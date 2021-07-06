@@ -13,7 +13,7 @@ class Terceros(ModelSQL, ModelView):
     __name__ = 'conector.terceros'
 
     actualizacion = fields.Char('Actualizacion', required=True)
-    fecha = fields.DateTime('Fecha y hora', format='%H:%M:%S', required=True)
+    fecha = fields.DateTime('Fecha y hora', format="%H:%M:%S", required=True)
 
     @classmethod
     def __setup__(cls):
