@@ -1,2 +1,2 @@
 # conector
-modulo conector
+modulo conector para CDST
