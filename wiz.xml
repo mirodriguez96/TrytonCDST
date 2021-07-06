@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<tryton>
+    
+    <data>
+        
+        <!-- ###################### -->
+        <!-- # Create Exemplaries # -->
+        <!-- ###################### -->
+        <!--
+        <record model="ir.action.wizard" id="act_cargar_datos">
+            <field name="name">Cargar Datos</field>
+            <field name="wiz_name">mimporta.tercero.cargar_datos</field>
+        </record>
+        <record model="ir.action.keyword" id="act_cargar_datos_keyword">
+            <field name="keyword">form_action</field>
+            <field name="model">mimporta.tercero,-1</field>
+            <field name="action" ref="act_cargar_datos"/>
+        </record>
+        -->
+        <!-- ################################# -->
+        <!-- # Create Exemplaries Parameters # -->
+        <!-- ################################# -->
+        <!--
+        <record model="ir.ui.view" id="cargar_datos_parameters_view_form">
+            <field name="model">mimporta.tercero.cargar_datos.parameters</field>
+            <field name="type">form</field>
+            <field name="name">cargar_datos_parameters_form</field>
+        </record>
+        -->
+    </data>
+
+</tryton>

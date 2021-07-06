@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<form>
+    <label name="actualizacion"/>
+    <field name="actualizacion"/>
+
+    <button string="Actualizar" name="cargar_datos" icon="tryton-new" colspan="4"/>
+</form>

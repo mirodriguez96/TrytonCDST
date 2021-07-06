@@ -1,0 +1,39 @@
+<?xml version="1.0"?>
+
+<tryton>
+    <data>
+        <menuitem name="Actualizar" id="menu_importa" sequence="1"/>
+        <!-- ####################### -->
+        <!-- # Actualizar Terceros # -->
+        <!-- ####################### -->
+        <record model="ir.ui.view" id="actercero_view_form">
+            <field name="model">conector.ActualizacionTerceros</field>
+            <field name="type">form</field>
+            <field name="name">actercero_form</field>
+        </record>
+        <record model="ir.ui.view" id="actercero_view_list">
+            <field name="model">conector.ActualizacionTerceros</field>
+            <field name="type">tree</field>
+            <field name="name">actercero_list</field>
+        </record>
+
+        <!-- Vista que acciona la vista del form y list -->
+        <record model="ir.action.act_window" id="act_tercero">
+            <field name="name">Actualizaciones</field>
+            <field name="res_model">conector.ActualizacionTerceros</field>
+        </record>
+        <record model="ir.action.act_window.view" id="act_tercero_view_list">
+            <field name="sequence" eval="10"/>
+            <field name="view" ref="actercero_view_list"/>
+            <field name="act_window" ref="act_tercero"/>
+        </record>
+        <record model="ir.action.act_window.view" id="act_tercero_view_form">
+            <field name="sequence" eval="20"/>
+            <field name="view" ref="actercero_view_form"/>
+            <field name="act_window" ref="act_tercero"/>
+        </record>
+
+        <menuitem parent="menu_importa" sequence="1" action="act_tercero" id="menu_actercero"/>
+
+    </data>
+</tryton>
