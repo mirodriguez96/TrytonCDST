@@ -5,12 +5,12 @@ from trytond.pool import Pool
 import datetime
 
 __all__ = [
-    'ActualizacionTerceros',
+    'Terceros',
     ]
 
-class ActualizacionTerceros(ModelSQL, ModelView):
-    'ActualizacionTerceros'
-    __name__ = 'conector.ActualizacionTerceros'
+class Terceros(ModelSQL, ModelView):
+    'Terceros'
+    __name__ = 'conector.terceros'
 
     actualizacion = fields.Char('Actualizacion', required=True)
     fecha = fields.DateTime('Fecha', required=True)

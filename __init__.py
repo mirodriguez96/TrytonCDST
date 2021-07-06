@@ -6,7 +6,7 @@ import conector
 
 def register():
     Pool.register(
-        conector.ActualizacionTerceros,
+        conector.Terceros,
         #wiz.CargarDatosParameters,
         module='conector', type_='model')
 

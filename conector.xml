@@ -7,12 +7,12 @@
         <!-- # Actualizar Terceros # -->
         <!-- ####################### -->
         <record model="ir.ui.view" id="actercero_view_form">
-            <field name="model">conector.ActualizacionTerceros</field>
+            <field name="model">conector.terceros</field>
             <field name="type">form</field>
             <field name="name">actercero_form</field>
         </record>
         <record model="ir.ui.view" id="actercero_view_list">
-            <field name="model">conector.ActualizacionTerceros</field>
+            <field name="model">conector.terceros</field>
             <field name="type">tree</field>
             <field name="name">actercero_list</field>
         </record>
@@ -20,7 +20,7 @@
         <!-- Vista que acciona la vista del form y list -->
         <record model="ir.action.act_window" id="act_tercero">
             <field name="name">Actualizaciones</field>
-            <field name="res_model">conector.ActualizacionTerceros</field>
+            <field name="res_model">conector.terceros</field>
         </record>
         <record model="ir.action.act_window.view" id="act_tercero_view_list">
             <field name="sequence" eval="10"/>
