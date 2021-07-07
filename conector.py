@@ -37,7 +37,7 @@ class Terceros(ModelSQL, ModelView):
         Acterceros = Pool().get('conector.terceros')
         ultima_actualizacion = Acterceros.search([], order=[('id', 'DESC')], limit=1)
 
-        print(ultima_actualizacion[0])
+        print(ultima_actualizacion[0].fecha)
         """
         terceros_tecno = []
         try:
