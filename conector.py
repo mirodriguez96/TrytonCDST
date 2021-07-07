@@ -32,6 +32,12 @@ class Terceros(ModelSQL, ModelView):
     @classmethod
     @ModelView.button
     def cargar_datos(cls):
+        cls.fecha = datetime.datetime.now()
+
+        Acterceros = Pool().get('conector.terceros')
+        ultima_actualizacion = Acterceros.searc([], order=[('id', 'DESC')], limit=1)
+
+        print(ultima_actualizacion.fecha)
         """
         terceros_tecno = []
         try:
