@@ -47,7 +47,7 @@ class Terceros(ModelSQL, ModelView):
         direcciones_tecno = []
         try:
             with conexion.cursor() as cursor:
-                query2 = cursor.execute("SELECT * FROM dbo.Terceros_Dir FOR JSON AUTO")
+                query2 = cursor.execute("SELECT TOP(10) * FROM dbo.Terceros_Dir FOR JSON AUTO")
                 for d in query2.fetchall():
                     direcciones_tecno.append(d)
                 """
@@ -61,7 +61,7 @@ class Terceros(ModelSQL, ModelView):
         finally:
             cursor.close()
             conexion.close()
-            print (direcciones_tecno[0]['Ultimo_Cambio_Registro'])
+            print (direcciones_tecno)
 """
         pool = Pool()
         Party = pool.get('party.party')
