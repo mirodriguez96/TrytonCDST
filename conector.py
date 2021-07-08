@@ -47,12 +47,14 @@ class Terceros(ModelSQL, ModelView):
         direcciones_tecno = []
         try:
             with conexion.cursor() as cursor:
-                query2 = cursor.execute("SELECT TOP(10) * FROM dbo.Terceros_Dir FOR JSON AUTO")
+                query2 = cursor.execute("SELECT TOP(3) * FROM dbo.Terceros_Dir FOR JSON AUTO")
+                print(query2)
+                """
                 for d in query2.fetchall():
                     print('  ------------------------>  ')
                     print (d)
                     #direcciones_tecno.append(d)
-                """
+                
                 for ter in terceros_tecno:
                     result = query2.fetchall()[0]
                     if result:
