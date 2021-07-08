@@ -16,6 +16,7 @@ class Terceros(ModelSQL, ModelView):
     actualizacion = fields.Char('Actualizacion', required=True)
     fecha = fields.DateTime('Fecha y hora', format="%H:%M:%S", required=True)
 
+
     @classmethod
     def __setup__(cls):
         super().__setup__()
@@ -23,8 +24,21 @@ class Terceros(ModelSQL, ModelView):
                 'cargar_datos': {},
                 })
         cls._error_messages.update({
-            'invalid_insert': 'Actualizacion erronea'
+            'invalid_insert': 'Actualizacion erronea',
         })
+
+    """
+    @classmethod
+    def validate(cls, books):
+        for book in books:
+            if not book.isbn:
+                continue
+            try:
+                if int(book.isbn) < 0:
+                    raise ValueError
+            except ValueError:
+                cls.raise_user_error('invalid_isbn')
+    """
 
     @classmethod
     def default_fecha(cls):
@@ -33,42 +47,28 @@ class Terceros(ModelSQL, ModelView):
     @classmethod
     @ModelView.button
     def cargar_datos(cls, fecha = None):
-        """
-        terceros_tecno = []
+        
+        terceros_tecno = None
         try:
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT * FROM dbo.TblTerceros")
-                for t in query.fetchall():
-                    terceros_tecno.append([t['nit_cedula'], t['nombre']])
+                query = cursor.execute("SELECT TOP(20) FROM dbo.TblTerceros FOR JSON AUTO")
+                terceros_tecno = json.loads(query.fetchall()[0][0])
         except Exception as e:
             print("Error consulta 1: ", e)
         finally:
             cursor.close()
-        """
+        
         direcciones_tecno = None
         try:
             with conexion.cursor() as cursor:
-                query2 = cursor.execute("SELECT TOP(3) * FROM dbo.Terceros_Dir FOR JSON AUTO")
+                query2 = cursor.execute("SELECT TOP(20) FROM dbo.Terceros_Dir FOR JSON AUTO")
                 direcciones_tecno = json.loads(query2.fetchall()[0][0])
-                print(direcciones_tecno[0])
-                """
-                for d in query2.fetchall():
-                    print('  ------------------------>  ')
-                    print (d)
-                    #direcciones_tecno.append(d)
-                
-                for ter in terceros_tecno:
-                    result = query2.fetchall()[0]
-                    if result:
-                        direcciones_tecno.append([result['nit_cedula'], result[3], result[13], result[2], result[4]])
-                        """
         except Exception as e:
             print("Error consulta 2: ", e)
         finally:
             cursor.close()
             conexion.close()
-            #print (direcciones_tecno)
-"""
+
         pool = Pool()
         Party = pool.get('party.party')
         Address = pool.get('party.address')
@@ -77,32 +77,47 @@ class Terceros(ModelSQL, ModelView):
         Mcontact = pool.get('party.contact_mechanism')
         to_create = []
         for ter in terceros_tecno:
-            exemp = Party()
-            exemp.code = ter[0]
-            exemp.name = ter[1]
-            exemp.lang = es
+            tercero = Party()
+            tercero.code = ter['nit_cedula']
+            tercero.name = ter['nombre']
+            tercero.lang = es
             for dir in direcciones_tecno:
-                if dir[0] == ter[0]:
-                    #Creacion e inserccion de metodos de contacto
-                    contacto = Mcontact()
-                    contacto.type = 'phone'
-                    contacto.value = dir[4]
-                    contacto.party = exemp
-                    contacto.save()
+                if dir['nit'] == ter['nit_cedula']:
+                    if dir['telefono_1']:
+                        #Creacion e inserccion de metodos de contacto
+                        contacto = Mcontact()
+                        contacto.type = 'phone'
+                        contacto.value = dir['telefono_1']
+                        contacto.party = tercero
+                        contacto.save()
+                    if dir['telefono_2']:
+                        #Creacion e inserccion de metodos de contacto
+                        contacto = Mcontact()
+                        contacto.type = 'phone'
+                        contacto.value = dir['telefono_2']
+                        contacto.party = tercero
+                        contacto.save()
+                    if ter['mail']:
+                        #Creacion e inserccion de metodos de contacto
+                        contacto = Mcontact()
+                        contacto.type = 'email'
+                        contacto.value = ter['mail']
+                        contacto.party = tercero
+                        contacto.save()
                     #Creacion e inserccion de direcciones
-                    exemd = Address()
-                    exemd.city = dir[1]
-                    exemd.country = 50
-                    exemd.name = dir[2]
-                    exemd.party = exemp
-                    exemd.party_name = exemp.name
-                    exemd.street = dir[3]
-                    exemd.save()
-            to_create.append(exemp)
+                    direccion = Address()
+                    direccion.city = dir['ciudad']
+                    direccion.country = 50
+                    direccion.name = dir['Barrio']
+                    direccion.party = tercero
+                    direccion.party_name = tercero.name
+                    direccion.street = dir['direccion']
+                    direccion.save()
+            to_create.append(tercero)
         Party.save(to_create)
         return None
 
-
+"""
     @classmethod
     @ModelView.button
     def actualizar_datos(cls, fecha = None):
@@ -112,5 +127,4 @@ class Terceros(ModelSQL, ModelView):
         print(ultima_actualizacion[0].fecha)
 
         return None
-
 """
