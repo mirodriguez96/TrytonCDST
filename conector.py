@@ -61,7 +61,7 @@ class Terceros(ModelSQL, ModelView):
         finally:
             cursor.close()
             conexion.close()
-            print (direcciones_tecno[0])
+            print (direcciones_tecno[0]['Ultimo_Cambio_Registro'])
 """
         pool = Pool()
         Party = pool.get('party.party')
