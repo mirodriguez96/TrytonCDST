@@ -32,45 +32,43 @@ class Terceros(ModelSQL, ModelView):
     @classmethod
     @ModelView.button
     def cargar_datos(cls, fecha = None):
-        #cls.fecha = datetime.datetime.now()
-
-        Acterceros = Pool().get('conector.terceros')
-        ultima_actualizacion = Acterceros.search([], order=[('id', 'DESC')], limit=1)
-
-        print(ultima_actualizacion[0].fecha)
         """
         terceros_tecno = []
         try:
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT * FROM dbo.TblTerceros WHERE fecha_creacion > ? OR Ultimo_CambioRegistro > ?")
+                query = cursor.execute("SELECT * FROM dbo.TblTerceros")
                 for t in query.fetchall():
-                    terceros_tecno.append([t[2], t[1]])
+                    terceros_tecno.append([t['nit_cedula'], t['nombre']])
         except Exception as e:
-            print("Error consulta1: ", e)
+            print("Error consulta 1: ", e)
         finally:
-            conexion.cursor().close()
-            #print(terceros_tecno)
-
+            cursor.close()
+        """
         direcciones_tecno = []
         try:
             with conexion.cursor() as cursor:
+                query2 = cursor.execute("SELECT * FROM dbo.Terceros_Dir")
+                for d in query2.fetchall():
+                    direcciones_tecno.append(d)
+                """
                 for ter in terceros_tecno:
-                    query2 = cursor.execute("SELECT * FROM dbo.Terceros_Dir WHERE nit = ?", (ter[0]))
                     result = query2.fetchall()[0]
                     if result:
-                        direcciones_tecno.append([result[0], result[3], result[13], result[2], result[4]])
+                        direcciones_tecno.append([result['nit_cedula'], result[3], result[13], result[2], result[4]])
+                        """
         except Exception as e:
-            print("Error consulta2: ", e)
+            print("Error consulta 2: ", e)
         finally:
             cursor.close()
             conexion.close()
-            #print(direcciones_tecno)
-
-        Party = Pool().get('party.party')
-        Address = Pool().get('party.address')
-        Lang = Pool().get('ir.lang')
-        es, = Lang.search([('code', '=', 'es')])
-        Mcontact = Pool().get('party.contact_mechanism')
+            print (direcciones_tecno[0])
+"""
+        pool = Pool()
+        Party = pool.get('party.party')
+        Address = pool.get('party.address')
+        Lang = pool.get('ir.lang')
+        es, = Lang.search([('code', '=', 'es_419')])
+        Mcontact = pool.get('party.contact_mechanism')
         to_create = []
         for ter in terceros_tecno:
             exemp = Party()
@@ -96,10 +94,17 @@ class Terceros(ModelSQL, ModelView):
                     exemd.save()
             to_create.append(exemp)
         Party.save(to_create)
-        """
         return None
 
+
     @classmethod
-    def pruebacron(cls):
-        print ("-----------Prueba CRON--------------")
+    @ModelView.button
+    def actualizar_datos(cls, fecha = None):
+        pool = Pool()
+        Acterceros = pool.get('conector.terceros')
+        ultima_actualizacion = Acterceros.search([], order=[('id', 'DESC')], limit=1)
+        print(ultima_actualizacion[0].fecha)
+
         return None
+
+"""
