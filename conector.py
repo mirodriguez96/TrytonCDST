@@ -3,6 +3,7 @@ from conexion import conexion
 from trytond.model import ModelSQL, ModelView, fields
 from trytond.pool import Pool
 import datetime
+import json
 
 __all__ = [
     'Terceros',
@@ -44,11 +45,12 @@ class Terceros(ModelSQL, ModelView):
         finally:
             cursor.close()
         """
-        direcciones_tecno = []
+        direcciones_tecno = None
         try:
             with conexion.cursor() as cursor:
                 query2 = cursor.execute("SELECT TOP(3) * FROM dbo.Terceros_Dir FOR JSON AUTO")
-                print(type(query2.fetchall()[0][0]))
+                direcciones_tecno = json.loads(query2.fetchall()[0][0])
+                print(direcciones_tecno[0])
                 """
                 for d in query2.fetchall():
                     print('  ------------------------>  ')
