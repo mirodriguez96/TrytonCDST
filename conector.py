@@ -48,7 +48,7 @@ class Terceros(ModelSQL, ModelView):
         try:
             with conexion.cursor() as cursor:
                 query2 = cursor.execute("SELECT TOP(3) * FROM dbo.Terceros_Dir FOR JSON AUTO")
-                print(query2.fetchall())
+                print(query2.fetchall()[1])
                 """
                 for d in query2.fetchall():
                     print('  ------------------------>  ')
