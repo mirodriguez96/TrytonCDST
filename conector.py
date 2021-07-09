@@ -51,7 +51,7 @@ class Terceros(ModelSQL, ModelView):
         terceros_tecno = None
         try:
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT TOP(1) * FROM dbo.TblTerceros FOR JSON PATH")
+                query = cursor.execute("SELECT TOP(1) * FROM dbo.TblTerceros")
                 #print(query.fetchall()[0][0])
                 terceros_tecno = json.loads(query.fetchall()[0][0])
                 #print(terceros_tecno)
@@ -59,6 +59,7 @@ class Terceros(ModelSQL, ModelView):
             print("ERROR consulta terceros_tecno: ", e)
         finally:
             cursor.close()
+            conexion.close()
         
         direcciones_tecno = None
         try:
@@ -119,14 +120,21 @@ class Terceros(ModelSQL, ModelView):
         Party.save(to_create)
         return None
 
-"""
+
     @classmethod
     @ModelView.button
-    def actualizar_datos(cls, fecha = None):
-        pool = Pool()
-        Acterceros = pool.get('conector.terceros')
-        ultima_actualizacion = Acterceros.search([], order=[('id', 'DESC')], limit=1)
-        print(ultima_actualizacion[0].fecha)
+    def btn_prueba(cls, fecha = None):
+        terceros_tecno = None
+        try:
+            with conexion.cursor() as cursor:
+                query = cursor.execute("SELECT TOP(10) * FROM dbo.TblTerceros")
+                #print(query.fetchall()[0][0])
+                #terceros_tecno = json.loads(query.fetchall()[0][0])
+                print(query.fetchall())
+        except Exception as e:
+            print("ERROR consulta terceros_tecno: ", e)
+        finally:
+            cursor.close()
+            conexion.close()
 
         return None
-"""
