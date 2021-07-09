@@ -58,7 +58,6 @@ class Terceros(ModelSQL, ModelView):
                 query = cursor.execute("SELECT TOP(100) * FROM dbo.TblTerceros")
                 terceros_tecno = list(query.fetchall())
                 cursor.close()
-                conexion.close()
         except Exception as e:
             print("ERROR consulta terceros_tecno: ", e)
 
