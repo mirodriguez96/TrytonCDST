@@ -81,7 +81,7 @@ class Terceros(ModelSQL, ModelView):
         Party = pool.get('party.party')
         Address = pool.get('party.address')
         Lang = pool.get('ir.lang')
-        es, = Lang.search([('code', '=', 'es_419')])
+        es, = Lang.search([('code', '=', 'es')])
         Mcontact = pool.get('party.contact_mechanism')
         to_create = []
         for ter in terceros_tecno:
