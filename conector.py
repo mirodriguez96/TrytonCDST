@@ -49,14 +49,17 @@ class Terceros(ModelSQL, ModelView):
     def cargar_datos(cls, fecha = None):
         
         terceros_tecno = None
+        columnas = []
         try:
             with conexion.cursor() as cursor:
-                columnas = cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'TecnoCarnes' AND TABLE_NAME = 'dbo.TblTerceros'")
-                print(columnas.fetchall())
-                query = cursor.execute("SELECT TOP(1) * FROM dbo.TblTerceros")
+                column = cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'TblTerceros' ORDER BY ORDINAL_POSITION")
+                for c in column.fetchall():
+                    columnas.append(c)
+                print(columnas)
+                #query = cursor.execute("SELECT TOP(1) * FROM dbo.TblTerceros")
                 #print(query.fetchall()[0][0])
                 #terceros_tecno = json.loads(query.fetchall()[0][0])
-                print(query.fetchall())
+                #print(query.fetchall())
         except Exception as e:
             print("ERROR consulta terceros_tecno: ", e)
         finally:
