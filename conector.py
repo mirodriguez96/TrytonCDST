@@ -53,29 +53,31 @@ class Terceros(ModelSQL, ModelView):
         try:
             with conexion.cursor() as cursor:
                 querycol = cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'TblTerceros' ORDER BY ORDINAL_POSITION")
-                for c in querycol.fetchall():
-                    columnas_terceros.append(c[0])
+                columnas_terceros = list(querycol.fetchall())
                 query = cursor.execute("SELECT * FROM dbo.TblTerceros")
-                #print(query.fetchall())
                 terceros_tecno = list(query.fetchall())
         except Exception as e:
             print("ERROR consulta terceros_tecno: ", e)
         finally:
             cursor.close()
             conexion.close()
-        print(terceros_tecno[0])
-"""
-        direcciones_tecno = None
+
+        direcciones_tecno = []
+        columna_direcciones = []
         try:
             with conexion.cursor() as cursor:
-                query2 = cursor.execute("SELECT TOP(1) * FROM dbo.Terceros_Dir FOR JSON PATH")
-                direcciones_tecno = json.loads(query2.fetchall()[0][0])
+                querycol2 = cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'Terceros_Dir' ORDER BY ORDINAL_POSITION")
+                columna_direcciones = list(querycol2.fetchall())
+                query2 = cursor.execute("SELECT * FROM dbo.Terceros_Dir")
+                direcciones_tecno = list(query2.fetchall())
         except Exception as e:
             print("ERROR consulta direcciones_tecno: ", e)
         finally:
             cursor.close()
             conexion.close()
-
+        for t in terceros_tecno:
+            print(t[columnas_terceros.index('nombre')])
+"""
         pool = Pool()
         Party = pool.get('party.party')
         Address = pool.get('party.address')
