@@ -47,34 +47,31 @@ class Terceros(ModelSQL, ModelView):
     @classmethod
     @ModelView.button
     def cargar_datos(cls, fecha = None):
-        
+        """
         terceros_tecno = []
         columnas_terceros = []
-        try:
-            with conexion.cursor() as cursor1:
-                querycol = cursor1.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'TblTerceros' ORDER BY ORDINAL_POSITION")
-                for d in querycol.fetchall():
-                    columnas_terceros.append(d[0])
-                query = cursor1.execute("SELECT TOP(100) * FROM dbo.TblTerceros")
-                terceros_tecno = list(query.fetchall())
-                cursor1.close()
-        except Exception as e:
-            print("ERROR consulta 1: ", e)
-
-
         direcciones_tecno = []
         columna_direcciones = []
+
         try:
-            with conexion.cursor() as cursor2:
-                querycol2 = cursor2.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'Terceros_Dir' ORDER BY ORDINAL_POSITION")
+            with conexion.cursor() as cursor:
+                #Datos de terceros
+                querycol = cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'TblTerceros' ORDER BY ORDINAL_POSITION")
+                for d in querycol.fetchall():
+                    columnas_terceros.append(d[0])
+                query = cursor.execute("SELECT TOP(100) * FROM dbo.TblTerceros")
+                terceros_tecno = list(query.fetchall())
+                #Datos de direcciones
+                querycol2 = cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'Terceros_Dir' ORDER BY ORDINAL_POSITION")
                 for d in querycol2.fetchall():
                     columna_direcciones.append(d[0])
-                query2 = cursor2.execute("SELECT TOP(100) * FROM dbo.Terceros_Dir")
+                query2 = cursor.execute("SELECT TOP(100) * FROM dbo.Terceros_Dir")
                 direcciones_tecno = list(query2.fetchall())
-                cursor2.close()
+                
+                cursor.close()
                 conexion.close()
         except Exception as e:
-            print("ERROR consulta 2: ", e)
+            print("ERROR consulta 1: ", e)
 
         pool = Pool()
         Party = pool.get('party.party')
@@ -122,6 +119,32 @@ class Terceros(ModelSQL, ModelView):
                     direccion.save()
             to_create.append(tercero)
         Party.save(to_create)
+        """
+
+        productos_tecno = []
+        col_pro = []
+        try:
+            with conexion.cursor() as cursor:
+                #Datos de productos
+                querycol = cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'TblProducto' ORDER BY ORDINAL_POSITION")
+                for d in querycol.fetchall():
+                    col_pro.append(d[0])
+                query = cursor.execute("SELECT TOP(100) * FROM dbo.TblProducto")
+                productos_tecno = list(query.fetchall())
+                cursor.close()
+                conexion.close()
+        except Exception as e:
+            print("ERROR consulta 1: ", e)
+
+        Producto = Pool().get('product.product')
+        to_prod = []
+        for p in productos_tecno:
+            prod = Producto()
+            prod.description = p[col_pro.index('Producto')]
+            prod.template = p[col_pro.index('TipoProducto')]
+            to_prod.append(prod)
+        Producto.save(to_prod)
+
         return None
 
 """
