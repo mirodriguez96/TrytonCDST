@@ -53,7 +53,9 @@ class Terceros(ModelSQL, ModelView):
         try:
             with conexion.cursor() as cursor:
                 querycol = cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'TblTerceros' ORDER BY ORDINAL_POSITION")
-                columnas_terceros = list(querycol.fetchall())
+                for d in querycol.fetchall():
+                    columnas_terceros.append(d[0])
+                #columnas_terceros = list(querycol.fetchall())
                 query = cursor.execute("SELECT * FROM dbo.TblTerceros")
                 terceros_tecno = list(query.fetchall())
                 cursor.close()
@@ -74,9 +76,12 @@ class Terceros(ModelSQL, ModelView):
                 conexion.close()
         except Exception as e:
             print("ERROR consulta direcciones_tecno: ", e)
+        
 
         for t in terceros_tecno:
             print(t[columnas_terceros.index('nombre')])
+        
+        print(columna_direcciones)
 """
         pool = Pool()
         Party = pool.get('party.party')
