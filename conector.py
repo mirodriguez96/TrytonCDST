@@ -51,7 +51,7 @@ class Terceros(ModelSQL, ModelView):
         terceros_tecno = None
         try:
             with conexion.cursor() as cursor:
-                columnas = cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'dbo.TblTerceros'")
+                columnas = cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'TecnoCarnes' AND TABLE_NAME = 'dbo.TblTerceros'")
                 print(columnas.fetchall())
                 query = cursor.execute("SELECT TOP(1) * FROM dbo.TblTerceros")
                 #print(query.fetchall()[0][0])
