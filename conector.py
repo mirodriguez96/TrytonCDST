@@ -51,13 +51,13 @@ class Terceros(ModelSQL, ModelView):
         terceros_tecno = []
         columnas_terceros = []
         try:
-            with conexion.cursor() as cursor:
-                querycol = cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'TblTerceros' ORDER BY ORDINAL_POSITION")
+            with conexion.cursor() as cursor1:
+                querycol = cursor1.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'TblTerceros' ORDER BY ORDINAL_POSITION")
                 for d in querycol.fetchall():
                     columnas_terceros.append(d[0])
-                query = cursor.execute("SELECT TOP(100) * FROM dbo.TblTerceros")
+                query = cursor1.execute("SELECT TOP(100) * FROM dbo.TblTerceros")
                 terceros_tecno = list(query.fetchall())
-                cursor.close()
+                cursor1.close()
         except Exception as e:
             print("ERROR consulta 1: ", e)
 
@@ -65,13 +65,13 @@ class Terceros(ModelSQL, ModelView):
         direcciones_tecno = []
         columna_direcciones = []
         try:
-            with conexion.cursor() as cursor:
-                querycol2 = cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'Terceros_Dir' ORDER BY ORDINAL_POSITION")
+            with conexion.cursor() as cursor2:
+                querycol2 = cursor2.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'Terceros_Dir' ORDER BY ORDINAL_POSITION")
                 for d in querycol2.fetchall():
                     columna_direcciones.append(d[0])
-                query2 = cursor.execute("SELECT TOP(100) * FROM dbo.Terceros_Dir")
+                query2 = cursor2.execute("SELECT TOP(100) * FROM dbo.Terceros_Dir")
                 direcciones_tecno = list(query2.fetchall())
-                cursor.close()
+                cursor2.close()
                 conexion.close()
         except Exception as e:
             print("ERROR consulta 2: ", e)
