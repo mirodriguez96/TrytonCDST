@@ -51,7 +51,7 @@ class Terceros(ModelSQL, ModelView):
         terceros_tecno = None
         try:
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT TOP(20) FROM dbo.TblTerceros FOR JSON AUTO")
+                query = cursor.execute("SELECT TOP(20) * FROM dbo.TblTerceros FOR JSON AUTO")
                 terceros_tecno = json.loads(query.fetchall()[0][0])
         except Exception as e:
             print("Error consulta 1: ", e)
@@ -61,7 +61,7 @@ class Terceros(ModelSQL, ModelView):
         direcciones_tecno = None
         try:
             with conexion.cursor() as cursor:
-                query2 = cursor.execute("SELECT TOP(20) FROM dbo.Terceros_Dir FOR JSON AUTO")
+                query2 = cursor.execute("SELECT TOP(20) * FROM dbo.Terceros_Dir FOR JSON AUTO")
                 direcciones_tecno = json.loads(query2.fetchall()[0][0])
         except Exception as e:
             print("Error consulta 2: ", e)
