@@ -52,10 +52,11 @@ class Terceros(ModelSQL, ModelView):
         try:
             with conexion.cursor() as cursor:
                 query = cursor.execute("SELECT TOP(20) * FROM dbo.TblTerceros FOR JSON AUTO")
-                print(query.fetchall()[0][0])
+                #print(query.fetchall()[0][0])
                 terceros_tecno = json.loads(query.fetchall()[0][0])
+                print(terceros_tecno)
         except Exception as e:
-            print("Error consulta 1: ", e)
+            print("ERROR consulta terceros_tecno: ", e)
         finally:
             cursor.close()
         
@@ -65,7 +66,7 @@ class Terceros(ModelSQL, ModelView):
                 query2 = cursor.execute("SELECT TOP(20) * FROM dbo.Terceros_Dir FOR JSON AUTO")
                 direcciones_tecno = json.loads(query2.fetchall()[0][0])
         except Exception as e:
-            print("Error consulta 2: ", e)
+            print("ERROR consulta direcciones_tecno: ", e)
         finally:
             cursor.close()
             conexion.close()
