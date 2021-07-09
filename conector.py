@@ -51,6 +51,8 @@ class Terceros(ModelSQL, ModelView):
         terceros_tecno = None
         try:
             with conexion.cursor() as cursor:
+                columnas = cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMS WHERE TABLE_NAME = 'dbo.TblTerceros'")
+                print(columnas)
                 query = cursor.execute("SELECT TOP(1) * FROM dbo.TblTerceros")
                 #print(query.fetchall()[0][0])
                 #terceros_tecno = json.loads(query.fetchall()[0][0])
