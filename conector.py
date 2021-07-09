@@ -53,14 +53,15 @@ class Terceros(ModelSQL, ModelView):
             with conexion.cursor() as cursor:
                 query = cursor.execute("SELECT TOP(1) * FROM dbo.TblTerceros")
                 #print(query.fetchall()[0][0])
-                terceros_tecno = json.loads(query.fetchall()[0][0])
-                #print(terceros_tecno)
+                #terceros_tecno = json.loads(query.fetchall()[0][0])
+                print(query.fetchall())
         except Exception as e:
             print("ERROR consulta terceros_tecno: ", e)
         finally:
             cursor.close()
             conexion.close()
-        
+
+"""
         direcciones_tecno = None
         try:
             with conexion.cursor() as cursor:
@@ -119,22 +120,10 @@ class Terceros(ModelSQL, ModelView):
             to_create.append(tercero)
         Party.save(to_create)
         return None
-
-
+"""
+"""
     @classmethod
     @ModelView.button
     def btn_prueba(cls, fecha = None):
-        terceros_tecno = None
-        try:
-            with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT TOP(10) * FROM dbo.TblTerceros")
-                #print(query.fetchall()[0][0])
-                #terceros_tecno = json.loads(query.fetchall()[0][0])
-                print(query.fetchall())
-        except Exception as e:
-            print("ERROR consulta terceros_tecno: ", e)
-        finally:
-            cursor.close()
-            conexion.close()
-
         return None
+"""
