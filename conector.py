@@ -55,8 +55,7 @@ class Terceros(ModelSQL, ModelView):
                 querycol = cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'TblTerceros' ORDER BY ORDINAL_POSITION")
                 for d in querycol.fetchall():
                     columnas_terceros.append(d[0])
-                #columnas_terceros = list(querycol.fetchall())
-                query = cursor.execute("SELECT * FROM dbo.TblTerceros")
+                query = cursor.execute("SELECT TOP(100) * FROM dbo.TblTerceros")
                 terceros_tecno = list(query.fetchall())
                 cursor.close()
                 conexion.close()
@@ -69,20 +68,15 @@ class Terceros(ModelSQL, ModelView):
         try:
             with conexion.cursor() as cursor:
                 querycol2 = cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'Terceros_Dir' ORDER BY ORDINAL_POSITION")
-                columna_direcciones = list(querycol2.fetchall())
-                query2 = cursor.execute("SELECT * FROM dbo.Terceros_Dir")
+                for d in querycol2.fetchall():
+                    columna_direcciones.append(d[0])
+                query2 = cursor.execute("SELECT TOP(100) * FROM dbo.Terceros_Dir")
                 direcciones_tecno = list(query2.fetchall())
                 cursor.close()
                 conexion.close()
         except Exception as e:
             print("ERROR consulta direcciones_tecno: ", e)
-        
 
-        for t in terceros_tecno:
-            print(t[columnas_terceros.index('nombre')])
-        
-        print(columna_direcciones)
-"""
         pool = Pool()
         Party = pool.get('party.party')
         Address = pool.get('party.address')
@@ -92,45 +86,45 @@ class Terceros(ModelSQL, ModelView):
         to_create = []
         for ter in terceros_tecno:
             tercero = Party()
-            tercero.code = ter['nit_cedula']
-            tercero.name = ter['nombre']
+            tercero.code = ter[columnas_terceros.index('nit_cedula')]
+            tercero.name = ter[columnas_terceros.index('nombre')]
             tercero.lang = es
             for dir in direcciones_tecno:
-                if dir['nit'] == ter['nit_cedula']:
-                    if dir['telefono_1']:
+                if dir[columna_direcciones.index('nit')] == ter[columnas_terceros.index('nit_cedula')]:
+                    if dir[columna_direcciones.index('telefono_1')]:
                         #Creacion e inserccion de metodos de contacto
                         contacto = Mcontact()
                         contacto.type = 'phone'
-                        contacto.value = dir['telefono_1']
+                        contacto.value = dir[columna_direcciones.index('telefono_1')]
                         contacto.party = tercero
                         contacto.save()
-                    if dir['telefono_2']:
+                    if dir[columna_direcciones.index('telefono_2')]:
                         #Creacion e inserccion de metodos de contacto
                         contacto = Mcontact()
                         contacto.type = 'phone'
-                        contacto.value = dir['telefono_2']
+                        contacto.value = dir[columna_direcciones.index('telefono_2')]
                         contacto.party = tercero
                         contacto.save()
-                    if ter['mail']:
+                    if ter[columnas_terceros.index('mail')]:
                         #Creacion e inserccion de metodos de contacto
                         contacto = Mcontact()
                         contacto.type = 'email'
-                        contacto.value = ter['mail']
+                        contacto.value = ter[columnas_terceros.index('mail')]
                         contacto.party = tercero
                         contacto.save()
                     #Creacion e inserccion de direcciones
                     direccion = Address()
-                    direccion.city = dir['ciudad']
+                    direccion.city = dir[columna_direcciones.index('ciudad')]
                     direccion.country = 50
-                    direccion.name = dir['Barrio']
+                    direccion.name = dir[columna_direcciones.index('Barrio')]
                     direccion.party = tercero
                     direccion.party_name = tercero.name
-                    direccion.street = dir['direccion']
+                    direccion.street = dir[columna_direcciones.index('direccion')]
                     direccion.save()
             to_create.append(tercero)
         Party.save(to_create)
         return None
-"""
+
 """
     @classmethod
     @ModelView.button
