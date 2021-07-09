@@ -56,11 +56,11 @@ class Terceros(ModelSQL, ModelView):
                 columnas_terceros = list(querycol.fetchall())
                 query = cursor.execute("SELECT * FROM dbo.TblTerceros")
                 terceros_tecno = list(query.fetchall())
+                cursor.close()
+                conexion.close()
         except Exception as e:
             print("ERROR consulta terceros_tecno: ", e)
-        finally:
-            cursor.close()
-            conexion.close()
+
 
         direcciones_tecno = []
         columna_direcciones = []
@@ -70,11 +70,11 @@ class Terceros(ModelSQL, ModelView):
                 columna_direcciones = list(querycol2.fetchall())
                 query2 = cursor.execute("SELECT * FROM dbo.Terceros_Dir")
                 direcciones_tecno = list(query2.fetchall())
+                cursor.close()
+                conexion.close()
         except Exception as e:
             print("ERROR consulta direcciones_tecno: ", e)
-        finally:
-            cursor.close()
-            conexion.close()
+
         for t in terceros_tecno:
             print(t[columnas_terceros.index('nombre')])
 """
