@@ -48,24 +48,22 @@ class Terceros(ModelSQL, ModelView):
     @ModelView.button
     def cargar_datos(cls, fecha = None):
         
-        terceros_tecno = None
-        columnas = []
+        terceros_tecno = []
+        columnas_terceros = []
         try:
             with conexion.cursor() as cursor:
-                column = cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'TblTerceros' ORDER BY ORDINAL_POSITION")
-                for c in column.fetchall():
-                    columnas.append(c)
-                print(columnas)
-                #query = cursor.execute("SELECT TOP(1) * FROM dbo.TblTerceros")
-                #print(query.fetchall()[0][0])
-                #terceros_tecno = json.loads(query.fetchall()[0][0])
+                querycol = cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'TblTerceros' ORDER BY ORDINAL_POSITION")
+                for c in querycol.fetchall():
+                    columnas_terceros.append(c[0])
+                query = cursor.execute("SELECT * FROM dbo.TblTerceros")
                 #print(query.fetchall())
+                terceros_tecno = query.fetchall()[0]
         except Exception as e:
             print("ERROR consulta terceros_tecno: ", e)
         finally:
             cursor.close()
             conexion.close()
-
+        print(terceros_tecno[0])
 """
         direcciones_tecno = None
         try:
