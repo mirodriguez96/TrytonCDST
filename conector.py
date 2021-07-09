@@ -59,7 +59,7 @@ class Terceros(ModelSQL, ModelView):
                 terceros_tecno = list(query.fetchall())
                 cursor.close()
         except Exception as e:
-            print("ERROR consulta terceros_tecno: ", e)
+            print("ERROR consulta 1: ", e)
 
 
         direcciones_tecno = []
@@ -74,7 +74,7 @@ class Terceros(ModelSQL, ModelView):
                 cursor.close()
                 conexion.close()
         except Exception as e:
-            print("ERROR consulta direcciones_tecno: ", e)
+            print("ERROR consulta 2: ", e)
 
         pool = Pool()
         Party = pool.get('party.party')
