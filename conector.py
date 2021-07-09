@@ -52,7 +52,7 @@ class Terceros(ModelSQL, ModelView):
         try:
             with conexion.cursor() as cursor:
                 query = cursor.execute("SELECT TOP(20) * FROM dbo.TblTerceros FOR JSON AUTO")
-                print(query.fetchall()[0])
+                print(query.fetchall()[0][0].strip())
                 #terceros_tecno = json.loads(query.fetchall()[0][0])
                 #print(terceros_tecno)
         except Exception as e:
