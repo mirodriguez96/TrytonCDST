@@ -64,7 +64,7 @@ class Terceros(ModelSQL, ModelView):
         try:
             with conexion.cursor() as cursor:
                 query2 = cursor.execute("SELECT TOP(20) * FROM dbo.Terceros_Dir FOR JSON AUTO")
-                direcciones_tecno = json.loads(query2.fetchall()[0][0])
+                direcciones_tecno = json.loads(query2.fetchall()[0][0].split())
         except Exception as e:
             print("ERROR consulta direcciones_tecno: ", e)
         finally:
