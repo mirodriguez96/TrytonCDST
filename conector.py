@@ -57,7 +57,7 @@ class Terceros(ModelSQL, ModelView):
                     columnas_terceros.append(c[0])
                 query = cursor.execute("SELECT * FROM dbo.TblTerceros")
                 #print(query.fetchall())
-                terceros_tecno = query.fetchall()[0]
+                terceros_tecno = list(query.fetchall())
         except Exception as e:
             print("ERROR consulta terceros_tecno: ", e)
         finally:
