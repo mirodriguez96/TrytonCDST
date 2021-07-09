@@ -52,6 +52,7 @@ class Terceros(ModelSQL, ModelView):
         try:
             with conexion.cursor() as cursor:
                 query = cursor.execute("SELECT TOP(20) * FROM dbo.TblTerceros FOR JSON AUTO")
+                print(query.fetchall()[0][0])
                 terceros_tecno = json.loads(query.fetchall()[0][0])
         except Exception as e:
             print("Error consulta 1: ", e)
@@ -68,7 +69,7 @@ class Terceros(ModelSQL, ModelView):
         finally:
             cursor.close()
             conexion.close()
-
+"""
         pool = Pool()
         Party = pool.get('party.party')
         Address = pool.get('party.address')
@@ -116,7 +117,7 @@ class Terceros(ModelSQL, ModelView):
             to_create.append(tercero)
         Party.save(to_create)
         return None
-
+"""
 """
     @classmethod
     @ModelView.button
