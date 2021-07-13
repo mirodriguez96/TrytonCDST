@@ -23,9 +23,6 @@ class Terceros(ModelSQL, ModelView):
         cls._buttons.update({
                 'cargar_datos': {},
                 })
-        cls._error_messages.update({
-            'invalid_insert': 'Actualizacion erronea',
-        })
 
     """
     @classmethod
@@ -146,6 +143,8 @@ class Terceros(ModelSQL, ModelView):
         Producto.save(to_prod)
         """
         return None
+
+
 
 """
     @classmethod
