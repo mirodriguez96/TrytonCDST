@@ -47,7 +47,7 @@ class Terceros(ModelSQL, ModelView):
     @classmethod
     @ModelView.button
     def cargar_datos(cls, fecha = None):
-        """
+        
         terceros_tecno = []
         columnas_terceros = []
         direcciones_tecno = []
@@ -119,8 +119,8 @@ class Terceros(ModelSQL, ModelView):
                     direccion.save()
             to_create.append(tercero)
         Party.save(to_create)
+        
         """
-
         productos_tecno = []
         col_pro = []
         try:
@@ -144,12 +144,14 @@ class Terceros(ModelSQL, ModelView):
             prod.template = p[col_pro.index('TipoProducto')]
             to_prod.append(prod)
         Producto.save(to_prod)
-
+        """
         return None
 
 """
     @classmethod
-    @ModelView.button
+    @ModelView.btn_prueba
     def btn_prueba(cls, fecha = None):
-        return None
+        print("Prueba ")
+        pass
+
 """
