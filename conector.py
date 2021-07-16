@@ -43,7 +43,7 @@ class Terceros(ModelSQL, ModelView):
 
     @classmethod
     @ModelView.button
-    def cargar_datos(cls, fecha = None):
+    def cargar_datos(cls):
         #terceros = cls.carga_terceros()
         #cls.carga_productos()
         """
