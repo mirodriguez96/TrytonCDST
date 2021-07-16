@@ -123,7 +123,7 @@ class Terceros(ModelSQL, ModelView):
                     direccion.save()
             to_create.append(tercero)
         Party.save(to_create)
-        return None
+        #return None
 
 
     @classmethod
@@ -204,7 +204,6 @@ class Terceros(ModelSQL, ModelView):
                     direccion.save()
             to_create.append(tercero)
         Party.save(to_create)
-        return None
 
 
     @classmethod
