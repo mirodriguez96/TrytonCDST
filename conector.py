@@ -46,13 +46,11 @@ class Terceros(ModelSQL, ModelView):
     def cargar_datos(cls, fecha = None):
 
         cls.carga_terceros()
-        cls.carga_productos()
+        #cls.carga_productos()
         return None
 
     @classmethod
     def carga_terceros(cls):
-        print("Hola desde terceros")
-        """
         terceros_tecno = []
         columnas_terceros = []
         direcciones_tecno = []
@@ -87,8 +85,14 @@ class Terceros(ModelSQL, ModelView):
         to_create = []
         for ter in terceros_tecno:
             tercero = Party()
+            tercero.create_date = ter[columnas_terceros.index('fecha_creacion')]
             tercero.code = ter[columnas_terceros.index('nit_cedula')]
             tercero.name = ter[columnas_terceros.index('nombre')]
+            tercero.write_date = ter[columnas_terceros.index('Ultimo_Cambio_Registro')]
+            if ter[columnas_terceros.index('Ultimo_Cambio_Registro')] == 'Natural':
+                tercero.type_person = 'persona_natural'
+            else:
+                tercero.type_person = 'persona_juridica'
             tercero.lang = es
             for dir in direcciones_tecno:
                 if dir[columna_direcciones.index('nit')] == ter[columnas_terceros.index('nit_cedula')]:
@@ -124,13 +128,10 @@ class Terceros(ModelSQL, ModelView):
                     direccion.save()
             to_create.append(tercero)
         Party.save(to_create)
-        """
 
 
     @classmethod
     def carga_productos(cls):
-        print("Hola desde productos")
-        """
         productos_tecno = []
         col_pro = []
         try:
@@ -154,7 +155,7 @@ class Terceros(ModelSQL, ModelView):
             prod.template = p[col_pro.index('TipoProducto')]
             to_prod.append(prod)
         Producto.save(to_prod)
-        """
+
 
 """
     @classmethod
