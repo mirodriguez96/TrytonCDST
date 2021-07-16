@@ -4,5 +4,4 @@
     <field name="actualizacion"/>
 
     <button string="Actualizar" name="cargar_datos" icon="tryton-new" colspan="2"/>
-    <button string="Prueba" name="btn_prueba" icon="tryton-new" colspan="2"/>
 </form>

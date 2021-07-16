@@ -44,7 +44,15 @@ class Terceros(ModelSQL, ModelView):
     @classmethod
     @ModelView.button
     def cargar_datos(cls, fecha = None):
-        
+
+        cls.carga_terceros()
+        cls.carga_productos()
+        return None
+
+    @classmethod
+    def carga_terceros():
+        print("Hola desde terceros")
+        """
         terceros_tecno = []
         columnas_terceros = []
         direcciones_tecno = []
@@ -56,13 +64,13 @@ class Terceros(ModelSQL, ModelView):
                 querycol = cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'TblTerceros' ORDER BY ORDINAL_POSITION")
                 for d in querycol.fetchall():
                     columnas_terceros.append(d[0])
-                query = cursor.execute("SELECT TOP(100) * FROM dbo.TblTerceros")
+                query = cursor.execute("SELECT TOP(5) * FROM dbo.TblTerceros")
                 terceros_tecno = list(query.fetchall())
                 #Datos de direcciones
                 querycol2 = cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'Terceros_Dir' ORDER BY ORDINAL_POSITION")
                 for d in querycol2.fetchall():
                     columna_direcciones.append(d[0])
-                query2 = cursor.execute("SELECT TOP(100) * FROM dbo.Terceros_Dir")
+                query2 = cursor.execute("SELECT TOP(5) * FROM dbo.Terceros_Dir")
                 direcciones_tecno = list(query2.fetchall())
                 
                 cursor.close()
@@ -116,7 +124,12 @@ class Terceros(ModelSQL, ModelView):
                     direccion.save()
             to_create.append(tercero)
         Party.save(to_create)
-        
+        """
+
+
+    @classmethod
+    def carga_productos():
+        print("Hola desde productos")
         """
         productos_tecno = []
         col_pro = []
@@ -142,9 +155,6 @@ class Terceros(ModelSQL, ModelView):
             to_prod.append(prod)
         Producto.save(to_prod)
         """
-        return None
-
-
 
 """
     @classmethod
