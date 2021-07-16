@@ -50,7 +50,7 @@ class Terceros(ModelSQL, ModelView):
         return None
 
     @classmethod
-    def carga_terceros():
+    def carga_terceros(cls):
         print("Hola desde terceros")
         """
         terceros_tecno = []
@@ -128,7 +128,7 @@ class Terceros(ModelSQL, ModelView):
 
 
     @classmethod
-    def carga_productos():
+    def carga_productos(cls):
         print("Hola desde productos")
         """
         productos_tecno = []
