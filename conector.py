@@ -41,6 +41,7 @@ class Terceros(ModelSQL, ModelView):
     def default_fecha(cls):
         return datetime.datetime.now()
 
+
     @classmethod
     @ModelView.button
     def cargar_datos(cls, fecha = None):
@@ -80,6 +81,7 @@ class Terceros(ModelSQL, ModelView):
             tercero = Party()
             tercero.create_date = ter[columnas_terceros.index('fecha_creacion')]
             tercero.type_document = '31'
+            tercero.id_number = ter[columnas_terceros.index('nit_cedula')]
             tercero.code = ter[columnas_terceros.index('nit_cedula')]
             tercero.name = ter[columnas_terceros.index('nombre')]
             tercero.write_date = ter[columnas_terceros.index('Ultimo_Cambio_Registro')]
