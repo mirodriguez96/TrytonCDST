@@ -46,7 +46,7 @@ class Terceros(ModelSQL, ModelView):
     def cargar_datos(cls, fecha = None):
         #terceros = cls.carga_terceros()
         #cls.carga_productos()
-
+        """
         terceros_tecno = []
         columnas_terceros = []
         direcciones_tecno = []
@@ -123,7 +123,8 @@ class Terceros(ModelSQL, ModelView):
                     direccion.save()
             to_create.append(tercero)
         Party.save(to_create)
-        #return None
+        """
+        return None
 
 
     @classmethod
@@ -204,6 +205,7 @@ class Terceros(ModelSQL, ModelView):
                     direccion.save()
             to_create.append(tercero)
         Party.save(to_create)
+        return None
 
 
     @classmethod
