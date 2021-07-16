@@ -44,8 +44,7 @@ class Terceros(ModelSQL, ModelView):
     @classmethod
     @ModelView.button
     def cargar_datos(cls, fecha = None):
-
-        cls.carga_terceros()
+        terceros = cls.carga_terceros()
         #cls.carga_productos()
         return None
 
@@ -70,11 +69,10 @@ class Terceros(ModelSQL, ModelView):
                     columna_direcciones.append(d[0])
                 query2 = cursor.execute("SELECT TOP(5) * FROM dbo.Terceros_Dir")
                 direcciones_tecno = list(query2.fetchall())
-                
                 cursor.close()
                 conexion.close()
         except Exception as e:
-            print("ERROR consulta 1: ", e)
+            print("ERROR consulta terceros: ", e)
 
         pool = Pool()
         Party = pool.get('party.party')
@@ -128,6 +126,7 @@ class Terceros(ModelSQL, ModelView):
                     direccion.save()
             to_create.append(tercero)
         Party.save(to_create)
+        return None
 
 
     @classmethod
