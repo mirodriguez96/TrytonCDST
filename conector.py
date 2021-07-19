@@ -98,7 +98,7 @@ class Terceros(ModelSQL, ModelView):
             elif ter[columnas_terceros.index('tipo_identificacion')] == '6':
                 tercero.type_document = '12'
             tercero.id_number = ter[columnas_terceros.index('nit_cedula')]
-            tercero.code = ter[columnas_terceros.index('nit_cedula')]
+            #tercero.code = ter[columnas_terceros.index('nit_cedula')]
             tercero.name = ter[columnas_terceros.index('nombre')]
             tercero.first_name = ter[columnas_terceros.index('PrimerNombre')]
             tercero.second_name = ter[columnas_terceros.index('SegundoNombre')]
@@ -106,21 +106,21 @@ class Terceros(ModelSQL, ModelView):
             tercero.second_family_name = ter[columnas_terceros.index('SegundoApellido')]
             tercero.write_date = ter[columnas_terceros.index('Ultimo_Cambio_Registro')]
             #Equivalencia tipo de persona y asignación True en declarante
-            if ter[columnas_terceros.index('Ultimo_Cambio_Registro')] == 'Natural':
+            if ter[columnas_terceros.index('TipoPersona')] == 'Natural':
                 tercero.type_person = 'persona_natural'
-            else:
+            elif ter[columnas_terceros.index('TipoPersona')] == 'Juridica':
                 tercero.type_person = 'persona_juridica'
                 tercero.declarante = True
-            #Verificación e inseción codigo ciiu
+            #Verificación e inserción codigo ciiu
             if ter[columnas_terceros.index('IdActividadEconomica')] != 0:
                 tercero.ciiu_code = ter[columnas_terceros.index('IdActividadEconomica')]
             #Equivalencia regimen de impuestos
-            idtipo_contribuyente = ter[columnas_terceros.index('IdTipoContribuyente')]
-            if idtipo_contribuyente == '1' or idtipo_contribuyente == '4' or idtipo_contribuyente == '9':
+            idtipo_contribuyente = int(ter[columnas_terceros.index('IdTipoContribuyente')])
+            if idtipo_contribuyente == 1 or idtipo_contribuyente == 4 or idtipo_contribuyente == 9:
                 tercero.regime_tax = 'gran_contribuyente'
-            elif idtipo_contribuyente == '2' or idtipo_contribuyente == '5' or idtipo_contribuyente == '6' or idtipo_contribuyente == '7' or idtipo_contribuyente == '8':
+            elif idtipo_contribuyente == 2 or idtipo_contribuyente == 5 or idtipo_contribuyente == 6 or idtipo_contribuyente == 7 or idtipo_contribuyente == 8:
                 tercero.regime_tax = 'regimen_responsable'
-            elif idtipo_contribuyente == '3':
+            elif idtipo_contribuyente == 3:
                 tercero.regime_tax = 'regimen_no_responsable'
             tercero.lang = es
             cant_dir = 0
