@@ -75,7 +75,7 @@ class Terceros(ModelSQL, ModelView):
                 conexion.close()
         except Exception as e:
             print("ERROR consulta terceros: ", e)
-
+        """
         pool = Pool()
         Party = pool.get('party.party')
         Address = pool.get('party.address')
@@ -83,7 +83,9 @@ class Terceros(ModelSQL, ModelView):
         es, = Lang.search([('code', '=', 'es')])
         Mcontact = pool.get('party.contact_mechanism')
         to_create = []
+        """
         for ter in terceros_tecno:
+            """
             tercero = Party()
             tercero.create_date = ter[columnas_terceros.index('fecha_creacion')]
             #Equivalencia tipo de identificacion
@@ -105,11 +107,13 @@ class Terceros(ModelSQL, ModelView):
             tercero.first_family_name = ter[columnas_terceros.index('PrimerApellido')]
             tercero.second_family_name = ter[columnas_terceros.index('SegundoApellido')]
             tercero.write_date = ter[columnas_terceros.index('Ultimo_Cambio_Registro')]
+            """
+            print (ter[columnas_terceros.index('TipoPersona')])
+            """
             #Equivalencia tipo de persona y asignación True en declarante
-            TipoPersona = str(ter[columnas_terceros.index('TipoPersona')])
-            if TipoPersona == 'Natural':
+            if ter[columnas_terceros.index('TipoPersona')] == 'Natural':
                 tercero.type_person = 'persona_natural'
-            elif TipoPersona == 'Juridica':
+            elif ter[columnas_terceros.index('TipoPersona')] == 'Juridica':
                 tercero.type_person = 'persona_juridica'
                 tercero.declarante = True
             #Verificación e inserción codigo ciiu
@@ -162,7 +166,7 @@ class Terceros(ModelSQL, ModelView):
                     direccion.save()
             to_create.append(tercero)
         Party.save(to_create)
-
+        """
 
     @classmethod
     def carga_productos(cls):
