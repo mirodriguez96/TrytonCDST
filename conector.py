@@ -128,7 +128,7 @@ class Terceros(ModelSQL, ModelView):
                 if dir[columna_direcciones.index('nit')] == ter[columnas_terceros.index('nit_cedula')]:
                     cant_dir += 1
                     if cant_dir == 1:
-                        tercero.comercial_name = dir[columna_direcciones.index('NombreSucursal')]
+                        tercero.commercial_name = dir[columna_direcciones.index('NombreSucursal')]
                     if dir[columna_direcciones.index('telefono_1')]:
                         #Creacion e inserccion de metodos de contacto
                         contacto = Mcontact()
