@@ -106,9 +106,9 @@ class Terceros(ModelSQL, ModelView):
             tercero.second_family_name = ter[columnas_terceros.index('SegundoApellido')]
             tercero.write_date = ter[columnas_terceros.index('Ultimo_Cambio_Registro')]
             #Equivalencia tipo de persona y asignación True en declarante
-            if ter[columnas_terceros.index('TipoPersona')] == 'Natural':
+            if ter[columnas_terceros.index('TipoPersona')] == 'natural':
                 tercero.type_person = 'persona_natural'
-            elif ter[columnas_terceros.index('TipoPersona')] == 'Juridica':
+            elif ter[columnas_terceros.index('TipoPersona')] == 'juridica':
                 tercero.type_person = 'persona_juridica'
                 tercero.declarante = True
             #Verificación e inserción codigo ciiu
