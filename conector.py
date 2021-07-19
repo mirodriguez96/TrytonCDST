@@ -86,7 +86,16 @@ class Terceros(ModelSQL, ModelView):
         for ter in terceros_tecno:
             tercero = Party()
             tercero.create_date = ter[columnas_terceros.index('fecha_creacion')]
-            tercero.type_document = '31'
+            if ter[columnas_terceros.index('tipo_identificacion')] == '1':
+                tercero.type_document = '13'
+            elif ter[columnas_terceros.index('tipo_identificacion')] == '2':
+                tercero.type_document = '22'
+            elif ter[columnas_terceros.index('tipo_identificacion')] == '3':
+                tercero.type_document = '31'
+            elif ter[columnas_terceros.index('tipo_identificacion')] == '4':
+                tercero.type_document = '41'
+            elif ter[columnas_terceros.index('tipo_identificacion')] == '6':
+                tercero.type_document = '12'
             tercero.id_number = ter[columnas_terceros.index('nit_cedula')]
             tercero.code = ter[columnas_terceros.index('nit_cedula')]
             tercero.name = ter[columnas_terceros.index('nombre')]
