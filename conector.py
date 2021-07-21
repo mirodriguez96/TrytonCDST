@@ -108,7 +108,7 @@ class Terceros(ModelSQL, ModelView):
             tercero.second_family_name = ter[columnas_terceros.index('SegundoApellido')]
             tercero.write_date = ter[columnas_terceros.index('Ultimo_Cambio_Registro')]
             """
-            print ("->"+ter[columnas_terceros.index('TipoPersona')]+"<-")
+            print ("->"+ter[columnas_terceros.index('TipoPersona')].strip()+"<-")
             """
             #Equivalencia tipo de persona y asignación True en declarante
             if ter[columnas_terceros.index('TipoPersona')] == 'Natural':
