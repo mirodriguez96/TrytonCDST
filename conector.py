@@ -105,7 +105,7 @@ class Terceros(ModelSQL, ModelView):
             tercero.second_name = ter[columnas_terceros.index('SegundoNombre')].strip()
             tercero.first_family_name = ter[columnas_terceros.index('PrimerApellido')].strip()
             tercero.second_family_name = ter[columnas_terceros.index('SegundoApellido')].strip()
-            tercero.write_date = ter[columnas_terceros.index('Ultimo_Cambio_Registro')].strip()
+            tercero.write_date = ter[columnas_terceros.index('Ultimo_Cambio_Registro')]
             
             #Equivalencia tipo de persona y asignación True en declarante
             if ter[columnas_terceros.index('TipoPersona')].strip() == 'Natural':
