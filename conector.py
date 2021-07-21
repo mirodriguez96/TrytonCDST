@@ -45,8 +45,8 @@ class Terceros(ModelSQL, ModelView):
     @classmethod
     @ModelView.button
     def cargar_datos(cls, fecha = None):
-        terceros = cls.carga_terceros()
-        #cls.carga_productos()
+        #cls.carga_terceros()
+        cls.carga_productos()
         return None
 
 
@@ -145,7 +145,7 @@ class Terceros(ModelSQL, ModelView):
                         contacto.value = dir[columna_direcciones.index('telefono_2')]
                         contacto.party = tercero
                         contacto.save()
-                    if ter[columnas_terceros.index('mail')]:
+                    if ter[columnas_terceros.index('mail')] != '0':
                         #Creacion e inserccion de metodos de contacto
                         contacto = Mcontact()
                         contacto.type = 'email'
@@ -169,8 +169,17 @@ class Terceros(ModelSQL, ModelView):
     def carga_productos(cls):
         productos_tecno = []
         col_pro = []
+        #col_gproducto = []
+        #grupos_producto = []
         try:
             with conexion.cursor() as cursor:
+                #Grupo de productos (categorias)
+                #query_gproducto = cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'TblGrupoProducto' ORDER BY ORDINAL_POSITION")
+                #for g in query_gproducto.fetchall():
+                    #col_gproducto.append(g[0])
+                #query_r_gproducto = cursor.execute("SELECT * FROM dbo.TblGrupoProducto")
+                #grupos_producto = list(query_r_gproducto.fetchall())
+
                 #Datos de productos
                 querycol = cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'TblProducto' ORDER BY ORDINAL_POSITION")
                 for d in querycol.fetchall():
@@ -183,11 +192,16 @@ class Terceros(ModelSQL, ModelView):
             print("ERROR consulta producto: ", e)
 
         Producto = Pool().get('product.product')
+        Template_Product = Pool().get('product.template')
         to_prod = []
         for p in productos_tecno:
             prod = Producto()
-            prod.description = p[col_pro.index('Producto')]
-            prod.template = p[col_pro.index('TipoProducto')]
+            temp = Template_Product()
+            temp.name = p[col_pro.index('Producto')]
+            temp.customs_category = int(p[col_pro.index('TipoProducto')])
+            temp.default_uom = 1
+            temp.type = 'goods'
+            prod.template = temp
             to_prod.append(prod)
         Producto.save(to_prod)
 
