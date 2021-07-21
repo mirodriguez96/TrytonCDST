@@ -80,7 +80,7 @@ class Terceros(ModelSQL, ModelView):
         Party = pool.get('party.party')
         Address = pool.get('party.address')
         Lang = pool.get('ir.lang')
-        es, = Lang.search([('code', '=', 'es')])
+        es, = Lang.search([('code', '=', 'es_419')])
         Mcontact = pool.get('party.contact_mechanism')
         to_create = []
 
@@ -130,7 +130,7 @@ class Terceros(ModelSQL, ModelView):
                 if dir[columna_direcciones.index('nit')] == ter[columnas_terceros.index('nit_cedula')]:
                     cant_dir += 1
                     if cant_dir == 1:
-                        tercero.commercial_name = dir[columna_direcciones.index('NombreSucursal')]
+                        tercero.commercial_name = dir[columna_direcciones.index('NombreSucursal')].strip()
                     if dir[columna_direcciones.index('telefono_1')]:
                         #Creacion e inserccion de metodos de contacto
                         contacto = Mcontact()
@@ -154,12 +154,12 @@ class Terceros(ModelSQL, ModelView):
                         contacto.save()
                     #Creacion e inserccion de direcciones
                     direccion = Address()
-                    direccion.city = dir[columna_direcciones.index('ciudad')]
+                    direccion.city = dir[columna_direcciones.index('ciudad')].strip()
                     direccion.country = 50
-                    direccion.name = dir[columna_direcciones.index('Barrio')]
+                    direccion.name = dir[columna_direcciones.index('Barrio')].strip()
                     direccion.party = tercero
                     direccion.party_name = tercero.name
-                    direccion.street = dir[columna_direcciones.index('direccion')]
+                    direccion.street = dir[columna_direcciones.index('direccion')].strip()
                     direccion.save()
             to_create.append(tercero)
         Party.save(to_create)
