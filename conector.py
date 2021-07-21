@@ -193,9 +193,12 @@ class Terceros(ModelSQL, ModelView):
 
         Producto = Pool().get('product.product')
         Template_Product = Pool().get('product.template')
+        Category = Pool().get('product.category')
+        ct, = Category.search([('id', '=', 1)])
         to_prod = []
         for p in productos_tecno:
             prod = Producto()
+            prod.categories = ct
             temp = Template_Product()
             temp.name = p[col_pro.index('Producto')]
             #temp.customs_category = int(p[col_pro.index('IdGrupoProducto')])
