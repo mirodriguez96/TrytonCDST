@@ -198,13 +198,13 @@ class Terceros(ModelSQL, ModelView):
         to_prod = []
         for p in productos_tecno:
             prod = Producto()
-            prod.categories = ct
             temp = Template_Product()
             temp.name = p[col_pro.index('Producto')]
             #temp.customs_category = int(p[col_pro.index('IdGrupoProducto')])
             temp.default_uom = 1
             temp.type = 'goods'
             temp.list_price = int(p[col_pro.index('costo_unitario')])
+            ct.templates = temp
             prod.template = temp
             to_prod.append(prod)
         Producto.save(to_prod)
