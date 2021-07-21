@@ -63,13 +63,13 @@ class Terceros(ModelSQL, ModelView):
                 querycol = cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'TblTerceros' ORDER BY ORDINAL_POSITION")
                 for d in querycol.fetchall():
                     columnas_terceros.append(d[0])
-                query = cursor.execute("SELECT TOP(50) * FROM dbo.TblTerceros")
+                query = cursor.execute("SELECT * FROM dbo.TblTerceros")
                 terceros_tecno = list(query.fetchall())
                 #Datos de direcciones
                 querycol2 = cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'Terceros_Dir' ORDER BY ORDINAL_POSITION")
                 for d in querycol2.fetchall():
                     columna_direcciones.append(d[0])
-                query2 = cursor.execute("SELECT TOP(50) * FROM dbo.Terceros_Dir")
+                query2 = cursor.execute("SELECT * FROM dbo.Terceros_Dir")
                 direcciones_tecno = list(query2.fetchall())
                 cursor.close()
                 conexion.close()
@@ -99,7 +99,7 @@ class Terceros(ModelSQL, ModelView):
             elif ter[columnas_terceros.index('tipo_identificacion')] == '6':
                 tercero.type_document = '12'
             tercero.id_number = ter[columnas_terceros.index('nit_cedula')]
-            #tercero.code = ter[columnas_terceros.index('nit_cedula')]
+            tercero.code = ter[columnas_terceros.index('nit_cedula')]
             tercero.name = ter[columnas_terceros.index('nombre')]
             tercero.first_name = ter[columnas_terceros.index('PrimerNombre')].strip()
             tercero.second_name = ter[columnas_terceros.index('SegundoNombre')].strip()
@@ -205,7 +205,7 @@ class Terceros(ModelSQL, ModelView):
             temp.default_uom = 1
             temp.type = 'goods'
             temp.list_price = int(p[col_pro.index('costo_unitario')])
-            temp.categories = ct
+            temp.account_category = ct
             to_prod.append(prod)
         Producto.save(to_prod)
         
