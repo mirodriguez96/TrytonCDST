@@ -99,7 +99,7 @@ class Terceros(ModelSQL, ModelView):
             elif ter[columnas_terceros.index('tipo_identificacion')] == '6':
                 tercero.type_document = '12'
             tercero.id_number = ter[columnas_terceros.index('nit_cedula')]
-            tercero.code = ter[columnas_terceros.index('nit_cedula')]
+            #tercero.code = ter[columnas_terceros.index('nit_cedula')]
             tercero.name = ter[columnas_terceros.index('nombre')].strip()
             tercero.first_name = ter[columnas_terceros.index('PrimerNombre')].strip()
             tercero.second_name = ter[columnas_terceros.index('SegundoNombre')].strip()
