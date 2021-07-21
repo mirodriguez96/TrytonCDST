@@ -183,7 +183,7 @@ class Terceros(ModelSQL, ModelView):
                 cursor.close()
                 conexion.close()
         except Exception as e:
-            print("ERROR consulta 1: ", e)
+            print("ERROR consulta producto: ", e)
 
         Producto = Pool().get('product.product')
         to_prod = []
