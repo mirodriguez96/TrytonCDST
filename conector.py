@@ -198,7 +198,7 @@ class Terceros(ModelSQL, ModelView):
             prod = Producto()
             temp = Template_Product()
             temp.name = p[col_pro.index('Producto')]
-            temp.customs_category = int(p[col_pro.index('TipoProducto')])
+            #temp.customs_category = int(p[col_pro.index('IdGrupoProducto')])
             temp.default_uom = 1
             temp.type = 'goods'
             temp.list_price = int(p[col_pro.index('costo_unitario')])
