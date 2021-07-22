@@ -45,7 +45,7 @@ class Terceros(ModelSQL, ModelView):
     @classmethod
     @ModelView.button
     def cargar_datos(cls, fecha = None):
-        cls.carga_terceros()
+        #cls.carga_terceros()
         #cls.carga_productos()
         return None
 
@@ -85,83 +85,82 @@ class Terceros(ModelSQL, ModelView):
         to_create = []
 
         for ter in terceros_tecno:
-            if ter[columnas_terceros.index('nit_cedula')].strip() != '98642443' and ter[columnas_terceros.index('nit_cedula')].strip() != '811019092':
-                tercero = Party()
-                tercero.create_date = ter[columnas_terceros.index('fecha_creacion')]
-                #Equivalencia tipo de identificacion
-                if ter[columnas_terceros.index('tipo_identificacion')] == '1':
-                    tercero.type_document = '13'
-                elif ter[columnas_terceros.index('tipo_identificacion')] == '2':
-                    tercero.type_document = '22'
-                elif ter[columnas_terceros.index('tipo_identificacion')] == '3':
-                    tercero.type_document = '31'
-                elif ter[columnas_terceros.index('tipo_identificacion')] == '4':
-                    tercero.type_document = '41'
-                elif ter[columnas_terceros.index('tipo_identificacion')] == '6':
-                    tercero.type_document = '12'
-                tercero.id_number = ter[columnas_terceros.index('nit_cedula')]
-                #tercero.code = ter[columnas_terceros.index('nit_cedula')]
-                tercero.name = ter[columnas_terceros.index('nombre')].strip()
-                tercero.first_name = ter[columnas_terceros.index('PrimerNombre')].strip()
-                tercero.second_name = ter[columnas_terceros.index('SegundoNombre')].strip()
-                tercero.first_family_name = ter[columnas_terceros.index('PrimerApellido')].strip()
-                tercero.second_family_name = ter[columnas_terceros.index('SegundoApellido')].strip()
-                tercero.write_date = ter[columnas_terceros.index('Ultimo_Cambio_Registro')]
+            tercero = Party()
+            tercero.create_date = ter[columnas_terceros.index('fecha_creacion')]
+            #Equivalencia tipo de identificacion
+            if ter[columnas_terceros.index('tipo_identificacion')] == '1':
+                tercero.type_document = '13'
+            elif ter[columnas_terceros.index('tipo_identificacion')] == '2':
+                tercero.type_document = '22'
+            elif ter[columnas_terceros.index('tipo_identificacion')] == '3':
+                tercero.type_document = '31'
+            elif ter[columnas_terceros.index('tipo_identificacion')] == '4':
+                tercero.type_document = '41'
+            elif ter[columnas_terceros.index('tipo_identificacion')] == '6':
+                tercero.type_document = '12'
+            tercero.id_number = ter[columnas_terceros.index('nit_cedula')]
+            #tercero.code = ter[columnas_terceros.index('nit_cedula')]
+            tercero.name = ter[columnas_terceros.index('nombre')].strip()
+            tercero.first_name = ter[columnas_terceros.index('PrimerNombre')].strip()
+            tercero.second_name = ter[columnas_terceros.index('SegundoNombre')].strip()
+            tercero.first_family_name = ter[columnas_terceros.index('PrimerApellido')].strip()
+            tercero.second_family_name = ter[columnas_terceros.index('SegundoApellido')].strip()
+            tercero.write_date = ter[columnas_terceros.index('Ultimo_Cambio_Registro')]
                 
-                #Equivalencia tipo de persona y asignación True en declarante
-                if ter[columnas_terceros.index('TipoPersona')].strip() == 'Natural':
-                    tercero.type_person = 'persona_natural'
-                elif ter[columnas_terceros.index('TipoPersona')].strip() == 'Juridica':
-                    tercero.type_person = 'persona_juridica'
-                    tercero.declarante = True
-                #Verificación e inserción codigo ciiu
-                if ter[columnas_terceros.index('IdActividadEconomica')] != 0:
-                    tercero.ciiu_code = ter[columnas_terceros.index('IdActividadEconomica')]
-                #Equivalencia regimen de impuestos
-                idtipo_contribuyente = int(ter[columnas_terceros.index('IdTipoContribuyente')])
-                if idtipo_contribuyente == 1 or idtipo_contribuyente == 4 or idtipo_contribuyente == 9:
-                    tercero.regime_tax = 'gran_contribuyente'
-                elif idtipo_contribuyente == 2 or idtipo_contribuyente == 5 or idtipo_contribuyente == 6 or idtipo_contribuyente == 7 or idtipo_contribuyente == 8:
-                    tercero.regime_tax = 'regimen_responsable'
-                elif idtipo_contribuyente == 3:
-                    tercero.regime_tax = 'regimen_no_responsable'
-                tercero.lang = es
-                cant_dir = 0
-                for dir in direcciones_tecno:
-                    if dir[columna_direcciones.index('nit')] == ter[columnas_terceros.index('nit_cedula')]:
-                        cant_dir += 1
-                        if cant_dir == 1:
-                            tercero.commercial_name = dir[columna_direcciones.index('NombreSucursal')].strip()
-                        if dir[columna_direcciones.index('telefono_1')]:
-                            #Creacion e inserccion de metodos de contacto
-                            contacto = Mcontact()
-                            contacto.type = 'phone'
-                            contacto.value = dir[columna_direcciones.index('telefono_1')]
-                            contacto.party = tercero
-                            contacto.save()
-                        if dir[columna_direcciones.index('telefono_2')]:
-                            #Creacion e inserccion de metodos de contacto
-                            contacto = Mcontact()
-                            contacto.type = 'phone'
-                            contacto.value = dir[columna_direcciones.index('telefono_2')]
-                            contacto.party = tercero
-                            contacto.save()
-                        if ter[columnas_terceros.index('mail')] != '0':
-                            #Creacion e inserccion de metodos de contacto
-                            contacto = Mcontact()
-                            contacto.type = 'email'
-                            contacto.value = ter[columnas_terceros.index('mail')]
-                            contacto.party = tercero
-                            contacto.save()
-                        #Creacion e inserccion de direcciones
-                        direccion = Address()
-                        direccion.city = dir[columna_direcciones.index('ciudad')].strip()
-                        direccion.country = 50
-                        direccion.name = dir[columna_direcciones.index('Barrio')].strip()
-                        direccion.party = tercero
-                        direccion.party_name = tercero.name
-                        direccion.street = dir[columna_direcciones.index('direccion')].strip()
-                        direccion.save()
+            #Equivalencia tipo de persona y asignación True en declarante
+            if ter[columnas_terceros.index('TipoPersona')].strip() == 'Natural':
+                tercero.type_person = 'persona_natural'
+            elif ter[columnas_terceros.index('TipoPersona')].strip() == 'Juridica':
+                tercero.type_person = 'persona_juridica'
+                tercero.declarante = True
+            #Verificación e inserción codigo ciiu
+            if ter[columnas_terceros.index('IdActividadEconomica')] != 0:
+                tercero.ciiu_code = ter[columnas_terceros.index('IdActividadEconomica')]
+            #Equivalencia regimen de impuestos
+            idtipo_contribuyente = int(ter[columnas_terceros.index('IdTipoContribuyente')])
+            if idtipo_contribuyente == 1 or idtipo_contribuyente == 4 or idtipo_contribuyente == 9:
+                tercero.regime_tax = 'gran_contribuyente'
+            elif idtipo_contribuyente == 2 or idtipo_contribuyente == 5 or idtipo_contribuyente == 6 or idtipo_contribuyente == 7 or idtipo_contribuyente == 8:
+                tercero.regime_tax = 'regimen_responsable'
+            elif idtipo_contribuyente == 3:
+                tercero.regime_tax = 'regimen_no_responsable'
+            tercero.lang = es
+            cant_dir = 0
+            for dir in direcciones_tecno:
+                if dir[columna_direcciones.index('nit')] == ter[columnas_terceros.index('nit_cedula')]:
+                    cant_dir += 1
+                    if cant_dir == 1:
+                        tercero.commercial_name = dir[columna_direcciones.index('NombreSucursal')].strip()
+                    if dir[columna_direcciones.index('telefono_1')]:
+                        #Creacion e inserccion de metodos de contacto
+                        contacto = Mcontact()
+                        contacto.type = 'phone'
+                        contacto.value = dir[columna_direcciones.index('telefono_1')]
+                        contacto.party = tercero
+                        contacto.save()
+                    if dir[columna_direcciones.index('telefono_2')]:
+                        #Creacion e inserccion de metodos de contacto
+                        contacto = Mcontact()
+                        contacto.type = 'phone'
+                        contacto.value = dir[columna_direcciones.index('telefono_2')]
+                        contacto.party = tercero
+                        contacto.save()
+                    if ter[columnas_terceros.index('mail')] != '0':
+                        #Creacion e inserccion de metodos de contacto
+                        contacto = Mcontact()
+                        contacto.type = 'email'
+                        contacto.value = ter[columnas_terceros.index('mail')]
+                        contacto.party = tercero
+                        contacto.save()
+                    #Creacion e inserccion de direcciones
+                    direccion = Address()
+                    direccion.city = dir[columna_direcciones.index('ciudad')].strip()
+                    direccion.country = 50
+                    direccion.name = dir[columna_direcciones.index('Barrio')].strip()
+                    direccion.party = tercero
+                    direccion.party_name = tercero.name
+                    direccion.street = dir[columna_direcciones.index('direccion')].strip()
+                    direccion.save()
             to_create.append(tercero)
         Party.save(to_create)
 
