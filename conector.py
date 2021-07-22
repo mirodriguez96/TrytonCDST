@@ -203,17 +203,17 @@ class Terceros(ModelSQL, ModelView):
             temp = Template_Product()
             temp.name = p[col_pro.index('Producto')]
             #equivalencia del tipo de producto
-            if p[col_pro.index('TipoProducto')].strip() == '5':
+            if p[col_pro.index('TipoProducto')] == '5':
                 temp.type = 'service'
-            elif p[col_pro.index('TipoProducto')].strip() != '1':
+            elif p[col_pro.index('TipoProducto')] != '1':
                 temp.type = 'goods'
                 temp.consumable = True
             else:
                 temp.type = 'goods'
             #equivalencia de unidad de medida
-            if p[col_pro.index('unidad_Inventario')].strip() == '1':
+            if p[col_pro.index('unidad_Inventario')] == '1':
                 temp.default_uom = 2
-            elif p[col_pro.index('unidad_Inventario')].strip() == '3':
+            elif p[col_pro.index('unidad_Inventario')] == '3':
                 temp.default_uom = 5
             else:
                 temp.default_uom = 1
