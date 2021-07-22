@@ -106,7 +106,7 @@ class Terceros(ModelSQL, ModelView):
             tercero.first_family_name = ter[columnas_terceros.index('PrimerApellido')].strip()
             tercero.second_family_name = ter[columnas_terceros.index('SegundoApellido')].strip()
             tercero.write_date = ter[columnas_terceros.index('Ultimo_Cambio_Registro')]
-                
+
             #Equivalencia tipo de persona y asignación True en declarante
             if ter[columnas_terceros.index('TipoPersona')].strip() == 'Natural':
                 tercero.type_person = 'persona_natural'
@@ -193,9 +193,9 @@ class Terceros(ModelSQL, ModelView):
 
         Producto = Pool().get('product.product')
         Template_Product = Pool().get('product.template')
-        Category = Pool().get('product.category')
-        ct, = Category.search([('id', '=', 12)])
-        print(ct.templates)
+        #Category = Pool().get('product.category')
+        #ct, = Category.search([('id', '=', 12)])
+        #print(ct.templates)
         to_prod = []
         
         for p in productos_tecno:
