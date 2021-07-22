@@ -202,11 +202,20 @@ class Terceros(ModelSQL, ModelView):
             prod = Producto()
             temp = Template_Product()
             temp.name = p[col_pro.index('Producto')]
-            #temp.customs_category = int(p[col_pro.index('IdGrupoProducto')])
-            temp.default_uom = 1
-            temp.type = 'goods'
+            #equivalencia del tipo de producto
+            if p[col_pro.index('TipoProducto')] == '5':
+                temp.type = 'service'
+            else:
+                temp.type = 'goods'
+            #equivalencia de unidad de medida
+            if p[col_pro.index('unidad_Inventario')] == '1':
+                temp.default_uom = 2
+            elif p[col_pro.index('unidad_Inventario')] == '3':
+                temp.default_uom = 5
+            else:
+                temp.default_uom = 1
             temp.list_price = int(p[col_pro.index('costo_unitario')])
-            prod.template = temp
+            #prod.template = temp
             to_prod.append(prod)
         Producto.save(to_prod)
 
