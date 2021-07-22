@@ -206,6 +206,7 @@ class Terceros(ModelSQL, ModelView):
         template.name = 'PRODUCTO TEMPLATE'
         template.type = 'goods'
         template.consumable = True
+        template.default_uom = 1
         template.list_price = 2550
         template.categories = [ct]
         producto.template = template
