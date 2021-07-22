@@ -23,6 +23,9 @@ class Terceros(ModelSQL, ModelView):
         cls._buttons.update({
                 'cargar_datos': {},
                 })
+        cls._error_messages.update({
+            'invalid_date': 'Esto no se puede hacer',
+            })
 
     """
     @classmethod
@@ -44,9 +47,10 @@ class Terceros(ModelSQL, ModelView):
 
     @classmethod
     @ModelView.button
-    def cargar_datos(cls, fecha = None):
+    def cargar_datos(self, fecha = None):
         #cls.carga_terceros()
         #cls.carga_productos()
+        self.raise_user_error('invalid_date')
         return None
 
 
