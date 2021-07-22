@@ -201,7 +201,8 @@ class Terceros(ModelSQL, ModelView):
         for p in productos_tecno:
             prod = Producto()
             temp = Template_Product()
-            temp.name = p[col_pro.index('Producto')]
+            prod.code = p[col_pro.index('IdProducto')]
+            temp.name = p[col_pro.index('Producto')].strip()
             #equivalencia del tipo de producto
             if p[col_pro.index('TipoProducto')] == '5':
                 temp.type = 'service'
@@ -218,7 +219,7 @@ class Terceros(ModelSQL, ModelView):
             else:
                 temp.default_uom = 1
             temp.list_price = int(p[col_pro.index('costo_unitario')])
-            #prod.template = temp
+            prod.template = temp
             to_prod.append(prod)
         Producto.save(to_prod)
 
