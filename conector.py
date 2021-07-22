@@ -46,11 +46,11 @@ class Terceros(ModelSQL, ModelView):
 
     @classmethod
     def validate(cls, terceros):
-        for book in terceros:
-            if not book.actualizacion:
+        for ter in terceros:
+            if not ter.actualizacion:
                 continue
             try:
-                if int(book.actualizacion) < 0:
+                if int(ter.actualizacion) < 0:
                     raise ValueError
             except ValueError:
                 cls.raise_user_error('invalid_isbn')
@@ -66,7 +66,7 @@ class Terceros(ModelSQL, ModelView):
     def cargar_datos(self, fecha = None):
         #cls.carga_terceros()
         #cls.carga_productos()
-        self.raise_user_error('invalid_date')
+        self.raise_user_error('invalid_isbn')
         return None
 
 
