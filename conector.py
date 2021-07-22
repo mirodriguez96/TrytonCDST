@@ -193,8 +193,8 @@ class Terceros(ModelSQL, ModelView):
 
         Producto = Pool().get('product.product')
         Template_Product = Pool().get('product.template')
-        #Category = Pool().get('product.category')
-        #ct, = Category.search([('id', '=', 1)])
+        Category = Pool().get('product.category')
+        ct, = Category.search([('id', '=', 1)])
         #print(ct.templates)
         to_prod = []
 
@@ -207,7 +207,7 @@ class Terceros(ModelSQL, ModelView):
         template.type = 'goods'
         template.consumable = True
         template.list_price = 2550
-        template.categories = [('add', 2)]
+        template.categories = [ct]
         producto.template = template
         to_prod.append(producto)
 
