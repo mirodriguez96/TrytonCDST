@@ -194,10 +194,24 @@ class Terceros(ModelSQL, ModelView):
         Producto = Pool().get('product.product')
         Template_Product = Pool().get('product.template')
         #Category = Pool().get('product.category')
-        #ct, = Category.search([('id', '=', 12)])
+        #ct, = Category.search([('id', '=', 1)])
         #print(ct.templates)
         to_prod = []
-        
+
+        producto = Producto()
+        producto.code = '007'
+        producto.description = 'esto es una descripcion de prueba'
+        template = Template_Product()
+        template.code = '07'
+        template.name = 'PRODUCTO TEMPLATE'
+        template.type = 'goods'
+        template.consumable = True
+        template.list_price = 2550
+        template.categories = 2
+        producto.template = template
+        to_prod.append(producto)
+
+        """
         for p in productos_tecno:
             prod = Producto()
             temp = Template_Product()
@@ -219,9 +233,10 @@ class Terceros(ModelSQL, ModelView):
             else:
                 temp.default_uom = 1
             temp.list_price = int(p[col_pro.index('costo_unitario')])
-            temp.account_category = int(p[col_pro.index('TipoProducto')])
+            temp.account_category = int(p[col_pro.index('IdGrupoProducto')])
             prod.template = temp
             to_prod.append(prod)
+        """
         Producto.save(to_prod)
 
 
