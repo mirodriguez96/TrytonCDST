@@ -16,18 +16,15 @@ class Terceros(ModelSQL, ModelView):
     actualizacion = fields.Char('Actualizacion', required=True)
     fecha = fields.DateTime('Fecha y hora', format="%H:%M:%S", required=True)
 
-
+    """
     @classmethod
     def __setup__(cls):
         super().__setup__()
         cls._buttons.update({
                 'cargar_datos': {},
                 })
-        cls._error_messages.update({
-            'invalid_date': 'Esto no se puede hacer',
-            })
 
-    """
+    
     @classmethod
     def validate(cls, books):
         for book in books:
@@ -39,6 +36,25 @@ class Terceros(ModelSQL, ModelView):
             except ValueError:
                 cls.raise_user_error('invalid_isbn')
     """
+
+    @classmethod
+    def __setup__(cls):
+        super().__setup__()
+        cls._error_messages.update({
+                'invalid_isbn': 'ISBN should only be digits',
+                })
+
+    @classmethod
+    def validate(cls, terceros):
+        for book in terceros:
+            if not book.actualizacion:
+                continue
+            try:
+                if int(book.actualizacion) < 0:
+                    raise ValueError
+            except ValueError:
+                cls.raise_user_error('invalid_isbn')
+
 
     @classmethod
     def default_fecha(cls):
