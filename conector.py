@@ -195,42 +195,45 @@ class Terceros(ModelSQL, ModelView):
         to_categorias = []
         for categoria in grupos_producto:
             existe = cls.buscar_categoria(str(categoria[col_gproducto.index('IdGrupoProducto')])+'-'+categoria[col_gproducto.index('GrupoProducto')])
-            if existe:
+            if not existe:
                 categoria_prod = Category()
                 categoria_prod.name = str(categoria[col_gproducto.index('IdGrupoProducto')])+'-'+categoria[col_gproducto.index('GrupoProducto')]
                 to_categorias.append(categoria_prod)
         Category.save(to_categorias)
-        """
+        
         Producto = Pool().get('product.product')
         Template_Product = Pool().get('product.template')
         to_producto = []
-        for p in productos_tecno:
-            prod = Producto()
-            ct, = Category.search([('id', '=', p[col_pro.index('IdGrupoProducto')])])
-            temp = Template_Product()
-            temp.code = p[col_pro.index('IdProducto')]
-            temp.name = p[col_pro.index('Producto')].strip()
-            #equivalencia del tipo de producto
-            if p[col_pro.index('TipoProducto')] == '5':
-                temp.type = 'service'
-            elif p[col_pro.index('TipoProducto')] != '1':
-                temp.type = 'goods'
-                temp.consumable = True
+        for producto in productos_tecno:
+            existe = cls.buscar_producto(producto[col_pro.index('IdProducto')])
+            if existe:
+                ct, = Category.search([('id', '=', producto[col_pro.index('IdGrupoProducto')])])
+                existe.template.name = producto[col_pro.index('Producto')].strip()
+                existe.template.type = cls.tipo_producto(producto[col_pro.index('maneja_inventario')].strip())
+                if producto[col_pro.index('unidad_Inventario')] == 1:
+                    existe.template.default_uom = 2
+                else:
+                    existe.template.default_uom = 1
+                existe.template.categories = [ct]
+                existe.save()
             else:
-                temp.type = 'goods'
-            #equivalencia de unidad de medida
-            if p[col_pro.index('unidad_Inventario')] == 1:
-                temp.default_uom = 2
-            elif p[col_pro.index('unidad_Inventario')] == 3:
-                temp.default_uom = 5
-            else:
-                temp.default_uom = 1
-            temp.list_price = int(p[col_pro.index('costo_unitario')])
-            temp.categories = [ct]
-            prod.template = temp
-            to_producto.append(prod)
+                prod = Producto()
+                ct, = Category.search([('id', '=', producto[col_pro.index('IdGrupoProducto')])])
+                temp = Template_Product()
+                temp.code = producto[col_pro.index('IdProducto')]
+                temp.name = producto[col_pro.index('Producto')].strip()
+                temp.type = cls.tipo_producto(producto[col_pro.index('maneja_inventario')].strip())
+                #equivalencia de unidad de medida
+                if producto[col_pro.index('unidad_Inventario')] == 1:
+                    temp.default_uom = 2
+                else:
+                    temp.default_uom = 1
+                temp.list_price = int(producto[col_pro.index('costo_unitario')])
+                temp.categories = [ct]
+                prod.template = temp
+                to_producto.append(prod)
         Producto.save(to_producto)
-        """
+        
 
     @classmethod
     def buscar_categoria(cls, id_categoria):
@@ -238,10 +241,27 @@ class Terceros(ModelSQL, ModelView):
         try:
             categoria_producto, = Category.search([('name', '=', id_categoria)])
         except ValueError:
-            return True
-        else:
             return False
+        else:
+            return True
 
+    @classmethod
+    def buscar_producto(cls, id_producto):
+        Product = Pool().get('product.product')
+        try:
+            producto, = Product.search([('code', '=', id_producto)])
+        except ValueError:
+            return False
+        else:
+            return producto
+
+    @classmethod
+    def tipo_producto(cls, inventario):
+        #equivalencia del tipo de producto (si maneja inventario o no)
+        if inventario == 'N':
+            return 'service'
+        else:
+            return 'goods'
 
 """
     @classmethod
