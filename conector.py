@@ -172,6 +172,7 @@ class Terceros(ModelSQL, ModelView):
         col_gproducto = []
         grupos_producto = []
         try:
+            #Con el with se cierra automaticamente el cursor
             with conexion.cursor() as cursor:
                 #Grupo de productos (categorias)
                 query_gproducto = cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'TblGrupoProducto' ORDER BY ORDINAL_POSITION")
@@ -187,11 +188,8 @@ class Terceros(ModelSQL, ModelView):
                     col_pro.append(d[0])
                 query = cursor.execute("SELECT * FROM dbo.TblProducto")
                 productos_tecno = list(query.fetchall())
-                #cursor.close()
         except Exception as e:
             print("ERROR consulta producto: ", e)
-        finally:
-            conexion.close()
 
         Category = Pool().get('product.category')
         to_categorias = []
