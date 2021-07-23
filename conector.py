@@ -225,7 +225,7 @@ class Terceros(ModelSQL, ModelView):
             else:
                 temp.type = 'goods'
             #equivalencia de unidad de medida
-            print(p[col_pro.index('unidad_Inventario')] +' --> ' +type(p[col_pro.index('unidad_Inventario')]))
+            #print(p[col_pro.index('unidad_Inventario')] +' --> ' +type(p[col_pro.index('unidad_Inventario')]))
             if p[col_pro.index('unidad_Inventario')] == 1:
                 temp.default_uom = 2
             elif p[col_pro.index('unidad_Inventario')] == 3:
