@@ -212,7 +212,7 @@ class Terceros(ModelSQL, ModelView):
         """
         for p in productos_tecno:
             prod = Producto()
-            ct = Category.search([('id', '=', p[col_pro.index('IdGrupoProducto')])])
+            ct = Category.search([('id', '=', 1)])
             temp = Template_Product()
             temp.code = p[col_pro.index('IdProducto')]
             temp.name = p[col_pro.index('Producto')].strip()
