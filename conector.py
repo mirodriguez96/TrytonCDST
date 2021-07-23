@@ -195,10 +195,10 @@ class Terceros(ModelSQL, ModelView):
         Category = Pool().get('product.category')
         to_categorias = []
         for categoria in grupos_producto:
-            existe = cls.buscar_categoria(categoria[col_gproducto.index('GrupoProducto')])
+            existe = cls.buscar_categoria(str(categoria[col_gproducto.index('IdGrupoProducto')])+'-'+categoria[col_gproducto.index('GrupoProducto')])
             if existe:
                 categoria_prod = Category()
-                categoria_prod.name = categoria[col_gproducto.index('GrupoProducto')]
+                categoria_prod.name = str(categoria[col_gproducto.index('IdGrupoProducto')])+'-'+categoria[col_gproducto.index('GrupoProducto')]
                 to_categorias.append(categoria_prod)
         Category.save(to_categorias)
         """
