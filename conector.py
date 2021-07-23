@@ -179,7 +179,7 @@ class Terceros(ModelSQL, ModelView):
                     col_gproducto.append(g[0])
                 query_r_gproducto = cursor.execute("SELECT * FROM dbo.TblGrupoProducto")
                 grupos_producto = list(query_r_gproducto.fetchall())
-                print(grupos_producto)
+                #print(grupos_producto)
 
                 #Datos de productos
                 querycol = cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'TblProducto' ORDER BY ORDINAL_POSITION")
@@ -198,7 +198,7 @@ class Terceros(ModelSQL, ModelView):
             existe = cls.buscar_categoria(str(categoria[col_gproducto.index('IdGrupoProducto')])+'-'+categoria[col_gproducto.index('GrupoProducto')])
             if existe:
                 categoria_prod = Category()
-                categoria_prod.name = categoria[col_gproducto('GrupoProducto')]
+                categoria_prod.name = categoria[col_gproducto.index('GrupoProducto')]
                 to_categorias.append(categoria_prod)
         Category.save(to_categorias)
         """
