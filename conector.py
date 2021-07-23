@@ -195,7 +195,7 @@ class Terceros(ModelSQL, ModelView):
         Category = Pool().get('product.category')
         to_categorias = []
         for categoria in grupos_producto:
-            if cls.buscar_categoria(categoria[col_gproducto('IdGrupoProducto')]+'-'+categoria[col_gproducto('GrupoProducto')]) == None:
+            if cls.buscar_categoria(categoria[col_gproducto('IdGrupoProducto')]+'-'+categoria[col_gproducto('GrupoProducto')]):
                 categoria_prod = Category()
                 categoria_prod.name = categoria[col_gproducto('GrupoProducto')]
                 to_categorias.append(categoria_prod)
@@ -238,9 +238,9 @@ class Terceros(ModelSQL, ModelView):
         try:
             categoria_producto, = Category.search([('name', '=', id_categoria)])
         except ValueError:
-            return None
-        else:
             return True
+        else:
+            return False
 
 
 """
