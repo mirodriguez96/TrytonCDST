@@ -169,16 +169,17 @@ class Terceros(ModelSQL, ModelView):
     def carga_productos(cls):
         productos_tecno = []
         col_pro = []
-        #col_gproducto = []
-        #grupos_producto = []
+        col_gproducto = []
+        grupos_producto = []
         try:
             with conexion.cursor() as cursor:
                 #Grupo de productos (categorias)
-                #query_gproducto = cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'TblGrupoProducto' ORDER BY ORDINAL_POSITION")
-                #for g in query_gproducto.fetchall():
-                    #col_gproducto.append(g[0])
-                #query_r_gproducto = cursor.execute("SELECT * FROM dbo.TblGrupoProducto")
-                #grupos_producto = list(query_r_gproducto.fetchall())
+                query_gproducto = cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'TblGrupoProducto' ORDER BY ORDINAL_POSITION")
+                for g in query_gproducto.fetchall():
+                    col_gproducto.append(g[0])
+                query_r_gproducto = cursor.execute("SELECT * FROM dbo.TblGrupoProducto")
+                grupos_producto = list(query_r_gproducto.fetchall())
+                print(grupos_producto)
 
                 #Datos de productos
                 querycol = cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'TblProducto' ORDER BY ORDINAL_POSITION")
@@ -191,25 +192,18 @@ class Terceros(ModelSQL, ModelView):
         except Exception as e:
             print("ERROR consulta producto: ", e)
 
+        Category = Pool().get('product.category')
+        to_categorias = []
+        for categoria in grupos_producto:
+            if cls.buscar_categoria(categoria[col_gproducto('IdGrupoProducto')]+'-'+categoria[col_gproducto('GrupoProducto')]) == None:
+                categoria_prod = Category()
+                categoria_prod.name = categoria[col_gproducto('GrupoProducto')]
+                to_categorias.append(categoria_prod)
+        Category.save(to_categorias)
+        """
         Producto = Pool().get('product.product')
         Template_Product = Pool().get('product.template')
-        Category = Pool().get('product.category')
-        to_prod = []
-        """
-        producto = Producto()
-        producto.code = '007'
-        producto.description = 'esto es una descripcion de prueba'
-        template = Template_Product()
-        template.code = '07'
-        template.name = 'PRODUCTO TEMPLATE'
-        template.type = 'goods'
-        template.consumable = True
-        template.default_uom = 1
-        template.list_price = 2550
-        template.categories = [ct]
-        producto.template = template
-        to_prod.append(producto)
-        """
+        to_producto = []
         for p in productos_tecno:
             prod = Producto()
             ct, = Category.search([('id', '=', p[col_pro.index('IdGrupoProducto')])])
@@ -225,7 +219,6 @@ class Terceros(ModelSQL, ModelView):
             else:
                 temp.type = 'goods'
             #equivalencia de unidad de medida
-            #print(p[col_pro.index('unidad_Inventario')] +' --> ' +type(p[col_pro.index('unidad_Inventario')]))
             if p[col_pro.index('unidad_Inventario')] == 1:
                 temp.default_uom = 2
             elif p[col_pro.index('unidad_Inventario')] == 3:
@@ -235,8 +228,19 @@ class Terceros(ModelSQL, ModelView):
             temp.list_price = int(p[col_pro.index('costo_unitario')])
             temp.categories = [ct]
             prod.template = temp
-            to_prod.append(prod)
-        Producto.save(to_prod)
+            to_producto.append(prod)
+        Producto.save(to_producto)
+        """
+
+    @classmethod
+    def buscar_categoria(cls, id_categoria):
+        Category = Pool().get('product.category')
+        try:
+            categoria_producto, = Category.search([('name', '=', id_categoria)])
+        except ValueError:
+            return None
+        else:
+            return True
 
 
 """
