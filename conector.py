@@ -207,18 +207,18 @@ class Terceros(ModelSQL, ModelView):
         for producto in productos_tecno:
             existe = cls.buscar_producto(producto[col_pro.index('IdProducto')])
             if existe:
-                ct, = Category.search([('id', '=', producto[col_pro.index('IdGrupoProducto')])])
+                cate, = Category.search([('name', '=', str(categoria[col_gproducto.index('IdGrupoProducto')])+'-'+categoria[col_gproducto.index('GrupoProducto')])])
                 existe.template.name = producto[col_pro.index('Producto')].strip()
                 existe.template.type = cls.tipo_producto(producto[col_pro.index('maneja_inventario')].strip())
                 if producto[col_pro.index('unidad_Inventario')] == 1:
                     existe.template.default_uom = 2
                 else:
                     existe.template.default_uom = 1
-                existe.template.categories = [ct]
+                existe.template.categories = [cate]
                 existe.save()
             else:
                 prod = Producto()
-                ct, = Category.search([('id', '=', producto[col_pro.index('IdGrupoProducto')])])
+                ct, = Category.search([('name', '=', str(categoria[col_gproducto.index('IdGrupoProducto')])+'-'+categoria[col_gproducto.index('GrupoProducto')])])
                 temp = Template_Product()
                 temp.code = producto[col_pro.index('IdProducto')]
                 temp.name = producto[col_pro.index('Producto')].strip()
