@@ -200,14 +200,15 @@ class Terceros(ModelSQL, ModelView):
                 categoria_prod.name = str(categoria[col_gproducto.index('IdGrupoProducto')])+'-'+categoria[col_gproducto.index('GrupoProducto')]
                 to_categorias.append(categoria_prod)
         Category.save(to_categorias)
-        
+
         Producto = Pool().get('product.product')
         Template_Product = Pool().get('product.template')
         to_producto = []
         for producto in productos_tecno:
             existe = cls.buscar_producto(producto[col_pro.index('IdProducto')])
             if existe:
-                cate, = Category.search([('name', '=', str(categoria[col_gproducto.index('IdGrupoProducto')])+'-'+categoria[col_gproducto.index('GrupoProducto')])])
+                name_categoria = str(categoria[col_gproducto.index('IdGrupoProducto')])+'-'+categoria[col_gproducto.index('GrupoProducto')]
+                categ, = Category.search([('name', '=', name_categoria)])
                 existe.template.name = producto[col_pro.index('Producto')].strip()
                 existe.template.type = cls.tipo_producto(producto[col_pro.index('maneja_inventario')].strip())
                 if producto[col_pro.index('unidad_Inventario')] == 1:
@@ -215,11 +216,12 @@ class Terceros(ModelSQL, ModelView):
                 else:
                     existe.template.default_uom = 1
                 existe.template.list_price = int(producto[col_pro.index('costo_unitario')])
-                existe.template.categories = [cate]
+                existe.template.categories = [categ]
                 existe.save()
             else:
                 prod = Producto()
-                ct, = Category.search([('name', '=', str(categoria[col_gproducto.index('IdGrupoProducto')])+'-'+categoria[col_gproducto.index('GrupoProducto')])])
+                name_categoria = str(categoria[col_gproducto.index('IdGrupoProducto')])+'-'+categoria[col_gproducto.index('GrupoProducto')]
+                ct, = Category.search([('name', '=', name_categoria)])
                 temp = Template_Product()
                 temp.code = producto[col_pro.index('IdProducto')]
                 temp.name = producto[col_pro.index('Producto')].strip()
