@@ -184,7 +184,7 @@ class Terceros(ModelSQL, ModelView):
                 querycol = cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'TblProducto' ORDER BY ORDINAL_POSITION")
                 for d in querycol.fetchall():
                     col_pro.append(d[0])
-                query = cursor.execute("SELECT TOP(100) * FROM dbo.TblProducto")
+                query = cursor.execute("SELECT * FROM dbo.TblProducto")
                 productos_tecno = list(query.fetchall())
                 cursor.close()
                 conexion.close()
@@ -194,10 +194,8 @@ class Terceros(ModelSQL, ModelView):
         Producto = Pool().get('product.product')
         Template_Product = Pool().get('product.template')
         Category = Pool().get('product.category')
-        ct, = Category.search([('id', '=', 1)])
-        #print(ct.templates)
         to_prod = []
-
+        """
         producto = Producto()
         producto.code = '007'
         producto.description = 'esto es una descripcion de prueba'
@@ -211,10 +209,10 @@ class Terceros(ModelSQL, ModelView):
         template.categories = [ct]
         producto.template = template
         to_prod.append(producto)
-
         """
         for p in productos_tecno:
             prod = Producto()
+            ct = Category.search([('id', '=', int(p[col_pro.index('IdGrupoProducto')]))])
             temp = Template_Product()
             temp.code = p[col_pro.index('IdProducto')]
             temp.name = p[col_pro.index('Producto')].strip()
@@ -234,10 +232,9 @@ class Terceros(ModelSQL, ModelView):
             else:
                 temp.default_uom = 1
             temp.list_price = int(p[col_pro.index('costo_unitario')])
-            temp.account_category = int(p[col_pro.index('IdGrupoProducto')])
+            temp.categories = [ct]
             prod.template = temp
             to_prod.append(prod)
-        """
         Producto.save(to_prod)
 
 
