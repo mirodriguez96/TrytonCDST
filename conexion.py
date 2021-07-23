@@ -1,6 +1,6 @@
 import pyodbc
 
-server = 'tcp:192.168.1.127,10433'
+server = 'tcp:200.29.236.12,10433'
 db = 'TecnoCarnes'
 user = 'sa'
 password = '3.1416.asd*'

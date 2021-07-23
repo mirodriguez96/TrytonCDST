@@ -187,10 +187,11 @@ class Terceros(ModelSQL, ModelView):
                     col_pro.append(d[0])
                 query = cursor.execute("SELECT * FROM dbo.TblProducto")
                 productos_tecno = list(query.fetchall())
-                cursor.close()
-                conexion.close()
+                #cursor.close()
         except Exception as e:
             print("ERROR consulta producto: ", e)
+        finally:
+            conexion.close()
 
         Category = Pool().get('product.category')
         to_categorias = []
