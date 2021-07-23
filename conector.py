@@ -214,6 +214,7 @@ class Terceros(ModelSQL, ModelView):
                     existe.template.default_uom = 2
                 else:
                     existe.template.default_uom = 1
+                existe.template.list_price = int(producto[col_pro.index('costo_unitario')])
                 existe.template.categories = [cate]
                 existe.save()
             else:
