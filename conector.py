@@ -110,9 +110,10 @@ class Terceros(ModelSQL, ModelView):
                         if cant_dir == 1:
                             exists.commercial_name = dir[columna_direcciones.index('NombreSucursal')].strip()
                         contacts = cls.find_contact_mechanism(exists.id)
+                        if contacts:
+                            contacts[0].value = '2252828'
+                            contacts[0].save()
                         print(contacts)
-                        #contacts[0].value = '2252828'
-                        contacts[0].save()
                         #Actualización de la dirección
                         direccion = cls.find_address(exists.id)
                         direccion.city = dir[columna_direcciones.index('ciudad')].strip()
