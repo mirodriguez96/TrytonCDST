@@ -110,18 +110,8 @@ class Terceros(ModelSQL, ModelView):
                         if cant_dir == 1:
                             exists.commercial_name = dir[columna_direcciones.index('NombreSucursal')].strip()
                         contacts = cls.find_contact_mechanism(exists)
-                        contador = 0
-                        for contm in range(3):
-                            campo = None
-                            if contador == 0:
-                                campo = 'telefono_1'
-                            elif contador == 1:
-                                campo = 'telefono_2'
-                            else:
-                                campo = 'mail'
-                            contacts[contador].value = dir[columna_direcciones.index(campo)]
-                            contacts[contador].save()
-                            contador += 1
+                        contacts[0].value = '2252828'
+                        contacts[0].save()
                         #Actualización de la dirección
                         direccion = cls.find_address(exists)
                         direccion.city = dir[columna_direcciones.index('ciudad')].strip()
@@ -365,7 +355,7 @@ class Terceros(ModelSQL, ModelView):
     def find_contact_mechanism(cls, party):
         Contact = Pool().get('party.contact_mechanism')
         try:
-            contact, = Contact.search([('party', '=', party)])
+            contact, = Contact.search([('party', '=', party)], limit=3)
         except ValueError:
             return False
         else:
