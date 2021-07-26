@@ -207,7 +207,6 @@ class Terceros(ModelSQL, ModelView):
         for producto in productos_tecno:
             existe = cls.buscar_producto(producto[col_pro.index('IdProducto')])
             if existe:
-                existe, = Producto.search([('code', '=', producto[col_pro.index('IdProducto')])])
                 name_categoria = None
                 for categoria in grupos_producto:
                     if categoria[col_gproducto.index('IdGrupoProducto')] == producto[col_pro.index('IdGrupoProducto')]:
@@ -221,7 +220,7 @@ class Terceros(ModelSQL, ModelView):
                     existe.template.default_uom = 1
                 existe.template.list_price = int(producto[col_pro.index('costo_unitario')])
                 existe.template.categories = [categoria_producto]
-                existe.save()
+                existe.template.save()
                 #to_producto.append(existe)
             else:
                 prod = Producto()
@@ -264,7 +263,7 @@ class Terceros(ModelSQL, ModelView):
         except ValueError:
             return False
         else:
-            return True
+            return producto
 
     @classmethod
     def tipo_producto(cls, inventario):
