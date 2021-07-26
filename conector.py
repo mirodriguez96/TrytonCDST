@@ -207,6 +207,7 @@ class Terceros(ModelSQL, ModelView):
         for producto in productos_tecno:
             existe = cls.buscar_producto(producto[col_pro.index('IdProducto')])
             if existe:
+                print(existe.template.name)
                 name_categoria = str(categoria[col_gproducto.index('IdGrupoProducto')])+'-'+categoria[col_gproducto.index('GrupoProducto')]
                 categ, = Category.search([('name', '=', name_categoria)])
                 existe.template.name = producto[col_pro.index('Producto')].strip()
