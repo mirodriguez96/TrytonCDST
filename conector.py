@@ -211,6 +211,7 @@ class Terceros(ModelSQL, ModelView):
                 for categoria in grupos_producto:
                     if categoria[col_gproducto.index('IdGrupoProducto')] == producto[col_pro.index('IdGrupoProducto')]:
                         name_categoria = str(categoria[col_gproducto.index('IdGrupoProducto')])+'-'+categoria[col_gproducto.index('GrupoProducto')]
+                categoria_producto, = Category.search([('name', '=', name_categoria)])
                 existe.template.name = producto[col_pro.index('Producto')].strip()
                 existe.template.type = cls.tipo_producto(producto[col_pro.index('maneja_inventario')].strip())
                 if producto[col_pro.index('unidad_Inventario')] == 1:
@@ -218,7 +219,7 @@ class Terceros(ModelSQL, ModelView):
                 else:
                     existe.template.default_uom = 1
                 existe.template.list_price = int(producto[col_pro.index('costo_unitario')])
-                existe.template.categories = [name_categoria]
+                existe.template.categories = [categoria_producto]
                 existe.save()
                 #to_producto.append(existe)
             else:
@@ -227,6 +228,7 @@ class Terceros(ModelSQL, ModelView):
                 for categoria in grupos_producto:
                     if categoria[col_gproducto.index('IdGrupoProducto')] == producto[col_pro.index('IdGrupoProducto')]:
                         name_categoria = str(categoria[col_gproducto.index('IdGrupoProducto')])+'-'+categoria[col_gproducto.index('GrupoProducto')]
+                categoria_producto, = Category.search([('name', '=', name_categoria)])
                 temp = Template_Product()
                 temp.code = producto[col_pro.index('IdProducto')]
                 temp.name = producto[col_pro.index('Producto')].strip()
@@ -237,7 +239,7 @@ class Terceros(ModelSQL, ModelView):
                 else:
                     temp.default_uom = 1
                 temp.list_price = int(producto[col_pro.index('costo_unitario')])
-                temp.categories = [name_categoria]
+                temp.categories = [categoria_producto]
                 prod.template = temp
                 to_producto.append(prod)
         Producto.save(to_producto)
