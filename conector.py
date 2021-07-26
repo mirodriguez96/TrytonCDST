@@ -207,6 +207,7 @@ class Terceros(ModelSQL, ModelView):
         for producto in productos_tecno:
             existe = cls.buscar_producto(producto[col_pro.index('IdProducto')])
             if existe:
+                existe, = Producto.search([('code', '=', producto[col_pro.index('IdProducto')])])
                 name_categoria = None
                 for categoria in grupos_producto:
                     if categoria[col_gproducto.index('IdGrupoProducto')] == producto[col_pro.index('IdGrupoProducto')]:
@@ -263,7 +264,7 @@ class Terceros(ModelSQL, ModelView):
         except ValueError:
             return False
         else:
-            return producto
+            return True
 
     @classmethod
     def tipo_producto(cls, inventario):
