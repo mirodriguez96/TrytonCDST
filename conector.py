@@ -3,7 +3,7 @@ from conexion import conexion
 from trytond.model import ModelSQL, ModelView, fields
 from trytond.pool import Pool
 import datetime
-import json
+from trytond.transaction import Transaction
 
 __all__ = [
     'Terceros',
@@ -357,5 +357,9 @@ class Terceros(ModelSQL, ModelView):
     @classmethod
     def find_contact_mechanism(cls, party):
         Contact = Pool().get('party.contact_mechanism')
-        contact, = Contact.search([], [('party', '=', party.id)])
-        print(contact)
+        contact = Contact.__table__()
+        #contact, = Contact.search([], [('party', '=', party.id)])
+        cursor = Transaction().connection.cursor()
+        cursor.execute(*contact.select(contact.type, contact.value, where=(contact.party == party.id)))
+        result = cursor.fetchall()
+        print(result)
