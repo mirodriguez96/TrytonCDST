@@ -109,7 +109,7 @@ class Terceros(ModelSQL, ModelView):
                         cant_dir += 1
                         if cant_dir == 1:
                             exists.commercial_name = dir[columna_direcciones.index('NombreSucursal')].strip()
-                        contacts = cls.find_contact_mechanism(exists)
+                        contacts = cls.find_contact_mechanism(exists.id)
                         print(contacts)
                         #contacts[0].value = '2252828'
                         contacts[0].save()
@@ -356,7 +356,8 @@ class Terceros(ModelSQL, ModelView):
     def find_contact_mechanism(cls, party):
         Contact = Pool().get('party.contact_mechanism')
         try:
-            contact, = Contact.search([('party', '=', party.id)])
+            print(party)
+            contact, = Contact.search([('party', '=', party)])
             print(contact)
         except ValueError:
             return False
