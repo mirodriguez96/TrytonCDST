@@ -114,7 +114,7 @@ class Terceros(ModelSQL, ModelView):
                         #contacts[0].value = '2252828'
                         contacts[0].save()
                         #Actualización de la dirección
-                        direccion = cls.find_address(exists)
+                        direccion = cls.find_address(exists.id)
                         direccion.city = dir[columna_direcciones.index('ciudad')].strip()
                         direccion.name = dir[columna_direcciones.index('Barrio')].strip()
                         direccion.street = dir[columna_direcciones.index('direccion')].strip()
