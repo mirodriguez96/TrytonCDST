@@ -71,8 +71,6 @@ class Terceros(ModelSQL, ModelView):
                     columna_direcciones.append(d[0])
                 query2 = cursor.execute("SELECT * FROM dbo.Terceros_Dir")
                 direcciones_tecno = list(query2.fetchall())
-                cursor.close()
-                conexion.close()
         except Exception as e:
             print("ERROR consulta terceros: ", e)
         
@@ -112,17 +110,17 @@ class Terceros(ModelSQL, ModelView):
                         if cant_dir == 1:
                             exists.commercial_name = dir[columna_direcciones.index('NombreSucursal')].strip()
                         contacts = cls.find_contact_mechanism(exists)
-                        contador = 1
-                        for contm in contacts:
+                        contador = 0
+                        for contm in range(3):
                             campo = None
-                            if contador == 1:
+                            if contador == 0:
                                 campo = 'telefono_1'
                             elif contador == 1:
                                 campo = 'telefono_2'
                             else:
                                 campo = 'mail'
-                            contm.value = dir[columna_direcciones.index(campo)]
-                            contm.save()
+                            contacts[contador].value = dir[columna_direcciones.index(campo)]
+                            contacts[contador].save()
                             contador += 1
                         #Actualización de la dirección
                         direccion = cls.find_address(exists)
