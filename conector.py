@@ -357,10 +357,4 @@ class Terceros(ModelSQL, ModelView):
     @classmethod
     def find_contact_mechanism(cls, party):
         Contact = Pool().get('party.contact_mechanism')
-        try:
-            print(party.id)
-            contact, = Contact.search([('party', '=', party.id)])
-        except ValueError:
-            return False
-        else:
-            return contact
+        contact, = Contact.search([('party', '=', party.id)])
