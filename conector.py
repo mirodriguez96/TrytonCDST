@@ -119,7 +119,7 @@ class Terceros(ModelSQL, ModelView):
                                 elif j == 1:
                                     contm.value = dir[columna_direcciones.index('telefono_2')]
                                 else:
-                                    contm.value = dir[columna_direcciones.index('mail')]
+                                    contm.value = dir[columnas_terceros.index('mail')]
                                 contm.save()
                                 j += 1
                         address = cls.find_address(exists)
