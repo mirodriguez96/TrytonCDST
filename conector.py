@@ -110,7 +110,10 @@ class Terceros(ModelSQL, ModelView):
                         if cant_dir == 1:
                             exists.commercial_name = dir[columna_direcciones.index('NombreSucursal')].strip()
                         contacts = cls.find_contact_mechanism(exists)
+                        print('------------------------')
                         print(contacts)
+                        print('------------------------')
+                        """
                         if contacts:
                             contacts[0].value = '2252828'
                             contacts[0].save()
@@ -121,6 +124,7 @@ class Terceros(ModelSQL, ModelView):
                             direccion.name = dir[columna_direcciones.index('Barrio')].strip()
                             direccion.street = dir[columna_direcciones.index('direccion')].strip()
                             direccion.save()
+                        """
                 exists.save()
             else:
                 tercero = Party()
