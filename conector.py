@@ -124,7 +124,9 @@ class Terceros(ModelSQL, ModelView):
                                 j += 1
                         address = cls.find_address(exists)
                         if address:
+                            print(len(address))
                             for addr in address:
+                                print(addr[0])
                                 address_party = Address.search([('id', '=', addr[0])])
                                 address_party.city = dir[columna_direcciones.index('ciudad')].strip()
                                 address_party.name = dir[columna_direcciones.index('Barrio')].strip()
