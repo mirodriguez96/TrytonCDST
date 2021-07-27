@@ -63,7 +63,7 @@ class Terceros(ModelSQL, ModelView):
                 querycol = cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'TblTerceros' ORDER BY ORDINAL_POSITION")
                 for d in querycol.fetchall():
                     columnas_terceros.append(d[0])
-                query = cursor.execute("SELECT TOP(10) * FROM dbo.TblTerceros")
+                query = cursor.execute("SELECT TOP(100) * FROM dbo.TblTerceros")
                 terceros_tecno = list(query.fetchall())
                 #Datos de direcciones
                 querycol2 = cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'Terceros_Dir' ORDER BY ORDINAL_POSITION")
