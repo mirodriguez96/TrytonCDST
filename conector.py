@@ -126,10 +126,9 @@ class Terceros(ModelSQL, ModelView):
                         if address:
                             for addr in address:
                                 address_party = Address.search([('id', '=', addr[0])])
-                                print(address_party[0])
-                                address_party.city = dir[columna_direcciones.index('ciudad')].strip()
                                 address_party.name = dir[columna_direcciones.index('Barrio')].strip()
                                 address_party.street = dir[columna_direcciones.index('direccion')].strip()
+                                address_party.city = dir[columna_direcciones.index('ciudad')].strip()
                                 address_party.save()
                 exists.save()
             else:
