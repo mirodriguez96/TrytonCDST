@@ -346,12 +346,12 @@ class Terceros(ModelSQL, ModelView):
     @classmethod
     def find_address(cls, party):
         Address = Pool().get('party.address')
-        try:
-            address, = Address.search([('party', '=', party)])
-        except ValueError:
-            return False
-        else:
-            return address
+        address = Address.__table__()
+        #contact, = Contact.search([], [('party', '=', party.id)])
+        cursor = Transaction().connection.cursor()
+        cursor.execute(*address.select(address.type, address.value, where=(address.party == party.id)))
+        result = cursor.fetchall()
+        return result
 
 
     @classmethod
@@ -360,6 +360,6 @@ class Terceros(ModelSQL, ModelView):
         contact = Contact.__table__()
         #contact, = Contact.search([], [('party', '=', party.id)])
         cursor = Transaction().connection.cursor()
-        cursor.execute(*contact.select(contact.type, contact.value, where=(contact.party == party.id)))
+        cursor.execute(*contact.select(where=(contact.party == party.id)))
         result = cursor.fetchall()
-        print(result)
+        return result
