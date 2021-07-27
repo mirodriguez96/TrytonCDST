@@ -111,17 +111,15 @@ class Terceros(ModelSQL, ModelView):
                             exists.commercial_name = dir[columna_direcciones.index('NombreSucursal')].strip()
                         contacts = cls.find_contact_mechanism(exists)
                         if contacts:
-                            j = 0
                             for cont in contacts:
                                 contm, = Mcontact.search([('id', '=', cont[0])])
-                                if j == 0:
+                                if contm.type == 'phone':
                                     contm.value = dir[columna_direcciones.index('telefono_1')]
-                                elif j == 1:
+                                elif contm.type == 'phone':
                                     contm.value = dir[columna_direcciones.index('telefono_2')]
-                                else:
+                                elif contm.type == 'email':
                                     contm.value = dir[columnas_terceros.index('mail')]
                                 contm.save()
-                                j += 1
                         address = cls.find_address(exists)
                         if address:
                             for addr in address:
