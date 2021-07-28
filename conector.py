@@ -138,6 +138,7 @@ class Terceros(ModelSQL, ModelView):
                         contacto.type = 'phone'
                         contacto.value = cont[columnas_contactos.index('Telefono')].strip()
                         contacto.name = cont[columnas_contactos.index('Nombre')].strip()+' ('+cont[columnas_contactos.index('Cargo')].strip()+')'
+                        contacto.language = es
                         contacto.party = tercero
                         contacto.save()
                         #Creacion e inserccion de metodo de contacto email
@@ -145,6 +146,7 @@ class Terceros(ModelSQL, ModelView):
                         contacto.type = 'email'
                         contacto.value = cont[columnas_contactos.index('Email')].strip()
                         contacto.name = cont[columnas_contactos.index('Nombre')].strip()+' ('+cont[columnas_contactos.index('Cargo')].strip()+')'
+                        contacto.language = es
                         contacto.party = tercero
                         contacto.save()
                 to_create.append(tercero)
@@ -489,13 +491,19 @@ class Terceros(ModelSQL, ModelView):
                     contacto.save()
 
 
+#Herencia del party.address e insercción del campo id_tecno
+class Party(ModelSQL, ModelView):
+    __name__ = 'party.address'
+    id_tecno = fields.Char('Id TecnoCarnes', required=False)
+
+
+#Herencia del party.address e insercción del campo id_tecno
+class ContactMechanism(ModelSQL, ModelView):
+    __name__ = 'party.contact_mechanism'
+    id_tecno = fields.Char('Id TecnoCarnes', required=False)
+"""
     @classmethod
     def find_or_create_using_magento_data(cls, order_data):
-        """
-        Find or Create sale using magento data
-        :param order_data: Order Data from magento
-        :return: Active record of record created/found
-        """
         sale = cls.find_using_magento_data(order_data)
 
         if not sale:
@@ -505,11 +513,6 @@ class Terceros(ModelSQL, ModelView):
 
     @classmethod
     def find_using_magento_data(cls, order_data):
-        """
-        Finds sale using magento data and returns that sale if found, else None
-        :param order_data: Order Data from magento
-        :return: Active record of record found
-        """
         # Each sale has to be unique in an channel of magento
         sales = cls.search([
             ('magento_id', '=', int(order_data['order_id'])),
@@ -521,13 +524,6 @@ class Terceros(ModelSQL, ModelView):
 
     @classmethod
     def create_using_magento_data(cls, order_data):
-        """
-        Create a sale from magento data. If you wish to override the creation
-        process, it is recommended to subclass and manipulate the returned
-        unsaved active record from the `get_sale_using_magento_data` method.
-        :param order_data: Order data from magento
-        :return: Active record of record created
-        """
         ChannelException = Pool().get('channel.exception')
 
         Channel = Pool().get('sale.channel')
@@ -564,3 +560,5 @@ class Terceros(ModelSQL, ModelView):
             }])
 
         return sale
+
+"""
