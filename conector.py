@@ -7,6 +7,8 @@ from trytond.transaction import Transaction
 
 __all__ = [
     'Terceros',
+    'Party',
+    'ContactMechanism',
     ]
 
 class Terceros(ModelSQL, ModelView):
@@ -493,14 +495,18 @@ class Terceros(ModelSQL, ModelView):
 
 #Herencia del party.address e insercción del campo id_tecno
 class Party(ModelSQL, ModelView):
+    'Party'
     __name__ = 'party.address'
     id_tecno = fields.Char('Id TecnoCarnes', required=False)
 
 
 #Herencia del party.address e insercción del campo id_tecno
 class ContactMechanism(ModelSQL, ModelView):
+    'ContactMechanism'
     __name__ = 'party.contact_mechanism'
     id_tecno = fields.Char('Id TecnoCarnes', required=False)
+
+
 """
     @classmethod
     def find_or_create_using_magento_data(cls, order_data):
