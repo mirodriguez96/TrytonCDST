@@ -9,6 +9,7 @@ def register():
         conector.Terceros,
         conector.Party,
         conector.ContactMechanism,
+        conector.ProductCategory,
         #wiz.CargarDatosParameters,
         module='conector', type_='model')
 

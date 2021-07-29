@@ -1,7 +1,7 @@
 
 from conexion import conexion
 from trytond.model import ModelSQL, ModelView, fields
-from trytond.pool import Pool
+from trytond.pool import Pool, PoolMeta
 import datetime
 from trytond.transaction import Transaction
 
@@ -9,6 +9,7 @@ __all__ = [
     'Terceros',
     'Party',
     'ContactMechanism',
+    'ProductCategory',
     ]
 
 class Terceros(ModelSQL, ModelView):
@@ -44,14 +45,16 @@ class Terceros(ModelSQL, ModelView):
         return datetime.datetime.now()
 
 
+    #Función que se activa al pulsar el botón actualizar
     @classmethod
     @ModelView.button
     def cargar_datos(cls, fecha = None):
-        cls.carga_terceros()
-        #cls.carga_productos()
+        #cls.carga_terceros()
+        cls.carga_productos()
         return None
 
 
+    #Función encargada de crear o actualizar los terceros
     @classmethod
     def carga_terceros(cls):
         terceros_tecno = cls.get_data_db_tecno('TblTerceros')
@@ -163,69 +166,75 @@ class Terceros(ModelSQL, ModelView):
         col_gproducto = cls.get_columns_db_tecno('TblGrupoProducto')
         grupos_producto = cls.get_data_db_tecno('TblGrupoProducto')
 
+        #Creación o actualización de las categorias de los productos
         Category = Pool().get('product.category')
         to_categorias = []
         for categoria in grupos_producto:
-            existe = cls.buscar_categoria(str(categoria[col_gproducto.index('IdGrupoProducto')])+'-'+categoria[col_gproducto.index('GrupoProducto')])
-            if not existe:
+            id_tecno = str(categoria[col_gproducto.index('IdGrupoProducto')])
+            existe = cls.buscar_categoria(id_tecno)
+            if existe:
+                existe.name = categoria[col_gproducto.index('GrupoProducto')]
+                existe.save()
+            else:
                 categoria_prod = Category()
-                categoria_prod.name = str(categoria[col_gproducto.index('IdGrupoProducto')])+'-'+categoria[col_gproducto.index('GrupoProducto')]
+                categoria_prod.id_tecno = id_tecno
+                categoria_prod.name = categoria[col_gproducto.index('GrupoProducto')]
                 to_categorias.append(categoria_prod)
         Category.save(to_categorias)
 
+        #Creación de los productos con su respectiva categoria e información
         Producto = Pool().get('product.product')
         Template_Product = Pool().get('product.template')
         to_producto = []
         for producto in productos_tecno:
-            existe = cls.buscar_producto(producto[col_pro.index('IdProducto')])
+            id_producto = str(producto[col_pro.index('IdProducto')])
+            existe = cls.buscar_producto(id_producto)
+            id_tecno = str(producto[col_pro.index('IdGrupoProducto')])
+            categoria_producto, = Category.search([('id_tecno', '=', id_tecno)])
+            nombre_producto = producto[col_pro.index('Producto')].strip()
+            tipo_producto = cls.tipo_producto(producto[col_pro.index('maneja_inventario')])
+            udm_producto = cls.udm_producto(producto[col_pro.index('unidad_Inventario')])
+            vendible = cls.vendible_producto(producto[col_pro.index('TipoProducto')])
+            valor_unitario = producto[col_pro.index('valor_unitario')]
+            costo_unitario = producto[col_pro.index('costo_unitario')]
             if existe:
-                name_categoria = None
-                for categoria in grupos_producto:
-                    if categoria[col_gproducto.index('IdGrupoProducto')] == producto[col_pro.index('IdGrupoProducto')]:
-                        name_categoria = str(categoria[col_gproducto.index('IdGrupoProducto')])+'-'+categoria[col_gproducto.index('GrupoProducto')]
-                categoria_producto, = Category.search([('name', '=', name_categoria)])
-                existe.template.name = producto[col_pro.index('Producto')].strip()
-                existe.template.type = cls.tipo_producto(producto[col_pro.index('maneja_inventario')].strip())
-                #equivalencia de unidad de medida
-                if producto[col_pro.index('unidad_Inventario')] == 1:
-                    existe.template.default_uom = 2
-                else:
-                    existe.template.default_uom = 1
-                existe.template.list_price = int(producto[col_pro.index('costo_unitario')])
+                existe.template.name = nombre_producto
+                existe.template.type = tipo_producto
+                existe.template.default_uom = udm_producto
+                if vendible:
+                    existe.template.sale_uom = udm_producto
+                existe.template.list_price = valor_unitario
+                existe.template.cost_price = costo_unitario
                 existe.template.categories = [categoria_producto]
                 existe.template.save()
             else:
                 prod = Producto()
-                name_categoria = None
-                for categoria in grupos_producto:
-                    if categoria[col_gproducto.index('IdGrupoProducto')] == producto[col_pro.index('IdGrupoProducto')]:
-                        name_categoria = str(categoria[col_gproducto.index('IdGrupoProducto')])+'-'+categoria[col_gproducto.index('GrupoProducto')]
-                categoria_producto, = Category.search([('name', '=', name_categoria)])
+                prod.code = id_producto
                 temp = Template_Product()
-                temp.code = producto[col_pro.index('IdProducto')]
-                temp.name = producto[col_pro.index('Producto')].strip()
-                temp.type = cls.tipo_producto(producto[col_pro.index('maneja_inventario')].strip())
-                #equivalencia de unidad de medida
-                if producto[col_pro.index('unidad_Inventario')] == 1:
-                    temp.default_uom = 2
-                else:
-                    temp.default_uom = 1
-                temp.list_price = int(producto[col_pro.index('costo_unitario')])
+                temp.code = id_producto
+                temp.name = nombre_producto
+                temp.type = tipo_producto
+                temp.default_uom = udm_producto
+                if vendible:
+                    temp.sale_uom = udm_producto
+                temp.list_price = valor_unitario
+                temp.cost_price = costo_unitario
                 temp.categories = [categoria_producto]
                 prod.template = temp
                 to_producto.append(prod)
         Producto.save(to_producto)
-        
+
 
     @classmethod
     def buscar_categoria(cls, id_categoria):
         Category = Pool().get('product.category')
         try:
-            categoria_producto, = Category.search([('name', '=', id_categoria)])
+            categoria_producto, = Category.search([('id_tecno', '=', id_categoria)])
         except ValueError:
             return False
         else:
-            return True
+            return categoria_producto
+
 
     @classmethod
     def buscar_producto(cls, id_producto):
@@ -237,6 +246,7 @@ class Terceros(ModelSQL, ModelView):
         else:
             return producto
 
+
     @classmethod
     def tipo_producto(cls, inventario):
         #equivalencia del tipo de producto (si maneja inventario o no)
@@ -244,6 +254,28 @@ class Terceros(ModelSQL, ModelView):
             return 'service'
         else:
             return 'goods'
+
+
+    @classmethod
+    def udm_producto(cls, udm):
+        #Equivalencia de la unidad de medida en Kg y Unidades.
+        if udm == 1:
+            return 2
+        else:
+            return 1
+
+
+    #Función encargada de verificar si el producto es vendible, de acuerdo a su tipo
+    @classmethod
+    def vendible_producto(cls, tipo):
+        columns_tiproduct = cls.get_columns_db_tecno('TblTipoProducto')
+        tiproduct = cls.get_data_db_tecno('TblTipoProducto')
+        #Se verifica que el tipo de producto exista y el valor si es vendible o no
+        if tiproduct and tiproduct[columns_tiproduct.index('ProductoParaVender')] == 'S':
+            return True
+        else:
+            return False
+
 
     @classmethod
     def find_party(cls, id):
@@ -331,7 +363,7 @@ class Terceros(ModelSQL, ModelView):
         data = []
         try:
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT TOP (200) * FROM dbo."+table)
+                query = cursor.execute("SELECT * FROM dbo."+table)
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY "+table+": ", e)
@@ -448,6 +480,13 @@ class Party(ModelSQL, ModelView):
 class ContactMechanism(ModelSQL, ModelView):
     'ContactMechanism'
     __name__ = 'party.contact_mechanism'
+    id_tecno = fields.Char('Id TecnoCarnes', required=False)
+
+
+#Herencia del party.contact_mechanism e insercción del campo id_tecno
+class ProductCategory(ModelSQL, ModelView):
+    'ProductCategory'
+    __name__ = 'product.category'
     id_tecno = fields.Char('Id TecnoCarnes', required=False)
 
 
