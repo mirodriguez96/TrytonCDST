@@ -318,20 +318,20 @@ class Terceros(ModelSQL, ModelView):
         columns = []
         try:
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = "+table+" ORDER BY ORDINAL_POSITION")
+                query = cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = '"+table+"' ORDER BY ORDINAL_POSITION")
                 for q in query.fetchall():
                     columns.append(q[0])
         except Exception as e:
             print("ERROR QUERY "+table+": ", e)
         return columns
 
-
+    #Esta función se encarga de traer todos los datos de una tabla dada
     @classmethod
     def get_data_db_tecno(cls, table):
         data = []
         try:
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT * FROM dbo."+table)
+                query = cursor.execute("SELECT TOP (200) * FROM dbo."+table)
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY "+table+": ", e)
