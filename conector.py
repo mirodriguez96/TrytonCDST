@@ -74,8 +74,9 @@ class Terceros(ModelSQL, ModelView):
             exists = cls.find_party(ter[columnas_terceros.index('nit_cedula')].strip())
             #Ahora verificamos si el tercero existe en la bd de tryton
             if exists:
+                ultimo_cambio = ter[columnas_terceros.index('Ultimo_Cambio_Registro')]
                 #Ahora vamos a verificar si el cambio más reciente fue hecho en la bd TecnoCarnes para actualizarlo
-                if ter[columnas_terceros.index('Ultimo_Cambio_Registro')] and exists.write_date and ter[columnas_terceros.index('Ultimo_Cambio_Registro')] > exists.write_date:
+                if (ultimo_cambio and exists.write_date and ultimo_cambio > exists.write_date) or (ultimo_cambio and not exists.write_date and ultimo_cambio > exists.create_date):
                     exists.type_document = cls.id_type(ter[columnas_terceros.index('tipo_identificacion')])
                     exists.id_number = ter[columnas_terceros.index('nit_cedula')].strip()
                     exists.name = ter[columnas_terceros.index('nombre')].strip()
@@ -197,16 +198,18 @@ class Terceros(ModelSQL, ModelView):
             vendible = cls.vendible_producto(producto[col_pro.index('TipoProducto')])
             valor_unitario = producto[col_pro.index('valor_unitario')]
             costo_unitario = producto[col_pro.index('costo_unitario')]
+            ultimo_cambio = producto[col_pro.index('Ultimo_Cambio_Registro')]
             if existe:
-                existe.template.name = nombre_producto
-                existe.template.type = tipo_producto
-                existe.template.default_uom = udm_producto
-                if vendible:
-                    existe.template.sale_uom = udm_producto
-                existe.template.list_price = valor_unitario
-                existe.template.cost_price = costo_unitario
-                existe.template.categories = [categoria_producto]
-                existe.template.save()
+                if (ultimo_cambio and existe.write_date and ultimo_cambio > existe.write_date) or (ultimo_cambio and not existe.write_date and ultimo_cambio > existe.create_date):
+                    existe.template.name = nombre_producto
+                    existe.template.type = tipo_producto
+                    existe.template.default_uom = udm_producto
+                    if vendible:
+                        existe.template.sale_uom = udm_producto
+                    existe.template.list_price = valor_unitario
+                    existe.template.cost_price = costo_unitario
+                    existe.template.categories = [categoria_producto]
+                    existe.template.save()
             else:
                 prod = Producto()
                 prod.code = id_producto
