@@ -208,7 +208,7 @@ class Terceros(ModelSQL, ModelView):
                     if vendible:
                         existe.template.sale_uom = udm_producto
                     existe.template.list_price = valor_unitario
-                    existe.template.cost_price = costo_unitario
+                    existe.cost_price = costo_unitario
                     existe.template.categories = [categoria_producto]
                     existe.template.save()
             else:
@@ -222,7 +222,7 @@ class Terceros(ModelSQL, ModelView):
                 if vendible:
                     temp.sale_uom = udm_producto
                 temp.list_price = valor_unitario
-                temp.cost_price = costo_unitario
+                prod.cost_price = costo_unitario
                 temp.categories = [categoria_producto]
                 prod.template = temp
                 to_producto.append(prod)
@@ -273,8 +273,13 @@ class Terceros(ModelSQL, ModelView):
     @classmethod
     def vendible_producto(cls, tipo):
         columns_tiproduct = cls.get_columns_db_tecno('TblTipoProducto')
-        tiproduct = cls.get_data_db_tecno('TblTipoProducto')
-        print(tiproduct[columns_tiproduct.index('ProductoParaVender')])
+        tiproduct = None
+        try:
+            with conexion.cursor() as cursor:
+                query = cursor.execute("SELECT * FROM dbo.TblTipoProducto WHERE IdTipoProducto = "+tipo)
+                tiproduct = query.fetchone()
+        except Exception as e:
+            print("ERROR QUERY TblTipoProducto: ", e)
         #Se verifica que el tipo de producto exista y el valor si es vendible o no
         if tiproduct and tiproduct[columns_tiproduct.index('ProductoParaVender')] == 'S':
             return True
