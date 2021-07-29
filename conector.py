@@ -204,6 +204,7 @@ class Terceros(ModelSQL, ModelView):
                     existe.template.name = nombre_producto
                     existe.template.type = tipo_producto
                     existe.template.default_uom = udm_producto
+                    existe.template.saleable = vendible
                     if vendible:
                         existe.template.sale_uom = udm_producto
                     existe.template.list_price = valor_unitario
@@ -218,6 +219,7 @@ class Terceros(ModelSQL, ModelView):
                 temp.name = nombre_producto
                 temp.type = tipo_producto
                 temp.default_uom = udm_producto
+                temp.saleable = vendible
                 if vendible:
                     temp.sale_uom = udm_producto
                 temp.list_price = valor_unitario
