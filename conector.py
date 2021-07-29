@@ -198,7 +198,6 @@ class Terceros(ModelSQL, ModelView):
             vendible = cls.vendible_producto(producto[col_pro.index('TipoProducto')])
             valor_unitario = producto[col_pro.index('valor_unitario')]
             costo_unitario = producto[col_pro.index('costo_unitario')]
-            print(costo_unitario)
             ultimo_cambio = producto[col_pro.index('Ultimo_Cambio_Registro')]
             if existe:
                 if (ultimo_cambio and existe.write_date and ultimo_cambio > existe.write_date) or (ultimo_cambio and not existe.write_date and ultimo_cambio > existe.create_date):
@@ -276,7 +275,7 @@ class Terceros(ModelSQL, ModelView):
         tiproduct = None
         try:
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT * FROM dbo.TblTipoProducto WHERE IdTipoProducto = "+tipo)
+                query = cursor.execute("SELECT * FROM dbo.TblTipoProducto WHERE IdTipoProducto = "+str(tipo))
                 tiproduct = query.fetchone()
         except Exception as e:
             print("ERROR QUERY TblTipoProducto: ", e)
