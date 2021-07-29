@@ -343,7 +343,7 @@ class Terceros(ModelSQL, ModelView):
         address = []
         try:
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT * FROM dbo.Terceros_Dir WHERE nit = "+nit)
+                query = cursor.execute("SELECT * FROM dbo.Terceros_Dir WHERE nit = '"+nit+"'")
                 address = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY ADDRESS: ", e)
@@ -355,7 +355,7 @@ class Terceros(ModelSQL, ModelView):
         contacts = []
         try:
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT * FROM dbo.Terceros_Contactos WHERE Nit_Cedula = "+nit)
+                query = cursor.execute("SELECT * FROM dbo.Terceros_Contactos WHERE Nit_Cedula = '"+nit+"'")
                 contacts = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY CONTACTS: ", e)
