@@ -84,10 +84,10 @@ class Terceros(ModelSQL, ModelView):
                     if exists.type_person == 'persona_juridica':
                         exists.declarante = True
                     #Verificación e inserción codigo ciiu
-                    ciiu = ter[columnas_terceros.index('IdActividadEconomica')].strip()
+                    ciiu = ter[columnas_terceros.index('IdActividadEconomica')]
                     if ciiu and ciiu != 0:
                         exists.ciiu_code = ciiu
-                    exists.regime_tax = cls.tax_regime(int(ter[columnas_terceros.index('IdTipoContribuyente')]))
+                    exists.regime_tax = cls.tax_regime(ter[columnas_terceros.index('IdTipoContribuyente')])
                     exists.lang = es
                     #Actualización de la dirección y metodos de contacto
                     cls.update_address(exists)
@@ -110,11 +110,11 @@ class Terceros(ModelSQL, ModelView):
                 if tercero.type_person == 'persona_juridica':
                     tercero.declarante = True
                 #Verificación e inserción codigo ciiu
-                ciiu = ter[columnas_terceros.index('IdActividadEconomica')].strip()
+                ciiu = ter[columnas_terceros.index('IdActividadEconomica')]
                 if ciiu and ciiu != 0:
                     exists.ciiu_code = ciiu
                 #Equivalencia regimen de impuestos
-                tercero.regime_tax = cls.tax_regime(int(ter[columnas_terceros.index('IdTipoContribuyente')]))
+                tercero.regime_tax = cls.tax_regime(ter[columnas_terceros.index('IdTipoContribuyente')])
                 tercero.lang = es
                 direcciones_tecno = cls.get_address_db_tecno(tercero.id_number)
                 if direcciones_tecno:
