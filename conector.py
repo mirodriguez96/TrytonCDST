@@ -47,7 +47,7 @@ class Terceros(ModelSQL, ModelView):
     @classmethod
     @ModelView.button
     def cargar_datos(cls, fecha = None):
-        #cls.carga_terceros()
+        cls.carga_terceros()
         #cls.carga_productos()
         return None
 
