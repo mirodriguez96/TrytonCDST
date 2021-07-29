@@ -112,7 +112,7 @@ class Terceros(ModelSQL, ModelView):
                 #Verificación e inserción codigo ciiu
                 ciiu = ter[columnas_terceros.index('IdActividadEconomica')]
                 if ciiu and ciiu != 0:
-                    exists.ciiu_code = ciiu
+                    tercero.ciiu_code = ciiu
                 #Equivalencia regimen de impuestos
                 tercero.regime_tax = cls.tax_regime(ter[columnas_terceros.index('IdTipoContribuyente')])
                 tercero.lang = es
