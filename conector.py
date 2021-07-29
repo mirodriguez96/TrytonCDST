@@ -72,7 +72,7 @@ class Terceros(ModelSQL, ModelView):
             #Ahora verificamos si el tercero existe en la bd de tryton
             if exists:
                 #Ahora vamos a verificar si el cambio más reciente fue hecho en la bd TecnoCarnes para actualizarlo
-                if ter[columnas_terceros.index('Ultimo_Cambio_Registro')] > exists.write_date:
+                if ter[columnas_terceros.index('Ultimo_Cambio_Registro')] and exists.write_date and ter[columnas_terceros.index('Ultimo_Cambio_Registro')] > exists.write_date:
                     exists.type_document = cls.id_type(ter[columnas_terceros.index('tipo_identificacion')])
                     exists.id_number = ter[columnas_terceros.index('nit_cedula')].strip()
                     exists.name = ter[columnas_terceros.index('nombre')].strip()
