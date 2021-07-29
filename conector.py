@@ -198,6 +198,7 @@ class Terceros(ModelSQL, ModelView):
             vendible = cls.vendible_producto(producto[col_pro.index('TipoProducto')])
             valor_unitario = producto[col_pro.index('valor_unitario')]
             costo_unitario = producto[col_pro.index('costo_unitario')]
+            print(costo_unitario)
             ultimo_cambio = producto[col_pro.index('Ultimo_Cambio_Registro')]
             if existe:
                 if (ultimo_cambio and existe.write_date and ultimo_cambio > existe.write_date) or (ultimo_cambio and not existe.write_date and ultimo_cambio > existe.create_date):
@@ -273,6 +274,7 @@ class Terceros(ModelSQL, ModelView):
     def vendible_producto(cls, tipo):
         columns_tiproduct = cls.get_columns_db_tecno('TblTipoProducto')
         tiproduct = cls.get_data_db_tecno('TblTipoProducto')
+        print(tiproduct[columns_tiproduct.index('ProductoParaVender')])
         #Se verifica que el tipo de producto exista y el valor si es vendible o no
         if tiproduct and tiproduct[columns_tiproduct.index('ProductoParaVender')] == 'S':
             return True
