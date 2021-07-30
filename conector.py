@@ -245,6 +245,7 @@ class Terceros(ModelSQL, ModelView):
                 to_producto.append(prod)
         Producto.save(to_producto)
         """
+        pass
 
 
     @classmethod
