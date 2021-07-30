@@ -174,14 +174,15 @@ class Terceros(ModelSQL, ModelView):
         Party.save(to_create)
 
     @classmethod
-    def new(cls, nombre, fecha):
-        Terceros.actualizacion = nombre
-        Terceros.fecha = fecha
-        return None
+    def new(cls):
+        Terceros.actualizacion = 'Prueba cron'
+        Terceros.fecha = datetime.datetime.now()
+        Terceros.save()
 
     @classmethod
     def carga_productos(cls):
         print("---------------Run Productos---------------")
+        cls.new()
         """
         productos_tecno = cls.get_data_db_tecno('TblProducto')
         col_pro = cls.get_columns_db_tecno('TblProducto')
