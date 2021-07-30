@@ -175,8 +175,8 @@ class Terceros(ModelSQL, ModelView):
 
     @classmethod
     def new(cls):
-        Terceros.actualizacion = 'Prueba cron'
-        Terceros.fecha = datetime.datetime.now()
+        cls.actualizacion = 'Prueba cron'
+        cls.fecha = datetime.datetime.now()
         return None
 
     @classmethod
