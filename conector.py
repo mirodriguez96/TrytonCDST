@@ -10,7 +10,21 @@ __all__ = [
     'Party',
     'ContactMechanism',
     'ProductCategory',
+    'Cron',
     ]
+
+
+class Cron(metaclass=PoolMeta):
+    'Cron'
+    __name__ = 'ir.cron'
+
+    @classmethod
+    def __setup__(cls):
+        super().__setup__()
+        cls.method.selection.append(
+            ('Terceros|carga_productos', "Run my method"),
+            )
+
 
 class Terceros(ModelSQL, ModelView):
     'Terceros'
@@ -49,7 +63,7 @@ class Terceros(ModelSQL, ModelView):
     @classmethod
     @ModelView.button
     def cargar_datos(cls, fecha = None):
-        cls.carga_terceros()
+        #cls.carga_terceros()
         #cls.carga_productos()
         return None
 

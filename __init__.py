@@ -10,6 +10,7 @@ def register():
         conector.Party,
         conector.ContactMechanism,
         conector.ProductCategory,
+        conector.Cron,
         #wiz.CargarDatosParameters,
         module='conector', type_='model')
 
