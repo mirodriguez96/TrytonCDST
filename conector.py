@@ -22,7 +22,7 @@ class Cron(metaclass=PoolMeta):
     def __setup__(cls):
         super().__setup__()
         cls.method.selection.append(
-            ('conector.Terceros|carga_productos', "Run Actualización de Productos"),
+            ('conector.terceros|carga_productos', "Run Actualización de Productos"),
             )
 
 
