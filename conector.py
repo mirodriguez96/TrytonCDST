@@ -18,6 +18,7 @@ class Cron(metaclass=PoolMeta):
     'Cron'
     __name__ = 'ir.cron'
 
+
     @classmethod
     def __setup__(cls):
         super().__setup__()
@@ -64,7 +65,7 @@ class Terceros(ModelSQL, ModelView):
     @ModelView.button
     def cargar_datos(cls, fecha = None):
         #cls.carga_terceros()
-        #cls.carga_productos()
+        cls.carga_productos()
         return None
 
 
@@ -173,16 +174,13 @@ class Terceros(ModelSQL, ModelView):
                 to_create.append(tercero)
         Party.save(to_create)
 
-    @classmethod
-    def new(cls):
-        cls.actualizacion = 'Prueba cron'
-        cls.fecha = datetime.datetime.now()
-        return None
 
     @classmethod
     def carga_productos(cls):
         print("---------------Run Productos---------------")
-        cls.new()
+        Actualizacion = Pool().get('conector.Terceros')
+        ultima_actualizacion = Actualizacion.search([('actualizacion', '=','PRODUCTOS')], order=[('create_date', 'DESC')], limit=1)
+        print(ultima_actualizacion)
         """
         productos_tecno = cls.get_data_db_tecno('TblProducto')
         col_pro = cls.get_columns_db_tecno('TblProducto')
