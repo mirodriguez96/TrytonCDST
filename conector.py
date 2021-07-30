@@ -182,9 +182,6 @@ class Terceros(ModelSQL, ModelView):
     @classmethod
     def carga_productos(cls):
         print("---------------Run Productos---------------")
-        fecha = datetime.datetime.now()
-        cls.new('Prueba cron', fecha)
-
         """
         productos_tecno = cls.get_data_db_tecno('TblProducto')
         col_pro = cls.get_columns_db_tecno('TblProducto')
