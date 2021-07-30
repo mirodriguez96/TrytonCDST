@@ -177,8 +177,8 @@ class Terceros(ModelSQL, ModelView):
     @classmethod
     def carga_productos(cls):
         print("---------------Run Productos---------------")
-        a = 2
-        b = 'Algo '+a
+        cls.actualizacion = 'Prueba Cron'
+        return None
         """
         productos_tecno = cls.get_data_db_tecno('TblProducto')
         col_pro = cls.get_columns_db_tecno('TblProducto')
@@ -247,7 +247,6 @@ class Terceros(ModelSQL, ModelView):
                 to_producto.append(prod)
         Producto.save(to_producto)
         """
-        pass
 
 
     @classmethod
