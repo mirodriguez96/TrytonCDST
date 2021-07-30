@@ -177,7 +177,7 @@ class Terceros(ModelSQL, ModelView):
     def new(cls):
         Terceros.actualizacion = 'Prueba cron'
         Terceros.fecha = datetime.datetime.now()
-        Terceros.save()
+        return None
 
     @classmethod
     def carga_productos(cls):
