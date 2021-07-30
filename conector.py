@@ -180,7 +180,7 @@ class Terceros(ModelSQL, ModelView):
         print("---------------Run Productos---------------")
         Actualizacion = Pool().get('conector.terceros')
         ultima_actualizacion = Actualizacion.search([('actualizacion', '=','PRODUCTOS')], order=[('create_date', 'DESC')], limit=1)
-        print(ultima_actualizacion)
+        print(ultima_actualizacion.fecha)
         """
         productos_tecno = cls.get_data_db_tecno('TblProducto')
         col_pro = cls.get_columns_db_tecno('TblProducto')
