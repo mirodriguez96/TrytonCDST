@@ -22,7 +22,7 @@ class Cron(metaclass=PoolMeta):
     def __setup__(cls):
         super().__setup__()
         cls.method.selection.append(
-            ('Terceros|carga_productos', "Run my method"),
+            ('Terceros|carga_productos', "Run Actualización de Productos"),
             )
 
 
@@ -176,6 +176,8 @@ class Terceros(ModelSQL, ModelView):
 
     @classmethod
     def carga_productos(cls):
+        print("---------------Run Productos---------------")
+        """
         productos_tecno = cls.get_data_db_tecno('TblProducto')
         col_pro = cls.get_columns_db_tecno('TblProducto')
         col_gproducto = cls.get_columns_db_tecno('TblGrupoProducto')
@@ -242,6 +244,7 @@ class Terceros(ModelSQL, ModelView):
                 prod.template = temp
                 to_producto.append(prod)
         Producto.save(to_producto)
+        """
 
 
     @classmethod
