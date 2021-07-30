@@ -177,6 +177,8 @@ class Terceros(ModelSQL, ModelView):
     @classmethod
     def carga_productos(cls):
         print("---------------Run Productos---------------")
+        a = 2
+        b = 'Algo '+a
         """
         productos_tecno = cls.get_data_db_tecno('TblProducto')
         col_pro = cls.get_columns_db_tecno('TblProducto')
