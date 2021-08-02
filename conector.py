@@ -64,15 +64,23 @@ class Terceros(ModelSQL, ModelView):
     @classmethod
     @ModelView.button
     def cargar_datos(cls, fecha = None):
-        #cls.carga_terceros()
+        cls.carga_terceros()
         cls.carga_productos()
         return None
 
 
-    #Función encargada de crear o actualizar los terceros
+    #Función encargada de crear o actualizar los terceros de db TecnoCarnes,
+    #teniendo en cuenta la ultima fecha de actualizacion y si existe o no.
     @classmethod
     def carga_terceros(cls):
-        terceros_tecno = cls.get_data_db_tecno('TblTerceros')
+        #print("---------------RUN TERCEROS---------------")
+        Actualizacion = Pool().get('conector.terceros')
+        #Se consulta la ultima actualización realizada para los terceros
+        ultima_actualizacion = Actualizacion.search([('actualizacion', '=','TERCEROS')], order=[('create_date', 'DESC')], limit=1)
+        #Se calcula la fecha restando la diferencia de horas que tiene el servidor con respecto al clienete
+        fecha_ultima_actualizacion = cls.convert_date(ultima_actualizacion[0].create_date - datetime.timedelta(hours=5))
+        terceros_tecno = cls.get_data_where_tecno('TblTerceros', fecha_ultima_actualizacion)
+        #terceros_tecno = cls.get_data_db_tecno('TblTerceros')
         columnas_terceros = cls.get_columns_db_tecno('TblTerceros')
         columnas_contactos = cls.get_columns_db_tecno('Terceros_Contactos')
         columna_direcciones = cls.get_columns_db_tecno('Terceros_Dir')
@@ -175,17 +183,18 @@ class Terceros(ModelSQL, ModelView):
         Party.save(to_create)
 
 
+    #FFunción encargada de crear o actualizar los productos y categorias de db TecnoCarnes,
+    #teniendo en cuenta la ultima fecha de actualizacion y si existe o no.
     @classmethod
     def carga_productos(cls):
-        print("---------------Run Productos---------------")
+        #print("---------------Run Productos---------------")
         Actualizacion = Pool().get('conector.terceros')
+        #Se consulta la ultima actualización realizada para los productos
         ultima_actualizacion = Actualizacion.search([('actualizacion', '=','PRODUCTOS')], order=[('create_date', 'DESC')], limit=1)
+        #Se calcula la fecha restando la diferencia de horas que tiene el servidor con respecto al clienete
         fecha_ultima_actualizacion = cls.convert_date(ultima_actualizacion[0].create_date - datetime.timedelta(hours=5))
-        print(fecha_ultima_actualizacion)
-        productos_tecno = cls.get_data_where_tecno('TblProducto', '2021-08-02 09:07:38')
-        print(productos_tecno)
+        productos_tecno = cls.get_data_where_tecno('TblProducto', fecha_ultima_actualizacion)
         #productos_tecno = cls.get_data_db_tecno('TblProducto')
-        """
         col_pro = cls.get_columns_db_tecno('TblProducto')
         col_gproducto = cls.get_columns_db_tecno('TblGrupoProducto')
         grupos_producto = cls.get_data_db_tecno('TblGrupoProducto')
@@ -251,9 +260,9 @@ class Terceros(ModelSQL, ModelView):
                 prod.template = temp
                 to_producto.append(prod)
         Producto.save(to_producto)
-        """
 
 
+    #Función encargada de consultar si existe una categoria dada de la bd TecnoCarnes
     @classmethod
     def buscar_categoria(cls, id_categoria):
         Category = Pool().get('product.category')
@@ -264,7 +273,7 @@ class Terceros(ModelSQL, ModelView):
         else:
             return categoria_producto
 
-
+    #Función encargada de consultar si existe un producto dado de la bd TecnoCarnes
     @classmethod
     def buscar_producto(cls, id_producto):
         Product = Pool().get('product.product')
@@ -275,7 +284,7 @@ class Terceros(ModelSQL, ModelView):
         else:
             return producto
 
-
+    #Función encargada de retornar que tipo de producto será un al realizar la equivalencia con el manejo de inventario de la bd de TecnoCarnes
     @classmethod
     def tipo_producto(cls, inventario):
         #equivalencia del tipo de producto (si maneja inventario o no)
@@ -284,7 +293,7 @@ class Terceros(ModelSQL, ModelView):
         else:
             return 'goods'
 
-
+    #Función encargada de retornar la unidad de medida de un producto, al realizar la equivalencia con kg y unidades de la bd de TecnoCarnes
     @classmethod
     def udm_producto(cls, udm):
         #Equivalencia de la unidad de medida en Kg y Unidades.
@@ -292,7 +301,6 @@ class Terceros(ModelSQL, ModelView):
             return 2
         else:
             return 1
-
 
     #Función encargada de verificar si el producto es vendible, de acuerdo a su tipo
     @classmethod
@@ -311,7 +319,7 @@ class Terceros(ModelSQL, ModelView):
         else:
             return False
 
-
+    #Función encargada de retornar el tercero de acuerdo a su id_number
     @classmethod
     def find_party(cls, id):
         Party = Pool().get('party.party')
