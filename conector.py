@@ -516,7 +516,8 @@ class Terceros(ModelSQL, ModelView):
 
     @classmethod
     def convert_date(cls, fecha):
-        result = fecha.strftime('%Y-%d-%m %H:%M:%S')
+        result = fecha.strftime('%Y-%d-%m ')
+        result = result+str(fecha.hour)+':'+str(fecha.minute)+':'+str(fecha.second)
         return result
 
 #Herencia del party.address e insercción del campo id_tecno
