@@ -183,7 +183,7 @@ class Terceros(ModelSQL, ModelView):
         fecha_ultima_actualizacion = cls.convert_date(ultima_actualizacion[0].create_date - datetime.timedelta(hours=5))
         print(fecha_ultima_actualizacion)
         productos_tecno = cls.get_data_where_tecno('TblProducto', '2021-08-02 09:07:38')
-        print(productos_tecno.fetchone())
+        print(productos_tecno)
         #productos_tecno = cls.get_data_db_tecno('TblProducto')
         """
         col_pro = cls.get_columns_db_tecno('TblProducto')
