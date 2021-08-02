@@ -410,7 +410,7 @@ class Terceros(ModelSQL, ModelView):
         data = []
         try:
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT * FROM dbo."+table+" WHERE fecha_creacion >= CAST('"+date+"' AS datetime) OR Ultimo_Cambio_Registro >= CAST('"+date+"' AS datetime)")
+                query = cursor.execute("SELECT * FROM dbo."+table+" WHERE fecha_creacion >= CAST("+date+" AS datetime) OR Ultimo_Cambio_Registro >= CAST("+date+" AS datetime)")
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY "+table+": ", e)
