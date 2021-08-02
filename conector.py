@@ -65,12 +65,9 @@ class Terceros(ModelSQL, ModelView):
     @classmethod
     @ModelView.button
     def cargar_datos(cls, fecha = None):
-        actualizacion = Terceros()
-        actualizacion.actualizacion = 'PRUEBA ACTUALIZACION'
-        #actualizacion.save()
         cls.carga_terceros()
         cls.carga_productos()
-        return None
+        #return None
 
 
     #Función encargada de crear o actualizar los terceros de db TecnoCarnes,
@@ -85,6 +82,9 @@ class Terceros(ModelSQL, ModelView):
         fecha_ultima_actualizacion = cls.convert_date(ultima_actualizacion[0].create_date - datetime.timedelta(hours=5))
         terceros_tecno = cls.get_data_where_tecno('TblTerceros', fecha_ultima_actualizacion)
         #terceros_tecno = cls.get_data_db_tecno('TblTerceros')
+
+        Actua = Pool().get('conector.terceros')
+        Actua.actualizacion = 'TERCEROS'
         if terceros_tecno:
             columnas_terceros = cls.get_columns_db_tecno('TblTerceros')
             columnas_contactos = cls.get_columns_db_tecno('Terceros_Contactos')
