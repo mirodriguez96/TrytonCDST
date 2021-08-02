@@ -84,7 +84,7 @@ class Terceros(ModelSQL, ModelView):
         #terceros_tecno = cls.get_data_db_tecno('TblTerceros')
 
         Actua = Pool().get('conector.terceros')
-        Actua.actualizacion = 'TERCEROS'
+        Actua.actualizacion = 'TERCEROS PRUEBA'
         if terceros_tecno:
             columnas_terceros = cls.get_columns_db_tecno('TblTerceros')
             columnas_contactos = cls.get_columns_db_tecno('Terceros_Contactos')
