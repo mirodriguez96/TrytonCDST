@@ -182,7 +182,7 @@ class Terceros(ModelSQL, ModelView):
         ultima_actualizacion = Actualizacion.search([('actualizacion', '=','PRODUCTOS')], order=[('create_date', 'DESC')], limit=1)
         print(ultima_actualizacion[0].create_date)
         """
-        productos_tecno = cls.get_data_db_tecno('TblProducto')
+        productos_tecno = cls.get_data_where_tecno('TblProducto', ultima_actualizacion[0].fecha)
         col_pro = cls.get_columns_db_tecno('TblProducto')
         col_gproducto = cls.get_columns_db_tecno('TblGrupoProducto')
         grupos_producto = cls.get_data_db_tecno('TblGrupoProducto')
@@ -401,6 +401,17 @@ class Terceros(ModelSQL, ModelView):
             print("ERROR QUERY "+table+": ", e)
         return data
 
+    #Esta función se encarga de traer todos los datos de una tabla dada
+    @classmethod
+    def get_data_where_tecno(cls, table, date):
+        data = []
+        try:
+            with conexion.cursor() as cursor:
+                query = cursor.execute("SELECT * FROM dbo."+table+" WHERE Ultimo_Cambio_Registro >= "+date)
+                data = list(query.fetchall())
+        except Exception as e:
+            print("ERROR QUERY "+table+": ", e)
+        return data
 
     @classmethod
     def get_address_db_tecno(cls, nit):
