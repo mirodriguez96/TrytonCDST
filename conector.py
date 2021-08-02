@@ -23,7 +23,8 @@ class Cron(metaclass=PoolMeta):
     def __setup__(cls):
         super().__setup__()
         cls.method.selection.append(
-            ('conector.terceros|carga_productos', "Run Actualización de Productos"),
+            ('conector.terceros|carga_productos', "Actualizacion de Productos"),
+            ('conector.terceros|carga_terceros', "Actualizacion de Terceros"),
             )
 
 
@@ -73,7 +74,7 @@ class Terceros(ModelSQL, ModelView):
     #teniendo en cuenta la ultima fecha de actualizacion y si existe o no.
     @classmethod
     def carga_terceros(cls):
-        #print("---------------RUN TERCEROS---------------")
+        print("---------------RUN TERCEROS---------------")
         Actualizacion = Pool().get('conector.terceros')
         #Se consulta la ultima actualización realizada para los terceros
         ultima_actualizacion = Actualizacion.search([('actualizacion', '=','TERCEROS')], order=[('create_date', 'DESC')], limit=1)
@@ -188,7 +189,7 @@ class Terceros(ModelSQL, ModelView):
     #teniendo en cuenta la ultima fecha de actualizacion y si existe o no.
     @classmethod
     def carga_productos(cls):
-        #print("---------------Run Productos---------------")
+        print("---------------RUN PRODUCTOS---------------")
         Actualizacion = Pool().get('conector.terceros')
         #Se consulta la ultima actualización realizada para los productos
         ultima_actualizacion = Actualizacion.search([('actualizacion', '=','PRODUCTOS')], order=[('create_date', 'DESC')], limit=1)
