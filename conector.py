@@ -81,106 +81,107 @@ class Terceros(ModelSQL, ModelView):
         fecha_ultima_actualizacion = cls.convert_date(ultima_actualizacion[0].create_date - datetime.timedelta(hours=5))
         terceros_tecno = cls.get_data_where_tecno('TblTerceros', fecha_ultima_actualizacion)
         #terceros_tecno = cls.get_data_db_tecno('TblTerceros')
-        columnas_terceros = cls.get_columns_db_tecno('TblTerceros')
-        columnas_contactos = cls.get_columns_db_tecno('Terceros_Contactos')
-        columna_direcciones = cls.get_columns_db_tecno('Terceros_Dir')
+        if terceros_tecno:
+            columnas_terceros = cls.get_columns_db_tecno('TblTerceros')
+            columnas_contactos = cls.get_columns_db_tecno('Terceros_Contactos')
+            columna_direcciones = cls.get_columns_db_tecno('Terceros_Dir')
 
-        pool = Pool()
-        Party = pool.get('party.party')
-        Address = pool.get('party.address')
-        Lang = pool.get('ir.lang')
-        es, = Lang.search([('code', '=', 'es_419')])
-        Mcontact = pool.get('party.contact_mechanism')
-        to_create = []
+            pool = Pool()
+            Party = pool.get('party.party')
+            Address = pool.get('party.address')
+            Lang = pool.get('ir.lang')
+            es, = Lang.search([('code', '=', 'es_419')])
+            Mcontact = pool.get('party.contact_mechanism')
+            to_create = []
 
-        for ter in terceros_tecno:
-            exists = cls.find_party(ter[columnas_terceros.index('nit_cedula')].strip())
-            #Ahora verificamos si el tercero existe en la bd de tryton
-            if exists:
-                ultimo_cambio = ter[columnas_terceros.index('Ultimo_Cambio_Registro')]
-                #Ahora vamos a verificar si el cambio más reciente fue hecho en la bd TecnoCarnes para actualizarlo
-                if (ultimo_cambio and exists.write_date and ultimo_cambio > exists.write_date) or (ultimo_cambio and not exists.write_date and ultimo_cambio > exists.create_date):
-                    exists.type_document = cls.id_type(ter[columnas_terceros.index('tipo_identificacion')])
-                    exists.id_number = ter[columnas_terceros.index('nit_cedula')].strip()
-                    exists.name = ter[columnas_terceros.index('nombre')].strip()
-                    exists.first_name = ter[columnas_terceros.index('PrimerNombre')].strip()
-                    exists.second_name = ter[columnas_terceros.index('SegundoNombre')].strip()
-                    exists.first_family_name = ter[columnas_terceros.index('PrimerApellido')].strip()
-                    exists.second_family_name = ter[columnas_terceros.index('SegundoApellido')].strip()
-                    exists.type_person = cls.person_type(ter[columnas_terceros.index('TipoPersona')].strip())
-                    if exists.type_person == 'persona_juridica':
-                        exists.declarante = True
+            for ter in terceros_tecno:
+                exists = cls.find_party(ter[columnas_terceros.index('nit_cedula')].strip())
+                #Ahora verificamos si el tercero existe en la bd de tryton
+                if exists:
+                    ultimo_cambio = ter[columnas_terceros.index('Ultimo_Cambio_Registro')]
+                    #Ahora vamos a verificar si el cambio más reciente fue hecho en la bd TecnoCarnes para actualizarlo
+                    if (ultimo_cambio and exists.write_date and ultimo_cambio > exists.write_date) or (ultimo_cambio and not exists.write_date and ultimo_cambio > exists.create_date):
+                        exists.type_document = cls.id_type(ter[columnas_terceros.index('tipo_identificacion')])
+                        exists.id_number = ter[columnas_terceros.index('nit_cedula')].strip()
+                        exists.name = ter[columnas_terceros.index('nombre')].strip()
+                        exists.first_name = ter[columnas_terceros.index('PrimerNombre')].strip()
+                        exists.second_name = ter[columnas_terceros.index('SegundoNombre')].strip()
+                        exists.first_family_name = ter[columnas_terceros.index('PrimerApellido')].strip()
+                        exists.second_family_name = ter[columnas_terceros.index('SegundoApellido')].strip()
+                        exists.type_person = cls.person_type(ter[columnas_terceros.index('TipoPersona')].strip())
+                        if exists.type_person == 'persona_juridica':
+                            exists.declarante = True
+                        #Verificación e inserción codigo ciiu
+                        ciiu = ter[columnas_terceros.index('IdActividadEconomica')]
+                        if ciiu and ciiu != 0:
+                            exists.ciiu_code = ciiu
+                        exists.regime_tax = cls.tax_regime(ter[columnas_terceros.index('IdTipoContribuyente')])
+                        exists.lang = es
+                        #Actualización de la dirección y metodos de contacto
+                        cls.update_address(exists)
+                        cls.update_contact(exists)
+                        exists.save()
+                else:
+                    #Creando tercero junto con sus direcciones y metodos de contactos
+                    tercero = Party()
+                    tercero.create_date = ter[columnas_terceros.index('fecha_creacion')]
+                    tercero.type_document = cls.id_type(ter[columnas_terceros.index('tipo_identificacion')])
+                    tercero.id_number = ter[columnas_terceros.index('nit_cedula')].strip()
+                    tercero.name = ter[columnas_terceros.index('nombre')].strip()
+                    tercero.first_name = ter[columnas_terceros.index('PrimerNombre')].strip()
+                    tercero.second_name = ter[columnas_terceros.index('SegundoNombre')].strip()
+                    tercero.first_family_name = ter[columnas_terceros.index('PrimerApellido')].strip()
+                    tercero.second_family_name = ter[columnas_terceros.index('SegundoApellido')].strip()
+                    tercero.write_date = ter[columnas_terceros.index('Ultimo_Cambio_Registro')]
+                    #Equivalencia tipo de persona y asignación True en declarante
+                    tercero.type_person = cls.person_type(ter[columnas_terceros.index('TipoPersona')].strip())
+                    if tercero.type_person == 'persona_juridica':
+                        tercero.declarante = True
                     #Verificación e inserción codigo ciiu
                     ciiu = ter[columnas_terceros.index('IdActividadEconomica')]
                     if ciiu and ciiu != 0:
-                        exists.ciiu_code = ciiu
-                    exists.regime_tax = cls.tax_regime(ter[columnas_terceros.index('IdTipoContribuyente')])
-                    exists.lang = es
-                    #Actualización de la dirección y metodos de contacto
-                    cls.update_address(exists)
-                    cls.update_contact(exists)
-                    exists.save()
-            else:
-                #Creando tercero junto con sus direcciones y metodos de contactos
-                tercero = Party()
-                tercero.create_date = ter[columnas_terceros.index('fecha_creacion')]
-                tercero.type_document = cls.id_type(ter[columnas_terceros.index('tipo_identificacion')])
-                tercero.id_number = ter[columnas_terceros.index('nit_cedula')].strip()
-                tercero.name = ter[columnas_terceros.index('nombre')].strip()
-                tercero.first_name = ter[columnas_terceros.index('PrimerNombre')].strip()
-                tercero.second_name = ter[columnas_terceros.index('SegundoNombre')].strip()
-                tercero.first_family_name = ter[columnas_terceros.index('PrimerApellido')].strip()
-                tercero.second_family_name = ter[columnas_terceros.index('SegundoApellido')].strip()
-                tercero.write_date = ter[columnas_terceros.index('Ultimo_Cambio_Registro')]
-                #Equivalencia tipo de persona y asignación True en declarante
-                tercero.type_person = cls.person_type(ter[columnas_terceros.index('TipoPersona')].strip())
-                if tercero.type_person == 'persona_juridica':
-                    tercero.declarante = True
-                #Verificación e inserción codigo ciiu
-                ciiu = ter[columnas_terceros.index('IdActividadEconomica')]
-                if ciiu and ciiu != 0:
-                    tercero.ciiu_code = ciiu
-                #Equivalencia regimen de impuestos
-                tercero.regime_tax = cls.tax_regime(ter[columnas_terceros.index('IdTipoContribuyente')])
-                tercero.lang = es
-                direcciones_tecno = cls.get_address_db_tecno(tercero.id_number)
-                if direcciones_tecno:
-                    for direc in direcciones_tecno:
-                        if direc[columna_direcciones.index('codigo_direccion')] == 1:
-                            tercero.commercial_name = direc[columna_direcciones.index('NombreSucursal')].strip()
-                        #Creacion e inserccion de direccion
-                        direccion = Address()
-                        direccion.id_tecno = direc[columna_direcciones.index('nit')].strip()+'-'+str(direc[columna_direcciones.index('codigo_direccion')])
-                        direccion.city = direc[columna_direcciones.index('ciudad')].strip()
-                        direccion.country = 50
-                        direccion.name = direc[columna_direcciones.index('Barrio')].strip()
-                        direccion.party = tercero
-                        direccion.party_name = tercero.name
-                        direccion.street = direc[columna_direcciones.index('direccion')].strip()
-                        direccion.save()
-                contactos_tecno = cls.get_contacts_db_tecno(tercero.id_number)
-                if contactos_tecno:
-                    for cont in contactos_tecno:
-                        #Creacion e inserccion de metodo de contacto phone
-                        contacto = Mcontact()
-                        contacto.id_tecno = str(cont[columnas_contactos.index('IdContacto')])+'-1'
-                        contacto.type = 'phone'
-                        contacto.value = cont[columnas_contactos.index('Telefono')].strip()
-                        contacto.name = cont[columnas_contactos.index('Nombre')].strip()+' ('+cont[columnas_contactos.index('Cargo')].strip()+')'
-                        contacto.language = es
-                        contacto.party = tercero
-                        contacto.save()
-                        #Creacion e inserccion de metodo de contacto email
-                        contacto = Mcontact()
-                        contacto.id_tecno = str(cont[columnas_contactos.index('IdContacto')])+'-2'
-                        contacto.type = 'email'
-                        contacto.value = cont[columnas_contactos.index('Email')].strip()
-                        contacto.name = cont[columnas_contactos.index('Nombre')].strip()+' ('+cont[columnas_contactos.index('Cargo')].strip()+')'
-                        contacto.language = es
-                        contacto.party = tercero
-                        contacto.save()
-                to_create.append(tercero)
-        Party.save(to_create)
+                        tercero.ciiu_code = ciiu
+                    #Equivalencia regimen de impuestos
+                    tercero.regime_tax = cls.tax_regime(ter[columnas_terceros.index('IdTipoContribuyente')])
+                    tercero.lang = es
+                    direcciones_tecno = cls.get_address_db_tecno(tercero.id_number)
+                    if direcciones_tecno:
+                        for direc in direcciones_tecno:
+                            if direc[columna_direcciones.index('codigo_direccion')] == 1:
+                                tercero.commercial_name = direc[columna_direcciones.index('NombreSucursal')].strip()
+                            #Creacion e inserccion de direccion
+                            direccion = Address()
+                            direccion.id_tecno = direc[columna_direcciones.index('nit')].strip()+'-'+str(direc[columna_direcciones.index('codigo_direccion')])
+                            direccion.city = direc[columna_direcciones.index('ciudad')].strip()
+                            direccion.country = 50
+                            direccion.name = direc[columna_direcciones.index('Barrio')].strip()
+                            direccion.party = tercero
+                            direccion.party_name = tercero.name
+                            direccion.street = direc[columna_direcciones.index('direccion')].strip()
+                            direccion.save()
+                    contactos_tecno = cls.get_contacts_db_tecno(tercero.id_number)
+                    if contactos_tecno:
+                        for cont in contactos_tecno:
+                            #Creacion e inserccion de metodo de contacto phone
+                            contacto = Mcontact()
+                            contacto.id_tecno = str(cont[columnas_contactos.index('IdContacto')])+'-1'
+                            contacto.type = 'phone'
+                            contacto.value = cont[columnas_contactos.index('Telefono')].strip()
+                            contacto.name = cont[columnas_contactos.index('Nombre')].strip()+' ('+cont[columnas_contactos.index('Cargo')].strip()+')'
+                            contacto.language = es
+                            contacto.party = tercero
+                            contacto.save()
+                            #Creacion e inserccion de metodo de contacto email
+                            contacto = Mcontact()
+                            contacto.id_tecno = str(cont[columnas_contactos.index('IdContacto')])+'-2'
+                            contacto.type = 'email'
+                            contacto.value = cont[columnas_contactos.index('Email')].strip()
+                            contacto.name = cont[columnas_contactos.index('Nombre')].strip()+' ('+cont[columnas_contactos.index('Cargo')].strip()+')'
+                            contacto.language = es
+                            contacto.party = tercero
+                            contacto.save()
+                    to_create.append(tercero)
+            Party.save(to_create)
 
 
     #FFunción encargada de crear o actualizar los productos y categorias de db TecnoCarnes,
@@ -195,6 +196,7 @@ class Terceros(ModelSQL, ModelView):
         fecha_ultima_actualizacion = cls.convert_date(ultima_actualizacion[0].create_date - datetime.timedelta(hours=5))
         productos_tecno = cls.get_data_where_tecno('TblProducto', fecha_ultima_actualizacion)
         #productos_tecno = cls.get_data_db_tecno('TblProducto')
+        
         col_pro = cls.get_columns_db_tecno('TblProducto')
         col_gproducto = cls.get_columns_db_tecno('TblGrupoProducto')
         grupos_producto = cls.get_data_db_tecno('TblGrupoProducto')
@@ -215,51 +217,52 @@ class Terceros(ModelSQL, ModelView):
                 to_categorias.append(categoria_prod)
         Category.save(to_categorias)
 
-        #Creación de los productos con su respectiva categoria e información
-        Producto = Pool().get('product.product')
-        Template_Product = Pool().get('product.template')
-        to_producto = []
-        for producto in productos_tecno:
-            id_producto = str(producto[col_pro.index('IdProducto')])
-            existe = cls.buscar_producto(id_producto)
-            id_tecno = str(producto[col_pro.index('IdGrupoProducto')])
-            categoria_producto, = Category.search([('id_tecno', '=', id_tecno)])
-            nombre_producto = producto[col_pro.index('Producto')].strip()
-            tipo_producto = cls.tipo_producto(producto[col_pro.index('maneja_inventario')])
-            udm_producto = cls.udm_producto(producto[col_pro.index('unidad_Inventario')])
-            vendible = cls.vendible_producto(producto[col_pro.index('TipoProducto')])
-            valor_unitario = producto[col_pro.index('valor_unitario')]
-            costo_unitario = producto[col_pro.index('costo_unitario')]
-            ultimo_cambio = producto[col_pro.index('Ultimo_Cambio_Registro')]
-            if existe:
-                if (ultimo_cambio and existe.write_date and ultimo_cambio > existe.write_date) or (ultimo_cambio and not existe.write_date and ultimo_cambio > existe.create_date):
-                    existe.template.name = nombre_producto
-                    existe.template.type = tipo_producto
-                    existe.template.default_uom = udm_producto
-                    existe.template.salable = vendible
+        if productos_tecno:
+            #Creación de los productos con su respectiva categoria e información
+            Producto = Pool().get('product.product')
+            Template_Product = Pool().get('product.template')
+            to_producto = []
+            for producto in productos_tecno:
+                id_producto = str(producto[col_pro.index('IdProducto')])
+                existe = cls.buscar_producto(id_producto)
+                id_tecno = str(producto[col_pro.index('IdGrupoProducto')])
+                categoria_producto, = Category.search([('id_tecno', '=', id_tecno)])
+                nombre_producto = producto[col_pro.index('Producto')].strip()
+                tipo_producto = cls.tipo_producto(producto[col_pro.index('maneja_inventario')])
+                udm_producto = cls.udm_producto(producto[col_pro.index('unidad_Inventario')])
+                vendible = cls.vendible_producto(producto[col_pro.index('TipoProducto')])
+                valor_unitario = producto[col_pro.index('valor_unitario')]
+                costo_unitario = producto[col_pro.index('costo_unitario')]
+                ultimo_cambio = producto[col_pro.index('Ultimo_Cambio_Registro')]
+                if existe:
+                    if (ultimo_cambio and existe.write_date and ultimo_cambio > existe.write_date) or (ultimo_cambio and not existe.write_date and ultimo_cambio > existe.create_date):
+                        existe.template.name = nombre_producto
+                        existe.template.type = tipo_producto
+                        existe.template.default_uom = udm_producto
+                        existe.template.salable = vendible
+                        if vendible:
+                            existe.template.sale_uom = udm_producto
+                        existe.template.list_price = valor_unitario
+                        existe.cost_price = costo_unitario
+                        existe.template.categories = [categoria_producto]
+                        existe.template.save()
+                else:
+                    prod = Producto()
+                    prod.code = id_producto
+                    temp = Template_Product()
+                    temp.code = id_producto
+                    temp.name = nombre_producto
+                    temp.type = tipo_producto
+                    temp.default_uom = udm_producto
+                    temp.salable = vendible
                     if vendible:
-                        existe.template.sale_uom = udm_producto
-                    existe.template.list_price = valor_unitario
-                    existe.cost_price = costo_unitario
-                    existe.template.categories = [categoria_producto]
-                    existe.template.save()
-            else:
-                prod = Producto()
-                prod.code = id_producto
-                temp = Template_Product()
-                temp.code = id_producto
-                temp.name = nombre_producto
-                temp.type = tipo_producto
-                temp.default_uom = udm_producto
-                temp.salable = vendible
-                if vendible:
-                    temp.sale_uom = udm_producto
-                temp.list_price = valor_unitario
-                prod.cost_price = costo_unitario
-                temp.categories = [categoria_producto]
-                prod.template = temp
-                to_producto.append(prod)
-        Producto.save(to_producto)
+                        temp.sale_uom = udm_producto
+                    temp.list_price = valor_unitario
+                    prod.cost_price = costo_unitario
+                    temp.categories = [categoria_producto]
+                    prod.template = temp
+                    to_producto.append(prod)
+            Producto.save(to_producto)
 
 
     #Función encargada de consultar si existe una categoria dada de la bd TecnoCarnes
@@ -330,7 +333,8 @@ class Terceros(ModelSQL, ModelView):
         else:
             return party
 
-
+    #Función encargada de realizar la equivalencia entre los tipo de documentos de la db TecnoCarnes
+    # y los tipo de documentos del modulo account_col de presik
     @classmethod
     def id_type(cls, type):
         #Equivalencia tipo de identificacion
@@ -347,7 +351,8 @@ class Terceros(ModelSQL, ModelView):
         else:
             return None
 
-
+    #Función encargada de realizar la equivalencia entre los tipos de personas de la db TecnoCarnes
+    # y los tipos del modulo account_col de presik
     @classmethod
     def person_type(cls, type):
         #Equivalencia tipo de persona y asignación True en declarante
@@ -356,6 +361,8 @@ class Terceros(ModelSQL, ModelView):
         elif type == 'Juridica':
             return 'persona_juridica'
 
+    #Función encargada de realizar la equivalencia entre los regimen de impuestos de la db TecnoCarnes
+    # y los regimen de impuestos del modulo account_col de presik
     @classmethod
     def tax_regime(cls, regime):
         #Equivalencia regimen de impuestos
@@ -368,7 +375,7 @@ class Terceros(ModelSQL, ModelView):
         else:
             return None
 
-
+    #Función encargada de consultar la dirección de un tercero dado
     @classmethod
     def find_address(cls, party):
         Address = Pool().get('party.address')
@@ -378,7 +385,7 @@ class Terceros(ModelSQL, ModelView):
         result = cursor.fetchall()
         return result
 
-
+    #Función encargada de consultar el metodo de contacto de un tercero dado
     @classmethod
     def find_contact_mechanism(cls, party):
         Contact = Pool().get('party.contact_mechanism')
@@ -388,6 +395,7 @@ class Terceros(ModelSQL, ModelView):
         result = cursor.fetchall()
         return result
 
+    #Función encargada de consultar las columnas pertenecientes a 'x' tabla de la bd de TecnoCarnes
     @classmethod
     def get_columns_db_tecno(cls, table):
         columns = []
@@ -400,7 +408,7 @@ class Terceros(ModelSQL, ModelView):
             print("ERROR QUERY "+table+": ", e)
         return columns
 
-    #Esta función se encarga de traer todos los datos de una tabla dada
+    #Esta función se encarga de traer todos los datos de una tabla dada de la bd TecnoCarnes
     @classmethod
     def get_data_db_tecno(cls, table):
         data = []
@@ -412,7 +420,7 @@ class Terceros(ModelSQL, ModelView):
             print("ERROR QUERY "+table+": ", e)
         return data
 
-    #Esta función se encarga de traer todos los datos de una tabla dada de acuerdo al rango de fecha dada
+    #Esta función se encarga de traer todos los datos de una tabla dada de acuerdo al rango de fecha dada de la bd TecnoCarnes
     @classmethod
     def get_data_where_tecno(cls, table, date):
         data = []
@@ -424,30 +432,31 @@ class Terceros(ModelSQL, ModelView):
             print("ERROR QUERY get_data_where_tecno: ", e)
         return data
 
+    #Función encargada de consultar las direcciones pertenecientes a un tercero en la bd TecnoCarnes
     @classmethod
-    def get_address_db_tecno(cls, nit):
+    def get_address_db_tecno(cls, id):
         address = []
         try:
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT * FROM dbo.Terceros_Dir WHERE nit = '"+nit+"'")
+                query = cursor.execute("SELECT * FROM dbo.Terceros_Dir WHERE nit = '"+id+"'")
                 address = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY ADDRESS: ", e)
         return address
 
-
+    #Función encargada de consultar los metodos de contactos pertenecientes a un tercero en la bd TecnoCarnes
     @classmethod
-    def get_contacts_db_tecno(cls, nit):
+    def get_contacts_db_tecno(cls, id):
         contacts = []
         try:
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT * FROM dbo.Terceros_Contactos WHERE Nit_Cedula = '"+nit+"'")
+                query = cursor.execute("SELECT * FROM dbo.Terceros_Contactos WHERE Nit_Cedula = '"+id+"'")
                 contacts = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY CONTACTS: ", e)
         return contacts
 
-
+    #Función encargada de verificar, actualizar e insertar las direcciones pertenecientes a un tercero dado
     @classmethod
     def update_address(cls, party):
         address_tecno = cls.get_address_db_tecno(party.id)
@@ -478,7 +487,7 @@ class Terceros(ModelSQL, ModelView):
                     address.street = add[columna_direcciones.index('direccion')].strip()
                     address.save()
 
-
+    #Función encargada de verificar, actualizar e insertar los metodos de contacto pertenecientes a un tercero dado
     @classmethod
     def update_contact(cls, party):
         contacts_tecno = cls.get_contacts_db_tecno(party.id)
@@ -522,7 +531,7 @@ class Terceros(ModelSQL, ModelView):
                     contacto.party = party
                     contacto.save()
 
-
+    #Función encargada de convertir una fecha dada, al formato y orden para consultas sql server
     @classmethod
     def convert_date(cls, fecha):
         result = fecha.strftime('%Y-%d-%m %H:%M:%S')
