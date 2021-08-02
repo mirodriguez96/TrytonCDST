@@ -65,6 +65,9 @@ class Terceros(ModelSQL, ModelView):
     @classmethod
     @ModelView.button
     def cargar_datos(cls, fecha = None):
+        actualizacion = Terceros()
+        actualizacion.actualizacion = 'PRUEBA ACTUALIZACION'
+        #actualizacion.save()
         cls.carga_terceros()
         cls.carga_productos()
         return None
