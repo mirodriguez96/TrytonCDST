@@ -182,9 +182,8 @@ class Terceros(ModelSQL, ModelView):
         ultima_actualizacion = Actualizacion.search([('actualizacion', '=','PRODUCTOS')], order=[('create_date', 'DESC')], limit=1)
         fecha_ultima_actualizacion = (ultima_actualizacion[0].create_date - datetime.timedelta(hours=5))
         print(fecha_ultima_actualizacion)
-        print(str(fecha_ultima_actualizacion))
         productos_tecno = cls.get_data_where_tecno('TblProducto', str(fecha_ultima_actualizacion))
-
+        #productos_tecno = cls.get_data_db_tecno('TblProducto')
         """
         col_pro = cls.get_columns_db_tecno('TblProducto')
         col_gproducto = cls.get_columns_db_tecno('TblGrupoProducto')
@@ -413,7 +412,7 @@ class Terceros(ModelSQL, ModelView):
                 query = cursor.execute("SELECT * FROM dbo."+table+" WHERE fecha_creacion >= CAST("+date+" AS datetime) OR Ultimo_Cambio_Registro >= CAST("+date+" AS datetime)")
                 data = list(query.fetchall())
         except Exception as e:
-            print("ERROR QUERY "+table+": ", e)
+            print("ERROR QUERY get_data_where_tecno: ", e)
         return data
 
     @classmethod
