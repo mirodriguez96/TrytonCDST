@@ -23,7 +23,7 @@ class Cron(metaclass=PoolMeta):
     def __setup__(cls):
         super().__setup__()
         cls.method.selection.append(
-            ('conector.terceros|cargar_datos', "Actualizacion de Productos y Terceros"),
+            ('conector.terceros|actualizar_datos', "Actualizacion de Productos y Terceros"),
             #('conector.terceros|carga_terceros', "Actualizacion de Terceros"),
             )
 
@@ -67,8 +67,12 @@ class Terceros(ModelSQL, ModelView):
     def cargar_datos(cls, fecha = None):
         cls.carga_terceros()
         cls.carga_productos()
-        #return None
+        return None
 
+    def actualizar_datos(self):
+        self.actualizacion = 'PROBANDO...'
+        self.fecha = None
+        
 
     #Función encargada de crear o actualizar los terceros de db TecnoCarnes,
     #teniendo en cuenta la ultima fecha de actualizacion y si existe o no.
@@ -82,10 +86,6 @@ class Terceros(ModelSQL, ModelView):
         fecha_ultima_actualizacion = cls.convert_date(ultima_actualizacion[0].create_date - datetime.timedelta(hours=5))
         terceros_tecno = cls.get_data_where_tecno('TblTerceros', fecha_ultima_actualizacion)
         #terceros_tecno = cls.get_data_db_tecno('TblTerceros')
-
-        Actua = Pool().get('conector.terceros')
-        Actua.actualizacion = 'TERCEROS PRUEBA'
-        Actua.save()
         if terceros_tecno:
             columnas_terceros = cls.get_columns_db_tecno('TblTerceros')
             columnas_contactos = cls.get_columns_db_tecno('Terceros_Contactos')
