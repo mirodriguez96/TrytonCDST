@@ -70,7 +70,11 @@ class Terceros(ModelSQL, ModelView):
         return None
 
     @classmethod
-    def actualizar_datos(cls, actualizacion= 'Prueba...', fecha = None):
+    def actualizar_datos(cls):
+        Actualizacion = Pool().get('conector.terceros')
+        Actualizacion.name = 'Prueba...'
+        Actualizacion.fecha = None
+        Actualizacion.save()
         return None
 
 
