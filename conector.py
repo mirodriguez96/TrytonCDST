@@ -71,13 +71,8 @@ class Terceros(ModelSQL, ModelView):
 
     @classmethod
     def actualizar_datos(cls):
-        Actualizacion = Pool().get('conector.terceros')
-        actualizar = Actualizacion()
-        actualizar.name = 'Prueba...'
-        actualizar.fecha = None
-        actualizar.save()
-        return None
-
+        cls.carga_terceros
+        cls.carga_productos
 
     #Función encargada de crear o actualizar los terceros de db TecnoCarnes,
     #teniendo en cuenta la ultima fecha de actualizacion y si existe o no.
@@ -85,6 +80,10 @@ class Terceros(ModelSQL, ModelView):
     def carga_terceros(cls):
         print("---------------RUN TERCEROS---------------")
         Actualizacion = Pool().get('conector.terceros')
+        #Se crea un registro con la actualización realizada
+        actualizar = Actualizacion()
+        actualizar.actualizacion = 'TERCEROS'
+        actualizar.save()
         #Se consulta la ultima actualización realizada para los terceros
         ultima_actualizacion = Actualizacion.search([('actualizacion', '=','TERCEROS')], order=[('create_date', 'DESC')], limit=1)
         #Se calcula la fecha restando la diferencia de horas que tiene el servidor con respecto al clienete
@@ -200,6 +199,9 @@ class Terceros(ModelSQL, ModelView):
     def carga_productos(cls):
         print("---------------RUN PRODUCTOS---------------")
         Actualizacion = Pool().get('conector.terceros')
+        actualizar = Actualizacion()
+        actualizar.actualizacion = 'PRODUCTOS'
+        actualizar.save()
         #Se consulta la ultima actualización realizada para los productos
         ultima_actualizacion = Actualizacion.search([('actualizacion', '=','PRODUCTOS')], order=[('create_date', 'DESC')], limit=1)
         #Se calcula la fecha restando la diferencia de horas que tiene el servidor con respecto al clienete
