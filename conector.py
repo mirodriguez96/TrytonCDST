@@ -69,7 +69,8 @@ class Terceros(ModelSQL, ModelView):
         cls.carga_productos()
         return None
 
-    def actualizar_datos(self, actualizacion= 'Prueba...', fecha = None):
+    @classmethod
+    def actualizar_datos(cls, actualizacion= 'Prueba...', fecha = None):
         return None
 
 
