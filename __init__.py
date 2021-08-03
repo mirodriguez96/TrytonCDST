@@ -11,7 +11,7 @@ def register():
         conector.ContactMechanism,
         conector.ProductCategory,
         conector.Cron,
-        #wiz.CargarDatosParameters,
+        wiz.CargarVentas,
         module='conector', type_='model')
 
     Pool.register(

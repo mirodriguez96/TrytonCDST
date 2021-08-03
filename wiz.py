@@ -3,7 +3,7 @@ from trytond.wizard import Wizard, StateView, StateTransition, StateAction, Butt
 
 __all__ = [
     'ActualizarVentas',
-    'CargarDatosParameters',
+    'CargarVentas',
     ]
 
 
@@ -19,19 +19,18 @@ class ActualizarVentas(Wizard):
     __name__ = 'conector.terceros.actualizar_ventas'
 
     print('Ejecutando Asistente')
-"""
+
+
     start_state = 'parameters'
-    parameters = StateView('mimporta.tercero.cargar_datos.parameters',
-        'mimporta.cargar_datos_parameters_view_form', [
+    parameters = StateView('conector.terceros.cargar_ventas.parameters',
+        'conector.cargar_ventas_view_form', [
             Button('Cancel', 'end', 'tryton-cancel'),
-            Button('Create', 'create_exemp', 'tryton-go-next',
-                default=True)])
-    create_exemp = StateTransition()
-    open_exemp = StateAction('mimporta.act_tercero')
+            Button('Create', 'actualizar_venta', 'tryton-go-next', default=True)])
+    actualizar_venta = StateTransition()
+    #open_exemp = StateAction('conector.actualizar_venta')
 
 
 
-class CargarDatosParameters(ModelView):
-    'CargarDatosParameters'
-    __name__ = 'mimporta.tercero.cargar_datos.parameters'
-"""
+class CargarVentas(ModelView):
+    'CargarVentas'
+    __name__ = 'conector.terceros.cargar_ventas.parameters'
