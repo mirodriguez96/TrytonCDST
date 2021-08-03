@@ -72,7 +72,8 @@ class Terceros(ModelSQL, ModelView):
     def actualizar_datos(self):
         self.actualizacion = 'PROBANDO...'
         self.fecha = None
-        
+        return None
+
 
     #Función encargada de crear o actualizar los terceros de db TecnoCarnes,
     #teniendo en cuenta la ultima fecha de actualizacion y si existe o no.
