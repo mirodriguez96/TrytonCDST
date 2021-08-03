@@ -1,7 +1,7 @@
 from trytond.pool import Pool
 
 import conector
-#import wiz
+import wiz
 
 
 def register():
@@ -14,8 +14,7 @@ def register():
         #wiz.CargarDatosParameters,
         module='conector', type_='model')
 
-"""
     Pool.register(
-        wiz.CargarDatos,
-        module='mimporta', type_='wizard')
-"""
+        wiz.ActualizarVentas,
+        module='conector', type_='wizard')
+

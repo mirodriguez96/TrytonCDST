@@ -80,10 +80,6 @@ class Terceros(ModelSQL, ModelView):
     def carga_terceros(cls):
         print("---------------RUN TERCEROS---------------")
         Actualizacion = Pool().get('conector.terceros')
-        #Se crea un registro con la actualización realizada
-        actualizar = Actualizacion()
-        actualizar.actualizacion = 'TERCEROS'
-        actualizar.save()
         #Se consulta la ultima actualización realizada para los terceros
         ultima_actualizacion = Actualizacion.search([('actualizacion', '=','TERCEROS')], order=[('create_date', 'DESC')], limit=1)
         #Se calcula la fecha restando la diferencia de horas que tiene el servidor con respecto al clienete
@@ -191,6 +187,10 @@ class Terceros(ModelSQL, ModelView):
                             contacto.save()
                     to_create.append(tercero)
             Party.save(to_create)
+        #Se crea un registro con la actualización realizada
+        actualizar = Actualizacion()
+        actualizar.actualizacion = 'TERCEROS'
+        actualizar.save()
 
 
     #FFunción encargada de crear o actualizar los productos y categorias de db TecnoCarnes,
@@ -199,9 +199,6 @@ class Terceros(ModelSQL, ModelView):
     def carga_productos(cls):
         print("---------------RUN PRODUCTOS---------------")
         Actualizacion = Pool().get('conector.terceros')
-        actualizar = Actualizacion()
-        actualizar.actualizacion = 'PRODUCTOS'
-        actualizar.save()
         #Se consulta la ultima actualización realizada para los productos
         ultima_actualizacion = Actualizacion.search([('actualizacion', '=','PRODUCTOS')], order=[('create_date', 'DESC')], limit=1)
         #Se calcula la fecha restando la diferencia de horas que tiene el servidor con respecto al clienete
@@ -275,6 +272,9 @@ class Terceros(ModelSQL, ModelView):
                     prod.template = temp
                     to_producto.append(prod)
             Producto.save(to_producto)
+        actualizar = Actualizacion()
+        actualizar.actualizacion = 'PRODUCTOS'
+        actualizar.save()
 
 
     #Función encargada de consultar si existe una categoria dada de la bd TecnoCarnes

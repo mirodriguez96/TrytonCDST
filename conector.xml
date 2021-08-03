@@ -27,12 +27,13 @@
             <field name="view" ref="actercero_view_list"/>
             <field name="act_window" ref="act_tercero"/>
         </record>
+        <!--
         <record model="ir.action.act_window.view" id="act_tercero_view_form">
             <field name="sequence" eval="20"/>
             <field name="view" ref="actercero_view_form"/>
             <field name="act_window" ref="act_tercero"/>
         </record>
-
+        -->
         <menuitem parent="menu_importa" sequence="1" action="act_tercero" id="menu_actercero"/>
 
     </data>

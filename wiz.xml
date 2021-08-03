@@ -6,17 +6,18 @@
         <!-- ###################### -->
         <!-- # Create Exemplaries # -->
         <!-- ###################### -->
-        <!--
-        <record model="ir.action.wizard" id="act_cargar_datos">
-            <field name="name">Cargar Datos</field>
-            <field name="wiz_name">mimporta.tercero.cargar_datos</field>
+        
+        <record model="ir.action.wizard" id="act_actualizar_ventas">
+            <field name="name">Actualizar Ventas</field>
+            <!--El __name__ del asistente al que está vinculada esta acción.-->
+            <field name="wiz_name">conector.terceros.actualizar_ventas</field>
         </record>
-        <record model="ir.action.keyword" id="act_cargar_datos_keyword">
+        <record model="ir.action.keyword" id="act_actualizar_ventas_keyword">
             <field name="keyword">form_action</field>
-            <field name="model">mimporta.tercero,-1</field>
-            <field name="action" ref="act_cargar_datos"/>
+            <field name="model">conector.terceros,-1</field>
+            <field name="action" ref="act_actualizar_ventas"/>
         </record>
-        -->
+        <!---->
         <!-- ################################# -->
         <!-- # Create Exemplaries Parameters # -->
         <!-- ################################# -->
