@@ -23,7 +23,7 @@ class ActualizarVentas(Wizard):
 
     start_state = 'parameters'
     parameters = StateView('conector.terceros.cargar_ventas.parameters',
-        'conector.cargar_ventas_view_form', [
+        'conector.cargar_ventas_form', [
             Button('Cancel', 'end', 'tryton-cancel'),
             Button('Create', 'actualizar_venta', 'tryton-go-next', default=True)])
     actualizar_venta = StateTransition()

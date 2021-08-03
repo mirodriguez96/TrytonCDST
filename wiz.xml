@@ -22,7 +22,7 @@
         <!-- # Create Exemplaries Parameters # -->
         <!-- ################################# -->
         
-        <record model="ir.ui.view" id="cargar_ventas_view_form">
+        <record model="ir.ui.view" id="cargar_ventas_form">
             <field name="model">conector.tercero.cargar_ventas.parameters</field>
             <field name="type">form</field>
             <field name="name">cargar_ventas_form</field>
