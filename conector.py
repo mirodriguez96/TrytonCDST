@@ -60,7 +60,6 @@ class Terceros(ModelSQL, ModelView):
     def default_fecha(cls):
         return datetime.datetime.now()
 
-
     #Función que se activa al pulsar el botón actualizar
     @classmethod
     @ModelView.button
@@ -68,7 +67,8 @@ class Terceros(ModelSQL, ModelView):
         cls.carga_terceros()
         cls.carga_productos()
         return None
-
+    
+    #Método llamado en la clase de CRON (acciones programadas) para la actualización de terceros y productos
     @classmethod
     def actualizar_datos(cls):
         cls.carga_terceros()
