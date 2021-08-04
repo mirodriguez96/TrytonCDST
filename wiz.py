@@ -79,11 +79,10 @@ class CargarVentas(ModelView):
 
     def transition_actualizar_venta(self):
         if (not self.parameters):
-            #print('Error')
-            raise UserError("You cannot process.", "because…")
+            print('Error')
             #self.raise_user_error('invalid_date')
         #Si no...
-        print(self.parameters)
+        raise UserError("You cannot process.", "because…")
         """
         Exemplary = Pool().get('library.book.exemplary')
         to_create = []
