@@ -36,17 +36,16 @@ class ActualizarVentas(Wizard):
         venta.shipment_state = 'none'
         venta.state = 'done'
 
+
 """
 class ActualizarVentas(Wizard):
     'ActualizarVentas'
-    """
-    """
-    Los asistentes __name__ normalmente deben estar compuestos
-    por el modelo en el que trabajará el asistente (conector.terceros), 
-    luego la acción que se realizará (actualizar_ventas). 
-    La acción suele ser un verbo.
-    """
-    """
+
+    #Los asistentes __name__ normalmente deben estar compuestos
+    #por el modelo en el que trabajará el asistente (conector.terceros), 
+    #luego la acción que se realizará (actualizar_ventas). 
+    #La acción suele ser un verbo.
+
     __name__ = 'conector.terceros.actualizar_ventas'
 
     #Estado inicial que le pedira al usuario una entrada
@@ -63,13 +62,11 @@ class ActualizarVentas(Wizard):
 
     def default_parameters(self, name):
         #El context es un diccionario que contiene datos sobre el contexto (...) en el que se está ejecutando el código actual.
-        """
-        """
-        active_model: es el modelo que se muestra actualmente al usuario. En nuestro caso,conector.terceros
-        active_ids: es la lista de los ID de los registros que se seleccionaron cuando se desencadenó la acción
-        active_id: es el primero de esos registros (o el único si solo se seleccionó un registro).
-        """
-        """
+
+        #active_model: es el modelo que se muestra actualmente al usuario. En nuestro caso,conector.terceros
+        #active_ids: es la lista de los ID de los registros que se seleccionaron cuando se desencadenó la acción
+        #active_id: es el primero de esos registros (o el único si solo se seleccionó un registro).
+        
         if Transaction().context.get('active_model', '') != 'conector.terceros':
             #generamos un mensaje de error
             #self.raise_user_error('invalid_model')
@@ -79,16 +76,14 @@ class ActualizarVentas(Wizard):
             #'id': Transaction().context.get('active_id'),
             }
 
-    
     def do_open_exemplaries(self, action):
         #Aquí configuramos la clave pyson_domain para forzar un dominio / restricción en la pestaña,
         #lo que hará que muestre solo los identificadores que coinciden con los elementos que acabamos de crear.
         action['pyson_domain'] = PYSONEncoder().encode([
                 ('id', 'in', [x.id for x in self.parameters.exemplaries])])
         return action, {}
-    """
 
-"""
+
 class CargarVentas(ModelView):
     'CargarVentas'
     __name__ = 'conector.terceros.cargar_ventas.parameters'
@@ -112,6 +107,6 @@ class CargarVentas(ModelView):
         Exemplary.save(to_create)
         self.parameters.exemplaries = to_create
         return 'open_exemplaries'
-        """
+"""
 
 
