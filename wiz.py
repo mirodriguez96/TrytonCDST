@@ -35,6 +35,8 @@ class ActualizarVentas(Wizard):
         venta.shipment_method = 'manual'
         venta.shipment_state = 'none'
         venta.state = 'done'
+        venta.save()
+        return 'end'
 
 
 """
