@@ -40,6 +40,7 @@ class ActualizarVentas(Wizard):
         super().__setup__()
         cls._error_messages.update({
                 'invalid_model': 'This action should be started from a update',
+                'invalid_date' : 'No puede seguir',
                 })
 
     def default_parameters(self, name):
@@ -72,13 +73,6 @@ class ActualizarVentas(Wizard):
 class CargarVentas(ModelView):
     'CargarVentas'
     __name__ = 'conector.terceros.cargar_ventas.parameters'
-
-    @classmethod
-    def __setup__(cls):
-        super().__setup__()
-        cls._error_messages.update({
-                'invalid_date' : 'No puede seguir',
-                })
 
     def transition_actualizar_venta(self):
         if (self.parameters.date and self.parameters.date > datetime.date.today()):
