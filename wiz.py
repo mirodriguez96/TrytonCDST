@@ -3,7 +3,7 @@ from trytond.wizard import Wizard, StateView, StateTransition, StateAction, Butt
 import datetime
 from trytond.pool import Pool
 from trytond.transaction import Transaction
-from trytond.pyson import PYSONEncoder
+#from trytond.pyson import PYSONEncoder
 
 
 __all__ = [
@@ -100,7 +100,3 @@ class CargarVentas(ModelView):
         self.parameters.exemplaries = to_create
         return 'open_exemplaries'
         """
-
-
-if self.parameters._default_values:
-    return self.parameters._default_values
