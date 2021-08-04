@@ -4,6 +4,7 @@ import datetime
 from trytond.pool import Pool
 from trytond.transaction import Transaction
 #from trytond.pyson import PYSONEncoder
+from trytond.exceptions import UserError
 
 
 __all__ = [
@@ -35,12 +36,14 @@ class ActualizarVentas(Wizard):
     actualizar_venta = StateTransition()
     #open_exemp = StateAction('conector.actualizar_venta')
 
+    """
     @classmethod
     def __setup__(cls):
         super().__setup__()
-        cls._error_messages.update({
+        cls.exceptions.update({
                 'invalid_model': 'This action should be started from a update',
                 })
+    """
 
     def default_parameters(self, name):
         #El context es un diccionario que contiene datos sobre el contexto (...) en el que se está ejecutando el código actual.
@@ -51,7 +54,8 @@ class ActualizarVentas(Wizard):
         """
         if Transaction().context.get('active_model', '') != 'conector.terceros':
             #generamos un mensaje de error
-            self.raise_user_error('invalid_model')
+            #self.raise_user_error('invalid_model')
+            raise UserError("You cannot process.", "because…")
         return {
             'date': datetime.date.today(),
             'actualizacion': Transaction().context.get('active_id'),
@@ -75,7 +79,9 @@ class CargarVentas(ModelView):
 
     def transition_actualizar_venta(self):
         if (self.parameters.date and self.parameters.date > datetime.date.today()):
-            self.raise_user_error('invalid_date')
+            print('Error')
+            raise UserError("You cannot process.", "because…")
+            #self.raise_user_error('invalid_date')
         #Si no...
         print(self.parameters.fecha)
         """
