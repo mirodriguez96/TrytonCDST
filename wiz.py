@@ -40,7 +40,6 @@ class ActualizarVentas(Wizard):
         super().__setup__()
         cls._error_messages.update({
                 'invalid_model': 'This action should be started from a update',
-                'invalid_date' : 'No puede seguir',
                 })
 
     def default_parameters(self, name):
