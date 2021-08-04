@@ -16,12 +16,36 @@ __all__ = [
 
 class ActualizarVentas(Wizard):
     'ActualizarVentas'
+    __name__ = 'conector.terceros.actualizar_ventas'
+    start_state = 'actualizar_venta'
+    actualizar_venta = StateTransition()
 
+    def transition_actualizar_venta(self):
+        if Transaction().context.get('active_model', '') != 'conector.terceros':
+            raise UserError("Error", "Debe estar en el modelo de actualizacion")
+        #Procedemos a actualizar una venta
+        Sale = Pool().get('sale.sale')
+        venta = Sale()
+        venta.company = 3
+        venta.currency = 1
+        venta.description = 'describe...'
+        venta.invoice_method = 'manual'
+        venta.invoice_state = 'none'
+        venta.party = 8735
+        venta.shipment_method = 'manual'
+        venta.shipment_state = 'none'
+        venta.state = 'done'
+
+"""
+class ActualizarVentas(Wizard):
+    'ActualizarVentas'
+    """
     """
     Los asistentes __name__ normalmente deben estar compuestos
     por el modelo en el que trabajará el asistente (conector.terceros), 
     luego la acción que se realizará (actualizar_ventas). 
     La acción suele ser un verbo.
+    """
     """
     __name__ = 'conector.terceros.actualizar_ventas'
 
@@ -36,33 +60,26 @@ class ActualizarVentas(Wizard):
     actualizar_venta = StateTransition()
     #open_exemp = StateAction('conector.actualizar_venta')
 
-    """
-    @classmethod
-    def __setup__(cls):
-        super().__setup__()
-        cls.exceptions.update({
-                'invalid_model': 'This action should be started from a update',
-                })
-    """
 
     def default_parameters(self, name):
         #El context es un diccionario que contiene datos sobre el contexto (...) en el que se está ejecutando el código actual.
+        """
         """
         active_model: es el modelo que se muestra actualmente al usuario. En nuestro caso,conector.terceros
         active_ids: es la lista de los ID de los registros que se seleccionaron cuando se desencadenó la acción
         active_id: es el primero de esos registros (o el único si solo se seleccionó un registro).
         """
+        """
         if Transaction().context.get('active_model', '') != 'conector.terceros':
             #generamos un mensaje de error
             #self.raise_user_error('invalid_model')
             raise UserError("You cannot process.", "because…")
-        raise UserError("You cannot process.", "because…")
         return {
             #'date': datetime.date.today(),
             #'id': Transaction().context.get('active_id'),
             }
 
-    """
+    
     def do_open_exemplaries(self, action):
         #Aquí configuramos la clave pyson_domain para forzar un dominio / restricción en la pestaña,
         #lo que hará que muestre solo los identificadores que coinciden con los elementos que acabamos de crear.
@@ -71,9 +88,7 @@ class ActualizarVentas(Wizard):
         return action, {}
     """
 
-
-
-
+"""
 class CargarVentas(ModelView):
     'CargarVentas'
     __name__ = 'conector.terceros.cargar_ventas.parameters'
@@ -84,7 +99,6 @@ class CargarVentas(ModelView):
             raise UserError("You cannot process.", "because…")
             #self.raise_user_error('invalid_date')
         #Si no...
-        """
         Exemplary = Pool().get('library.book.exemplary')
         to_create = []
         while len(to_create) < self.parameters.number_of_exemplaries:
@@ -99,3 +113,5 @@ class CargarVentas(ModelView):
         self.parameters.exemplaries = to_create
         return 'open_exemplaries'
         """
+
+
