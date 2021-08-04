@@ -57,8 +57,8 @@ class ActualizarVentas(Wizard):
             #self.raise_user_error('invalid_model')
             raise UserError("You cannot process.", "because…")
         return {
-            'date': datetime.date.today(),
-            'actualizacion': Transaction().context.get('active_id'),
+            #'date': datetime.date.today(),
+            #'id': Transaction().context.get('active_id'),
             }
 
     """
@@ -78,12 +78,12 @@ class CargarVentas(ModelView):
     __name__ = 'conector.terceros.cargar_ventas.parameters'
 
     def transition_actualizar_venta(self):
-        if (self.parameters.date and self.parameters.date > datetime.date.today()):
-            print('Error')
+        if (self.parameters):
+            #print('Error')
             raise UserError("You cannot process.", "because…")
             #self.raise_user_error('invalid_date')
         #Si no...
-        print(self.parameters.fecha)
+        #print(self.parameters.fecha)
         """
         Exemplary = Pool().get('library.book.exemplary')
         to_create = []
