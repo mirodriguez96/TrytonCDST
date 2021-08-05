@@ -1,10 +1,11 @@
-from trytond.model import ModelView
-from trytond.wizard import Wizard, StateView, StateTransition, StateAction, Button
+#from trytond.model import ModelView
+from trytond.wizard import Wizard, StateTransition#, StateView, StateAction, Button
 import datetime
 from trytond.pool import Pool
 from trytond.transaction import Transaction
 #from trytond.pyson import PYSONEncoder
 from trytond.exceptions import UserError
+from conexion import conexion
 
 
 __all__ = [
@@ -23,37 +24,92 @@ class ActualizarVentas(Wizard):
     def transition_actualizar_venta(self):
         if Transaction().context.get('active_model', '') != 'conector.terceros':
             raise UserError("Error", "Debe estar en el modelo de actualizacion")
-        
-        #Procedemos a realizar una venta
         pool = Pool()
         Product = pool.get('product.product')
-        p1 = Product.search([('id', '=', 3884)])
         Sale = pool.get('sale.sale')
         Line = pool.get('sale.line')
-        venta = Sale()
-        line = Line()
-        venta.company = 3
-        venta.currency = 1
-        venta.description = 'describe...'
-        venta.invoice_address = 10338
-        venta.invoice_method = 'manual'
-        venta.invoice_state = 'none'
-        venta.invoice_type = 'M'
-        venta.party = 8735
-        venta.sale_date = datetime.date(2019, 12, 4)
-        venta.shipment_address = 10338
-        venta.shipment_method = 'manual'
-        venta.shipment_state = 'none'
-        venta.state = 'done'
-        line.product = 3884
-        line.quantity = 4
-        line.sale = venta
-        line.type = 'line'
-        line.unit = 1
-        line.save()
-        venta.save()
+        Party = pool.get('party.party')
+        Address = pool.get('party.address')
+        documentos = self.get_data_db_tecno('Documentos')
+        coluns_doc = self.get_columns_db_tecno('Documentos')
+        create_sale = []
+        for vent in documentos:
+            numero_doc = vent[coluns_doc.index('Numero_Documento')]
+            venta = Sale()
+            line = Line()
+            #venta.company = 3
+            #venta.currency = 1
+            venta.description = vent[coluns_doc.index('notas')]
+            venta.invoice_method = 'manual'
+            venta.invoice_state = 'none'
+            venta.invoice_type = 'M'
+            fecha = str(vent[coluns_doc.index('Fecha_Orden_Venta')]).split()[0]
+            fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
+            venta.sale_date = fecha_date
+            venta.shipment_method = 'manual'
+            venta.shipment_state = 'none'
+            venta.state = 'done'
+            party = Party.search([('id_number', '=', vent[coluns_doc.index('nit_Cedula')])])
+            venta.party = party.id
+            address = Address.search([('party', '=', party.id)], limit=1)
+            venta.invoice_address = address[0].id
+            venta.shipment_address = address[0].id
 
+            documentos_linea = self.get_line_where(str(numero_doc))
+            col_line = self.get_columns_db_tecno('Documentos_Lin')
+            create_line = []
+            for lin in documentos_linea:
+                #Procedemos a realizar una venta
+                producto = Product.search([('code', '=', lin[col_line.index('IdProducto')])])
+                line.product = producto.id
+                line.quantity = int(lin[col_line.index('Cantidad_Facturada')])
+                line.sale = venta
+                line.type = 'line'
+                line.unit = 1
+                create_line.append(line)
+            create_sale.append(venta)
+        Line.save(create_line)
+        Sale.save(create_sale)
         return 'end'
+
+
+    #Esta función se encarga de traer todos los datos de una tabla dada de la bd TecnoCarnes
+    @classmethod
+    def get_data_db_tecno(cls, table):
+        data = []
+        try:
+            with conexion.cursor() as cursor:
+                query = cursor.execute("SELECT TOP (100) * FROM dbo."+table)
+                data = list(query.fetchall())
+        except Exception as e:
+            print("ERROR QUERY "+table+": ", e)
+        return data
+    
+    #Esta función se encarga de traer todos los datos de una tabla dada de la bd TecnoCarnes
+    @classmethod
+    def get_line_where(cls, id):
+        data = []
+        try:
+            with conexion.cursor() as cursor:
+                query = cursor.execute("SELECT TOP (100) * FROM dbo.Documentos_Lin WHERE Numero_Documento = "+id)
+                data = list(query.fetchall())
+        except Exception as e:
+            print("ERROR QUERY Documentos_Lin: ", e)
+        return data
+
+    #Función encargada de consultar las columnas pertenecientes a 'x' tabla de la bd de TecnoCarnes
+    @classmethod
+    def get_columns_db_tecno(cls, table):
+        columns = []
+        try:
+            with conexion.cursor() as cursor:
+                query = cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = '"+table+"' ORDER BY ORDINAL_POSITION")
+                for q in query.fetchall():
+                    columns.append(q[0])
+        except Exception as e:
+            print("ERROR QUERY "+table+": ", e)
+        return columns
+
 
 
 """
