@@ -59,9 +59,7 @@ class ActualizarVentas(Wizard):
             col_line = self.get_columns_db_tecno('Documentos_Lin')
             create_line = []
             for lin in documentos_linea:
-                id_prod = str(lin[col_line.index('IdProducto')])
-                print(id_prod)
-                producto, = Product.search([('code', '=', id_prod)])
+                producto = self.buscar_producto(str(lin[col_line.index('IdProducto')]))
                 if producto:
                     line = Line()
                     line.product = producto.id
@@ -113,6 +111,17 @@ class ActualizarVentas(Wizard):
         except Exception as e:
             print("ERROR QUERY "+table+": ", e)
         return columns
+
+    #Función encargada de consultar si existe un producto dado de la bd TecnoCarnes
+    @classmethod
+    def buscar_producto(cls, id_producto):
+        Product = Pool().get('product.product')
+        try:
+            producto, = Product.search([('code', '=', id_producto)])
+        except ValueError:
+            return False
+        else:
+            return producto
 
 
 
