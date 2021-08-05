@@ -21,13 +21,13 @@
         <!-- ################################# -->
         <!-- # Create Exemplaries Parameters # -->
         <!-- ################################# -->
-        
+        <!--
         <record model="ir.ui.view" id="cargar_ventas_view_form">
             <field name="model">conector.terceros.cargar_ventas.parameters</field>
             <field name="type">form</field>
             <field name="name">cargar_ventas_form</field>
         </record>
-        <!---->
+        -->
     </data>
 
 </tryton>
