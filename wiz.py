@@ -50,7 +50,7 @@ class ActualizarVentas(Wizard):
             venta.shipment_state = 'none'
             venta.state = 'done'
             party = Party.search([('id_number', '=', vent[coluns_doc.index('nit_Cedula')])])
-            venta.party = party.id
+            venta.party = party[0].id
             address = Address.search([('party', '=', party.id)], limit=1)
             venta.invoice_address = address[0].id
             venta.shipment_address = address[0].id
