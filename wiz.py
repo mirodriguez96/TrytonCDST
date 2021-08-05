@@ -23,22 +23,32 @@ class ActualizarVentas(Wizard):
     def transition_actualizar_venta(self):
         if Transaction().context.get('active_model', '') != 'conector.terceros':
             raise UserError("Error", "Debe estar en el modelo de actualizacion")
+        
         #Procedemos a actualizar una venta
         Sale = Pool().get('sale.sale')
+        Line = Pool().get('sale.line')
         venta = Sale()
+        line = Line()
         venta.company = 3
         venta.currency = 1
         venta.description = 'describe...'
         venta.invoice_address = 10338
         venta.invoice_method = 'manual'
         venta.invoice_state = 'none'
+        venta.invoice_type = 'M'
         venta.party = 8735
         venta.sale_date = datetime.date(2019, 12, 4)
         venta.shipment_address = 10338
         venta.shipment_method = 'manual'
         venta.shipment_state = 'none'
         venta.state = 'done'
+        line.product = 3884
+        line.quantity = 4
+        line.sale = venta
+        line.type = 'line'
+        line.save()
         venta.save()
+
         return 'end'
 
 
