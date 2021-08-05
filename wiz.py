@@ -33,6 +33,7 @@ class ActualizarVentas(Wizard):
         documentos = self.get_data_db_tecno('Documentos')
         coluns_doc = self.get_columns_db_tecno('Documentos')
         create_sale = []
+        #Procedemos a realizar una venta
         for vent in documentos:
             numero_doc = vent[coluns_doc.index('Numero_documento')]
             venta = Sale()
@@ -58,8 +59,9 @@ class ActualizarVentas(Wizard):
             col_line = self.get_columns_db_tecno('Documentos_Lin')
             create_line = []
             for lin in documentos_linea:
-                #Procedemos a realizar una venta
-                producto, = Product.search([('code', '=', lin[col_line.index('IdProducto')])])
+                id_prod = str(lin[col_line.index('IdProducto')])
+                print(id_prod)
+                producto, = Product.search([('code', '=', id_prod)])
                 if producto:
                     line = Line()
                     line.product = producto.id
