@@ -29,6 +29,7 @@ class ActualizarVentas(Wizard):
         venta.company = 3
         venta.currency = 1
         venta.description = 'describe...'
+        venta.invoice_address = 10338
         venta.invoice_method = 'manual'
         venta.invoice_state = 'none'
         venta.party = 8735
