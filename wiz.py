@@ -36,7 +36,6 @@ class ActualizarVentas(Wizard):
         for vent in documentos:
             numero_doc = vent[coluns_doc.index('Numero_documento')]
             venta = Sale()
-            line = Line()
             #venta.company = 3
             #venta.currency = 1
             venta.description = vent[coluns_doc.index('notas')]
@@ -60,14 +59,16 @@ class ActualizarVentas(Wizard):
             create_line = []
             for lin in documentos_linea:
                 #Procedemos a realizar una venta
-                producto = Product.search([('code', '=', lin[col_line.index('IdProducto')])])
-                line.product = producto[0].id
-                line.quantity = int(lin[col_line.index('Cantidad_Facturada')])
-                line.unit_price = lin[col_line.index('Valor_Unitario')]
-                line.sale = venta
-                line.type = 'line'
-                line.unit = 1
-                create_line.append(line)
+                producto, = Product.search([('code', '=', lin[col_line.index('IdProducto')])])
+                if producto:
+                    line = Line()
+                    line.product = producto.id
+                    line.quantity = int(lin[col_line.index('Cantidad_Facturada')])
+                    line.unit_price = lin[col_line.index('Valor_Unitario')]
+                    line.sale = venta
+                    line.type = 'line'
+                    line.unit = 1
+                    create_line.append(line)
             create_sale.append(venta)
         Line.save(create_line)
         Sale.save(create_sale)
