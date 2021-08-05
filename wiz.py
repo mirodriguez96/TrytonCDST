@@ -44,7 +44,7 @@ class ActualizarVentas(Wizard):
             venta.invoice_state = 'none'
             venta.invoice_type = 'M'
             fecha = str(vent[coluns_doc.index('Fecha_Orden_Venta')]).split()[0]
-            fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
+            fecha_date = datetime.date(int(fecha[0]), int(fecha[2]), int(fecha[1]))
             venta.sale_date = fecha_date
             venta.shipment_method = 'manual'
             venta.shipment_state = 'none'
