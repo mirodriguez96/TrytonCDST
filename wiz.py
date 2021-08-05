@@ -33,6 +33,7 @@ class ActualizarVentas(Wizard):
         venta.invoice_method = 'manual'
         venta.invoice_state = 'none'
         venta.party = 8735
+        venta.sale_date = datetime.date(2019, 12, 4)
         venta.shipment_address = 10338
         venta.shipment_method = 'manual'
         venta.shipment_state = 'none'
