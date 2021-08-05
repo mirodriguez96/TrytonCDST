@@ -24,9 +24,12 @@ class ActualizarVentas(Wizard):
         if Transaction().context.get('active_model', '') != 'conector.terceros':
             raise UserError("Error", "Debe estar en el modelo de actualizacion")
         
-        #Procedemos a actualizar una venta
-        Sale = Pool().get('sale.sale')
-        Line = Pool().get('sale.line')
+        #Procedemos a realizar una venta
+        pool = Pool()
+        Product = pool.get('product.product')
+        p1 = Product.search([('id', '=', 3884)])
+        Sale = pool.get('sale.sale')
+        Line = pool.get('sale.line')
         venta = Sale()
         line = Line()
         venta.company = 3
@@ -42,7 +45,7 @@ class ActualizarVentas(Wizard):
         venta.shipment_method = 'manual'
         venta.shipment_state = 'none'
         venta.state = 'done'
-        line.product = 3884
+        line.product = p1
         line.quantity = 4
         line.sale = venta
         line.type = 'line'
