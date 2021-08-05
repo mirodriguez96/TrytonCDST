@@ -51,7 +51,7 @@ class ActualizarVentas(Wizard):
             venta.state = 'done'
             party = Party.search([('id_number', '=', vent[coluns_doc.index('nit_Cedula')])])
             venta.party = party[0].id
-            address = Address.search([('party', '=', party.id)], limit=1)
+            address = Address.search([('party', '=', party[0].id)], limit=1)
             venta.invoice_address = address[0].id
             venta.shipment_address = address[0].id
 
@@ -61,8 +61,9 @@ class ActualizarVentas(Wizard):
             for lin in documentos_linea:
                 #Procedemos a realizar una venta
                 producto = Product.search([('code', '=', lin[col_line.index('IdProducto')])])
-                line.product = producto.id
+                line.product = producto[0].id
                 line.quantity = int(lin[col_line.index('Cantidad_Facturada')])
+                line.unit_price = lin[col_line.index('Valor_Unitario')]
                 line.sale = venta
                 line.type = 'line'
                 line.unit = 1
