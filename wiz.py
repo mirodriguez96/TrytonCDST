@@ -34,7 +34,7 @@ class ActualizarVentas(Wizard):
         coluns_doc = self.get_columns_db_tecno('Documentos')
         create_sale = []
         for vent in documentos:
-            numero_doc = vent[coluns_doc.index('Numero_Documento')]
+            numero_doc = vent[coluns_doc.index('Numero_documento')]
             venta = Sale()
             line = Line()
             #venta.company = 3
