@@ -45,10 +45,11 @@ class ActualizarVentas(Wizard):
         venta.shipment_method = 'manual'
         venta.shipment_state = 'none'
         venta.state = 'done'
-        line.product = p1
+        line.product = 3884
         line.quantity = 4
         line.sale = venta
         line.type = 'line'
+        line.unit = 1
         line.save()
         venta.save()
 
