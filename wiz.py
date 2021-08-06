@@ -77,10 +77,12 @@ class ActualizarVentas(Wizard):
                     line.sale = venta
                     line.type = 'line'
                     line.unit = 1
-                    create_line.append(line)
-            create_sale.append(venta)
-        Line.save(create_line)
-        Sale.save(create_sale)
+                    #create_line.append(line)
+                    line.save()
+            #create_sale.append(venta)
+            venta.save()
+        #Line.save(create_line)
+        #Sale.save(create_sale)
         return 'end'
 
 
