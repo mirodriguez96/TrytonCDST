@@ -37,6 +37,7 @@ class ActualizarVentas(Wizard):
         for vent in documentos:
             print('----------------VENTA----------------')
             numero_doc = vent[coluns_doc.index('Numero_documento')]
+            tipo_doc = vent[coluns_doc.index('tipo')]
             print(numero_doc)
             venta = Sale()
             #venta.company = 3
@@ -61,7 +62,7 @@ class ActualizarVentas(Wizard):
             venta.invoice_address = address[0].id
             venta.shipment_address = address[0].id
 
-            documentos_linea = self.get_line_where(str(numero_doc))
+            documentos_linea = self.get_line_where(str(numero_doc), str(tipo_doc))
             col_line = self.get_columns_db_tecno('Documentos_Lin')
             create_line = []
             for lin in documentos_linea:
@@ -70,7 +71,7 @@ class ActualizarVentas(Wizard):
                     print(producto.name)
                     line = Line()
                     line.product = producto.id
-                    line.quantity = int(lin[col_line.index('Cantidad_Facturada')])
+                    line.quantity = abs(int(lin[col_line.index('Cantidad_Facturada')]))
                     line.unit_price = lin[col_line.index('Valor_Unitario')]
                     line.sale = venta
                     line.type = 'line'
@@ -88,7 +89,7 @@ class ActualizarVentas(Wizard):
         data = []
         try:
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT TOP (100) * FROM dbo."+table)
+                query = cursor.execute("SELECT TOP (10) * FROM dbo."+table+" WHERE sw = 1")
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY "+table+": ", e)
@@ -96,11 +97,11 @@ class ActualizarVentas(Wizard):
     
     #Esta función se encarga de traer todos los datos de una tabla dada de la bd TecnoCarnes
     @classmethod
-    def get_line_where(cls, id):
+    def get_line_where(cls, id, tipo):
         data = []
         try:
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT TOP (10) * FROM dbo.Documentos_Lin WHERE Numero_Documento = "+id)
+                query = cursor.execute("SELECT * FROM dbo.Documentos_Lin WHERE Numero_Documento = "+id+" AND tipo = "+tipo)
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY Documentos_Lin: ", e)
