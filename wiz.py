@@ -16,8 +16,19 @@ __all__ = [
     'SaleLine',
     ]
 
-#Nota: el uso principal de los asistentes suele ser realizar acciones basadas en alguna entrada del usuario.
+#Herencia del party.contact_mechanism e insercción del campo id_tecno
+class Sale(ModelSQL, ModelView):
+    'Sale'
+    __name__ = 'sale.sale'
+    id_tecno = fields.Char('Id TecnoCarnes', required=False)
 
+#Herencia del party.contact_mechanism e insercción del campo id_tecno
+class SaleLine(ModelSQL, ModelView):
+    'SaleLine'
+    __name__ = 'sale.line'
+    id_tecno = fields.Char('Id TecnoCarnes', required=False)
+
+#Nota: el uso principal de los asistentes suele ser realizar acciones basadas en alguna entrada del usuario.
 class ActualizarVentas(Wizard):
     'ActualizarVentas'
     __name__ = 'conector.terceros.actualizar_ventas'
@@ -130,18 +141,6 @@ class ActualizarVentas(Wizard):
         else:
             return producto
 
-
-#Herencia del party.contact_mechanism e insercción del campo id_tecno
-class Sale(ModelSQL, ModelView):
-    'Sale'
-    __name__ = 'sale.sale'
-    id_tecno = fields.Char('Id TecnoCarnes', required=False)
-
-#Herencia del party.contact_mechanism e insercción del campo id_tecno
-class SaleLine(ModelSQL, ModelView):
-    'SaleLine'
-    __name__ = 'sale.line'
-    id_tecno = fields.Char('Id TecnoCarnes', required=False)
 
 
 """
