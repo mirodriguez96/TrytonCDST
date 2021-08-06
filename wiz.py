@@ -12,21 +12,7 @@ from conexion import conexion
 __all__ = [
     'ActualizarVentas',
     'CargarVentas',
-    'Sale',
-    'SaleLine',
     ]
-
-#Herencia del party.contact_mechanism e insercción del campo id_tecno
-class Sale(ModelSQL, ModelView):
-    'Sale'
-    __name__ = 'sale.sale'
-    id_tecno = fields.Char('Id TecnoCarnes', required=False)
-
-#Herencia del party.contact_mechanism e insercción del campo id_tecno
-class SaleLine(ModelSQL, ModelView):
-    'SaleLine'
-    __name__ = 'sale.line'
-    id_tecno = fields.Char('Id TecnoCarnes', required=False)
 
 #Nota: el uso principal de los asistentes suele ser realizar acciones basadas en alguna entrada del usuario.
 class ActualizarVentas(Wizard):

@@ -11,8 +11,8 @@ def register():
         conector.ContactMechanism,
         conector.ProductCategory,
         conector.Cron,
-        wiz.Sale,
-        wiz.SaleLine,
+        conector.Sale,
+        conector.SaleLine,
         module='conector', type_='model')
 
     Pool.register(
