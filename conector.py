@@ -570,6 +570,7 @@ class ProductCategory(ModelSQL, ModelView):
     __name__ = 'product.category'
     id_tecno = fields.Char('Id TecnoCarnes', required=False)
 
+"""
 #Heredamos del modelo sale.sale para agregar el campo id_tecno
 class Sale(ModelSQL, ModelView):
     'Sale'
@@ -581,3 +582,4 @@ class SaleLine(ModelSQL, ModelView):
     'SaleLine'
     __name__ = 'sale.line'
     id_tecno = fields.Char('Id TecnoCarnes', required=False)
+"""
