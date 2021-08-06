@@ -3,6 +3,7 @@ from trytond.wizard import Wizard, StateTransition#, StateView, StateAction, But
 import datetime
 from trytond.pool import Pool
 from trytond.transaction import Transaction
+from trytond.model import ModelSQL, ModelView, fields
 #from trytond.pyson import PYSONEncoder
 from trytond.exceptions import UserError
 from conexion import conexion
@@ -11,6 +12,8 @@ from conexion import conexion
 __all__ = [
     'ActualizarVentas',
     'CargarVentas',
+    'Sale',
+    'SaleLine',
     ]
 
 #Nota: el uso principal de los asistentes suele ser realizar acciones basadas en alguna entrada del usuario.
@@ -25,7 +28,6 @@ class ActualizarVentas(Wizard):
         if Transaction().context.get('active_model', '') != 'conector.terceros':
             raise UserError("Error", "Debe estar en el modelo de actualizacion")
         pool = Pool()
-        Product = pool.get('product.product')
         Sale = pool.get('sale.sale')
         Line = pool.get('sale.line')
         Party = pool.get('party.party')
@@ -38,25 +40,21 @@ class ActualizarVentas(Wizard):
             print('----------------VENTA----------------')
             numero_doc = vent[coluns_doc.index('Numero_documento')]
             tipo_doc = vent[coluns_doc.index('tipo')].strip()
-            print(numero_doc, tipo_doc)
             venta = Sale()
             venta.number = numero_doc
             #venta.company = 3
             #venta.currency = 1
             venta.description = vent[coluns_doc.index('notas')]
-            print('notas: ', vent[coluns_doc.index('notas')])
             venta.invoice_method = 'manual'
             venta.invoice_state = 'none'
             venta.invoice_type = 'M'
             fecha = str(vent[coluns_doc.index('Fecha_Orden_Venta')]).split()[0].split('-')
             fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
-            print('fecha: ', fecha_date)
             venta.sale_date = fecha_date
             venta.shipment_method = 'manual'
             venta.shipment_state = 'none'
             venta.state = 'done'
             party, = Party.search([('id_number', '=', vent[coluns_doc.index('nit_Cedula')])])
-            print('nit: ', vent[coluns_doc.index('nit_Cedula')])
             venta.party = party.id
             address = Address.search([('party', '=', party.id)], limit=1)
             venta.invoice_address = address[0].id
@@ -64,25 +62,23 @@ class ActualizarVentas(Wizard):
 
             documentos_linea = self.get_line_where(str(numero_doc), str(tipo_doc))
             col_line = self.get_columns_db_tecno('Documentos_Lin')
-            create_line = []
+            #create_line = []
             for lin in documentos_linea:
                 producto = self.buscar_producto(str(lin[col_line.index('IdProducto')]))
-                print('IdProducto: ', lin[col_line.index('IdProducto')])
                 if producto:
-                    print('Producto: ', producto.name)
                     line = Line()
                     line.product = producto
                     line.quantity = abs(int(lin[col_line.index('Cantidad_Facturada')]))
                     line.unit_price = lin[col_line.index('Valor_Unitario')]
                     line.sale = venta
                     line.type = 'line'
-                    line.unit = 1
+                    #line.unit = 1
                     #create_line.append(line)
                     line.save()
-            #create_sale.append(venta)
-            venta.save()
+            create_sale.append(venta)
+            #venta.save()
         #Line.save(create_line)
-        #Sale.save(create_sale)
+        Sale.save(create_sale)
         return 'end'
 
 
@@ -92,7 +88,7 @@ class ActualizarVentas(Wizard):
         data = []
         try:
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT TOP (10) * FROM dbo."+table+" WHERE sw = 1")
+                query = cursor.execute("SELECT TOP (100) * FROM dbo."+table+" WHERE sw = 1")
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY "+table+": ", e)
@@ -134,6 +130,18 @@ class ActualizarVentas(Wizard):
         else:
             return producto
 
+
+#Herencia del party.contact_mechanism e insercción del campo id_tecno
+class Sale(ModelSQL, ModelView):
+    'Sale'
+    __name__ = 'sale.sale'
+    id_tecno = fields.Char('Id TecnoCarnes', required=False)
+
+#Herencia del party.contact_mechanism e insercción del campo id_tecno
+class SaleLine(ModelSQL, ModelView):
+    'SaleLine'
+    __name__ = 'sale.line'
+    id_tecno = fields.Char('Id TecnoCarnes', required=False)
 
 
 """
