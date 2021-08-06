@@ -45,7 +45,7 @@ class ActualizarVentas(Wizard):
             venta.number = numero_doc
             #venta.company = 3
             #venta.currency = 1
-            venta.id_tecno = numero_doc+'-'+str(tipo_doc)
+            venta.id_tecno = str(numero_doc)+'-'+tipo_doc
             venta.description = vent[coluns_doc.index('notas')]
             venta.invoice_method = 'manual'
             venta.invoice_state = 'none'
