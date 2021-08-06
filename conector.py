@@ -12,14 +12,13 @@ __all__ = [
     'ProductCategory',
     'Cron',
     'Sale',
-    'SaleLine',
+    #'SaleLine',
     ]
 
 
 class Cron(metaclass=PoolMeta):
     'Cron'
     __name__ = 'ir.cron'
-
 
     @classmethod
     def __setup__(cls):
@@ -44,18 +43,6 @@ class Terceros(ModelSQL, ModelView):
                 'cargar_datos': {},
                 })
 
-    """
-    @classmethod
-    def validate(cls, books):
-        for book in books:
-            if not book.isbn:
-                continue
-            try:
-                if int(book.isbn) < 0:
-                    raise ValueError
-            except ValueError:
-                cls.raise_user_error('invalid_isbn')
-    """
 
     @classmethod
     def default_fecha(cls):
@@ -570,13 +557,13 @@ class ProductCategory(ModelSQL, ModelView):
     __name__ = 'product.category'
     id_tecno = fields.Char('Id TecnoCarnes', required=False)
 
-"""
+
 #Heredamos del modelo sale.sale para agregar el campo id_tecno
 class Sale(ModelSQL, ModelView):
     'Sale'
     __name__ = 'sale.sale'
     id_tecno = fields.Char('Id TecnoCarnes', required=False)
-
+"""
 #Heredamos del modelo sale.line para agregar el campo id_tecno
 class SaleLine(ModelSQL, ModelView):
     'SaleLine'

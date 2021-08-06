@@ -11,7 +11,7 @@ def register():
         conector.ContactMechanism,
         conector.ProductCategory,
         conector.Cron,
-        #conector.Sale,
+        conector.Sale,
         #conector.SaleLine,
         module='conector', type_='model')
 

@@ -3,7 +3,6 @@ from trytond.wizard import Wizard, StateTransition#, StateView, StateAction, But
 import datetime
 from trytond.pool import Pool
 from trytond.transaction import Transaction
-from trytond.model import ModelSQL, ModelView, fields
 #from trytond.pyson import PYSONEncoder
 from trytond.exceptions import UserError
 from conexion import conexion
@@ -13,6 +12,7 @@ __all__ = [
     'ActualizarVentas',
     'CargarVentas',
     ]
+
 
 #Nota: el uso principal de los asistentes suele ser realizar acciones basadas en alguna entrada del usuario.
 class ActualizarVentas(Wizard):
@@ -73,6 +73,8 @@ class ActualizarVentas(Wizard):
                     line.unit = template.default_uom
                     #create_line.append(line)
                     line.save()
+                else:
+                    raise UserError("Error", "No existe el producto con la siguiente id: ", lin[col_line.index('IdProducto')])
             create_sale.append(venta)
             #venta.save()
         #Line.save(create_line)
@@ -201,5 +203,4 @@ class CargarVentas(ModelView):
         self.parameters.exemplaries = to_create
         return 'open_exemplaries'
 """
-
 
