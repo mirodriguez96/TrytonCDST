@@ -37,7 +37,7 @@ class ActualizarVentas(Wizard):
         for vent in documentos:
             print('----------------VENTA----------------')
             numero_doc = vent[coluns_doc.index('Numero_documento')]
-            tipo_doc = vent[coluns_doc.index('tipo')]
+            tipo_doc = vent[coluns_doc.index('tipo')].strip()
             print(numero_doc, tipo_doc)
             venta = Sale()
             venta.number = numero_doc
@@ -71,7 +71,7 @@ class ActualizarVentas(Wizard):
                 if producto:
                     print('Producto: ', producto.name)
                     line = Line()
-                    line.product = producto.id
+                    line.product = producto
                     line.quantity = abs(int(lin[col_line.index('Cantidad_Facturada')]))
                     line.unit_price = lin[col_line.index('Valor_Unitario')]
                     line.sale = venta
@@ -125,7 +125,6 @@ class ActualizarVentas(Wizard):
     @classmethod
     def buscar_producto(cls, id_producto):
         Product = Pool().get('product.product')
-        print(id_producto)
         try:
             producto, = Product.search([('code', '=', id_producto)])
         except ValueError:
