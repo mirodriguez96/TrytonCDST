@@ -559,7 +559,7 @@ class ProductCategory(ModelSQL, ModelView):
 
 
 #Heredamos del modelo sale.sale para agregar el campo id_tecno
-class Sale(ModelSQL, ModelView):
+class Sale(metaclass=PoolMeta):
     'Sale'
     __name__ = 'sale.sale'
     id_tecno = fields.Char('Id TecnoCarnes', required=False)
