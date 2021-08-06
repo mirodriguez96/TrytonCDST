@@ -35,23 +35,29 @@ class ActualizarVentas(Wizard):
         create_sale = []
         #Procedemos a realizar una venta
         for vent in documentos:
+            print('----------------VENTA----------------')
             numero_doc = vent[coluns_doc.index('Numero_documento')]
+            print(numero_doc)
             venta = Sale()
             #venta.company = 3
             #venta.currency = 1
             venta.description = vent[coluns_doc.index('notas')]
+            print(vent[coluns_doc.index('notas')])
             venta.invoice_method = 'manual'
             venta.invoice_state = 'none'
             venta.invoice_type = 'M'
             fecha = str(vent[coluns_doc.index('Fecha_Orden_Venta')]).split()[0].split('-')
             fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
+            print(fecha_date)
             venta.sale_date = fecha_date
             venta.shipment_method = 'manual'
             venta.shipment_state = 'none'
             venta.state = 'done'
-            party = Party.search([('id_number', '=', vent[coluns_doc.index('nit_Cedula')])])
-            venta.party = party[0].id
-            address = Address.search([('party', '=', party[0].id)], limit=1)
+            party, = Party.search([('id_number', '=', vent[coluns_doc.index('nit_Cedula')])])
+            print(vent[coluns_doc.index('nit_Cedula')])
+            venta.party = party.id
+            print(party.id)
+            address = Address.search([('party', '=', party.id)], limit=1)
             venta.invoice_address = address[0].id
             venta.shipment_address = address[0].id
 
@@ -61,6 +67,7 @@ class ActualizarVentas(Wizard):
             for lin in documentos_linea:
                 producto = self.buscar_producto(str(lin[col_line.index('IdProducto')]))
                 if producto:
+                    print(producto.name)
                     line = Line()
                     line.product = producto.id
                     line.quantity = int(lin[col_line.index('Cantidad_Facturada')])
@@ -93,7 +100,7 @@ class ActualizarVentas(Wizard):
         data = []
         try:
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT TOP (100) * FROM dbo.Documentos_Lin WHERE Numero_Documento = "+id)
+                query = cursor.execute("SELECT TOP (10) * FROM dbo.Documentos_Lin WHERE Numero_Documento = "+id)
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY Documentos_Lin: ", e)
@@ -116,6 +123,7 @@ class ActualizarVentas(Wizard):
     @classmethod
     def buscar_producto(cls, id_producto):
         Product = Pool().get('product.product')
+        print(id_producto)
         try:
             producto, = Product.search([('code', '=', id_producto)])
         except ValueError:
