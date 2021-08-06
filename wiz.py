@@ -27,7 +27,8 @@ class ActualizarVentas(Wizard):
     def transition_actualizar_venta(self):
         if Transaction().context.get('active_model', '') != 'conector.terceros':
             raise UserError("Error", "Debe estar en el modelo de actualizacion")
-        pool = Pool()
+
+        pool = Pool()        
         Sale = pool.get('sale.sale')
         Line = pool.get('sale.line')
         Party = pool.get('party.party')
@@ -44,6 +45,7 @@ class ActualizarVentas(Wizard):
             venta.number = numero_doc
             #venta.company = 3
             #venta.currency = 1
+            venta.id_tecno = numero_doc+'-'+str(tipo_doc)
             venta.description = vent[coluns_doc.index('notas')]
             venta.invoice_method = 'manual'
             venta.invoice_state = 'none'
@@ -68,6 +70,8 @@ class ActualizarVentas(Wizard):
                 if producto:
                     template, = Template.search([('id', '=', producto.template)])
                     line = Line()
+                    id_t = lin[col_line.index('tipo')].strip()+'-'+str(lin[col_line.index('seq')])+'-'+str(lin[col_line.index('Numero_Documento')])+'-'+str(lin[col_line.index('IdBodega')])
+                    line.id_tecno = id_t
                     line.product = producto
                     line.quantity = abs(int(lin[col_line.index('Cantidad_Facturada')]))
                     line.unit_price = lin[col_line.index('Valor_Unitario')]
@@ -91,7 +95,7 @@ class ActualizarVentas(Wizard):
         data = []
         try:
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT TOP (100) * FROM dbo."+table+" WHERE sw = 1")
+                query = cursor.execute("SELECT TOP (1000) * FROM dbo."+table+" WHERE sw = 1")
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY "+table+": ", e)
@@ -133,6 +137,11 @@ class ActualizarVentas(Wizard):
         else:
             return producto
 
+    #Función encargada de convertir una fecha dada, al formato y orden para consultas sql server
+    @classmethod
+    def convert_date(cls, fecha):
+        result = fecha.strftime('%Y-%d-%m %H:%M:%S')
+        return result
 
 #Heredamos del modelo sale.sale para agregar el campo id_tecno
 class Sale(metaclass=PoolMeta):
