@@ -38,7 +38,7 @@ class ActualizarVentas(Wizard):
             print('----------------VENTA----------------')
             numero_doc = vent[coluns_doc.index('Numero_documento')]
             tipo_doc = vent[coluns_doc.index('tipo')]
-            print(numero_doc+'-'+tipo_doc)
+            print(numero_doc, tipo_doc)
             venta = Sale()
             venta.number = numero_doc
             #venta.company = 3
