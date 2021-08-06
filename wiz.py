@@ -38,26 +38,26 @@ class ActualizarVentas(Wizard):
             print('----------------VENTA----------------')
             numero_doc = vent[coluns_doc.index('Numero_documento')]
             tipo_doc = vent[coluns_doc.index('tipo')]
-            print(numero_doc)
+            print(numero_doc+'-'+tipo_doc)
             venta = Sale()
+            venta.number = numero_doc
             #venta.company = 3
             #venta.currency = 1
             venta.description = vent[coluns_doc.index('notas')]
-            print(vent[coluns_doc.index('notas')])
+            print('notas: ', vent[coluns_doc.index('notas')])
             venta.invoice_method = 'manual'
             venta.invoice_state = 'none'
             venta.invoice_type = 'M'
             fecha = str(vent[coluns_doc.index('Fecha_Orden_Venta')]).split()[0].split('-')
             fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
-            print(fecha_date)
+            print('fecha: ', fecha_date)
             venta.sale_date = fecha_date
             venta.shipment_method = 'manual'
             venta.shipment_state = 'none'
             venta.state = 'done'
             party, = Party.search([('id_number', '=', vent[coluns_doc.index('nit_Cedula')])])
-            print(vent[coluns_doc.index('nit_Cedula')])
+            print('nit: ', vent[coluns_doc.index('nit_Cedula')])
             venta.party = party.id
-            print(party.id)
             address = Address.search([('party', '=', party.id)], limit=1)
             venta.invoice_address = address[0].id
             venta.shipment_address = address[0].id
@@ -67,8 +67,9 @@ class ActualizarVentas(Wizard):
             create_line = []
             for lin in documentos_linea:
                 producto = self.buscar_producto(str(lin[col_line.index('IdProducto')]))
+                print('IdProducto: ', lin[col_line.index('IdProducto')])
                 if producto:
-                    print(producto.name)
+                    print('Producto: ', producto.name)
                     line = Line()
                     line.product = producto.id
                     line.quantity = abs(int(lin[col_line.index('Cantidad_Facturada')]))
