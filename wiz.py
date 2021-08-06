@@ -29,12 +29,12 @@ class ActualizarVentas(Wizard):
         Line = pool.get('sale.line')
         Party = pool.get('party.party')
         Address = pool.get('party.address')
+        Template = Pool().get('product.template')
         documentos = self.get_data_db_tecno('Documentos')
         coluns_doc = self.get_columns_db_tecno('Documentos')
         create_sale = []
         #Procedemos a realizar una venta
         for vent in documentos:
-            print('----------------VENTA----------------')
             numero_doc = vent[coluns_doc.index('Numero_documento')]
             tipo_doc = vent[coluns_doc.index('tipo')].strip()
             venta = Sale()
@@ -63,13 +63,14 @@ class ActualizarVentas(Wizard):
             for lin in documentos_linea:
                 producto = self.buscar_producto(str(lin[col_line.index('IdProducto')]))
                 if producto:
+                    template, = Template.search([('id', '=', producto.template)])
                     line = Line()
                     line.product = producto
                     line.quantity = abs(int(lin[col_line.index('Cantidad_Facturada')]))
                     line.unit_price = lin[col_line.index('Valor_Unitario')]
                     line.sale = venta
                     line.type = 'line'
-                    #line.unit = 1
+                    line.unit = template.default_uom
                     #create_line.append(line)
                     line.save()
             create_sale.append(venta)
