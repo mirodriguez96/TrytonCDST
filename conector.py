@@ -11,8 +11,6 @@ __all__ = [
     'ContactMechanism',
     'ProductCategory',
     'Cron',
-    'Sale',
-    #'SaleLine',
     ]
 
 
@@ -556,17 +554,3 @@ class ProductCategory(ModelSQL, ModelView):
     'ProductCategory'
     __name__ = 'product.category'
     id_tecno = fields.Char('Id TecnoCarnes', required=False)
-
-
-#Heredamos del modelo sale.sale para agregar el campo id_tecno
-class Sale(metaclass=PoolMeta):
-    'Sale'
-    __name__ = 'sale.sale'
-    id_tecno = fields.Char('Id TecnoCarnes', required=False)
-"""
-#Heredamos del modelo sale.line para agregar el campo id_tecno
-class SaleLine(ModelSQL, ModelView):
-    'SaleLine'
-    __name__ = 'sale.line'
-    id_tecno = fields.Char('Id TecnoCarnes', required=False)
-"""

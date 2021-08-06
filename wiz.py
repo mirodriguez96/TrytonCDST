@@ -1,7 +1,8 @@
 #from trytond.model import ModelView
 from trytond.wizard import Wizard, StateTransition#, StateView, StateAction, Button
 import datetime
-from trytond.pool import Pool
+from trytond.model import fields
+from trytond.pool import Pool, PoolMeta
 from trytond.transaction import Transaction
 #from trytond.pyson import PYSONEncoder
 from trytond.exceptions import UserError
@@ -11,6 +12,8 @@ from conexion import conexion
 __all__ = [
     'ActualizarVentas',
     'CargarVentas',
+    'Sale',
+    'SaleLine',
     ]
 
 
@@ -130,6 +133,18 @@ class ActualizarVentas(Wizard):
         else:
             return producto
 
+
+#Heredamos del modelo sale.sale para agregar el campo id_tecno
+class Sale(metaclass=PoolMeta):
+    'Sale'
+    __name__ = 'sale.sale'
+    id_tecno = fields.Char('Id TecnoCarnes', required=False)
+
+#Heredamos del modelo sale.line para agregar el campo id_tecno
+class SaleLine(metaclass=PoolMeta):
+    'SaleLine'
+    __name__ = 'sale.line'
+    id_tecno = fields.Char('Id TecnoCarnes', required=False)
 
 
 """
