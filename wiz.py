@@ -1,7 +1,7 @@
 #from trytond.model import ModelView
 from trytond.wizard import Wizard, StateTransition#, StateView, StateAction, Button
 import datetime
-from trytond.model import fields
+from trytond.model import ModelView, fields
 from trytond.pool import Pool, PoolMeta
 from trytond.transaction import Transaction
 #from trytond.pyson import PYSONEncoder
@@ -26,7 +26,7 @@ class Cron(metaclass=PoolMeta):
     def __setup__(cls):
         super().__setup__()
         cls.method.selection.append(
-            ('conector.actualizar_ventas|prueba', "Actualizar Ventas Wizard"),
+            ('conector.cargar_ventas|prueba', "Actualizar Ventas Wizard"),
             )
 
 
@@ -39,7 +39,7 @@ class ActualizarVentas(Wizard):
 
     def transition_actualizar_venta(self):
         print("--------------RUN WIZARD VENTAS--------------")
-        
+        """
         if Transaction().context.get('active_model', '') != 'conector.terceros':
             raise UserError("Error", "Debe estar en el modelo de actualizacion")
 
@@ -101,7 +101,7 @@ class ActualizarVentas(Wizard):
             #venta.save()
         #Line.save(create_line)
         Sale.save(create_sale)
-        
+        """
         return 'end'
 
     @classmethod
@@ -173,6 +173,15 @@ class SaleLine(metaclass=PoolMeta):
     'SaleLine'
     __name__ = 'sale.line'
     id_tecno = fields.Char('Id TecnoCarnes', required=False)
+
+
+class CargarVentas(ModelView):
+    'CargarVentas'
+    __name__ = 'conector.cargar_ventas'
+
+    @classmethod
+    def prueba(cls):
+        print("----------------PRUEBA----------------")
 
 
 """

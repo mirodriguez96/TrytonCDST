@@ -11,6 +11,7 @@ def register():
         conector.ContactMechanism,
         conector.ProductCategory,
         conector.Cron,
+        wiz.CargarVentas,
         wiz.Sale,
         wiz.SaleLine,
         wiz.Cron,
