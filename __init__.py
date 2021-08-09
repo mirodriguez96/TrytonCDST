@@ -12,6 +12,7 @@ def register():
         conector.ProductCategory,
         conector.Cron,
         wiz.CargarVentas,
+        wiz.ActualizarVentas,
         wiz.Sale,
         wiz.SaleLine,
         wiz.Cron,
