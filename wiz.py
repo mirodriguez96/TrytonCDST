@@ -26,13 +26,13 @@ class Cron(metaclass=PoolMeta):
     def __setup__(cls):
         super().__setup__()
         cls.method.selection.append(
-            ('conector.actualizar_ventas|transition_actualizar_venta', "Actualizar ventas"),
+            ('conector.terceros.actualizar_ventas|transition_actualizar_venta', "Actualizar ventas"),
             )
 
 #Nota: el uso principal de los asistentes suele ser realizar acciones basadas en alguna entrada del usuario.
 class ActualizarVentas(Wizard):
     'ActualizarVentas'
-    __name__ = 'conector.actualizar_ventas'
+    __name__ = 'conector.terceros.actualizar_ventas'
     start_state = 'actualizar_venta'
     actualizar_venta = StateTransition()
 
