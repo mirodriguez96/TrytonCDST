@@ -26,19 +26,20 @@ class Cron(metaclass=PoolMeta):
     def __setup__(cls):
         super().__setup__()
         cls.method.selection.append(
-            ('conector.terceros.actualizar_ventas|transition_actualizar_venta', "Actualizar ventas"),
+            ('conector.actualizar_ventas|prueba', "Actualizar Ventas Wizard"),
             )
+
 
 #Nota: el uso principal de los asistentes suele ser realizar acciones basadas en alguna entrada del usuario.
 class ActualizarVentas(Wizard):
     'ActualizarVentas'
-    __name__ = 'conector.terceros.actualizar_ventas'
+    __name__ = 'conector.actualizar_ventas'
     start_state = 'actualizar_venta'
     actualizar_venta = StateTransition()
 
     def transition_actualizar_venta(self):
         print("--------------RUN WIZARD VENTAS--------------")
-        """
+        
         if Transaction().context.get('active_model', '') != 'conector.terceros':
             raise UserError("Error", "Debe estar en el modelo de actualizacion")
 
@@ -100,9 +101,12 @@ class ActualizarVentas(Wizard):
             #venta.save()
         #Line.save(create_line)
         Sale.save(create_sale)
-        """
+        
         return 'end'
 
+    @classmethod
+    def prueba(cls):
+        print("----------------PRUEBA----------------")
 
     #Esta función se encarga de traer todos los datos de una tabla dada de la bd TecnoCarnes
     @classmethod
