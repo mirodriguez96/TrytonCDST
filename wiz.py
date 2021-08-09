@@ -26,7 +26,7 @@ class Cron(metaclass=PoolMeta):
     def __setup__(cls):
         super().__setup__()
         cls.method.selection.append(
-            ('conector.actualizar_ventas|prueba', "Actualizar Ventas Wizard"),
+            ('conector.actualizar_ventas|transition_actualizar_venta', "Actualizar Ventas Wizard"),
             )
 
 
