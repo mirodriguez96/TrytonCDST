@@ -13,6 +13,7 @@ def register():
         conector.Cron,
         wiz.Sale,
         wiz.SaleLine,
+        wiz.Cron,
         module='conector', type_='model')
 
     Pool.register(
