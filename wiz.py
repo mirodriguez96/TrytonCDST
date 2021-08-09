@@ -37,7 +37,7 @@ class ActualizarVentas(Wizard):
     start_state = 'actualizar_venta'
     actualizar_venta = StateTransition()
 
-    def transition_actualizar_venta(self):
+    def transition_actualizar_venta(self=None):
         print("--------------RUN WIZARD VENTAS--------------")
         """
         if Transaction().context.get('active_model', '') != 'conector.terceros':
