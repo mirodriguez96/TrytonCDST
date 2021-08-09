@@ -31,7 +31,7 @@ class Cron(metaclass=PoolMeta):
 
 
 #Nota: el uso principal de los asistentes suele ser realizar acciones basadas en alguna entrada del usuario.
-class ActualizarVentas(Wizard, ModelView):
+class ActualizarVentas(ModelView, Wizard):
     'ActualizarVentas'
     __name__ = 'conector.actualizar_ventas'
     start_state = 'actualizar_venta'
