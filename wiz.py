@@ -26,12 +26,12 @@ class Cron(metaclass=PoolMeta):
     def __setup__(cls):
         super().__setup__()
         cls.method.selection.append(
-            ('conector.cargar_ventas|prueba', "Actualizar Ventas Wizard"),
+            ('conector.actualizar_ventas|prueba', "Actualizar Ventas Wizard"),
             )
 
 
 #Nota: el uso principal de los asistentes suele ser realizar acciones basadas en alguna entrada del usuario.
-class ActualizarVentas(Wizard):
+class ActualizarVentas(Wizard, ModelView):
     'ActualizarVentas'
     __name__ = 'conector.actualizar_ventas'
     start_state = 'actualizar_venta'
