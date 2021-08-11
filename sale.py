@@ -194,12 +194,11 @@ class Sale(metaclass=PoolMeta):
         data = []
         try:
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT * FROM dbo."+table+" WHERE fecha_hora >= CAST('"+date+"' AS datetime)")
+                query = cursor.execute("SELECT TOP (5) * FROM dbo."+table+" WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND sw = 1")
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY get_data_where_tecno: ", e)
         return data
-
 
     #Función encargada de convertir una fecha dada, al formato y orden para consultas sql server
     @classmethod
@@ -213,6 +212,7 @@ class Sale(metaclass=PoolMeta):
         Actualizacion = Pool().get('conector.actualizacion')
         #Se consulta la ultima actualización realizada para los terceros
         ultima_actualizacion = Actualizacion.search([('name', '=','VENTAS')])
+        ultima_actualizacion = False
         if ultima_actualizacion:
             #Se calcula la fecha restando la diferencia de horas que tiene el servidor con respecto al clienete
             if ultima_actualizacion[0].write_date:
