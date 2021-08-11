@@ -34,9 +34,10 @@ class Sale(metaclass=PoolMeta):
     @classmethod
     def import_data_sale(cls):
         print("--------------RUN WIZARD VENTAS--------------")
+        cls.create_actualizacion(False)
         ventas_tecno = cls.last_update()
         if ventas_tecno:
-            cls.create_actualizacion(False)
+            
             """
             pool = Pool()        
             Sale = pool.get('sale.sale')
