@@ -96,8 +96,6 @@ class Sale(metaclass=PoolMeta):
             #Line.save(create_line)
             Sale.save(create_sale)
             """
-            cls.create_actualizacion(False)
-        else:
             cls.create_actualizacion(True)
 
 
@@ -223,6 +221,7 @@ class Sale(metaclass=PoolMeta):
                 fecha = (ultima_actualizacion[0].create_date - datetime.timedelta(hours=5))
         else:
             fecha = datetime.date(1,1,1)
+            cls.create_actualizacion(False)
         fecha = fecha.strftime('%Y-%d-%m %H:%M:%S')
         data = cls.get_data_where_tecno('Documentos', fecha)
         return data
