@@ -36,8 +36,8 @@ class Party(ModelSQL, ModelView):
     @classmethod
     def update_parties(cls):
         print("---------------RUN TERCEROS---------------")
-        cls.create_actualizacion(False)
         terceros_tecno = cls.last_update()
+        cls.create_actualizacion(False)
         if terceros_tecno:
             """"""
             columnas_terceros = cls.get_columns_db_tecno('TblTerceros')

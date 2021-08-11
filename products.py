@@ -32,9 +32,8 @@ class Products(ModelSQL, ModelView):
     @classmethod
     def update_products(cls):
         print("---------------RUN PRODUCTOS---------------")
-        cls.create_actualizacion(False)
         productos_tecno = cls.last_update()
-        
+        cls.create_actualizacion(False)
         col_pro = cls.get_columns_db_tecno('TblProducto')
         col_gproducto = cls.get_columns_db_tecno('TblGrupoProducto')
         grupos_producto = cls.get_data_db_tecno('TblGrupoProducto')
