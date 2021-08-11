@@ -214,13 +214,13 @@ class Sale(metaclass=PoolMeta):
     def last_update(cls):
         Actualizacion = Pool().get('conector.actualizacion')
         #Se consulta la ultima actualización realizada para los terceros
-        ultima_actualizacion, = Actualizacion.search([('name', '=','VENTAS')])
+        ultima_actualizacion = Actualizacion.search([('name', '=','VENTAS')])
         if ultima_actualizacion:
             #Se calcula la fecha restando la diferencia de horas que tiene el servidor con respecto al clienete
-            if ultima_actualizacion.write_date:
-                fecha = (ultima_actualizacion.write_date - datetime.timedelta(hours=5))
+            if ultima_actualizacion[0].write_date:
+                fecha = (ultima_actualizacion[0].write_date - datetime.timedelta(hours=5))
             else:
-                fecha = (ultima_actualizacion.create_date - datetime.timedelta(hours=5))
+                fecha = (ultima_actualizacion[0].create_date - datetime.timedelta(hours=5))
         else:
             fecha = datetime.date(1,1,1)
         fecha = fecha.strftime('%Y-%d-%m %H:%M:%S')
