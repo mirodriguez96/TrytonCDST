@@ -206,13 +206,23 @@ class Sale(metaclass=PoolMeta):
         result = fecha.strftime('%Y-%d-%m %H:%M:%S')
         return result
 
+    #Función encargada de consultar si existe un producto dado de la bd TecnoCarnes
+    @classmethod
+    def buscar_producto(cls, id_producto):
+        Product = Pool().get('product.product')
+        try:
+            producto, = Product.search([('code', '=', id_producto)])
+        except ValueError:
+            return False
+        else:
+            return producto
+
     #Función encargada de traer los datos de la bd TecnoCarnes con una fecha dada.
     @classmethod
     def last_update(cls):
         Actualizacion = Pool().get('conector.actualizacion')
         #Se consulta la ultima actualización realizada para los terceros
         ultima_actualizacion = Actualizacion.search([('name', '=','VENTAS')])
-        ultima_actualizacion = False
         if ultima_actualizacion:
             #Se calcula la fecha restando la diferencia de horas que tiene el servidor con respecto al clienete
             if ultima_actualizacion[0].write_date:
