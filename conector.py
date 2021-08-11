@@ -1,19 +1,19 @@
 
-from conexion import conexion
+#from conexion import conexion
 from trytond.model import ModelSQL, ModelView, fields
-from trytond.pool import Pool, PoolMeta
-import datetime
-from trytond.transaction import Transaction
+#from trytond.pool import Pool, PoolMeta
+#import datetime
+#from trytond.transaction import Transaction
 
 __all__ = [
-    'Terceros',
-    'Party',
-    'ContactMechanism',
-    'ProductCategory',
-    'Cron',
+    'Actualizacion',
+    #'Party',
+    #'ContactMechanism',
+    #'ProductCategory',
+    #'Cron',
     ]
 
-
+"""
 class Cron(metaclass=PoolMeta):
     'Cron'
     __name__ = 'ir.cron'
@@ -24,28 +24,22 @@ class Cron(metaclass=PoolMeta):
         cls.method.selection.append(
             ('conector.terceros|actualizar_datos', "Actualizacion de Productos y Terceros"),
             )
+"""
 
+class Actualizacion(ModelSQL, ModelView):
+    'Actualizacion'
+    __name__ = 'conector.actualizacion'
 
-class Terceros(ModelSQL, ModelView):
-    'Terceros'
-    __name__ = 'conector.terceros'
+    name = fields.Char('Update', required=True)
 
-    actualizacion = fields.Char('Actualizacion', required=True)
-    fecha = fields.DateTime('Fecha y hora', format="%H:%M:%S", required=True)
-
-
+    """
     @classmethod
     def __setup__(cls):
         super().__setup__()
         cls._buttons.update({
                 'cargar_datos': {},
                 })
-
-
-    @classmethod
-    def default_fecha(cls):
-        return datetime.datetime.now()
-
+    
     #Función que se activa al pulsar el botón actualizar
     @classmethod
     @ModelView.button
@@ -53,6 +47,7 @@ class Terceros(ModelSQL, ModelView):
         cls.carga_terceros()
         cls.carga_productos()
         return None
+    
     
     #Método llamado en la clase de CRON (acciones programadas) para la actualización de terceros y productos
     @classmethod
@@ -554,3 +549,4 @@ class ProductCategory(ModelSQL, ModelView):
     'ProductCategory'
     __name__ = 'product.category'
     id_tecno = fields.Char('Id TecnoCarnes', required=False)
+"""

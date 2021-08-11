@@ -1,21 +1,26 @@
 from trytond.pool import Pool
 
-import conector
 #import wiz
+import conector
+import party
+import products
 import sale
 
 
 def register():
     Pool.register(
-        conector.Terceros,
-        conector.Party,
-        conector.ContactMechanism,
-        conector.ProductCategory,
-        conector.Cron,
-        #wiz.ActualizarVentas,
+        conector.Actualizacion,
+        party.Party,
+        party.PartyAddress,
+        party.ContactMechanism,
+        party.Cron,
+        products.Products,
+        products.ProductCategory,
+        products.Cron,
         sale.Sale,
         sale.SaleLine,
         sale.Cron,
+        #wiz.ActualizarVentas,
         module='conector', type_='model')
 
     Pool.register(

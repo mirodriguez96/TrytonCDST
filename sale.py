@@ -1,8 +1,7 @@
-
 import datetime
 from trytond.model import fields
 from trytond.pool import Pool, PoolMeta
-from trytond.transaction import Transaction
+#from trytond.transaction import Transaction
 from trytond.exceptions import UserError
 from conexion import conexion
 
@@ -148,6 +147,7 @@ class Sale(metaclass=PoolMeta):
         sale.save()
         return sale
 
+
     #Esta función se encarga de traer todos los datos de una tabla dada de la bd TecnoCarnes
     @classmethod
     def get_data_db_tecno(cls, table):
@@ -202,7 +202,38 @@ class Sale(metaclass=PoolMeta):
         result = fecha.strftime('%Y-%d-%m %H:%M:%S')
         return result
 
+    #Función encargada de traer los datos de la bd TecnoCarnes con una fecha dada.
+    @classmethod
+    def last_update(cls):
+        Actualizacion = Pool().get('conector.actualizacion')
+        #Se consulta la ultima actualización realizada para los terceros
+        ultima_actualizacion, = Actualizacion.search([('name', '=','VENTAS')])
+        if ultima_actualizacion:
+            #Se calcula la fecha restando la diferencia de horas que tiene el servidor con respecto al clienete
+            if ultima_actualizacion.write_date:
+                fecha = (ultima_actualizacion.write_date - datetime.timedelta(hours=5))
+            else:
+                fecha = (ultima_actualizacion.create_date - datetime.timedelta(hours=5))
+        else:
+            fecha = datetime.date(1,1,1)
+        fecha = fecha.strftime('%Y-%d-%m %H:%M:%S')
+        terceros_tecno = cls.get_data_where_tecno('TblProducto', fecha)
+        return terceros_tecno
 
+    #Crea o actualiza un registro de la tabla actualización en caso de ser necesario
+    @classmethod
+    def create_actualizacion(cls, create):
+        Actualizacion = Pool().get('conector.actualizacion')
+        if create:
+            #Se crea un registro con la actualización realizada
+            actualizar = Actualizacion()
+            actualizar.name = 'VENTAS'
+            actualizar.save()
+        else:
+            #Se busca un registro con la actualización realizada
+            actualizacion, = Actualizacion.search([('name', '=','VENTAS')])
+            actualizacion.name = 'VENTAS'
+            actualizacion.save()
 
 #Heredamos del modelo sale.line para agregar el campo id_tecno
 class SaleLine(metaclass=PoolMeta):
