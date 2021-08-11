@@ -37,8 +37,7 @@ class Sale(metaclass=PoolMeta):
         cls.create_actualizacion(False)
         ventas_tecno = cls.last_update()
         if ventas_tecno:
-            
-            """
+            """"""
             pool = Pool()        
             Sale = pool.get('sale.sale')
             SaleLine = pool.get('sale.line')
@@ -95,9 +94,9 @@ class Sale(metaclass=PoolMeta):
                         raise UserError("Error", "No existe el producto con la siguiente id: ", lin[col_line.index('IdProducto')])
                 create_sale.append(venta)
                 #venta.save()
-            #Line.save(create_line)
+            
             Sale.save(create_sale)
-            """
+            
 
 
     @classmethod

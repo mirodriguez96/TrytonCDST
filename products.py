@@ -32,6 +32,7 @@ class Products(ModelSQL, ModelView):
     @classmethod
     def update_products(cls):
         print("---------------RUN PRODUCTOS---------------")
+        cls.create_actualizacion(False)
         productos_tecno = cls.last_update()
         
         col_pro = cls.get_columns_db_tecno('TblProducto')
@@ -55,7 +56,6 @@ class Products(ModelSQL, ModelView):
         Category.save(to_categorias)
 
         if productos_tecno:
-            cls.create_actualizacion(False)
             #Creación de los productos con su respectiva categoria e información
             Producto = Pool().get('product.product')
             Template_Product = Pool().get('product.template')
