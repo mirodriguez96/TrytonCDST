@@ -55,6 +55,7 @@ class Products(ModelSQL, ModelView):
         Category.save(to_categorias)
 
         if productos_tecno:
+            cls.create_actualizacion(False)
             #Creación de los productos con su respectiva categoria e información
             Producto = Pool().get('product.product')
             Template_Product = Pool().get('product.template')
@@ -100,9 +101,6 @@ class Products(ModelSQL, ModelView):
                     prod.template = temp
                     to_producto.append(prod)
             Producto.save(to_producto)
-            cls.create_actualizacion(False)
-        else:
-            cls.create_actualizacion(True)
 
 
     #Función encargada de consultar si existe una categoria dada de la bd TecnoCarnes
@@ -214,6 +212,7 @@ class Products(ModelSQL, ModelView):
                 fecha = (ultima_actualizacion.create_date - datetime.timedelta(hours=5))
         else:
             fecha = datetime.date(1,1,1)
+            cls.create_actualizacion(True)
         fecha = fecha.strftime('%Y-%d-%m %H:%M:%S')
         data = cls.get_data_where_tecno('TblProducto', fecha)
         return data

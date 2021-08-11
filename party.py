@@ -38,6 +38,7 @@ class Party(ModelSQL, ModelView):
         print("---------------RUN TERCEROS---------------")
         terceros_tecno = cls.last_update()
         if terceros_tecno:
+            cls.create_actualizacion(False)
             """"""
             columnas_terceros = cls.get_columns_db_tecno('TblTerceros')
             columnas_contactos = cls.get_columns_db_tecno('Terceros_Contactos')
@@ -138,9 +139,6 @@ class Party(ModelSQL, ModelView):
                             contacto.save()
                     to_create.append(tercero)
             Party.save(to_create)
-            cls.create_actualizacion(False)
-        else:
-            cls.create_actualizacion(True)
 
     #Función encargada de verificar, actualizar e insertar las direcciones pertenecientes a un tercero dado
     @classmethod
@@ -356,15 +354,16 @@ class Party(ModelSQL, ModelView):
     def last_update(cls):
         Actualizacion = Pool().get('conector.actualizacion')
         #Se consulta la ultima actualización realizada para los terceros
-        ultima_actualizacion, = Actualizacion.search([('name', '=','TERCEROS')])
-        if ultima_actualizacion:
+        ultima_actualizacion = Actualizacion.search([('name', '=','TERCEROS')])
+        if ultima_actualizacion[0]:
             #Se calcula la fecha restando la diferencia de horas que tiene el servidor con respecto al clienete
-            if ultima_actualizacion.write_date:
-                fecha = (ultima_actualizacion.write_date - datetime.timedelta(hours=5))
+            if ultima_actualizacion[0].write_date:
+                fecha = (ultima_actualizacion[0].write_date - datetime.timedelta(hours=5))
             else:
-                fecha = (ultima_actualizacion.create_date - datetime.timedelta(hours=5))
+                fecha = (ultima_actualizacion[0].create_date - datetime.timedelta(hours=5))
         else:
             fecha = datetime.date(1,1,1)
+            cls.create_actualizacion(True)
         fecha = fecha.strftime('%Y-%d-%m %H:%M:%S')
         data = cls.get_data_where_tecno('TblTerceros', fecha)
         return data

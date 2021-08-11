@@ -36,6 +36,7 @@ class Sale(metaclass=PoolMeta):
         print("--------------RUN WIZARD VENTAS--------------")
         ventas_tecno = cls.last_update()
         if ventas_tecno:
+            cls.create_actualizacion(False)
             """
             pool = Pool()        
             Sale = pool.get('sale.sale')
@@ -96,7 +97,6 @@ class Sale(metaclass=PoolMeta):
             #Line.save(create_line)
             Sale.save(create_sale)
             """
-            cls.create_actualizacion(True)
 
 
     @classmethod
