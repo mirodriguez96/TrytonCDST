@@ -366,8 +366,8 @@ class Party(ModelSQL, ModelView):
         else:
             fecha = datetime.date(1,1,1)
         fecha = fecha.strftime('%Y-%d-%m %H:%M:%S')
-        terceros_tecno = cls.get_data_where_tecno('TblTerceros', fecha)
-        return terceros_tecno
+        data = cls.get_data_where_tecno('TblTerceros', fecha)
+        return data
 
     #Crea o actualiza un registro de la tabla actualización en caso de ser necesario
     @classmethod

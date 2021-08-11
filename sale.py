@@ -21,7 +21,7 @@ class Cron(metaclass=PoolMeta):
     def __setup__(cls):
         super().__setup__()
         cls.method.selection.append(
-            ('sale.sale|import_data_sale', "Actualizar Ventas Wizard"),
+            ('sale.sale|import_data_sale', "Update sales"),
             )
 
 
@@ -34,66 +34,71 @@ class Sale(metaclass=PoolMeta):
     @classmethod
     def import_data_sale(cls):
         print("--------------RUN WIZARD VENTAS--------------")
-        """
-        pool = Pool()        
-        Sale = pool.get('sale.sale')
-        SaleLine = pool.get('sale.line')
-        Party = pool.get('party.party')
-        Address = pool.get('party.address')
-        Template = Pool().get('product.template')
-        documentos = cls.get_data_db_tecno('Documentos')
-        coluns_doc = cls.get_columns_db_tecno('Documentos')
-        create_sale = []
-        #Procedemos a realizar una venta
-        for vent in documentos:
-            numero_doc = vent[coluns_doc.index('Numero_documento')]
-            tipo_doc = vent[coluns_doc.index('tipo')].strip()
-            venta = Sale()
-            venta.number = numero_doc
-            #venta.company = 3
-            #venta.currency = 1
-            venta.id_tecno = str(numero_doc)+'-'+tipo_doc
-            venta.description = vent[coluns_doc.index('notas')]
-            venta.invoice_method = 'manual'
-            venta.invoice_state = 'none'
-            venta.invoice_type = 'M'
-            fecha = str(vent[coluns_doc.index('Fecha_Orden_Venta')]).split()[0].split('-')
-            fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
-            venta.sale_date = fecha_date
-            venta.shipment_method = 'manual'
-            venta.shipment_state = 'none'
-            venta.state = 'done'
-            party, = Party.search([('id_number', '=', vent[coluns_doc.index('nit_Cedula')])])
-            venta.party = party.id
-            address = Address.search([('party', '=', party.id)], limit=1)
-            venta.invoice_address = address[0].id
-            venta.shipment_address = address[0].id
+        ventas_tecno = cls.last_update()
+        if ventas_tecno:
+            """
+            pool = Pool()        
+            Sale = pool.get('sale.sale')
+            SaleLine = pool.get('sale.line')
+            Party = pool.get('party.party')
+            Address = pool.get('party.address')
+            Template = Pool().get('product.template')
+            documentos = cls.get_data_db_tecno('Documentos')
+            coluns_doc = cls.get_columns_db_tecno('Documentos')
+            create_sale = []
+            #Procedemos a realizar una venta
+            for vent in documentos:
+                numero_doc = vent[coluns_doc.index('Numero_documento')]
+                tipo_doc = vent[coluns_doc.index('tipo')].strip()
+                venta = Sale()
+                venta.number = numero_doc
+                #venta.company = 3
+                #venta.currency = 1
+                venta.id_tecno = str(numero_doc)+'-'+tipo_doc
+                venta.description = vent[coluns_doc.index('notas')]
+                venta.invoice_method = 'manual'
+                venta.invoice_state = 'none'
+                venta.invoice_type = 'M'
+                fecha = str(vent[coluns_doc.index('Fecha_Orden_Venta')]).split()[0].split('-')
+                fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
+                venta.sale_date = fecha_date
+                venta.shipment_method = 'manual'
+                venta.shipment_state = 'none'
+                venta.state = 'done'
+                party, = Party.search([('id_number', '=', vent[coluns_doc.index('nit_Cedula')])])
+                venta.party = party.id
+                address = Address.search([('party', '=', party.id)], limit=1)
+                venta.invoice_address = address[0].id
+                venta.shipment_address = address[0].id
 
-            documentos_linea = cls.get_line_where(str(numero_doc), str(tipo_doc))
-            col_line = cls.get_columns_db_tecno('Documentos_Lin')
-            #create_line = []
-            for lin in documentos_linea:
-                producto = cls.buscar_producto(str(lin[col_line.index('IdProducto')]))
-                if producto:
-                    template, = Template.search([('id', '=', producto.template)])
-                    line = SaleLine()
-                    id_t = lin[col_line.index('tipo')].strip()+'-'+str(lin[col_line.index('seq')])+'-'+str(lin[col_line.index('Numero_Documento')])+'-'+str(lin[col_line.index('IdBodega')])
-                    line.id_tecno = id_t
-                    line.product = producto
-                    line.quantity = abs(int(lin[col_line.index('Cantidad_Facturada')]))
-                    line.unit_price = lin[col_line.index('Valor_Unitario')]
-                    line.sale = venta
-                    line.type = 'line'
-                    line.unit = template.default_uom
-                    #create_line.append(line)
-                    line.save()
-                else:
-                    raise UserError("Error", "No existe el producto con la siguiente id: ", lin[col_line.index('IdProducto')])
-            create_sale.append(venta)
-            #venta.save()
-        #Line.save(create_line)
-        Sale.save(create_sale)
-        """
+                documentos_linea = cls.get_line_where(str(numero_doc), str(tipo_doc))
+                col_line = cls.get_columns_db_tecno('Documentos_Lin')
+                #create_line = []
+                for lin in documentos_linea:
+                    producto = cls.buscar_producto(str(lin[col_line.index('IdProducto')]))
+                    if producto:
+                        template, = Template.search([('id', '=', producto.template)])
+                        line = SaleLine()
+                        id_t = lin[col_line.index('tipo')].strip()+'-'+str(lin[col_line.index('seq')])+'-'+str(lin[col_line.index('Numero_Documento')])+'-'+str(lin[col_line.index('IdBodega')])
+                        line.id_tecno = id_t
+                        line.product = producto
+                        line.quantity = abs(int(lin[col_line.index('Cantidad_Facturada')]))
+                        line.unit_price = lin[col_line.index('Valor_Unitario')]
+                        line.sale = venta
+                        line.type = 'line'
+                        line.unit = template.default_uom
+                        #create_line.append(line)
+                        line.save()
+                    else:
+                        raise UserError("Error", "No existe el producto con la siguiente id: ", lin[col_line.index('IdProducto')])
+                create_sale.append(venta)
+                #venta.save()
+            #Line.save(create_line)
+            Sale.save(create_sale)
+            """
+            cls.create_actualizacion(False)
+        else:
+            cls.create_actualizacion(True)
 
 
     @classmethod
@@ -185,16 +190,18 @@ class Sale(metaclass=PoolMeta):
             print("ERROR QUERY "+table+": ", e)
         return columns
 
-    #Función encargada de consultar si existe un producto dado de la bd TecnoCarnes
+    #Esta función se encarga de traer todos los datos de una tabla dada de acuerdo al rango de fecha dada de la bd TecnoCarnes
     @classmethod
-    def buscar_producto(cls, id_producto):
-        Product = Pool().get('product.product')
+    def get_data_where_tecno(cls, table, date):
+        data = []
         try:
-            producto, = Product.search([('code', '=', id_producto)])
-        except ValueError:
-            return False
-        else:
-            return producto
+            with conexion.cursor() as cursor:
+                query = cursor.execute("SELECT * FROM dbo."+table+" WHERE fecha_hora >= CAST('"+date+"' AS datetime)")
+                data = list(query.fetchall())
+        except Exception as e:
+            print("ERROR QUERY get_data_where_tecno: ", e)
+        return data
+
 
     #Función encargada de convertir una fecha dada, al formato y orden para consultas sql server
     @classmethod
@@ -217,8 +224,8 @@ class Sale(metaclass=PoolMeta):
         else:
             fecha = datetime.date(1,1,1)
         fecha = fecha.strftime('%Y-%d-%m %H:%M:%S')
-        terceros_tecno = cls.get_data_where_tecno('TblProducto', fecha)
-        return terceros_tecno
+        data = cls.get_data_where_tecno('Documentos', fecha)
+        return data
 
     #Crea o actualiza un registro de la tabla actualización en caso de ser necesario
     @classmethod
