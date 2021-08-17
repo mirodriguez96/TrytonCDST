@@ -38,8 +38,8 @@ class Products(ModelSQL, ModelView):
         col_pro = cls.get_columns_db_tecno('TblProducto')
         col_gproducto = cls.get_columns_db_tecno('TblGrupoProducto')
         grupos_producto = cls.get_data_db_tecno('TblGrupoProducto')
-        impuestos = cls.get_data_db_tecno('TblImpuestos')
-        col_impuestos = cls.get_columns_db_tecno('TblImpuestos')
+        impuestos = cls.get_data_db_tecno('TblImpuesto')
+        col_impuestos = cls.get_columns_db_tecno('TblImpuesto')
 
         #Creación o actualización de las categorias de los productos
         Category = Pool().get('product.category')
