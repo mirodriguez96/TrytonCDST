@@ -162,7 +162,7 @@ class Sale(metaclass=PoolMeta):
         except Exception as e:
             print("ERROR QUERY "+table+": ", e)
         return data
-    
+
     #Esta función se encarga de traer todos los datos de una tabla dada de la bd TecnoCarnes
     @classmethod
     def get_line_where(cls, id, tipo):

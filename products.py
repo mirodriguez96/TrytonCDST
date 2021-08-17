@@ -26,6 +26,7 @@ class Cron(metaclass=PoolMeta):
 class Products(ModelSQL, ModelView):
     'Products'
     __name__ = 'products.products'
+    id_tecno = fields.Char('Id TecnoCarnes', required=False)
 
     #Función encargada de crear o actualizar los productos y categorias de db TecnoCarnes,
     #teniendo en cuenta la ultima fecha de actualizacion y si existe o no.
@@ -37,6 +38,8 @@ class Products(ModelSQL, ModelView):
         col_pro = cls.get_columns_db_tecno('TblProducto')
         col_gproducto = cls.get_columns_db_tecno('TblGrupoProducto')
         grupos_producto = cls.get_data_db_tecno('TblGrupoProducto')
+        impuestos = cls.get_data_db_tecno('TblImpuestos')
+        col_impuestos = cls.get_columns_db_tecno('TblImpuestos')
 
         #Creación o actualización de las categorias de los productos
         Category = Pool().get('product.category')
@@ -53,6 +56,29 @@ class Products(ModelSQL, ModelView):
                 categoria_prod.name = categoria[col_gproducto.index('GrupoProducto')]
                 to_categorias.append(categoria_prod)
         Category.save(to_categorias)
+
+        #Creación de categorias contables
+        CustomerTax = Pool().get('product.category-customer-account.tax')
+        to_contable = []
+        for imp in impuestos:
+            id_tecno = 'imp-'+str(imp[col_impuestos.index('IdImpuesto')])
+            existe = cls.buscar_categoria(id_tecno)
+            if existe:
+                existe.name = imp[col_impuestos.index('Impuesto')]
+                existe.accounting = True
+                existe.save()
+            else:
+                categoria_prod = Category()
+                categoria_prod.id_tecno = id_tecno
+                categoria_prod.name = imp[col_impuestos.index('Impuesto')]
+                categoria_prod.accounting = True
+                tax = CustomerTax()
+                tax.category = categoria_prod
+                tax.tax = 88
+                tax.save()
+                categoria_prod.customer_taxes = tax
+                to_contable.append(categoria_prod)
+        Category.save(to_contable)
 
         if productos_tecno:
             #Creación de los productos con su respectiva categoria e información
@@ -85,7 +111,7 @@ class Products(ModelSQL, ModelView):
                         existe.template.save()
                 else:
                     prod = Producto()
-                    prod.code = id_producto
+                    prod.id_tecno = id_producto
                     temp = Template_Product()
                     temp.code = id_producto
                     temp.name = nombre_producto
@@ -118,7 +144,7 @@ class Products(ModelSQL, ModelView):
     def buscar_producto(cls, id_producto):
         Product = Pool().get('product.product')
         try:
-            producto, = Product.search([('code', '=', id_producto)])
+            producto, = Product.search([('id_tecno', '=', id_producto)])
         except ValueError:
             return False
         else:
