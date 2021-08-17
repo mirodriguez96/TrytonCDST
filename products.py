@@ -76,7 +76,6 @@ class Products(ModelSQL, ModelView):
                 tax.category = categoria_prod
                 tax.tax = 88
                 tax.save()
-                categoria_prod.customer_taxes = tax
                 to_contable.append(categoria_prod)
         Category.save(to_contable)
 
