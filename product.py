@@ -112,6 +112,7 @@ class Product(ModelSQL, ModelView):
                         existe.cost_price = costo_unitario
                         existe.template.categories = [categoria_producto]
                         existe.template.account_category = categoria_contable.id
+                        print(categoria_contable.id)
                         existe.template.save()
                 else:
                     prod = Producto()
