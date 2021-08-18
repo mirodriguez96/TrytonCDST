@@ -41,6 +41,8 @@ class Sale(metaclass=PoolMeta):
             pool = Pool()        
             Sale = pool.get('sale.sale')
             SaleLine = pool.get('sale.line')
+            Invoice = pool.get('account.invoice')
+            InvoiceLine = pool.get('account.invoice.line')
             Party = pool.get('party.party')
             Address = pool.get('party.address')
             Template = Pool().get('product.template')
@@ -59,19 +61,28 @@ class Sale(metaclass=PoolMeta):
                 venta.id_tecno = str(numero_doc)+'-'+tipo_doc
                 venta.description = vent[coluns_doc.index('notas')]
                 venta.invoice_method = 'manual'
-                venta.invoice_state = 'waiting'
+                #venta.invoice_state = 'none'
                 venta.invoice_type = 'M'
                 fecha = str(vent[coluns_doc.index('Fecha_Orden_Venta')]).split()[0].split('-')
                 fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
                 venta.sale_date = fecha_date
                 venta.shipment_method = 'manual'
-                venta.shipment_state = 'none'
-                venta.state = 'processing'
+                #venta.shipment_state = 'none'
+                venta.state = 'done'
                 party, = Party.search([('id_number', '=', vent[coluns_doc.index('nit_Cedula')])])
                 venta.party = party.id
                 address = Address.search([('party', '=', party.id)], limit=1)
                 venta.invoice_address = address[0].id
                 venta.shipment_address = address[0].id
+
+                invoice = Invoice()
+                invoice.party = party.id
+                invoice.operation_type = 10
+                invoice.invoice_address = address[0].id
+                invoice.number = numero_doc
+                invoice.reference = numero_doc
+                invoice.state = 'validated'
+                invoice.type = 'out'
 
                 documentos_linea = cls.get_line_where(str(numero_doc), str(tipo_doc))
                 col_line = cls.get_columns_db_tecno('Documentos_Lin')
@@ -89,67 +100,24 @@ class Sale(metaclass=PoolMeta):
                         line.sale = venta
                         line.type = 'line'
                         line.unit = template.default_uom
+                        invoice_line = InvoiceLine()
+                        invoice_line.invoice = invoice
+                        invoice_line.product = producto
+                        invoice_line.quantity = abs(int(lin[col_line.index('Cantidad_Facturada')]))
+                        invoice_line.type = 'line'
+                        invoice_line.unit = template.default_uom
+                        invoice_line.save()
                         #create_line.append(line)
                         line.save()
                     else:
                         raise UserError("Error", "No existe el producto con la siguiente id: ", lin[col_line.index('IdProducto')])
                 create_sale.append(venta)
+                invoice.save()
                 #venta.save()
             Sale.save(create_sale)
             #for sale in create_sale:
             #    cls.process_pos(sale)
 
-
-    @classmethod
-    def process_pos(cls, sale):
-        pool = Pool()
-        Date = pool.get('ir.date')
-        # Necesitamos mantener esa secuencia para las facturas 
-        # tomadas de la configuración de la tienda en lugar del año fiscal, 
-        # porque algunas secuencias de países las establece la tienda.
-        number = None
-
-        if not sale:
-            return
-
-        invoice = sale.create_invoice()
-        sale.set_invoice_state()
-        sequence = sale.get_sequence(sale)
-        if not sale.invoice_number and sale.invoice_method == 'order':
-            if sequence:
-                number = sequence.get()
-                sale_date = Date.today()
-                cls.write([sale], {
-                    'invoice_number': number,
-                    'invoice_date': sale_date,
-                })
-        else:
-            number = sale.invoice_number
-        position = sale.position if sale.position else None
-        if invoice:
-            if sale.invoice_date:
-                inv_date = sale.invoice_date
-            elif sale.shipment_date:
-                inv_date = sale.shipment_date
-            else:
-                inv_date = Date.today()
-
-            sale.invoice = invoice.id
-            to_write = {
-                'shop': sale.shop.id,
-                'invoice_date': inv_date,
-                'number': number,
-                'reference': sale.reference or sale.number,
-                'position': position,
-                'turn': sale.turn,
-            }
-
-            if sale.invoice_type:
-                pass
-            invoice.write([invoice], to_write)
-
-        sale.save()
-        return sale
 
 
     #Esta función se encarga de traer todos los datos de una tabla dada de la bd TecnoCarnes

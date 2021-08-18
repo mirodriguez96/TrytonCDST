@@ -1,6 +1,7 @@
 from trytond.model import ModelSQL, ModelView, fields
 from trytond.pool import Pool, PoolMeta
 import datetime
+from decimal import Decimal
 from conexion import conexion
 
 
