@@ -5,7 +5,7 @@ from conexion import conexion
 
 
 __all__ = [
-    'Products',
+    'Product',
     'ProductCategory',
     'Cron',
     ]
@@ -19,13 +19,13 @@ class Cron(metaclass=PoolMeta):
     def __setup__(cls):
         super().__setup__()
         cls.method.selection.append(
-            ('products.products|update_products', "Update products"),
+            ('product.product|update_products', "Update products"),
             )
 
 
-class Products(ModelSQL, ModelView):
+class Product(ModelSQL, ModelView):
     'Products'
-    __name__ = 'products.products'
+    __name__ = 'product.product'
     id_tecno = fields.Char('Id TecnoCarnes', required=False)
 
     #Función encargada de crear o actualizar los productos y categorias de db TecnoCarnes,

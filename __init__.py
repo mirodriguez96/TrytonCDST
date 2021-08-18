@@ -3,7 +3,7 @@ from trytond.pool import Pool
 #import wiz
 import conector
 import party
-import products
+import product
 import sale
 
 
@@ -14,9 +14,9 @@ def register():
         party.PartyAddress,
         party.ContactMechanism,
         party.Cron,
-        products.Products,
-        products.ProductCategory,
-        products.Cron,
+        product.Product,
+        product.ProductCategory,
+        product.Cron,
         sale.Sale,
         sale.SaleLine,
         sale.Cron,
