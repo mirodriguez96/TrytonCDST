@@ -65,7 +65,7 @@ class Sale(metaclass=PoolMeta):
                 venta.sale_date = fecha_date
                 venta.shipment_method = 'manual'
                 venta.shipment_state = 'none'
-                venta.state = 'done'
+                venta.state = 'draft'
                 party, = Party.search([('id_number', '=', vent[coluns_doc.index('nit_Cedula')])])
                 venta.party = party.id
                 address = Address.search([('party', '=', party.id)], limit=1)
@@ -157,7 +157,7 @@ class Sale(metaclass=PoolMeta):
         data = []
         try:
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT TOP (5) * FROM dbo."+table+" WHERE sw = 1")
+                query = cursor.execute("SELECT TOP (100) * FROM dbo."+table+" WHERE sw = 1")
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY "+table+": ", e)

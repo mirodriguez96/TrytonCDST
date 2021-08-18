@@ -57,6 +57,7 @@ class Product(ModelSQL, ModelView):
                 to_categorias.append(categoria_prod)
         Category.save(to_categorias)
 
+        #FIX
         #Creación de categorias contables
         CustomerTax = Pool().get('product.category-customer-account.tax')
         to_contable = []
@@ -101,8 +102,8 @@ class Product(ModelSQL, ModelView):
                 costo_unitario = producto[col_pro.index('costo_unitario')]
                 ultimo_cambio = producto[col_pro.index('Ultimo_Cambio_Registro')]
                 if existe:
-                    if (True):
-                    #if (ultimo_cambio and existe.write_date and ultimo_cambio > existe.write_date) or (ultimo_cambio and not existe.write_date and ultimo_cambio > existe.create_date):
+                    #if (True):
+                    if (ultimo_cambio and existe.write_date and ultimo_cambio > existe.write_date) or (ultimo_cambio and not existe.write_date and ultimo_cambio > existe.create_date):
                         existe.template.name = nombre_producto
                         existe.template.type = tipo_producto
                         existe.template.default_uom = udm_producto
