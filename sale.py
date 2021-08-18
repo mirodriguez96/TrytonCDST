@@ -85,6 +85,7 @@ class Sale(metaclass=PoolMeta):
                 invoice.state = 'validated'
                 invoice.type = 'out'
                 invoice.invoice_date = fecha_date
+                invoice.journal = 1
 
                 documentos_linea = cls.get_line_where(str(numero_doc), str(tipo_doc))
                 col_line = cls.get_columns_db_tecno('Documentos_Lin')
