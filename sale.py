@@ -95,8 +95,8 @@ class Sale(metaclass=PoolMeta):
                 create_sale.append(venta)
                 #venta.save()
             Sale.save(create_sale)
-            for sale in create_sale:
-                cls.process_pos(sale)
+            #for sale in create_sale:
+            #    cls.process_pos(sale)
 
 
     @classmethod
@@ -211,7 +211,7 @@ class Sale(metaclass=PoolMeta):
     def buscar_producto(cls, id_producto):
         Product = Pool().get('product.product')
         try:
-            producto, = Product.search([('code', '=', id_producto)])
+            producto, = Product.search([('id_tecno', '=', id_producto)])
         except ValueError:
             return False
         else:
