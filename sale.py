@@ -101,6 +101,7 @@ class Sale(metaclass=PoolMeta):
                         line.type = 'line'
                         line.unit = template.default_uom
                         invoice_line = InvoiceLine()
+                        invoice_line.account = 2063
                         invoice_line.invoice = invoice
                         invoice_line.product = producto
                         invoice_line.quantity = abs(int(lin[col_line.index('Cantidad_Facturada')]))
