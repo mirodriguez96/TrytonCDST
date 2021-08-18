@@ -109,7 +109,7 @@ class Product(ModelSQL, ModelView):
                         existe.template.list_price = valor_unitario
                         existe.cost_price = costo_unitario
                         existe.template.categories = [categoria_producto]
-                        existe.template.account_category = [categoria_contable]
+                        existe.template.account_category = categoria_contable
                         existe.template.save()
                 else:
                     prod = Producto()
@@ -125,7 +125,7 @@ class Product(ModelSQL, ModelView):
                     temp.list_price = valor_unitario
                     prod.cost_price = costo_unitario
                     temp.categories = [categoria_producto]
-                    temp.account_category = [categoria_contable]
+                    temp.account_category = categoria_contable
                     prod.template = temp
                     to_producto.append(prod)
             Producto.save(to_producto)
