@@ -72,10 +72,12 @@ class Product(ModelSQL, ModelView):
                 categoria_prod.id_tecno = id_tecno
                 categoria_prod.name = imp[col_impuestos.index('Impuesto')].strip()
                 categoria_prod.accounting = True
-                tax = CustomerTax()
-                tax.category = categoria_prod
-                #tax.tax = 87
-                tax.save()
+                impuesto = cls.select_tax(imp[col_impuestos.index('IdImpuesto')])
+                if impuesto:
+                    tax = CustomerTax()
+                    tax.category = categoria_prod
+                    tax.tax = impuesto
+                    tax.save()
                 to_contable.append(categoria_prod)
         Category.save(to_contable)
 
@@ -109,7 +111,7 @@ class Product(ModelSQL, ModelView):
                         existe.template.list_price = valor_unitario
                         existe.cost_price = costo_unitario
                         existe.template.categories = [categoria_producto]
-                        existe.template.account_category = categoria_contable
+                        existe.template.account_category = categoria_contable.id
                         existe.template.save()
                 else:
                     prod = Producto()
@@ -125,7 +127,7 @@ class Product(ModelSQL, ModelView):
                     temp.list_price = valor_unitario
                     prod.cost_price = costo_unitario
                     temp.categories = [categoria_producto]
-                    temp.account_category = categoria_contable
+                    temp.account_category = categoria_contable.id
                     prod.template = temp
                     to_producto.append(prod)
             Producto.save(to_producto)
@@ -267,7 +269,8 @@ class Product(ModelSQL, ModelView):
             return 32
         elif tax == 3 or tax == 5:
             return 33
-        #return impuesto
+        else:
+            return False
 
 #Herencia del party.contact_mechanism e insercción del campo id_tecno
 class ProductCategory(ModelSQL, ModelView):
