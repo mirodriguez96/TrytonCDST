@@ -117,7 +117,7 @@ class Product(ModelSQL, ModelView):
                     prod = Producto()
                     prod.id_tecno = id_producto
                     temp = Template_Product()
-                    temp.code = id_producto
+                    #temp.code = id_producto
                     temp.name = nombre_producto
                     temp.type = tipo_producto
                     temp.default_uom = udm_producto
