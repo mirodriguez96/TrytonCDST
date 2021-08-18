@@ -76,6 +76,7 @@ class Sale(metaclass=PoolMeta):
                 venta.shipment_address = address[0].id
 
                 invoice = Invoice()
+                invoice.account = 1366
                 invoice.party = party.id
                 invoice.operation_type = 10
                 invoice.invoice_address = address[0].id
@@ -83,6 +84,7 @@ class Sale(metaclass=PoolMeta):
                 invoice.reference = numero_doc
                 invoice.state = 'validated'
                 invoice.type = 'out'
+                invoice.invoice_date = fecha_date
 
                 documentos_linea = cls.get_line_where(str(numero_doc), str(tipo_doc))
                 col_line = cls.get_columns_db_tecno('Documentos_Lin')
