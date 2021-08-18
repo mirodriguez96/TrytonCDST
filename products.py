@@ -48,12 +48,12 @@ class Products(ModelSQL, ModelView):
             id_tecno = str(categoria[col_gproducto.index('IdGrupoProducto')])
             existe = cls.buscar_categoria(id_tecno)
             if existe:
-                existe.name = categoria[col_gproducto.index('GrupoProducto')]
+                existe.name = categoria[col_gproducto.index('GrupoProducto')].strip()
                 existe.save()
             else:
                 categoria_prod = Category()
                 categoria_prod.id_tecno = id_tecno
-                categoria_prod.name = categoria[col_gproducto.index('GrupoProducto')]
+                categoria_prod.name = categoria[col_gproducto.index('GrupoProducto')].strip()
                 to_categorias.append(categoria_prod)
         Category.save(to_categorias)
 
@@ -64,17 +64,17 @@ class Products(ModelSQL, ModelView):
             id_tecno = 'imp-'+str(imp[col_impuestos.index('IdImpuesto')])
             existe = cls.buscar_categoria(id_tecno)
             if existe:
-                existe.name = imp[col_impuestos.index('Impuesto')]
+                existe.name = imp[col_impuestos.index('Impuesto')].strip()
                 existe.accounting = True
                 existe.save()
             else:
                 categoria_prod = Category()
                 categoria_prod.id_tecno = id_tecno
-                categoria_prod.name = imp[col_impuestos.index('Impuesto')]
+                categoria_prod.name = imp[col_impuestos.index('Impuesto')].strip()
                 categoria_prod.accounting = True
                 tax = CustomerTax()
                 tax.category = categoria_prod
-                tax.tax = 88
+                #tax.tax = 87
                 tax.save()
                 to_contable.append(categoria_prod)
         Category.save(to_contable)
@@ -88,7 +88,9 @@ class Products(ModelSQL, ModelView):
                 id_producto = str(producto[col_pro.index('IdProducto')])
                 existe = cls.buscar_producto(id_producto)
                 id_tecno = str(producto[col_pro.index('IdGrupoProducto')])
+                imp_tecno = 'imp-'+str(producto[col_pro.index('Impuesto_venta')])
                 categoria_producto, = Category.search([('id_tecno', '=', id_tecno)])
+                categoria_contable, = Category.search([('id_tecno', '=', imp_tecno)])
                 nombre_producto = producto[col_pro.index('Producto')].strip()
                 tipo_producto = cls.tipo_producto(producto[col_pro.index('maneja_inventario')])
                 udm_producto = cls.udm_producto(producto[col_pro.index('unidad_Inventario')])
@@ -107,6 +109,7 @@ class Products(ModelSQL, ModelView):
                         existe.template.list_price = valor_unitario
                         existe.cost_price = costo_unitario
                         existe.template.categories = [categoria_producto]
+                        existe.template.account_category = [categoria_contable]
                         existe.template.save()
                 else:
                     prod = Producto()
@@ -122,6 +125,7 @@ class Products(ModelSQL, ModelView):
                     temp.list_price = valor_unitario
                     prod.cost_price = costo_unitario
                     temp.categories = [categoria_producto]
+                    temp.account_category = [categoria_contable]
                     prod.template = temp
                     to_producto.append(prod)
             Producto.save(to_producto)
@@ -256,6 +260,14 @@ class Products(ModelSQL, ModelView):
             actualizacion.name = 'PRODUCTOS'
             actualizacion.save()
 
+
+    @classmethod
+    def select_tax(cls, tax):
+        if tax == 4:
+            return 32
+        elif tax == 3 or tax == 5:
+            return 33
+        #return impuesto
 
 #Herencia del party.contact_mechanism e insercción del campo id_tecno
 class ProductCategory(ModelSQL, ModelView):
