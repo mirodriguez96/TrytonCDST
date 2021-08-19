@@ -40,7 +40,7 @@ class Sale(metaclass=PoolMeta):
         cls.create_actualizacion(False)
         if ventas_tecno:
             """"""
-            pool = Pool()        
+            pool = Pool()
             Sale = pool.get('sale.sale')
             SaleLine = pool.get('sale.line')
             Invoice = pool.get('account.invoice')
@@ -132,9 +132,12 @@ class Sale(metaclass=PoolMeta):
 
     @classmethod
     def create_sale_invoice(cls):
+        pool = Pool()
+        Sale = pool.get('sale.sale')
+        SaleLine = pool.get('sale.line')
         venta = Sale()
-        venta.number = 102
-        venta.reference = 102
+        venta.number = '102'
+        venta.reference = '102'
         venta.description = 'prueba descripcion'
         venta.invoice_method = 'order'
         #venta.invoice_state = 'none'
