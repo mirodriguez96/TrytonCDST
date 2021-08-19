@@ -126,7 +126,7 @@ class Sale(metaclass=PoolMeta):
                 #invoice.save()
                 #venta.save()
             Sale.process(create_sale)
-            Sale.save(create_sale)
+            #Sale.save(create_sale)
             #for sale in create_sale:
             #    cls.process_pos(sale)
 
