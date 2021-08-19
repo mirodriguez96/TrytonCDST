@@ -89,7 +89,7 @@ class Sale(metaclass=PoolMeta):
                 invoice.payment_term = 4
                 """
                 invoice = venta.create_invoice()
-                venta.set_invoice_state()
+                #venta.set_invoice_state()
                 if invoice:
                     print(invoice.id)
 
