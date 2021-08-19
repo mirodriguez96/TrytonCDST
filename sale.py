@@ -60,15 +60,15 @@ class Sale(metaclass=PoolMeta):
                 #venta.currency = 1
                 venta.id_tecno = str(numero_doc)+'-'+tipo_doc
                 venta.description = vent[coluns_doc.index('notas')]
-                venta.invoice_method = 'manual'
+                venta.invoice_method = 'order'
                 #venta.invoice_state = 'none'
                 venta.invoice_type = 'M'
                 fecha = str(vent[coluns_doc.index('Fecha_Orden_Venta')]).split()[0].split('-')
                 fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
                 venta.sale_date = fecha_date
-                venta.shipment_method = 'manual'
+                venta.shipment_method = 'order'
                 #venta.shipment_state = 'none'
-                venta.state = 'draft'
+                venta.state = 'confirmed'
                 party, = Party.search([('id_number', '=', vent[coluns_doc.index('nit_Cedula')])])
                 venta.party = party.id
                 address = Address.search([('party', '=', party.id)], limit=1)
