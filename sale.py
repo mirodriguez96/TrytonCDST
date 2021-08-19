@@ -89,7 +89,9 @@ class Sale(metaclass=PoolMeta):
                 invoice.payment_term = 4
                 """
                 invoice = venta.create_invoice()
-                print(invoice)
+                venta.set_invoice_state()
+                if invoice:
+                    print(invoice.id)
 
                 documentos_linea = cls.get_line_where(str(numero_doc), str(tipo_doc))
                 col_line = cls.get_columns_db_tecno('Documentos_Lin')
@@ -129,7 +131,13 @@ class Sale(metaclass=PoolMeta):
             #for sale in create_sale:
             #    cls.process_pos(sale)
 
-
+    #Creacion de la factura
+    def create_invoice(self):
+        'Create and return an invoice'
+        pool = Pool()
+        Invoice = pool.get('account.invoice')
+        if self.invoice_method == 'manual':
+            return
 
     #Esta función se encarga de traer todos los datos de una tabla dada de la bd TecnoCarnes
     @classmethod
