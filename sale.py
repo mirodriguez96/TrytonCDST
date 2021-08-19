@@ -127,16 +127,8 @@ class Sale(metaclass=PoolMeta):
             #Sale.process(create_sale)
             Sale.save(create_sale)
 
-    #Creacion de la factura
-    def create_invoice(self):
-        'Create and return an invoice'
-        pool = Pool()
-        Invoice = pool.get('account.invoice')
-        if self.invoice_method == 'manual':
-            return
-
     @classmethod
-    def create_sale(cls):
+    def create_sale_invoice(cls):
         venta = Sale()
         venta.number = 102
         venta.reference = 102
