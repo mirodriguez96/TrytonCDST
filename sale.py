@@ -68,7 +68,7 @@ class Sale(metaclass=PoolMeta):
                 venta.sale_date = fecha_date
                 venta.shipment_method = 'manual'
                 #venta.shipment_state = 'none'
-                venta.state = 'done'
+                venta.state = 'draft'
                 party, = Party.search([('id_number', '=', vent[coluns_doc.index('nit_Cedula')])])
                 venta.party = party.id
                 address = Address.search([('party', '=', party.id)], limit=1)
@@ -88,9 +88,7 @@ class Sale(metaclass=PoolMeta):
                 invoice.journal = 1
                 invoice.payment_term = 4
                 """
-                invoice = venta.create_invoice()
-                #venta.set_invoice_state()
-                print(invoice.id)
+                #invoice = venta.create_invoice()
 
                 documentos_linea = cls.get_line_where(str(numero_doc), str(tipo_doc))
                 col_line = cls.get_columns_db_tecno('Documentos_Lin')
@@ -123,9 +121,11 @@ class Sale(metaclass=PoolMeta):
                         line.save()
                     else:
                         raise UserError("Error", "No existe el producto con la siguiente id: ", lin[col_line.index('IdProducto')])
+                
                 create_sale.append(venta)
                 #invoice.save()
                 #venta.save()
+            Sale.process(create_sale)
             Sale.save(create_sale)
             #for sale in create_sale:
             #    cls.process_pos(sale)
