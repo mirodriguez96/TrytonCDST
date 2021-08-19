@@ -88,7 +88,7 @@ class Sale(metaclass=PoolMeta):
                 invoice.journal = 1
                 invoice.payment_term = 4
 
-                venta.invoices = invoice
+                venta.invoice = invoice
 
                 documentos_linea = cls.get_line_where(str(numero_doc), str(tipo_doc))
                 col_line = cls.get_columns_db_tecno('Documentos_Lin')
