@@ -74,7 +74,7 @@ class Sale(metaclass=PoolMeta):
                 address = Address.search([('party', '=', party.id)], limit=1)
                 venta.invoice_address = address[0].id
                 venta.shipment_address = address[0].id
-
+                """
                 invoice = Invoice()
                 invoice.account = 1366
                 invoice.party = party.id
@@ -87,8 +87,9 @@ class Sale(metaclass=PoolMeta):
                 invoice.invoice_date = fecha_date
                 invoice.journal = 1
                 invoice.payment_term = 4
-
-                venta.invoice = invoice
+                """
+                invoice = venta.create_invoice()
+                print(invoice)
 
                 documentos_linea = cls.get_line_where(str(numero_doc), str(tipo_doc))
                 col_line = cls.get_columns_db_tecno('Documentos_Lin')
@@ -106,6 +107,7 @@ class Sale(metaclass=PoolMeta):
                         line.sale = venta
                         line.type = 'line'
                         line.unit = template.default_uom
+                        """
                         invoice_line = InvoiceLine()
                         invoice_line.account = 2063
                         invoice_line.invoice = invoice
@@ -115,6 +117,7 @@ class Sale(metaclass=PoolMeta):
                         invoice_line.unit = template.default_uom
                         invoice_line.unit_price = lin[col_line.index('Valor_Unitario')]
                         invoice_line.save()
+                        """
                         #create_line.append(line)
                         line.save()
                     else:
