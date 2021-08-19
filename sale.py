@@ -60,7 +60,7 @@ class Sale(metaclass=PoolMeta):
                 #venta.currency = 1
                 venta.id_tecno = str(numero_doc)+'-'+tipo_doc
                 venta.description = vent[coluns_doc.index('notas')]
-                venta.invoice_method = 'order'
+                venta.invoice_method = 'manual'
                 #venta.invoice_state = 'none'
                 venta.invoice_type = 'M'
                 fecha = str(vent[coluns_doc.index('Fecha_Orden_Venta')]).split()[0].split('-')
@@ -90,8 +90,7 @@ class Sale(metaclass=PoolMeta):
                 """
                 invoice = venta.create_invoice()
                 #venta.set_invoice_state()
-                if invoice:
-                    print(invoice.id)
+                print(invoice.id)
 
                 documentos_linea = cls.get_line_where(str(numero_doc), str(tipo_doc))
                 col_line = cls.get_columns_db_tecno('Documentos_Lin')
