@@ -49,6 +49,7 @@ class Sale(metaclass=PoolMeta):
             documentos = cls.get_data_db_tecno('Documentos')
             coluns_doc = cls.get_columns_db_tecno('Documentos')
             create_sale = []
+            create_invoice = []
             #Procedemos a realizar una venta
             for vent in documentos:
                 numero_doc = vent[coluns_doc.index('Numero_documento')]
@@ -68,26 +69,27 @@ class Sale(metaclass=PoolMeta):
                 venta.sale_date = fecha_date
                 venta.shipment_method = 'order'
                 #venta.shipment_state = 'none'
-                venta.state = 'confirmed'
+                venta.state = 'done'
                 party, = Party.search([('id_number', '=', vent[coluns_doc.index('nit_Cedula')])])
                 venta.party = party.id
                 address = Address.search([('party', '=', party.id)], limit=1)
                 venta.invoice_address = address[0].id
                 venta.shipment_address = address[0].id
-                """
+                """"""
                 invoice = Invoice()
                 invoice.account = 1366
-                invoice.party = party.id
-                invoice.operation_type = 10
                 invoice.invoice_address = address[0].id
+                invoice.journal = 1
+                invoice.party = party.id
+                invoice.type = 'out'
+                invoice.operation_type = 10
                 invoice.number = numero_doc
                 invoice.reference = numero_doc
                 invoice.state = 'validated'
-                invoice.type = 'out'
                 invoice.invoice_date = fecha_date
-                invoice.journal = 1
                 invoice.payment_term = 4
-                """
+                invoice.invoice_type = 'M'
+                invoice.description = vent[coluns_doc.index('notas')]
                 #invoice = venta.create_invoice()
 
                 documentos_linea = cls.get_line_where(str(numero_doc), str(tipo_doc))
@@ -106,7 +108,7 @@ class Sale(metaclass=PoolMeta):
                         line.sale = venta
                         line.type = 'line'
                         line.unit = template.default_uom
-                        """
+                        """"""
                         invoice_line = InvoiceLine()
                         invoice_line.account = 2063
                         invoice_line.invoice = invoice
@@ -116,19 +118,14 @@ class Sale(metaclass=PoolMeta):
                         invoice_line.unit = template.default_uom
                         invoice_line.unit_price = lin[col_line.index('Valor_Unitario')]
                         invoice_line.save()
-                        """
-                        #create_line.append(line)
+
                         line.save()
                     else:
                         raise UserError("Error", "No existe el producto con la siguiente id: ", lin[col_line.index('IdProducto')])
-                
                 create_sale.append(venta)
-                #invoice.save()
-                #venta.save()
-            Sale.process(create_sale)
-            #Sale.save(create_sale)
-            #for sale in create_sale:
-            #    cls.process_pos(sale)
+                create_invoice.append(invoice)
+            #Sale.process(create_sale)
+            Sale.save(create_sale)
 
     #Creacion de la factura
     def create_invoice(self):
@@ -137,6 +134,25 @@ class Sale(metaclass=PoolMeta):
         Invoice = pool.get('account.invoice')
         if self.invoice_method == 'manual':
             return
+
+    @classmethod
+    def create_sale(cls):
+        venta = Sale()
+        venta.number = 102
+        venta.reference = 102
+        venta.description = 'prueba descripcion'
+        venta.invoice_method = 'order'
+        #venta.invoice_state = 'none'
+        venta.invoice_type = 'M'
+        fecha_date = datetime.date(2021, 8, 15)
+        venta.sale_date = fecha_date
+        venta.shipment_method = 'order'
+        #venta.shipment_state = 'none'
+        venta.state = 'confirmed'
+        venta.party = 451
+        venta.invoice_address = 14512
+        venta.shipment_address = 14512
+        Sale.process(venta)
 
     #Esta función se encarga de traer todos los datos de una tabla dada de la bd TecnoCarnes
     @classmethod
