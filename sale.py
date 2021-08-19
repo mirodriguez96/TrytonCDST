@@ -135,6 +135,7 @@ class Sale(metaclass=PoolMeta):
         pool = Pool()
         Sale = pool.get('sale.sale')
         SaleLine = pool.get('sale.line')
+        to_create = []
         venta = Sale()
         venta.number = '102'
         venta.reference = '102'
@@ -160,7 +161,9 @@ class Sale(metaclass=PoolMeta):
         line.type = 'line'
         line.unit = 1
         line.save()
-        Sale.process(venta)
+        to_create.append(venta)
+        to_create.append(venta)
+        Sale.process(to_create)
 
     #Esta función se encarga de traer todos los datos de una tabla dada de la bd TecnoCarnes
     @classmethod
