@@ -34,6 +34,8 @@ class Sale(metaclass=PoolMeta):
     @classmethod
     def import_data_sale(cls):
         print("--------------RUN WIZARD VENTAS--------------")
+        cls.create_sale_invoice()
+        """
         ventas_tecno = cls.last_update()
         cls.create_actualizacion(False)
         if ventas_tecno:
@@ -126,6 +128,7 @@ class Sale(metaclass=PoolMeta):
                 create_invoice.append(invoice)
             #Sale.process(create_sale)
             Sale.save(create_sale)
+        """
 
     @classmethod
     def create_sale_invoice(cls):
@@ -144,6 +147,15 @@ class Sale(metaclass=PoolMeta):
         venta.party = 451
         venta.invoice_address = 14512
         venta.shipment_address = 14512
+        #linea
+        line = SaleLine()
+        line.product = 7
+        line.quantity = 3
+        line.unit_price = 23000
+        line.sale = venta
+        line.type = 'line'
+        line.unit = 1
+        line.save()
         Sale.process(venta)
 
     #Esta función se encarga de traer todos los datos de una tabla dada de la bd TecnoCarnes
