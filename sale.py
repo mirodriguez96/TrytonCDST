@@ -147,6 +147,7 @@ class Sale(metaclass=PoolMeta):
         venta.party = 451
         venta.invoice_address = 14512
         venta.shipment_address = 14512
+        venta.payment_term = 4
         #linea
         line = SaleLine()
         line.product = 7
