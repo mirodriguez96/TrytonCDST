@@ -162,7 +162,7 @@ class Sale(metaclass=PoolMeta):
 
     @classmethod
     def create_sale_invoice(cls):
-        
+        pass
 
     #Esta función se encarga de traer todos los datos de una tabla dada de la bd TecnoCarnes
     @classmethod
