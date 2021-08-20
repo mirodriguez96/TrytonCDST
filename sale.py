@@ -34,7 +34,37 @@ class Sale(metaclass=PoolMeta):
     @classmethod
     def import_data_sale(cls):
         print("--------------RUN WIZARD VENTAS--------------")
-        cls.create_sale_invoice()
+        pool = Pool()
+        Sale = pool.get('sale.sale')
+        SaleLine = pool.get('sale.line')
+        to_create = []
+        venta = Sale()
+        venta.number = '102'
+        venta.reference = '102'
+        venta.description = 'prueba descripcion'
+        venta.invoice_method = 'order'
+        #venta.invoice_state = 'none'
+        venta.invoice_type = 'M'
+        fecha_date = datetime.date(2021, 8, 15)
+        venta.sale_date = fecha_date
+        venta.shipment_method = 'order'
+        #venta.shipment_state = 'none'
+        venta.state = 'confirmed'
+        venta.party = 451
+        venta.invoice_address = 14512
+        venta.shipment_address = 14512
+        venta.payment_term = 4
+        #linea
+        line = SaleLine()
+        line.product = 7
+        line.quantity = 3
+        line.unit_price = 23000
+        line.sale = venta
+        line.type = 'line'
+        line.unit = 1
+        line.save()
+        to_create.append(venta)
+        Sale.process(to_create)
         """
         ventas_tecno = cls.last_update()
         cls.create_actualizacion(False)
@@ -132,38 +162,7 @@ class Sale(metaclass=PoolMeta):
 
     @classmethod
     def create_sale_invoice(cls):
-        pool = Pool()
-        Sale = pool.get('sale.sale')
-        SaleLine = pool.get('sale.line')
-        to_create = []
-        venta = Sale()
-        venta.number = '102'
-        venta.reference = '102'
-        venta.description = 'prueba descripcion'
-        venta.invoice_method = 'order'
-        #venta.invoice_state = 'none'
-        venta.invoice_type = 'M'
-        fecha_date = datetime.date(2021, 8, 15)
-        venta.sale_date = fecha_date
-        venta.shipment_method = 'order'
-        #venta.shipment_state = 'none'
-        venta.state = 'confirmed'
-        venta.party = 451
-        venta.invoice_address = 14512
-        venta.shipment_address = 14512
-        venta.payment_term = 4
-        #linea
-        line = SaleLine()
-        line.product = 7
-        line.quantity = 3
-        line.unit_price = 23000
-        line.sale = venta
-        line.type = 'line'
-        line.unit = 1
-        line.save()
-        to_create.append(venta)
-        to_create.append(venta)
-        Sale.process(to_create)
+        
 
     #Esta función se encarga de traer todos los datos de una tabla dada de la bd TecnoCarnes
     @classmethod
