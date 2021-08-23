@@ -37,15 +37,16 @@ class Sale(metaclass=PoolMeta):
         pool = Pool()
         Sale = pool.get('sale.sale')
         SaleLine = pool.get('sale.line')
+        Taxes = pool.get('sale.line-account.tax')
         to_create = []
         venta = Sale()
-        venta.number = '102'
-        venta.reference = '102'
+        venta.number = '107'
+        venta.reference = '107'
         venta.description = 'prueba descripcion'
         venta.invoice_method = 'order'
         #venta.invoice_state = 'none'
         venta.invoice_type = 'M'
-        fecha_date = datetime.date(2021, 8, 15)
+        fecha_date = datetime.date(2001, 8, 15)
         venta.sale_date = fecha_date
         venta.shipment_method = 'order'
         #venta.shipment_state = 'none'
@@ -62,7 +63,11 @@ class Sale(metaclass=PoolMeta):
         line.sale = venta
         line.type = 'line'
         line.unit = 1
+        tax = Taxes()
+        tax.line = line
+        tax.tax = 88
         line.save()
+        tax.save()
         to_create.append(venta)
         Sale.process(to_create)
         """
