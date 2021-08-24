@@ -34,6 +34,7 @@ class Sale(metaclass=PoolMeta):
     @classmethod
     def import_data_sale(cls):
         print("--------------RUN WIZARD VENTAS--------------")
+        """
         pool = Pool()
         Sale = pool.get('sale.sale')
         SaleLine = pool.get('sale.line')
@@ -63,7 +64,7 @@ class Sale(metaclass=PoolMeta):
         line.sale = venta
         line.type = 'line'
         line.unit = 1
-        # agregar impuestos a la venta
+        #Agregar impuestos a la venta
         tax = Taxes()
         tax.line = line
         tax.tax = 88
@@ -81,8 +82,9 @@ class Sale(metaclass=PoolMeta):
             pool = Pool()
             Sale = pool.get('sale.sale')
             SaleLine = pool.get('sale.line')
-            Invoice = pool.get('account.invoice')
-            InvoiceLine = pool.get('account.invoice.line')
+            #Invoice = pool.get('account.invoice')
+            #InvoiceLine = pool.get('account.invoice.line')
+            Taxes = pool.get('sale.line-account.tax')
             Party = pool.get('party.party')
             Address = pool.get('party.address')
             Template = Pool().get('product.template')
@@ -115,7 +117,7 @@ class Sale(metaclass=PoolMeta):
                 address = Address.search([('party', '=', party.id)], limit=1)
                 venta.invoice_address = address[0].id
                 venta.shipment_address = address[0].id
-                """"""
+                """
                 invoice = Invoice()
                 invoice.account = 1366
                 invoice.invoice_address = address[0].id
@@ -131,7 +133,7 @@ class Sale(metaclass=PoolMeta):
                 invoice.invoice_type = 'M'
                 invoice.description = vent[coluns_doc.index('notas')]
                 #invoice = venta.create_invoice()
-
+                """
                 documentos_linea = cls.get_line_where(str(numero_doc), str(tipo_doc))
                 col_line = cls.get_columns_db_tecno('Documentos_Lin')
                 #create_line = []
@@ -148,7 +150,13 @@ class Sale(metaclass=PoolMeta):
                         line.sale = venta
                         line.type = 'line'
                         line.unit = template.default_uom
-                        """"""
+                        #Agregar impuestos a la venta
+                        tax = Taxes()
+                        tax.line = line
+                        tax.tax = 88
+                        line.save()
+                        tax.save()
+                        """
                         invoice_line = InvoiceLine()
                         invoice_line.account = 2063
                         invoice_line.invoice = invoice
@@ -158,15 +166,15 @@ class Sale(metaclass=PoolMeta):
                         invoice_line.unit = template.default_uom
                         invoice_line.unit_price = lin[col_line.index('Valor_Unitario')]
                         invoice_line.save()
-
+                        """
                         line.save()
                     else:
                         raise UserError("Error", "No existe el producto con la siguiente id: ", lin[col_line.index('IdProducto')])
                 create_sale.append(venta)
-                create_invoice.append(invoice)
-            #Sale.process(create_sale)
-            Sale.save(create_sale)
-        """
+                #create_invoice.append(invoice)
+            Sale.process(create_sale)
+            #Sale.save(create_sale)
+        
 
     @classmethod
     def create_sale_invoice(cls):
@@ -215,7 +223,7 @@ class Sale(metaclass=PoolMeta):
         data = []
         try:
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT TOP (5) * FROM dbo."+table+" WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND sw = 1")
+                query = cursor.execute("SELECT TOP (10) * FROM dbo."+table+" WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND sw = 1")
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY get_data_where_tecno: ", e)
