@@ -173,13 +173,11 @@ class Sale(metaclass=PoolMeta):
                         line.save()
                     else:
                         raise UserError("Error", "No existe el producto con la siguiente id: ", lin[col_line.index('IdProducto')])
+                Sale.process([venta])
                 create_sale.append(venta)
                 #create_invoice.append(invoice)
             Sale.save(create_sale)
-            Sale.process(create_sale)
-            for sa in create_sale:
-                print(sa)
-                print('------------------------')
+            
 
 
     #Esta función se encarga de traer todos los datos de una tabla dada de la bd TecnoCarnes
