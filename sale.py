@@ -179,8 +179,6 @@ class Sale(metaclass=PoolMeta):
             Sale.process(create_sale)
             for sa in create_sale:
                 print(sa)
-                for s in sa:
-                    print(s)
                 print('------------------------')
 
 
