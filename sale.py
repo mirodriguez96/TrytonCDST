@@ -152,8 +152,8 @@ class Sale(metaclass=PoolMeta):
                         line.sale = venta
                         line.type = 'line'
                         line.unit = template.default_uom
-                        taxc, = CustomerTax.search([('category', '=', template.account_category)])
                         #Agregar impuestos a la venta
+                        taxc, = CustomerTax.search([('category', '=', template.account_category)])
                         tax = Taxes()
                         tax.line = line
                         tax.tax = taxc.tax
@@ -177,6 +177,11 @@ class Sale(metaclass=PoolMeta):
                 #create_invoice.append(invoice)
             Sale.save(create_sale)
             Sale.process(create_sale)
+            for sa in create_sale:
+                print(sa)
+                for s in sa:
+                    print(s)
+                print('------------------------')
 
 
     #Esta función se encarga de traer todos los datos de una tabla dada de la bd TecnoCarnes
