@@ -84,7 +84,8 @@ class Sale(metaclass=PoolMeta):
             SaleLine = pool.get('sale.line')
             #Invoice = pool.get('account.invoice')
             #InvoiceLine = pool.get('account.invoice.line')
-            #Taxes = pool.get('sale.line-account.tax')
+            Taxes = pool.get('sale.line-account.tax')
+            CustomerTax = Pool().get('product.category-customer-account.tax')
             Party = pool.get('party.party')
             Address = pool.get('party.address')
             Template = Pool().get('product.template')
@@ -112,7 +113,7 @@ class Sale(metaclass=PoolMeta):
                 venta.shipment_method = 'order'
                 #venta.shipment_state = 'none'
                 venta.payment_term = 4
-                venta.state = 'done'
+                venta.state = 'confirmed'
                 party, = Party.search([('id_number', '=', vent[coluns_doc.index('nit_Cedula')])])
                 venta.party = party.id
                 address = Address.search([('party', '=', party.id)], limit=1)
@@ -151,12 +152,13 @@ class Sale(metaclass=PoolMeta):
                         line.sale = venta
                         line.type = 'line'
                         line.unit = template.default_uom
+                        taxc, = CustomerTax.search([('category', '=', template.account_category)])
                         #Agregar impuestos a la venta
-                        #tax = Taxes()
-                        #tax.line = line
-                        #tax.tax = 88
+                        tax = Taxes()
+                        tax.line = line
+                        tax.tax = taxc.tax
                         line.save()
-                        #tax.save()
+                        tax.save()
                         """
                         invoice_line = InvoiceLine()
                         invoice_line.account = 2063
