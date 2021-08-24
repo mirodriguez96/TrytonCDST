@@ -174,6 +174,7 @@ class Sale(metaclass=PoolMeta):
                     else:
                         raise UserError("Error", "No existe el producto con la siguiente id: ", lin[col_line.index('IdProducto')])
                 Sale.process([venta])
+                print(venta.get_invoices(None))
                 create_sale.append(venta)
                 #create_invoice.append(invoice)
             Sale.save(create_sale)
