@@ -63,7 +63,7 @@ if minor_version % 2:
 setup(name=name,
     version=version,
     description='Modulo conector de CDST',
-    author='Tryton',
+    author='Casa de Software Tecno SAS',
     author_email='issue_tracker@tryton.org',
     url='http://www.tryton.org/',
     download_url=download_url,

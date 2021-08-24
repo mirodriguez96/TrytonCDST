@@ -40,8 +40,8 @@ class Sale(metaclass=PoolMeta):
         Taxes = pool.get('sale.line-account.tax')
         to_create = []
         venta = Sale()
-        venta.number = '107'
-        venta.reference = '107'
+        venta.number = '108'
+        venta.reference = '108'
         venta.description = 'prueba descripcion'
         venta.invoice_method = 'order'
         #venta.invoice_state = 'none'
@@ -63,6 +63,7 @@ class Sale(metaclass=PoolMeta):
         line.sale = venta
         line.type = 'line'
         line.unit = 1
+        # agregar impuestos a la venta
         tax = Taxes()
         tax.line = line
         tax.tax = 88
@@ -70,6 +71,8 @@ class Sale(metaclass=PoolMeta):
         tax.save()
         to_create.append(venta)
         Sale.process(to_create)
+        for inv in to_create:
+            print (inv.invoice)
         """
         ventas_tecno = cls.last_update()
         cls.create_actualizacion(False)
