@@ -74,7 +74,7 @@ class Product(ModelSQL, ModelView):
                 categoria_prod.id_tecno = id_tecno
                 categoria_prod.name = imp[col_impuestos.index('Impuesto')].strip()
                 categoria_prod.accounting = True
-                impuesto = cls.select_tax(imp[col_impuestos.index('IdImpuesto')])
+                impuesto = cls.select_tax(imp[col_impuestos.index('IdImpuesto')]) #FIX
                 if impuesto:
                     tax = CustomerTax()
                     tax.category = categoria_prod
@@ -266,13 +266,19 @@ class Product(ModelSQL, ModelView):
             actualizacion.name = 'PRODUCTOS'
             actualizacion.save()
 
-
+    #Selecciona el impuesto equivalente en TecnoCarnes
     @classmethod
     def select_tax(cls, tax):
-        if tax == 4:
-            return 32
-        elif tax == 3 or tax == 5:
-            return 33
+        Tax = Pool().get('account.tax')
+        if tax == 3:
+            tax, = Tax.search([('name', '=', 'IVA 19,0%')])
+            return tax.id
+        elif tax == 4:
+            tax, = Tax.search([('name', '=', 'IVA 5,0%')])
+            return tax.id
+        elif tax == 5:
+            tax, = Tax.search([('name', '=', 'IVA SERVICIOS 19,0%')])
+            return tax.id
         else:
             return False
 
