@@ -4,6 +4,7 @@ from trytond.pool import Pool, PoolMeta
 #from trytond.transaction import Transaction
 from trytond.exceptions import UserError
 from conexion import conexion
+from decimal import Decimal
 
 
 __all__ = [
@@ -182,9 +183,10 @@ class Sale(metaclass=PoolMeta):
                 invoice.description = vent[coluns_doc.index('notas')]
                 invoice.state = 'validated'
                 Invoice.process([invoice])
-                print(invoice.number)
-                print(Invoice.get_amount([invoice], 'total_amount'))
-                print('------------------------------------------------------------')
+                total = Invoice.get_amount([invoice], 'total_amount')
+                total_tecno = Decimal(vent[coluns_doc.index('valor_total')])
+                if total['total_amount'][invoice.id] == total_tecno:
+                    Invoice.post([invoice])
                 invoice.save()
                 create_sale.append(venta)
                 #create_invoice.append(invoice)
@@ -275,7 +277,7 @@ class Sale(metaclass=PoolMeta):
             else:
                 fecha = (ultima_actualizacion[0].create_date - datetime.timedelta(hours=5))
         else:
-            fecha = datetime.date(1,1,1)
+            fecha = datetime.date(2021,1,1)
             cls.create_actualizacion(True)
         fecha = fecha.strftime('%Y-%d-%m %H:%M:%S')
         data = cls.get_data_where_tecno('Documentos', fecha)
