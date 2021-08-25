@@ -180,7 +180,7 @@ class Sale(metaclass=PoolMeta):
                 invoice.reference = str(numero_doc)+'-'+tipo_doc
                 invoice.invoice_date = fecha_date
                 invoice.state = 'validated'
-                Invoice.process(invoice)
+                Invoice.process([invoice])
                 invoice.save()
                 create_sale.append(venta)
                 #create_invoice.append(invoice)
