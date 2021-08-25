@@ -90,7 +90,7 @@ class Sale(metaclass=PoolMeta):
             Template = Pool().get('product.template')
             #documentos = cls.get_data_db_tecno('Documentos')
             coluns_doc = cls.get_columns_db_tecno('Documentos')
-            create_sale = []
+            #create_sale = []
             #create_invoice = []
             #Procedemos a realizar una venta
             for vent in ventas_tecno:
@@ -172,8 +172,9 @@ class Sale(metaclass=PoolMeta):
                     else:
                         raise UserError("Error", "No existe el producto con la siguiente id: ", lin[col_line.index('IdProducto')])
                 Sale.process([venta])
-                create_sale.append(venta)
+                #create_sale.append(venta)
                 id_invoice = venta.get_invoices(None)
+                venta.save()
                 invoice, = Invoice.search([('id','=',id_invoice[0])])
                 invoice.operation_type = 10
                 invoice.number = tipo_doc+'-'+str(numero_doc)
@@ -189,7 +190,7 @@ class Sale(metaclass=PoolMeta):
                     print('TOTAL IGUALES')
                 invoice.save()
                 #create_invoice.append(invoice)
-            Sale.save(create_sale)
+            #Sale.save(create_sale)
             
 
     @classmethod
