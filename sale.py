@@ -183,12 +183,13 @@ class Sale(metaclass=PoolMeta):
                 invoice.invoice_date = fecha_date
                 desc = cls.get_tipo_dcto(tipo_doc)
                 invoice.description = desc[0][columns_tipodoc.index('TipoDoctos')]
+                Invoice.validate_invoice([invoice])
                 #invoice.state = 'validated'
                 #Invoice.process([invoice])
                 total = Invoice.get_amount([invoice], 'total_amount')
                 total_tecno = Decimal(vent[coluns_doc.index('valor_total')])
                 if total['total_amount'][invoice.id] == total_tecno:
-                    Invoice.post([invoice])
+                    Invoice.post_batch([invoice])
                     #print('TOTAL IGUALES')
                 invoice.save()
                 #create_invoice.append(invoice)
