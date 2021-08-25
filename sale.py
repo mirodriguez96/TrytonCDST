@@ -174,7 +174,7 @@ class Sale(metaclass=PoolMeta):
                         raise UserError("Error", "No existe el producto con la siguiente id: ", lin[col_line.index('IdProducto')])
                 Sale.process([venta])
                 id_invoice = venta.get_invoices(None)
-                invoice = Invoice.search([('id','=',id_invoice[0])])
+                invoice, = Invoice.search([('id','=',id_invoice[0])])
                 invoice.operation_type = 10
                 invoice.number = numero_doc
                 invoice.reference = str(numero_doc)+'-'+tipo_doc
