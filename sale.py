@@ -98,8 +98,8 @@ class Sale(metaclass=PoolMeta):
                 numero_doc = vent[coluns_doc.index('Numero_documento')]
                 tipo_doc = vent[coluns_doc.index('tipo')].strip()
                 venta = Sale()
-                venta.number = numero_doc
-                venta.reference = str(numero_doc)+'-'+tipo_doc
+                venta.number = tipo_doc+'-'+str(numero_doc)
+                venta.reference = tipo_doc+'-'+str(numero_doc)
                 #venta.company = 3
                 #venta.currency = 1
                 venta.id_tecno = str(numero_doc)+'-'+tipo_doc
@@ -176,11 +176,15 @@ class Sale(metaclass=PoolMeta):
                 id_invoice = venta.get_invoices(None)
                 invoice, = Invoice.search([('id','=',id_invoice[0])])
                 invoice.operation_type = 10
-                invoice.number = numero_doc
-                invoice.reference = str(numero_doc)+'-'+tipo_doc
+                invoice.number = tipo_doc+'-'+str(numero_doc)
+                invoice.reference = tipo_doc+'-'+str(numero_doc)
                 invoice.invoice_date = fecha_date
+                invoice.description = vent[coluns_doc.index('notas')]
                 invoice.state = 'validated'
                 Invoice.process([invoice])
+                print(invoice.number)
+                print(Invoice.get_amount([invoice], 'total_amount'))
+                print('------------------------------------------------------------')
                 invoice.save()
                 create_sale.append(venta)
                 #create_invoice.append(invoice)
