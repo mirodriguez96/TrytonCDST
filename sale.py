@@ -90,6 +90,7 @@ class Sale(metaclass=PoolMeta):
             Template = Pool().get('product.template')
             #documentos = cls.get_data_db_tecno('Documentos')
             coluns_doc = cls.get_columns_db_tecno('Documentos')
+            columns_tipodoc = cls.get_columns_db_tecno('TblTipoDoctos')
             #create_sale = []
             #create_invoice = []
             #Procedemos a realizar una venta
@@ -180,7 +181,8 @@ class Sale(metaclass=PoolMeta):
                 invoice.number = tipo_doc+'-'+str(numero_doc)
                 invoice.reference = tipo_doc+'-'+str(numero_doc)
                 invoice.invoice_date = fecha_date
-                invoice.description = vent[coluns_doc.index('notas')]
+                desc = cls.get_tipo_dcto(tipo_doc)
+                invoice.description = desc[0][columns_tipodoc.index('TipoDoctos')]
                 #invoice.state = 'validated'
                 #Invoice.process([invoice])
                 total = Invoice.get_amount([invoice], 'total_amount')
@@ -200,7 +202,7 @@ class Sale(metaclass=PoolMeta):
 
     #Esta función se encarga de traer todos los datos de una tabla dada de la bd TecnoCarnes
     @classmethod
-    def get_data_db_tecno(cls, table):
+    def get_data_db_tecno(cls, table): #TESTS
         data = []
         try:
             with conexion.cursor() as cursor:
@@ -208,6 +210,18 @@ class Sale(metaclass=PoolMeta):
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY "+table+": ", e)
+        return data
+
+    #Metodo encargado de traer el tipo de documento de la bd TecnoCarnes
+    @classmethod
+    def get_tipo_dcto(cls, id):
+        data = []
+        try:
+            with conexion.cursor() as cursor:
+                query = cursor.execute("SELECT * FROM dbo.TblTipoDoctos WHERE idTipoDoctos = '"+id+"'")
+                data = list(query.fetchall())
+        except Exception as e:
+            print("ERROR QUERY TblTipoDoctos: ", e)
         return data
 
     #Esta función se encarga de traer todos los datos de una tabla dada de la bd TecnoCarnes
