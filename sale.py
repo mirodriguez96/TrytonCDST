@@ -73,8 +73,6 @@ class Sale(metaclass=PoolMeta):
         tax.save()
         to_create.append(venta)
         Sale.process(to_create)
-        for inv in to_create:
-            print (inv.invoice)
         """
         ventas_tecno = cls.last_update()
         cls.create_actualizacion(False)
@@ -174,6 +172,7 @@ class Sale(metaclass=PoolMeta):
                     else:
                         raise UserError("Error", "No existe el producto con la siguiente id: ", lin[col_line.index('IdProducto')])
                 Sale.process([venta])
+                create_sale.append(venta)
                 id_invoice = venta.get_invoices(None)
                 invoice, = Invoice.search([('id','=',id_invoice[0])])
                 invoice.operation_type = 10
@@ -181,15 +180,14 @@ class Sale(metaclass=PoolMeta):
                 invoice.reference = tipo_doc+'-'+str(numero_doc)
                 invoice.invoice_date = fecha_date
                 invoice.description = vent[coluns_doc.index('notas')]
-                invoice.state = 'validated'
-                Invoice.process([invoice])
+                #invoice.state = 'validated'
+                #Invoice.process([invoice])
                 total = Invoice.get_amount([invoice], 'total_amount')
                 total_tecno = Decimal(vent[coluns_doc.index('valor_total')])
                 if total['total_amount'][invoice.id] == total_tecno:
                     #Invoice.post([invoice])
                     print('TOTAL IGUALES')
                 invoice.save()
-                create_sale.append(venta)
                 #create_invoice.append(invoice)
             Sale.save(create_sale)
             
