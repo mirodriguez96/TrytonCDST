@@ -152,12 +152,13 @@ class Sale(metaclass=PoolMeta):
                         line.type = 'line'
                         line.unit = template.default_uom
                         #Agregar impuestos a la venta
-                        taxc, = CustomerTax.search([('category', '=', template.account_category)])
-                        tax = Taxes()
-                        tax.line = line
-                        tax.tax = taxc.tax
-                        line.save()
-                        tax.save()
+                        taxc = CustomerTax.search([('category', '=', template.account_category)])
+                        if taxc:
+                            tax = Taxes()
+                            tax.line = line
+                            tax.tax = taxc[0].tax
+                            line.save()
+                            tax.save()
                         """
                         invoice_line = InvoiceLine()
                         invoice_line.account = 2063
