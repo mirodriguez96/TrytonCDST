@@ -82,7 +82,7 @@ class Sale(metaclass=PoolMeta):
             pool = Pool()
             Sale = pool.get('sale.sale')
             SaleLine = pool.get('sale.line')
-            #Invoice = pool.get('account.invoice')
+            Invoice = pool.get('account.invoice')
             #InvoiceLine = pool.get('account.invoice.line')
             Taxes = pool.get('sale.line-account.tax')
             CustomerTax = Pool().get('product.category-customer-account.tax')
@@ -134,7 +134,6 @@ class Sale(metaclass=PoolMeta):
                 invoice.payment_term = 4
                 invoice.invoice_type = 'M'
                 invoice.description = vent[coluns_doc.index('notas')]
-                #invoice = venta.create_invoice()
                 """
                 documentos_linea = cls.get_line_where(str(numero_doc), str(tipo_doc))
                 col_line = cls.get_columns_db_tecno('Documentos_Lin')
@@ -174,12 +173,22 @@ class Sale(metaclass=PoolMeta):
                     else:
                         raise UserError("Error", "No existe el producto con la siguiente id: ", lin[col_line.index('IdProducto')])
                 Sale.process([venta])
-                print(venta.get_invoices(None))
+                id_invoice = venta.get_invoices(None)
+                invoice = Invoice.search([('id','=',id_invoice[0])])
+                invoice.operation_type = 10
+                invoice.number = numero_doc
+                invoice.reference = str(numero_doc)+'-'+tipo_doc
+                invoice.invoice_date = fecha_date
+                invoice.save()
                 create_sale.append(venta)
                 #create_invoice.append(invoice)
             Sale.save(create_sale)
             
 
+    @classmethod
+    def add_data_invoice(cls, id):
+        Invoice = Pool().get('account.invoice')
+        
 
     #Esta función se encarga de traer todos los datos de una tabla dada de la bd TecnoCarnes
     @classmethod
