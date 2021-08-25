@@ -90,12 +90,12 @@ class Sale(metaclass=PoolMeta):
             Party = pool.get('party.party')
             Address = pool.get('party.address')
             Template = Pool().get('product.template')
-            documentos = cls.get_data_db_tecno('Documentos')
+            #documentos = cls.get_data_db_tecno('Documentos')
             coluns_doc = cls.get_columns_db_tecno('Documentos')
             create_sale = []
             #create_invoice = []
             #Procedemos a realizar una venta
-            for vent in documentos:
+            for vent in ventas_tecno:
                 numero_doc = vent[coluns_doc.index('Numero_documento')]
                 tipo_doc = vent[coluns_doc.index('tipo')].strip()
                 venta = Sale()
