@@ -22,6 +22,7 @@
             <field name="name">Actualizaciones</field>
             <field name="res_model">conector.actualizacion</field>
         </record>
+
         <record model="ir.action.act_window.view" id="act_tercero_view_list">
             <field name="sequence" eval="10"/>
             <field name="view" ref="actercero_view_list"/>
@@ -35,6 +36,5 @@
         </record>
         -->
         <menuitem parent="menu_importa" sequence="1" action="act_tercero" id="menu_actercero"/>
-
     </data>
 </tryton>
