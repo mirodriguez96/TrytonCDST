@@ -5,7 +5,7 @@ import conector
 import party
 import product
 import sale
-
+import configuration
 
 def register():
     Pool.register(
@@ -20,6 +20,7 @@ def register():
         sale.Sale,
         sale.SaleLine,
         sale.Cron,
+        configuration.Configuration,
         #wiz.ActualizarVentas,
         module='conector', type_='model')
 

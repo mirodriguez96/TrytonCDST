@@ -2,7 +2,8 @@
 
 <tryton>
     <data>
-        <menuitem name="Actualizar" id="menu_importa" sequence="1"/>
+        <!-- entry points -->
+        <menuitem name="Actualizar" id="menu_importa" sequence="1" active="1"/>
         <!-- ####################### -->
         <!-- # Actualizar Terceros # -->
         <!-- ####################### -->

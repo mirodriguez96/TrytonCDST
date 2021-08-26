@@ -2,12 +2,6 @@
 <tryton>
     <data>
 
-        <menuitem 
-        name="Configuration" 
-        id="menu_config" 
-        sequence="0" 
-        icon="tryton-settings"/>
-
         <record model="ir.ui.view" id="config_view_form">
             <field name="model">conector.configuration</field>
             <field name="type">form</field>
@@ -27,10 +21,11 @@
         </record>
 
         <menuitem 
-        parent="menu_config" 
+        parent="menu_importa" 
         sequence="10" 
         action="act_config" 
-        id="menu_act_config"/>
+        id="menu_act_config"
+        icon="tryton-settings"/>
 
     </data>
 </tryton>
