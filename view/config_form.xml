@@ -8,5 +8,5 @@
     <field name="user"/>
     <label name="password"/>
     <field name="password"/>
-    <button string="Test" name="test" colspan="2"/>
+    <button string="Test" name="test_conexion" colspan="2"/>
 </form>
