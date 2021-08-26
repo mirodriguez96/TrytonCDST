@@ -14,8 +14,15 @@ class Configuration(ModelSQL, ModelView):
     user = fields.Char('User', required=True)
     password = fields.Char('Password', required=True)
 
+    @classmethod 
+    def __setup__(cls):
+        super(Configuration, cls).__setup__()
+        cls._buttons.update({
+                'test_conexion': {},
+                })
+
     #Función que se activa al pulsar el botón test_conexion
     @classmethod
     @ModelView.button
-    def test_conexion(cls):
+    def test_conexion(cls, records):
         print('TEST CONEXION !')
