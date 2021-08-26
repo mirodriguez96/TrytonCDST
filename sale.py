@@ -103,7 +103,7 @@ class Sale(metaclass=PoolMeta):
                 #venta.company = 3
                 #venta.currency = 1
                 venta.id_tecno = str(numero_doc)+'-'+tipo_doc
-                venta.description = vent[coluns_doc.index('notas')]
+                venta.description = vent[coluns_doc.index('notas')].replace('\n', ' ').replace('\r', '')
                 venta.invoice_method = 'order'
                 #venta.invoice_state = 'none'
                 venta.invoice_type = 'M'
@@ -183,7 +183,7 @@ class Sale(metaclass=PoolMeta):
                 invoice.reference = tipo_doc+'-'+str(numero_doc)
                 invoice.invoice_date = fecha_date
                 desc = cls.get_tipo_dcto(tipo_doc)
-                invoice.description = desc[0][columns_tipodoc.index('TipoDoctos')]
+                invoice.description = desc[0][columns_tipodoc.index('TipoDoctos')].replace('\n', ' ').replace('\r', '')
                 Invoice.validate_invoice([invoice])
                 #invoice.state = 'validated'
                 #Invoice.process([invoice])
@@ -257,7 +257,7 @@ class Sale(metaclass=PoolMeta):
         data = []
         try:
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT TOP (10) * FROM dbo."+table+" WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND sw = 1")
+                query = cursor.execute("SELECT * FROM dbo."+table+" WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND sw = 1")
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY get_data_where_tecno: ", e)
