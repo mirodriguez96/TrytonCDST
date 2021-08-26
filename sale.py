@@ -183,7 +183,8 @@ class Sale(metaclass=PoolMeta):
                 invoice.reference = tipo_doc+'-'+str(numero_doc)
                 invoice.invoice_date = fecha_date
                 desc = cls.get_tipo_dcto(tipo_doc)
-                invoice.description = desc[0][columns_tipodoc.index('TipoDoctos')].replace('\n', ' ').replace('\r', '')
+                if desc:
+                    invoice.description = desc[0][columns_tipodoc.index('TipoDoctos')].replace('\n', ' ').replace('\r', '')
                 Invoice.validate_invoice([invoice])
                 #invoice.state = 'validated'
                 #Invoice.process([invoice])
