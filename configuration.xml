@@ -21,9 +21,9 @@
         </record>
 
         <menuitem 
-        parent="menu_importa" 
-        sequence="10" 
-        action="act_config" 
+        parent="menu_importa"
+        sequence="0"
+        action="act_config"
         id="menu_act_config"
         icon="tryton-settings"/>
 
