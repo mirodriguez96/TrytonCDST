@@ -107,9 +107,10 @@ class Sale(metaclass=PoolMeta):
                             tax.save()
                         #Verificamos si hay descuento para la linea de producto y se agrega su respectivo descuento
                         if lin[col_line.index('Porcentaje_Descuento_1')] > 0:
-                            #porcentaje = lin[col_line.index('Porcentaje_Descuento_1')]/100
-                            #line.discount_rate = Decimal(str(porcentaje))
-                            SaleLine.set_discount_rate(line, None, 10)
+                            line.base_price = lin[col_line.index('Valor_Unitario')]
+                            porcentaje = lin[col_line.index('Porcentaje_Descuento_1')]/100
+                            line.discount_rate = Decimal(str(porcentaje))
+                            #SaleLine.set_discount_rate(line, None, 10)
                             print(line.discount_amount)
                             #line.set_discount_rate(line, None, line.discount_rate)
                         line.save()
