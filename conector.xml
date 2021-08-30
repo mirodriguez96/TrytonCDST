@@ -3,7 +3,7 @@
 <tryton>
     <data>
         <!-- entry points -->
-        <menuitem name="Actualizar" id="menu_importa" sequence="1" active="1"/>
+        <menuitem name="Conector CDST" id="menu_importa" sequence="1" active="1"/>
         <!-- ####################### -->
         <!-- # Actualizar Terceros # -->
         <!-- ####################### -->

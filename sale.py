@@ -35,45 +35,6 @@ class Sale(metaclass=PoolMeta):
     @classmethod
     def import_data_sale(cls):
         print("--------------RUN WIZARD VENTAS--------------")
-        """
-        pool = Pool()
-        Sale = pool.get('sale.sale')
-        SaleLine = pool.get('sale.line')
-        Taxes = pool.get('sale.line-account.tax')
-        to_create = []
-        venta = Sale()
-        venta.number = '108'
-        venta.reference = '108'
-        venta.description = 'prueba descripcion'
-        venta.invoice_method = 'order'
-        #venta.invoice_state = 'none'
-        venta.invoice_type = 'M'
-        fecha_date = datetime.date(2001, 8, 15)
-        venta.sale_date = fecha_date
-        venta.shipment_method = 'order'
-        #venta.shipment_state = 'none'
-        venta.state = 'processing'
-        venta.party = 451
-        venta.invoice_address = 14512
-        venta.shipment_address = 14512
-        venta.payment_term = 4
-        #linea
-        line = SaleLine()
-        line.product = 7
-        line.quantity = 3
-        line.unit_price = 3000
-        line.sale = venta
-        line.type = 'line'
-        line.unit = 1
-        #Agregar impuestos a la venta
-        tax = Taxes()
-        tax.line = line
-        tax.tax = 88
-        line.save()
-        tax.save()
-        to_create.append(venta)
-        Sale.process(to_create)
-        """
         ventas_tecno = cls.last_update()
         cls.create_actualizacion(False)
         if ventas_tecno:
@@ -119,22 +80,7 @@ class Sale(metaclass=PoolMeta):
                 address = Address.search([('party', '=', party.id)], limit=1)
                 venta.invoice_address = address[0].id
                 venta.shipment_address = address[0].id
-                """
-                invoice = Invoice()
-                invoice.account = 1366
-                invoice.invoice_address = address[0].id
-                invoice.journal = 1
-                invoice.party = party.id
-                invoice.type = 'out'
-                invoice.operation_type = 10
-                invoice.number = numero_doc
-                invoice.reference = numero_doc
-                invoice.state = 'validated'
-                invoice.invoice_date = fecha_date
-                invoice.payment_term = 4
-                invoice.invoice_type = 'M'
-                invoice.description = vent[coluns_doc.index('notas')]
-                """
+
                 documentos_linea = cls.get_line_where(str(numero_doc), str(tipo_doc))
                 col_line = cls.get_columns_db_tecno('Documentos_Lin')
                 #create_line = []
@@ -148,6 +94,10 @@ class Sale(metaclass=PoolMeta):
                         line.product = producto
                         line.quantity = abs(int(lin[col_line.index('Cantidad_Facturada')]))
                         line.unit_price = lin[col_line.index('Valor_Unitario')]
+                        #Verificamos si hay descuento para la linea de producto y se agrega su respectivo descuento
+                        if lin[col_line.index('Porcentaje_Descuento_1')] > 0:
+                            porcentaje = lin[col_line.index('Porcentaje_Descuento_1')]/100
+                            line.discount_rate = Decimal(str(porcentaje))
                         line.sale = venta
                         line.type = 'line'
                         line.unit = template.default_uom
@@ -159,17 +109,6 @@ class Sale(metaclass=PoolMeta):
                             tax.tax = taxc[0].tax
                             line.save()
                             tax.save()
-                        """
-                        invoice_line = InvoiceLine()
-                        invoice_line.account = 2063
-                        invoice_line.invoice = invoice
-                        invoice_line.product = producto
-                        invoice_line.quantity = abs(int(lin[col_line.index('Cantidad_Facturada')]))
-                        invoice_line.type = 'line'
-                        invoice_line.unit = template.default_uom
-                        invoice_line.unit_price = lin[col_line.index('Valor_Unitario')]
-                        invoice_line.save()
-                        """
                         line.save()
                     else:
                         raise UserError("Error", "No existe el producto con la siguiente id: ", lin[col_line.index('IdProducto')])
@@ -196,12 +135,7 @@ class Sale(metaclass=PoolMeta):
                 invoice.save()
                 #create_invoice.append(invoice)
             #Sale.save(create_sale)
-            
 
-    @classmethod
-    def add_data_invoice(cls, id):
-        Invoice = Pool().get('account.invoice')
-        
 
     #Esta función se encarga de traer todos los datos de una tabla dada de la bd TecnoCarnes
     @classmethod
