@@ -107,13 +107,10 @@ class Sale(metaclass=PoolMeta):
                             tax.save()
                         #Verificamos si hay descuento para la linea de producto y se agrega su respectivo descuento
                         if lin[col_line.index('Porcentaje_Descuento_1')] > 0:
-                            line.base_price = lin[col_line.index('Valor_Unitario')]
                             porcentaje = lin[col_line.index('Porcentaje_Descuento_1')]/100
+                            line.base_price = lin[col_line.index('Valor_Unitario')]
                             line.discount_rate = Decimal(str(porcentaje))
-                            #SaleLine.set_discount_rate(line, None, 10)
                             line.on_change_discount_rate()
-                            print(line.discount_amount)
-                            #line.set_discount_rate(line, None, line.discount_rate)
                         line.save()
                     else:
                         raise UserError("Error", "No existe el producto con la siguiente id: ", lin[col_line.index('IdProducto')])
@@ -132,6 +129,7 @@ class Sale(metaclass=PoolMeta):
                 Invoice.validate_invoice([invoice])
                 #invoice.state = 'validated'
                 #Invoice.process([invoice])
+                #Verificamos que el total de TecnoCarnes coincidan para contabilizar la factura
                 total = Invoice.get_amount([invoice], 'total_amount')
                 total_tecno = Decimal(vent[coluns_doc.index('valor_total')])
                 if total['total_amount'][invoice.id] == total_tecno:
@@ -197,7 +195,7 @@ class Sale(metaclass=PoolMeta):
         data = []
         try:
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT TOP(30) * FROM dbo."+table+" WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND sw = 1")
+                query = cursor.execute("SELECT TOP(100) * FROM dbo."+table+" WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND sw = 1")
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY get_data_where_tecno: ", e)
