@@ -97,8 +97,8 @@ class Sale(metaclass=PoolMeta):
                         #Verificamos si hay descuento para la linea de producto y se agrega su respectivo descuento
                         if lin[col_line.index('Porcentaje_Descuento_1')] > 0:
                             porcentaje = lin[col_line.index('Porcentaje_Descuento_1')]/100
-                            print(porcentaje)
                             line.discount_rate = Decimal(str(porcentaje))
+                            line.on_change_discount_rate()
                         line.sale = venta
                         line.type = 'line'
                         line.unit = template.default_uom
