@@ -99,6 +99,7 @@ class Sale(metaclass=PoolMeta):
                         if lin[col_line.index('Porcentaje_Descuento_1')] > 0:
                             porcentaje = lin[col_line.index('Porcentaje_Descuento_1')]/100
                             line.discount_rate = Decimal(str(porcentaje))
+                            line.on_change_product()
                             print(line.discount_amount)
                             #line.set_discount_rate(line, None, line.discount_rate)
                         line.sale = venta
