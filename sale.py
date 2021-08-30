@@ -93,13 +93,14 @@ class Sale(metaclass=PoolMeta):
                         line.id_tecno = id_t
                         line.product = producto
                         line.quantity = abs(int(lin[col_line.index('Cantidad_Facturada')]))
-                        line.unit_price = lin[col_line.index('Valor_Unitario')]
+                        #line.unit_price = lin[col_line.index('Valor_Unitario')]
+                        line.base_price = lin[col_line.index('Valor_Unitario')]
                         #Verificamos si hay descuento para la linea de producto y se agrega su respectivo descuento
                         if lin[col_line.index('Porcentaje_Descuento_1')] > 0:
                             porcentaje = lin[col_line.index('Porcentaje_Descuento_1')]/100
                             line.discount_rate = Decimal(str(porcentaje))
-                            print(line.discount_rate)
-                            line.set_discount_rate(line, None, line.discount_rate)
+                            print(line.discount_amount)
+                            #line.set_discount_rate(line, None, line.discount_rate)
                         line.sale = venta
                         line.type = 'line'
                         line.unit = template.default_uom
