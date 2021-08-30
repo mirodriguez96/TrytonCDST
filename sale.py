@@ -94,14 +94,6 @@ class Sale(metaclass=PoolMeta):
                         line.product = producto
                         line.quantity = abs(int(lin[col_line.index('Cantidad_Facturada')]))
                         line.unit_price = lin[col_line.index('Valor_Unitario')]
-                        line.base_price = lin[col_line.index('Valor_Unitario')]
-                        #Verificamos si hay descuento para la linea de producto y se agrega su respectivo descuento
-                        if lin[col_line.index('Porcentaje_Descuento_1')] > 0:
-                            porcentaje = lin[col_line.index('Porcentaje_Descuento_1')]/100
-                            line.discount_rate = Decimal(str(porcentaje))
-                            line.on_change_product()
-                            print(line.discount_amount)
-                            #line.set_discount_rate(line, None, line.discount_rate)
                         line.sale = venta
                         line.type = 'line'
                         line.unit = template.default_uom
@@ -113,6 +105,13 @@ class Sale(metaclass=PoolMeta):
                             tax.tax = taxc[0].tax
                             line.save()
                             tax.save()
+                        #Verificamos si hay descuento para la linea de producto y se agrega su respectivo descuento
+                        if lin[col_line.index('Porcentaje_Descuento_1')] > 0:
+                            porcentaje = lin[col_line.index('Porcentaje_Descuento_1')]/100
+                            line.discount_rate = Decimal(str(porcentaje))
+                            line.on_change_product()
+                            print(line.discount_amount)
+                            #line.set_discount_rate(line, None, line.discount_rate)
                         line.save()
                     else:
                         raise UserError("Error", "No existe el producto con la siguiente id: ", lin[col_line.index('IdProducto')])
