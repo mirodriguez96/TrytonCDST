@@ -97,6 +97,7 @@ class Sale(metaclass=PoolMeta):
                         #Verificamos si hay descuento para la linea de producto y se agrega su respectivo descuento
                         if lin[col_line.index('Porcentaje_Descuento_1')] > 0:
                             porcentaje = lin[col_line.index('Porcentaje_Descuento_1')]/100
+                            print(porcentaje)
                             line.discount_rate = Decimal(str(porcentaje))
                         line.sale = venta
                         line.type = 'line'
@@ -192,7 +193,7 @@ class Sale(metaclass=PoolMeta):
         data = []
         try:
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT * FROM dbo."+table+" WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND sw = 1")
+                query = cursor.execute("SELECT TOP(100) * FROM dbo."+table+" WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND sw = 1")
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY get_data_where_tecno: ", e)
