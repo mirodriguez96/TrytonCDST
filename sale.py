@@ -73,7 +73,7 @@ class Sale(metaclass=PoolMeta):
                 venta.sale_date = fecha_date
                 venta.shipment_method = 'order'
                 #venta.shipment_state = 'none'
-                venta.payment_term = 4
+                #venta.payment_term = 1 #FIX
                 venta.state = 'confirmed'
                 party, = Party.search([('id_number', '=', vent[coluns_doc.index('nit_Cedula')])])
                 venta.party = party.id
