@@ -26,3 +26,7 @@ class Configuration(ModelSQL, ModelView):
     @ModelView.button
     def test_conexion(cls, records):
         print('TEST CONEXION !')
+
+    @classmethod
+    def setter_server(cls, instances, name, value):
+        pass

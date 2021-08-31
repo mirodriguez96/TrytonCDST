@@ -8,5 +8,7 @@
     <field name="user"/>
     <label name="password"/>
     <field name="password"/>
+    <separator id="line" string="" colspan="1"/>
     <button string="Test" name="test_conexion" colspan="2"/>
+    <separator id="line2" string="" colspan="1"/>
 </form>
