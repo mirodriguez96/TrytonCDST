@@ -1,9 +1,6 @@
 
-from configuration import Configuration
+conexion = None
 
-
-configuration = Configuration()
-conexion = configuration.conexion()
 """
 import pyodbc
 
