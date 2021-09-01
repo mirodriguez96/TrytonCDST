@@ -6,8 +6,6 @@ from trytond.exceptions import UserError
 #from conexion import conexion
 from decimal import Decimal
 
-Config = Pool().get('conector.configuration')
-conexion = Config.conexion()
 
 __all__ = [
     'Sale',
@@ -33,6 +31,9 @@ class Sale(metaclass=PoolMeta):
     'Sale'
     __name__ = 'sale.sale'
     id_tecno = fields.Char('Id TecnoCarnes', required=False)
+
+    Config = Pool().get('conector.configuration')
+    conexion = Config.conexion()
 
     @classmethod
     def import_data_sale(cls):
