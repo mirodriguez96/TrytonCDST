@@ -50,7 +50,5 @@ class Configuration(ModelSQL, ModelView):
             except Exception as e:
                 print('Error sql server: ', e)
                 raise UserError('Error al conectarse a la base de datos (SQL Server): ', str(e))
-            finally:
-                conexion.close()
         else:
             raise UserError('Error: ingrese por favor los datos de configuracion de la base de datos')
