@@ -1,13 +1,13 @@
 <?xml version="1.0"?>
 <form>
     <label name="server"/>
-    <field name="server" colspan="2"/>
+    <field name="server"/>
     <label name="db"/>
-    <field name="db" colspan="2"/>
+    <field name="db"/>
     <label name="user"/>
-    <field name="user" colspan="2"/>
+    <field name="user"/>
     <label name="password"/>
-    <field name="password" colspan="2"/>
+    <field name="password"/>
     <separator id="line" string="" colspan="1"/>
     <button string="Test" name="test_conexion" colspan="2"/>
     <separator id="line2" string="" colspan="1"/>
