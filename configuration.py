@@ -25,8 +25,11 @@ class Configuration(ModelSQL, ModelView):
     @classmethod
     @ModelView.button
     def test_conexion(cls, records):
-        print('TEST CONEXION !')
+        print('TEST CONEXION:')
+        try:
+            conexion = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER='+cls.server+';DATABASE='+cls.db+';UID='+cls.user+';PWD='+cls.password)
+            print("Conexion sqlserver exitosa !")
+        except Exception as e:
+            print("Ocurrio un error al conectar SQL Server: ", e)
 
-    @classmethod
-    def setter_server(cls, instances, name, value):
-        pass
+
