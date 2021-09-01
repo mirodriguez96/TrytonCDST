@@ -13,9 +13,8 @@ __all__ = [
     'Cron',
     ]
 
-Config = Pool().get('sale.sale')
-#conexion = Config.conexion()
-print(Config)
+Config = Pool().get('conector.configuration')
+conexion = Config.conexion()
 
 class Cron(metaclass=PoolMeta):
     'Cron'
@@ -35,7 +34,8 @@ class Sale(metaclass=PoolMeta):
     __name__ = 'sale.sale'
     id_tecno = fields.Char('Id TecnoCarnes', required=False)
 
-    
+    config = Pool().get('conector.configuration')
+    conexion = config.conexion()
 
     @classmethod
     def import_data_sale(cls):
