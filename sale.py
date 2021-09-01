@@ -3,9 +3,11 @@ from trytond.model import fields
 from trytond.pool import Pool, PoolMeta
 #from trytond.transaction import Transaction
 from trytond.exceptions import UserError
-from conexion import conexion
+#from conexion import conexion
 from decimal import Decimal
 
+Config = Pool().get('conector.configuration')
+conexion = Config.conexion()
 
 __all__ = [
     'Sale',
@@ -35,9 +37,9 @@ class Sale(metaclass=PoolMeta):
     @classmethod
     def import_data_sale(cls):
         print("--------------RUN WIZARD VENTAS--------------")
-        Config = Pool().get('conector.configuration')
-        con = Config.conexion()
-        print(con)
+        prueba = cls.get_data_db_tecno('Documentos')
+        for p in prueba:
+            print(p)
         ventas_tecno = cls.last_update()
         cls.create_actualizacion(False)
         if ventas_tecno:
@@ -149,7 +151,7 @@ class Sale(metaclass=PoolMeta):
         data = []
         try:
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT TOP (20) * FROM dbo."+table+" WHERE sw = 1")
+                query = cursor.execute("SELECT TOP (5) * FROM dbo."+table+" WHERE sw = 1")
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY "+table+": ", e)
