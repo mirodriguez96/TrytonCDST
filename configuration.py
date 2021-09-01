@@ -26,7 +26,7 @@ class Configuration(ModelSQL, ModelView):
     @ModelView.button
     def test_conexion(cls, records):
         print('TEST CONEXION:')
-        print(cls.db[0])
+        print(cls.id)
         """
         try:
             conexion = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER='+str(cls.server)+';DATABASE='+str(cls.db)+';UID='+str(cls.user)+';PWD='+str(cls.password))
