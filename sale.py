@@ -149,11 +149,15 @@ class Sale(metaclass=PoolMeta):
     def get_data_db_tecno(cls, table): #TESTS
         data = []
         try:
+            Config = Pool().get('conector.configuration')
+            conexion = Config.conexion()
             with conexion.cursor() as cursor:
                 query = cursor.execute("SELECT TOP (5) * FROM dbo."+table+" WHERE sw = 1")
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY "+table+": ", e)
+        finally:
+            conexion.close()
         return data
 
     #Metodo encargado de traer el tipo de documento de la bd TecnoCarnes
@@ -161,11 +165,15 @@ class Sale(metaclass=PoolMeta):
     def get_tipo_dcto(cls, id):
         data = []
         try:
+            Config = Pool().get('conector.configuration')
+            conexion = Config.conexion()
             with conexion.cursor() as cursor:
                 query = cursor.execute("SELECT * FROM dbo.TblTipoDoctos WHERE idTipoDoctos = '"+id+"'")
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY TblTipoDoctos: ", e)
+        finally:
+            conexion.close()
         return data
 
     #Esta función se encarga de traer todos los datos de una tabla dada de la bd TecnoCarnes
@@ -173,11 +181,15 @@ class Sale(metaclass=PoolMeta):
     def get_line_where(cls, id, tipo):
         data = []
         try:
+            Config = Pool().get('conector.configuration')
+            conexion = Config.conexion()
             with conexion.cursor() as cursor:
                 query = cursor.execute("SELECT * FROM dbo.Documentos_Lin WHERE Numero_Documento = "+id+" AND tipo = "+tipo)
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY Documentos_Lin: ", e)
+        finally:
+            conexion.close()
         return data
 
     #Función encargada de consultar las columnas pertenecientes a 'x' tabla de la bd de TecnoCarnes
@@ -185,12 +197,16 @@ class Sale(metaclass=PoolMeta):
     def get_columns_db_tecno(cls, table):
         columns = []
         try:
+            Config = Pool().get('conector.configuration')
+            conexion = Config.conexion()
             with conexion.cursor() as cursor:
                 query = cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = '"+table+"' ORDER BY ORDINAL_POSITION")
                 for q in query.fetchall():
                     columns.append(q[0])
         except Exception as e:
             print("ERROR QUERY "+table+": ", e)
+        finally:
+            conexion.close()
         return columns
 
     #Esta función se encarga de traer todos los datos de una tabla dada de acuerdo al rango de fecha dada de la bd TecnoCarnes
