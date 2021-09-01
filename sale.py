@@ -6,6 +6,7 @@ from trytond.exceptions import UserError
 #from conexion import conexion
 from decimal import Decimal
 
+conexion = None
 
 __all__ = [
     'Sale',
@@ -32,16 +33,12 @@ class Sale(metaclass=PoolMeta):
     __name__ = 'sale.sale'
     id_tecno = fields.Char('Id TecnoCarnes', required=False)
 
-    config = Pool().get('conector.configuration')
-    conexion = config.conexion()
+    #config = Pool().get('conector.configuration')
+    #conexion = config.conexion()
 
     @classmethod
     def import_data_sale(cls):
         print("--------------RUN WIZARD VENTAS--------------")
-        
-        prueba = cls.get_data_db_tecno('Documentos')
-        for p in prueba:
-            print(p)
         ventas_tecno = cls.last_update()
         cls.create_actualizacion(False)
         if ventas_tecno:
