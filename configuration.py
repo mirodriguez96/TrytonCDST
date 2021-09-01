@@ -27,13 +27,10 @@ class Configuration(ModelSQL, ModelView):
     def test_conexion(cls, records):
         print('TEST CONEXION:')
         for record in records:
-            print(record.server)
-        """
-        try:
-            conexion = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER='+str(cls.server)+';DATABASE='+str(cls.db)+';UID='+str(cls.user)+';PWD='+str(cls.password))
-            print("Conexion sqlserver exitosa !")
-        except Exception as e:
-            print("Ocurrio un error al conectar SQL Server: ", e)
-        """
+            try:
+                conexion = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER='+str(record.server)+';DATABASE='+str(record.db)+';UID='+str(record.user)+';PWD='+str(record.password))
+                print("Conexion sqlserver exitosa !")
+            except Exception as e:
+                print("Ocurrio un error al conectar SQL Server: ", e)
 
 
