@@ -151,7 +151,7 @@ class Sale(metaclass=PoolMeta):
     def get_data_db_tecno(cls, table): #TESTS
         data = []
         try:
-            with conexion.cursor() as cursor:
+            with cls.conexion.cursor() as cursor:
                 query = cursor.execute("SELECT TOP (5) * FROM dbo."+table+" WHERE sw = 1")
                 data = list(query.fetchall())
         except Exception as e:
