@@ -1,3 +1,4 @@
+"""
 import pyodbc
 
 server = 'tcp:200.29.236.12,10433'
@@ -10,3 +11,4 @@ try:
     print("Conexion sqlserver exitosa !")
 except Exception as e:
     print("Ocurrio un error al conectar SQL Server: ", e)
+"""
