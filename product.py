@@ -190,8 +190,6 @@ class Product(ModelSQL, ModelView):
                 tiproduct = query.fetchone()
         except Exception as e:
             print("ERROR QUERY TblTipoProducto: ", e)
-        finally:
-            conexion.close()
         #Se verifica que el tipo de producto exista y el valor si es vendible o no
         if tiproduct and tiproduct[columns_tiproduct.index('ProductoParaVender')] == 'S':
             return True
@@ -226,8 +224,6 @@ class Product(ModelSQL, ModelView):
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY "+table+": ", e)
-        finally:
-            conexion.close()
         return data
 
     #Esta función se encarga de traer todos los datos de una tabla dada de acuerdo al rango de fecha dada de la bd TecnoCarnes
@@ -242,8 +238,6 @@ class Product(ModelSQL, ModelView):
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY get_data_where_tecno: ", e)
-        finally:
-            conexion.close()
         return data
 
     #Función encargada de traer los datos de la bd TecnoCarnes con una fecha dada.

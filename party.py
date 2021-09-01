@@ -301,8 +301,6 @@ class Party(ModelSQL, ModelView):
                     columns.append(q[0])
         except Exception as e:
             print("ERROR QUERY "+table+": ", e)
-        finally:
-            conexion.close()
         return columns
 
     #Esta función se encarga de traer todos los datos de una tabla dada de la bd TecnoCarnes
@@ -317,8 +315,6 @@ class Party(ModelSQL, ModelView):
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY "+table+": ", e)
-        finally:
-            conexion.close()
         return data
 
     #Esta función se encarga de traer todos los datos de una tabla dada de acuerdo al rango de fecha dada de la bd TecnoCarnes
@@ -333,8 +329,6 @@ class Party(ModelSQL, ModelView):
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY get_data_where_tecno: ", e)
-        finally:
-            conexion.close()
         return data
 
     #Función encargada de consultar las direcciones pertenecientes a un tercero en la bd TecnoCarnes
@@ -349,8 +343,6 @@ class Party(ModelSQL, ModelView):
                 address = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY ADDRESS: ", e)
-        finally:
-            conexion.close()
         return address
 
     #Función encargada de consultar los metodos de contactos pertenecientes a un tercero en la bd TecnoCarnes
@@ -365,8 +357,6 @@ class Party(ModelSQL, ModelView):
                 contacts = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY CONTACTS: ", e)
-        finally:
-            conexion.close()
         return contacts
 
     #Función encargada de traer los datos de la bd TecnoCarnes con una fecha dada.

@@ -37,7 +37,7 @@ class Configuration(ModelSQL, ModelView):
             finally:
                 conexion.close()
 
-
+    #Función encargada de enviar la conexión configurada con los datos del primer registro
     @classmethod
     def conexion(cls):
         Config = Pool().get('conector.configuration')
