@@ -1,7 +1,7 @@
 from trytond.model import ModelSQL, ModelView, fields
 import pyodbc
 from trytond.exceptions import UserError
-
+from trytond.bus import notify
 
 __all__ = [
     'Configuration',
@@ -27,11 +27,12 @@ class Configuration(ModelSQL, ModelView):
     @classmethod
     @ModelView.button
     def test_conexion(cls, records):
-        print('TEST CONEXION:')
         for record in records:
             try:
                 conexion = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER='+str(record.server)+';DATABASE='+str(record.db)+';UID='+str(record.user)+';PWD='+str(record.password))
                 print("Conexion sqlserver exitosa !")
+                notify('Not enough stock', priority=3)
+                conexion.close()
             except Exception as e:
                 print('Error sql server: ', e)
                 raise UserError('Ocurrio un error al conectar SQL Server: ', str(e))
