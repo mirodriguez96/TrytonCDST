@@ -155,8 +155,6 @@ class Sale(metaclass=PoolMeta):
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY "+table+": ", e)
-        finally:
-            conexion.close()
         return data
 
     #Metodo encargado de traer el tipo de documento de la bd TecnoCarnes
@@ -171,8 +169,6 @@ class Sale(metaclass=PoolMeta):
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY TblTipoDoctos: ", e)
-        finally:
-            conexion.close()
         return data
 
     #Esta función se encarga de traer todos los datos de una tabla dada de la bd TecnoCarnes
@@ -187,8 +183,6 @@ class Sale(metaclass=PoolMeta):
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY Documentos_Lin: ", e)
-        finally:
-            conexion.close()
         return data
 
     #Función encargada de consultar las columnas pertenecientes a 'x' tabla de la bd de TecnoCarnes
@@ -204,8 +198,6 @@ class Sale(metaclass=PoolMeta):
                     columns.append(q[0])
         except Exception as e:
             print("ERROR QUERY "+table+": ", e)
-        finally:
-            conexion.close()
         return columns
 
     #Esta función se encarga de traer todos los datos de una tabla dada de acuerdo al rango de fecha dada de la bd TecnoCarnes
@@ -220,8 +212,6 @@ class Sale(metaclass=PoolMeta):
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY get_data_where_tecno: ", e)
-        finally:
-            conexion.close()
         return data
 
     #Función encargada de convertir una fecha dada, al formato y orden para consultas sql server
