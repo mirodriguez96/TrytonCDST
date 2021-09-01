@@ -31,10 +31,11 @@ class Configuration(ModelSQL, ModelView):
             try:
                 conexion = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER='+str(record.server)+';DATABASE='+str(record.db)+';UID='+str(record.user)+';PWD='+str(record.password))
                 print("Conexion sqlserver exitosa !")
-                conexion.close()
             except Exception as e:
                 print('Error sql server: ', e)
                 raise UserError('Error al conectarse a la base de datos (SQL Server): ', str(e))
+            finally:
+                conexion.close()
 
 
     @classmethod
@@ -49,5 +50,7 @@ class Configuration(ModelSQL, ModelView):
             except Exception as e:
                 print('Error sql server: ', e)
                 raise UserError('Error al conectarse a la base de datos (SQL Server): ', str(e))
+            finally:
+                conexion.close()
         else:
             raise UserError('Error: ingrese por favor los datos de configuracion de la base de datos')

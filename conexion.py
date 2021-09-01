@@ -1,6 +1,4 @@
 
-conexion = None
-
 """
 import pyodbc
 

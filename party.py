@@ -3,7 +3,7 @@ from trytond.model import ModelSQL, ModelView, fields
 from trytond.pool import Pool, PoolMeta
 from trytond.transaction import Transaction
 #from trytond.exceptions import UserError
-from conexion import conexion
+#from conexion import conexion
 
 
 __all__ = [
@@ -293,12 +293,16 @@ class Party(ModelSQL, ModelView):
     def get_columns_db_tecno(cls, table):
         columns = []
         try:
+            Config = Pool().get('conector.configuration')
+            conexion = Config.conexion()
             with conexion.cursor() as cursor:
                 query = cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = '"+table+"' ORDER BY ORDINAL_POSITION")
                 for q in query.fetchall():
                     columns.append(q[0])
         except Exception as e:
             print("ERROR QUERY "+table+": ", e)
+        finally:
+            conexion.close()
         return columns
 
     #Esta función se encarga de traer todos los datos de una tabla dada de la bd TecnoCarnes
@@ -306,11 +310,15 @@ class Party(ModelSQL, ModelView):
     def get_data_db_tecno(cls, table):
         data = []
         try:
+            Config = Pool().get('conector.configuration')
+            conexion = Config.conexion()
             with conexion.cursor() as cursor:
                 query = cursor.execute("SELECT * FROM dbo."+table)
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY "+table+": ", e)
+        finally:
+            conexion.close()
         return data
 
     #Esta función se encarga de traer todos los datos de una tabla dada de acuerdo al rango de fecha dada de la bd TecnoCarnes
@@ -318,11 +326,15 @@ class Party(ModelSQL, ModelView):
     def get_data_where_tecno(cls, table, date):
         data = []
         try:
+            Config = Pool().get('conector.configuration')
+            conexion = Config.conexion()
             with conexion.cursor() as cursor:
                 query = cursor.execute("SELECT * FROM dbo."+table+" WHERE fecha_creacion >= CAST('"+date+"' AS datetime) OR Ultimo_Cambio_Registro >= CAST('"+date+"' AS datetime)")
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY get_data_where_tecno: ", e)
+        finally:
+            conexion.close()
         return data
 
     #Función encargada de consultar las direcciones pertenecientes a un tercero en la bd TecnoCarnes
@@ -330,11 +342,15 @@ class Party(ModelSQL, ModelView):
     def get_address_db_tecno(cls, id):
         address = []
         try:
+            Config = Pool().get('conector.configuration')
+            conexion = Config.conexion()
             with conexion.cursor() as cursor:
                 query = cursor.execute("SELECT * FROM dbo.Terceros_Dir WHERE nit = '"+id+"'")
                 address = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY ADDRESS: ", e)
+        finally:
+            conexion.close()
         return address
 
     #Función encargada de consultar los metodos de contactos pertenecientes a un tercero en la bd TecnoCarnes
@@ -342,11 +358,15 @@ class Party(ModelSQL, ModelView):
     def get_contacts_db_tecno(cls, id):
         contacts = []
         try:
+            Config = Pool().get('conector.configuration')
+            conexion = Config.conexion()
             with conexion.cursor() as cursor:
                 query = cursor.execute("SELECT * FROM dbo.Terceros_Contactos WHERE Nit_Cedula = '"+id+"'")
                 contacts = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY CONTACTS: ", e)
+        finally:
+            conexion.close()
         return contacts
 
     #Función encargada de traer los datos de la bd TecnoCarnes con una fecha dada.

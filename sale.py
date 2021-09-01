@@ -3,10 +3,9 @@ from trytond.model import fields
 from trytond.pool import Pool, PoolMeta
 #from trytond.transaction import Transaction
 from trytond.exceptions import UserError
-from conexion import conexion
+#from conexion import conexion
 from decimal import Decimal
 
-#conexion = None
 
 __all__ = [
     'Sale',

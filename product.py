@@ -2,7 +2,7 @@ from trytond.model import ModelSQL, ModelView, fields
 from trytond.pool import Pool, PoolMeta
 import datetime
 from decimal import Decimal
-from conexion import conexion
+#from conexion import conexion
 
 
 __all__ = [
@@ -183,11 +183,15 @@ class Product(ModelSQL, ModelView):
         columns_tiproduct = cls.get_columns_db_tecno('TblTipoProducto')
         tiproduct = None
         try:
+            Config = Pool().get('conector.configuration')
+            conexion = Config.conexion()
             with conexion.cursor() as cursor:
                 query = cursor.execute("SELECT * FROM dbo.TblTipoProducto WHERE IdTipoProducto = "+str(tipo))
                 tiproduct = query.fetchone()
         except Exception as e:
             print("ERROR QUERY TblTipoProducto: ", e)
+        finally:
+            conexion.close()
         #Se verifica que el tipo de producto exista y el valor si es vendible o no
         if tiproduct and tiproduct[columns_tiproduct.index('ProductoParaVender')] == 'S':
             return True
@@ -200,6 +204,8 @@ class Product(ModelSQL, ModelView):
     def get_columns_db_tecno(cls, table):
         columns = []
         try:
+            Config = Pool().get('conector.configuration')
+            conexion = Config.conexion()
             with conexion.cursor() as cursor:
                 query = cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = '"+table+"' ORDER BY ORDINAL_POSITION")
                 for q in query.fetchall():
@@ -213,11 +219,15 @@ class Product(ModelSQL, ModelView):
     def get_data_db_tecno(cls, table):
         data = []
         try:
+            Config = Pool().get('conector.configuration')
+            conexion = Config.conexion()
             with conexion.cursor() as cursor:
                 query = cursor.execute("SELECT * FROM dbo."+table)
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY "+table+": ", e)
+        finally:
+            conexion.close()
         return data
 
     #Esta función se encarga de traer todos los datos de una tabla dada de acuerdo al rango de fecha dada de la bd TecnoCarnes
@@ -225,11 +235,15 @@ class Product(ModelSQL, ModelView):
     def get_data_where_tecno(cls, table, date):
         data = []
         try:
+            Config = Pool().get('conector.configuration')
+            conexion = Config.conexion()
             with conexion.cursor() as cursor:
                 query = cursor.execute("SELECT * FROM dbo."+table+" WHERE fecha_creacion >= CAST('"+date+"' AS datetime) OR Ultimo_Cambio_Registro >= CAST('"+date+"' AS datetime)")
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY get_data_where_tecno: ", e)
+        finally:
+            conexion.close()
         return data
 
     #Función encargada de traer los datos de la bd TecnoCarnes con una fecha dada.
