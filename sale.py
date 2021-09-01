@@ -32,12 +32,13 @@ class Sale(metaclass=PoolMeta):
     __name__ = 'sale.sale'
     id_tecno = fields.Char('Id TecnoCarnes', required=False)
 
-    Config = Pool().get('conector.configuration')
-    conexion = Config.conexion()
+    
 
     @classmethod
     def import_data_sale(cls):
         print("--------------RUN WIZARD VENTAS--------------")
+        Config = Pool().get('conector.configuration')
+        conexion = Config.conexion()
         prueba = cls.get_data_db_tecno('Documentos')
         for p in prueba:
             print(p)
