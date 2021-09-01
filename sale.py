@@ -198,6 +198,8 @@ class Sale(metaclass=PoolMeta):
     def get_data_where_tecno(cls, table, date):
         data = []
         try:
+            Config = Pool().get('conector.configuration')
+            conexion = Config.conexion()
             with conexion.cursor() as cursor:
                 query = cursor.execute("SELECT * FROM dbo."+table+" WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND sw = 1")
                 data = list(query.fetchall())
