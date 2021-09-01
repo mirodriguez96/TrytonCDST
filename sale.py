@@ -35,6 +35,9 @@ class Sale(metaclass=PoolMeta):
     @classmethod
     def import_data_sale(cls):
         print("--------------RUN WIZARD VENTAS--------------")
+        Config = Pool().get('conector.configuration')
+        con = Config.conexion()
+        print(con)
         ventas_tecno = cls.last_update()
         cls.create_actualizacion(False)
         if ventas_tecno:

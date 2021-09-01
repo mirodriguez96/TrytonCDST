@@ -1,7 +1,7 @@
 from trytond.model import ModelSQL, ModelView, fields
+from trytond.pool import Pool
 import pyodbc
 from trytond.exceptions import UserError
-from trytond.bus import notify
 
 __all__ = [
     'Configuration',
@@ -31,10 +31,23 @@ class Configuration(ModelSQL, ModelView):
             try:
                 conexion = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER='+str(record.server)+';DATABASE='+str(record.db)+';UID='+str(record.user)+';PWD='+str(record.password))
                 print("Conexion sqlserver exitosa !")
-                notify('Not enough stock', priority=3)
                 conexion.close()
             except Exception as e:
                 print('Error sql server: ', e)
-                raise UserError('Ocurrio un error al conectar SQL Server: ', str(e))
+                raise UserError('Error al conectarse a la base de datos (SQL Server): ', str(e))
 
 
+    @classmethod
+    def conexion(cls):
+        Config = Pool().get('conector.configuration')
+        last_record = Config.search([], order=[('id', 'DESC')], limit=1)
+        if last_record:
+            record = last_record[0]
+            try:
+                conexion = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER='+str(record.server)+';DATABASE='+str(record.db)+';UID='+str(record.user)+';PWD='+str(record.password))
+                return conexion
+            except Exception as e:
+                print('Error sql server: ', e)
+                raise UserError('Error al conectarse a la base de datos (SQL Server): ', str(e))
+        else:
+            raise UserError('Error: ingrese por favor los datos de configuracion de la base de datos')
