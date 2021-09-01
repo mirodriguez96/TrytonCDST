@@ -34,6 +34,6 @@ class Configuration(ModelSQL, ModelView):
                 print("Conexion sqlserver exitosa !")
                 raise UserWarning(f'Conexion sqlserver exitosa !')
             except Exception as e:
-                raise UserError(f'Ocurrio un error al conectar SQL Server: ', e)
+                raise UserError(f'Ocurrio un error al conectar SQL Server: ')
 
 
