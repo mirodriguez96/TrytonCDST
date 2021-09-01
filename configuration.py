@@ -1,5 +1,7 @@
 from trytond.model import ModelSQL, ModelView, fields
 import pyodbc
+from trytond.exceptions import UserError, UserWarning
+
 
 __all__ = [
     'Configuration',
@@ -30,7 +32,8 @@ class Configuration(ModelSQL, ModelView):
             try:
                 conexion = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER='+str(record.server)+';DATABASE='+str(record.db)+';UID='+str(record.user)+';PWD='+str(record.password))
                 print("Conexion sqlserver exitosa !")
+                raise UserWarning("Conexion sqlserver exitosa !")
             except Exception as e:
-                print("Ocurrio un error al conectar SQL Server: ", e)
+                raise UserError("Ocurrio un error al conectar SQL Server: ", e)
 
 
