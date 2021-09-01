@@ -13,8 +13,6 @@ __all__ = [
     'Cron',
     ]
 
-Config = Pool().get('conector.configuration')
-conexion = Config.conexion()
 
 class Cron(metaclass=PoolMeta):
     'Cron'
