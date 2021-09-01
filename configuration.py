@@ -34,6 +34,6 @@ class Configuration(ModelSQL, ModelView):
                 print("Conexion sqlserver exitosa !")
             except Exception as e:
                 print('Error sql server: ', e)
-                raise UserError('Ocurrio un error al conectar SQL Server '+e)
+                raise UserError('Ocurrio un error al conectar SQL Server: ', str(e))
 
 
