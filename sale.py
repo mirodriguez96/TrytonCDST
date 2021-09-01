@@ -205,6 +205,8 @@ class Sale(metaclass=PoolMeta):
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY get_data_where_tecno: ", e)
+        finally:
+            conexion.close()
         return data
 
     #Función encargada de convertir una fecha dada, al formato y orden para consultas sql server
