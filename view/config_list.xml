@@ -3,5 +3,5 @@
     <field name="server"/>
     <field name="db"/>
     <field name="user"/>
-    <field name="password" widget="sha"/>
+    <field name="password"/>
 </tree>
