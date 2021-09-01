@@ -32,11 +32,8 @@ class Configuration(ModelSQL, ModelView):
             try:
                 conexion = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER='+str(record.server)+';DATABASE='+str(record.db)+';UID='+str(record.user)+';PWD='+str(record.password))
                 print("Conexion sqlserver exitosa !")
-                raise UserError('Conexion sqlserver exitosa !')
-                return
             except Exception as e:
-                if e:
-                    print('Error sql server: ', e)
-                    raise UserError('Ocurrio un error al conectar SQL Server ')
+                print('Error sql server: ', e)
+                raise UserError('Ocurrio un error al conectar SQL Server '+e)
 
 
