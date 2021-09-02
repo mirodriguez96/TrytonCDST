@@ -62,7 +62,7 @@ if minor_version % 2:
 setup(name=name,
     version=version,
     description='Tryton module cdst conector',
-    long_description=read('README'),
+    long_description=read('README.md'),
     author='Cristhian Lancheros',
     author_email='clancheros@cdst.com',
     url='http://www.cdst.com/',
