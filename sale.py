@@ -70,7 +70,7 @@ class Sale(metaclass=PoolMeta):
                 try:
                     party, = Party.search([('id_number', '=', vent[coluns_doc.index('nit_Cedula')])])
                 except:
-                    raise UserError("Error: no se econtro el tercero con id: ", vent[coluns_doc.index('nit_Cedula')])
+                    raise UserError("No se econtro el tercero con id: ", vent[coluns_doc.index('nit_Cedula')])
                 venta.party = party.id
                 address = Address.search([('party', '=', party.id)], limit=1)
                 venta.invoice_address = address[0].id
