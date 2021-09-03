@@ -30,10 +30,7 @@ class Cron(metaclass=PoolMeta):
 class Sale(metaclass=PoolMeta):
     'Sale'
     __name__ = 'sale.sale'
-    id_tecno = fields.Char('Id TecnoCarnes', required=False)
-
-    #config = Pool().get('conector.configuration')
-    #conexion = config.conexion()
+    id_tecno = fields.Char('Id Tabla Sqlserver', required=False)
 
     @classmethod
     def import_data_sale(cls):
@@ -41,22 +38,18 @@ class Sale(metaclass=PoolMeta):
         ventas_tecno = cls.last_update()
         cls.create_actualizacion(False)
         if ventas_tecno:
-            """"""
             pool = Pool()
             Sale = pool.get('sale.sale')
             SaleLine = pool.get('sale.line')
             Invoice = pool.get('account.invoice')
-            #InvoiceLine = pool.get('account.invoice.line')
             Taxes = pool.get('sale.line-account.tax')
             CustomerTax = Pool().get('product.category-customer-account.tax')
             Party = pool.get('party.party')
             Address = pool.get('party.address')
             Template = Pool().get('product.template')
-            #documentos = cls.get_data_db_tecno('Documentos')
             coluns_doc = cls.get_columns_db_tecno('Documentos')
             columns_tipodoc = cls.get_columns_db_tecno('TblTipoDoctos')
             #create_sale = []
-            #create_invoice = []
             #Procedemos a realizar una venta
             for vent in ventas_tecno:
                 numero_doc = vent[coluns_doc.index('Numero_documento')]
@@ -64,26 +57,22 @@ class Sale(metaclass=PoolMeta):
                 venta = Sale()
                 venta.number = tipo_doc+'-'+str(numero_doc)
                 venta.reference = tipo_doc+'-'+str(numero_doc)
-                #venta.company = 3
-                #venta.currency = 1
                 venta.id_tecno = str(numero_doc)+'-'+tipo_doc
                 venta.description = vent[coluns_doc.index('notas')].replace('\n', ' ').replace('\r', '')
                 venta.invoice_method = 'order'
-                #venta.invoice_state = 'none'
                 venta.invoice_type = 'M'
                 fecha = str(vent[coluns_doc.index('Fecha_Orden_Venta')]).split()[0].split('-')
                 fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
                 venta.sale_date = fecha_date
                 venta.shipment_method = 'order'
-                #venta.shipment_state = 'none'
-                #venta.payment_term = 1 #FIX
+                #venta.payment_term = 1 #FIX CUENTAS
                 venta.state = 'confirmed'
                 party, = Party.search([('id_number', '=', vent[coluns_doc.index('nit_Cedula')])])
                 venta.party = party.id
                 address = Address.search([('party', '=', party.id)], limit=1)
                 venta.invoice_address = address[0].id
                 venta.shipment_address = address[0].id
-
+                #Ahora traemos las lineas de producto para la venta a procesar
                 documentos_linea = cls.get_line_where(str(numero_doc), str(tipo_doc))
                 col_line = cls.get_columns_db_tecno('Documentos_Lin')
                 #create_line = []
@@ -117,6 +106,7 @@ class Sale(metaclass=PoolMeta):
                         line.save()
                     else:
                         raise UserError("Error", "No existe el producto con la siguiente id: ", lin[col_line.index('IdProducto')])
+                #Procesamos la venta para generar la factura y procedemos a rellenar los campos de la factura
                 Sale.process([venta])
                 #create_sale.append(venta)
                 id_invoice = venta.get_invoices(None)
@@ -126,18 +116,17 @@ class Sale(metaclass=PoolMeta):
                 invoice.number = tipo_doc+'-'+str(numero_doc)
                 invoice.reference = tipo_doc+'-'+str(numero_doc)
                 invoice.invoice_date = fecha_date
+                #Se agrega en la descripcion el nombre del tipo de documento de la tabla en sqlserver
                 desc = cls.get_tipo_dcto(tipo_doc)
                 if desc:
                     invoice.description = desc[0][columns_tipodoc.index('TipoDoctos')].replace('\n', ' ').replace('\r', '')
                 Invoice.validate_invoice([invoice])
-                #invoice.state = 'validated'
-                #Invoice.process([invoice])
-                #Verificamos que el total de TecnoCarnes coincidan para contabilizar la factura
+                #Verificamos que el total de la tabla en sqlserver coincidan, para contabilizar la factura
                 total = Invoice.get_amount([invoice], 'total_amount')
                 total_tecno = Decimal(vent[coluns_doc.index('valor_total')])
                 if total['total_amount'][invoice.id] == total_tecno:
-                    Invoice.post_batch([invoice])
-                    #print('TOTAL IGUALES')
+                    Invoice.post([invoice])
+                    print('TOTAL IGUALES')
                 invoice.save()
                 #create_invoice.append(invoice)
             #Sale.save(create_sale)
@@ -208,7 +197,7 @@ class Sale(metaclass=PoolMeta):
             Config = Pool().get('conector.configuration')
             conexion = Config.conexion()
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT * FROM dbo."+table+" WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND sw = 1")
+                query = cursor.execute("SELECT TOP(20) * FROM dbo."+table+" WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND sw = 1")
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY get_data_where_tecno: ", e)
@@ -269,4 +258,4 @@ class Sale(metaclass=PoolMeta):
 class SaleLine(metaclass=PoolMeta):
     'SaleLine'
     __name__ = 'sale.line'
-    id_tecno = fields.Char('Id TecnoCarnes', required=False)
+    id_tecno = fields.Char('Id Tabla Sqlserver', required=False)
