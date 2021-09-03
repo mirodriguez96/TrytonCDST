@@ -105,7 +105,7 @@ class Sale(metaclass=PoolMeta):
                             line.on_change_discount_rate()
                         line.save()
                     else:
-                        raise UserError("Error", "No existe el producto con la siguiente id: ", lin[col_line.index('IdProducto')])
+                        raise UserError("Error, no existe el producto con la siguiente id: ", lin[col_line.index('IdProducto')])
                 #Procesamos la venta para generar la factura y procedemos a rellenar los campos de la factura
                 Sale.process([venta])
                 #create_sale.append(venta)
@@ -201,6 +201,7 @@ class Sale(metaclass=PoolMeta):
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY get_data_where_tecno: ", e)
+            raise UserError('ERROR QUERY get_data_where_tecno: ', str(e))
         return data
 
     #Función encargada de convertir una fecha dada, al formato y orden para consultas sql server
