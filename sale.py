@@ -67,7 +67,10 @@ class Sale(metaclass=PoolMeta):
                 venta.shipment_method = 'order'
                 #venta.payment_term = 1 #FIX CUENTAS
                 venta.state = 'confirmed'
-                party, = Party.search([('id_number', '=', vent[coluns_doc.index('nit_Cedula')])])
+                try:
+                    party, = Party.search([('id_number', '=', vent[coluns_doc.index('nit_Cedula')])])
+                except:
+                    raise UserError("Error: no se econtro el tercero con id: ", vent[coluns_doc.index('nit_Cedula')])
                 venta.party = party.id
                 address = Address.search([('party', '=', party.id)], limit=1)
                 venta.invoice_address = address[0].id
@@ -202,7 +205,6 @@ class Sale(metaclass=PoolMeta):
         except Exception as e:
             raise UserError('ERROR QUERY get_data_where_tecno: ', str(e))
             #print("ERROR QUERY get_data_where_tecno: ", e)
-            
         return data
 
     #Función encargada de convertir una fecha dada, al formato y orden para consultas sql server
