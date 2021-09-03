@@ -200,8 +200,9 @@ class Sale(metaclass=PoolMeta):
                 query = cursor.execute("SELECT TOP(20) * FROM dbo."+table+" WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND sw = 1")
                 data = list(query.fetchall())
         except Exception as e:
-            print("ERROR QUERY get_data_where_tecno: ", e)
             raise UserError('ERROR QUERY get_data_where_tecno: ', str(e))
+            #print("ERROR QUERY get_data_where_tecno: ", e)
+            
         return data
 
     #Función encargada de convertir una fecha dada, al formato y orden para consultas sql server
