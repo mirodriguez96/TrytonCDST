@@ -1,11 +1,16 @@
+"""
+El archivo setup.py describe cómo debe instalarse su módulo.
+"""
+
+#!/usr/bin/env python3
+# This file is part of Tryton.  The COPYRIGHT file at the top level of
+# this repository contains the full copyright notices and license terms.
+
 from setuptools import setup
 import re
 import os
 import io
-try:
-    from configparser import ConfigParser
-except ImportError:
-    from ConfigParser import ConfigParser
+from configparser import ConfigParser
 
 MODULE = 'conector'
 PREFIX = 'trytoncdst'
@@ -78,26 +83,27 @@ setup(name=name,
             + ['tryton.cfg', 'view/*.xml', 'locale/*.po', '*.fodt',
                 '*.fods']),
         },
-    classifiers=[
-        'Development Status :: 5 - Production/Stable',
-        'Environment :: Plugins',
-        'Framework :: Tryton',
-        'Intended Audience :: Developers',
-        'Intended Audience :: Financial and Insurance Industry',
-        'Intended Audience :: Legal Industry',
-        'License :: OSI Approved :: GNU General Public License (GPL)',
-        'Natural Language :: English',
-        'Natural Language :: Spanish',
-        'Operating System :: OS Independent',
-        'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3.3',
-        'Programming Language :: Python :: 3.4',
-        'Programming Language :: Python :: 3.5',
-        'Programming Language :: Python :: Implementation :: CPython',
-        'Programming Language :: Python :: Implementation :: PyPy',
-        'Topic :: Office/Business',
-        'Topic :: Office/Business :: Financial :: Accounting',
-        ],
+    #classifiers=[
+    #    'Development Status :: 5 - Production/Stable',
+    #    'Environment :: Plugins',
+    #    'Framework :: Tryton',
+    #    'Intended Audience :: Developers',
+    #    'Intended Audience :: Financial and Insurance Industry',
+    #    'Intended Audience :: Legal Industry',
+    #    'License :: OSI Approved :: GNU General Public License (GPL)',
+    #    'Natural Language :: English',
+    #    'Natural Language :: Spanish',
+    #    'Operating System :: OS Independent',
+    #    'Programming Language :: Python :: 2.7',
+    #    'Programming Language :: Python :: 3.3',
+    #    'Programming Language :: Python :: 3.4',
+    #    'Programming Language :: Python :: 3.5',
+    #    'Programming Language :: Python :: Implementation :: CPython',
+    #    'Programming Language :: Python :: Implementation :: PyPy',
+    #    'Topic :: Office/Business',
+    #    'Topic :: Office/Business :: Financial :: Accounting',
+    #    ],
+    platforms='any',
     license='GPL-3',
     install_requires=None,
     dependency_links=dependency_links,
