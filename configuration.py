@@ -1,7 +1,13 @@
 from trytond.model import ModelSQL, ModelView, fields
 from trytond.pool import Pool
-import pyodbc
 from trytond.exceptions import UserError
+
+try:
+    import pyodbc
+except:
+    print("Warning: Does not possible import pyodbc module!")
+    print("Please install it...!")
+
 
 __all__ = [
     'Configuration',

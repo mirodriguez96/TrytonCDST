@@ -1,2 +1,2 @@
-# Conector
-Modulo conector para CDST
+# Conector Module
+Modulo de tryton que sirve como conector para CDST
