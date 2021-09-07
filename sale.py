@@ -66,7 +66,6 @@ class Sale(metaclass=PoolMeta):
                 venta.sale_date = fecha_date
                 venta.shipment_method = 'order'
                 #venta.payment_term = 1 #FIX CUENTAS
-                venta.state = 'confirmed'
                 try:
                     party, = Party.search([('id_number', '=', vent[coluns_doc.index('nit_Cedula')])])
                 except:
@@ -87,7 +86,10 @@ class Sale(metaclass=PoolMeta):
                         id_t = lin[col_line.index('tipo')].strip()+'-'+str(lin[col_line.index('seq')])+'-'+str(lin[col_line.index('Numero_Documento')])+'-'+str(lin[col_line.index('IdBodega')])
                         line.id_tecno = id_t
                         line.product = producto
-                        line.quantity = abs(int(lin[col_line.index('Cantidad_Facturada')]))
+                        if vent[coluns_doc.index('notas')] == 3:
+                            line.quantity = -abs(int(lin[col_line.index('Cantidad_Facturada')]))
+                        else:
+                            line.quantity = abs(int(lin[col_line.index('Cantidad_Facturada')]))
                         line.unit_price = lin[col_line.index('Valor_Unitario')]
                         line.sale = venta
                         line.type = 'line'
@@ -110,10 +112,11 @@ class Sale(metaclass=PoolMeta):
                     else:
                         raise UserError("Error, no existe el producto con la siguiente id: ", lin[col_line.index('IdProducto')])
                 #Procesamos la venta para generar la factura y procedemos a rellenar los campos de la factura
-                Sale.process([venta])
+                venta.click('quote')
+                venta.click('confirm')
                 #create_sale.append(venta)
                 id_invoice = venta.get_invoices(None)
-                venta.save()
+                #venta.save()
                 invoice, = Invoice.search([('id','=',id_invoice[0])])
                 invoice.operation_type = 10
                 invoice.number = tipo_doc+'-'+str(numero_doc)
@@ -128,7 +131,7 @@ class Sale(metaclass=PoolMeta):
                 total = Invoice.get_amount([invoice], 'total_amount')
                 total_tecno = Decimal(vent[coluns_doc.index('valor_total')])
                 if total['total_amount'][invoice.id] == total_tecno:
-                    Invoice.post([invoice])
+                    invoice.click('post')
                     print('TOTAL IGUALES')
                 invoice.save()
                 #create_invoice.append(invoice)
@@ -200,7 +203,7 @@ class Sale(metaclass=PoolMeta):
             Config = Pool().get('conector.configuration')
             conexion = Config.conexion()
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT TOP(20) * FROM dbo."+table+" WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND sw = 1")
+                query = cursor.execute("SELECT TOP(20) * FROM dbo."+table+" WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 3)")
                 data = list(query.fetchall())
         except Exception as e:
             raise UserError('ERROR QUERY get_data_where_tecno: ', str(e))
@@ -257,6 +260,7 @@ class Sale(metaclass=PoolMeta):
             actualizacion, = Actualizacion.search([('name', '=','VENTAS')])
             actualizacion.name = 'VENTAS'
             actualizacion.save()
+
 
 #Heredamos del modelo sale.line para agregar el campo id_tecno
 class SaleLine(metaclass=PoolMeta):
