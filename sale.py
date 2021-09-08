@@ -136,7 +136,7 @@ class Sale(metaclass=PoolMeta):
                 total = Invoice.get_amount([invoice], 'total_amount')
                 total_tecno = Decimal(vent[coluns_doc.index('valor_total')])
                 if total['total_amount'][invoice.id] == total_tecno:
-                    Invoice.post([invoice])
+                    Invoice._post([invoice])
                     #invoice.click('post')
                     print('TOTAL IGUALES')
                 invoice.save()
