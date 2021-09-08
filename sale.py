@@ -110,7 +110,7 @@ class Sale(metaclass=PoolMeta):
                             line.on_change_discount_rate()
                         line.save()
                     else:
-                        raise UserError("Error, no existe el producto con la siguiente id: ", lin[col_line.index('IdProducto')])
+                        raise UserError("Error, no existe el producto con la siguiente id: ", str(lin[col_line.index('IdProducto')]))
                 #Procesamos la venta para generar la factura y procedemos a rellenar los campos de la factura
                 #venta.click('quote')
                 #venta.click('confirm')
