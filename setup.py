@@ -32,6 +32,7 @@ def get_require_version(name):
         major_version, minor_version + 1)
     return require
 
+
 config = ConfigParser()
 config.readfp(open('tryton.cfg'))
 info = dict(config.items('tryton'))
@@ -105,18 +106,19 @@ setup(name=name,
     #    ],
     platforms='any',
     license='GPL-3',
-    install_requires=None,
+    python_requires='>=3.4',
+    install_requires=requires,
     dependency_links=dependency_links,
     zip_safe=False,
     entry_points="""
     [trytond.modules]
     %s = trytond.modules.%s
     """ % (MODULE, MODULE),
-    test_suite='tests',
-    test_loader='trytond.test_loader:Loader',
-    tests_require=tests_require,
-    use_2to3=True,
-    convert_2to3_doctests=[
-        'tests/scenario.rst',
-        ],
+    #test_suite='tests',
+    #test_loader='trytond.test_loader:Loader',
+    #tests_require=tests_require,
+    #use_2to3=True,
+    #convert_2to3_doctests=[
+    #    'tests/scenario.rst',
+    #    ],
     )
