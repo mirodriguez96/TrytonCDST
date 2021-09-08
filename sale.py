@@ -114,8 +114,8 @@ class Sale(metaclass=PoolMeta):
                 #Procesamos la venta para generar la factura y procedemos a rellenar los campos de la factura
                 #venta.click('quote')
                 #venta.click('confirm')
-                Sale.quote([venta])
-                Sale.confirm([venta])
+                venta.quote([venta])
+                venta.confirm([venta])
                 #create_sale.append(venta)
                 id_invoice = venta.get_invoices(None)
                 #venta.save()
