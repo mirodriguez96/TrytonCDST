@@ -140,7 +140,7 @@ class Sale(metaclass=PoolMeta):
                 if total['total_amount'][invoice.id] == total_tecno:
                     Invoice.post_batch([invoice])
                     #invoice.click('post')
-                    print('TOTAL IGUALES')
+                    #print('TOTAL IGUALES')
                 invoice.save()
                 #create_invoice.append(invoice)
             #Sale.save(create_sale)
@@ -211,7 +211,7 @@ class Sale(metaclass=PoolMeta):
             Config = Pool().get('conector.configuration')
             conexion = Config.conexion()
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT TOP(20) * FROM dbo."+table+" WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 3)")
+                query = cursor.execute("SELECT TOP(20) * FROM dbo."+table+" WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2)")
                 data = list(query.fetchall())
         except Exception as e:
             raise UserError('ERROR QUERY get_data_where_tecno: ', str(e))
