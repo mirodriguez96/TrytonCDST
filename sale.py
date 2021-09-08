@@ -34,7 +34,7 @@ class Sale(metaclass=PoolMeta):
 
     @classmethod
     def import_data_sale(cls):
-        print("--------------RUN VENTAS 2--------------")
+        print("--------------RUN VENTAS--------------")
         ventas_tecno = cls.last_update()
         cls.create_actualizacion(False)
         if ventas_tecno:
@@ -112,8 +112,10 @@ class Sale(metaclass=PoolMeta):
                     else:
                         raise UserError("Error, no existe el producto con la siguiente id: ", lin[col_line.index('IdProducto')])
                 #Procesamos la venta para generar la factura y procedemos a rellenar los campos de la factura
-                venta.click('quote')
-                venta.click('confirm')
+                #venta.click('quote')
+                #venta.click('confirm')
+                Sale.quote([venta])
+                Sale.confirm([venta])
                 #create_sale.append(venta)
                 id_invoice = venta.get_invoices(None)
                 #venta.save()
@@ -131,7 +133,8 @@ class Sale(metaclass=PoolMeta):
                 total = Invoice.get_amount([invoice], 'total_amount')
                 total_tecno = Decimal(vent[coluns_doc.index('valor_total')])
                 if total['total_amount'][invoice.id] == total_tecno:
-                    invoice.click('post')
+                    Invoice.post([invoice])
+                    #invoice.click('post')
                     print('TOTAL IGUALES')
                 invoice.save()
                 #create_invoice.append(invoice)
