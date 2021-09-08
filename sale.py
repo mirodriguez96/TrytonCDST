@@ -82,7 +82,6 @@ class Sale(metaclass=PoolMeta):
                     producto = cls.buscar_producto(str(lin[col_line.index('IdProducto')]))
                     if producto:
                         print(producto.code)
-                        print(producto.saleable)
                         template, = Template.search([('id', '=', producto.template)])
                         line = SaleLine()
                         id_t = lin[col_line.index('tipo')].strip()+'-'+str(lin[col_line.index('seq')])+'-'+str(lin[col_line.index('Numero_Documento')])+'-'+str(lin[col_line.index('IdBodega')])
