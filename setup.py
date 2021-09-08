@@ -107,7 +107,7 @@ setup(name=name,
     platforms='any',
     license='GPL-3',
     python_requires='>=3.4',
-    install_requires=requires,
+    install_requires=requires, #None
     dependency_links=dependency_links,
     zip_safe=False,
     entry_points="""
