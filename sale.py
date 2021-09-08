@@ -121,7 +121,7 @@ class Sale(metaclass=PoolMeta):
                 print(venta.state)
                 #create_sale.append(venta)
                 #id_invoice = venta.get_invoices(None)
-                #venta.save()
+                venta.save()
                 #invoice, = Invoice.search([('id','=',id_invoice[0])])
                 invoice, = venta.invoices
                 invoice.operation_type = 10
