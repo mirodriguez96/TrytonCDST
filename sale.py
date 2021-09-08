@@ -116,7 +116,7 @@ class Sale(metaclass=PoolMeta):
                 #venta.click('confirm')
                 venta.quote([venta])
                 venta.confirm([venta])
-                #venta.process([venta])
+                venta.process([venta])
                 print(venta.state)
                 #create_sale.append(venta)
                 #id_invoice = venta.get_invoices(None)
