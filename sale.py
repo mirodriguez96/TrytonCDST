@@ -87,7 +87,7 @@ class Sale(metaclass=PoolMeta):
                         id_t = lin[col_line.index('tipo')].strip()+'-'+str(lin[col_line.index('seq')])+'-'+str(lin[col_line.index('Numero_Documento')])+'-'+str(lin[col_line.index('IdBodega')])
                         line.id_tecno = id_t
                         line.product = producto
-                        if vent[coluns_doc.index('notas')] == 3:
+                        if vent[coluns_doc.index('sw')] == 2:
                             line.quantity = -abs(int(lin[col_line.index('Cantidad_Facturada')]))
                         else:
                             line.quantity = abs(int(lin[col_line.index('Cantidad_Facturada')]))
