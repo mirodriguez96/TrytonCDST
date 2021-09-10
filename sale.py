@@ -43,20 +43,20 @@ class Sale(metaclass=PoolMeta):
             SaleLine = pool.get('sale.line')
             Invoice = pool.get('account.invoice')
             Taxes = pool.get('sale.line-account.tax')
-            CustomerTax = Pool().get('product.category-customer-account.tax')
+            CustomerTax = pool.get('product.category-customer-account.tax')
             Party = pool.get('party.party')
             Address = pool.get('party.address')
-            Template = Pool().get('product.template')
+            Template = pool.get('product.template')
             coluns_doc = cls.get_columns_db_tecno('Documentos')
             columns_tipodoc = cls.get_columns_db_tecno('TblTipoDoctos')
             #create_sale = []
             #Procedemos a realizar una venta
             for vent in ventas_tecno:
+                #FIX EXISTE?
                 numero_doc = vent[coluns_doc.index('Numero_documento')]
                 tipo_doc = vent[coluns_doc.index('tipo')].strip()
                 venta = Sale()
                 venta.number = tipo_doc+'-'+str(numero_doc)
-                venta.reference = tipo_doc+'-'+str(numero_doc)
                 venta.id_tecno = str(numero_doc)+'-'+tipo_doc
                 venta.description = vent[coluns_doc.index('notas')].replace('\n', ' ').replace('\r', '')
                 venta.invoice_method = 'order'
@@ -89,8 +89,10 @@ class Sale(metaclass=PoolMeta):
                         line.product = producto
                         if vent[coluns_doc.index('sw')] == 2:
                             line.quantity = -abs(int(lin[col_line.index('Cantidad_Facturada')]))
+                            venta.reference = tipo_doc+'-'+str(numero_doc)
                         else:
                             line.quantity = abs(int(lin[col_line.index('Cantidad_Facturada')]))
+                            venta.reference = vent[coluns_doc.index('Tipo_Docto_Base')].strip()+'-'+str(vent[coluns_doc.index('Numero_Docto_Base')])
                         line.unit_price = lin[col_line.index('Valor_Unitario')]
                         line.sale = venta
                         line.type = 'line'
