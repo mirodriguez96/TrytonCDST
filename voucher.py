@@ -35,7 +35,7 @@ class Voucher(ModelSQL, ModelView):
         tipo = '404'
         nro = 365
         id = str(nro)+'-'+tipo
-        invoice, = Invoice.search([('number','=',+"'"+id+"'")])
+        invoice, = Invoice.search([('number','=',id)])
         """
         recibos_tecno = cls.last_update()
         cls.create_actualizacion(False)
