@@ -31,21 +31,28 @@ class Voucher(ModelSQL, ModelView):
     @classmethod
     def import_voucher(cls):
         print("--------------RUN VOUCHER--------------")
+        Invoice = Pool().get('account.invoice')
+        tipo = '404'
+        nro = 365
+        id = tipo+'-'+str(nro)
+        invoice, = Invoice.search([('number','=',+"'"+id+"'")])
+        """
         recibos_tecno = cls.last_update()
         cls.create_actualizacion(False)
-        tipo = recibo[columns_doc.index('tipo')].strip
-        nro = recibo[columns_doc.index('Numero_documento')]
-        id = tipo+'-'+str(nro)
         if recibos_tecno:
-            #columns_doc = cls.get_columns_db_tecno('Documentos')
+            columns_doc = cls.get_columns_db_tecno('Documentos')
             pool = Pool()
             Invoice = pool.get('account.invoice')
             for recibo in recibos_tecno:
+                tipo = recibo[columns_doc.index('tipo')].strip
+                nro = recibo[columns_doc.index('Numero_documento')]
+                id = tipo+'-'+str(nro)
                 try:
                     invoice, = Invoice.search([('number','=',+"'"+id+"'")])
                     Invoice.pay_with_voucher([invoice])
                 except:
                     raise UserError("Error, no se encontró la factura del recibo: ", )
+        """
         pass
 
     #Función encargada de consultar las columnas pertenecientes a 'x' tabla de la bd de TecnoCarnes
