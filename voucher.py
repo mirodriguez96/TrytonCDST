@@ -33,14 +33,14 @@ class Voucher(ModelSQL, ModelView):
         print("--------------RUN VOUCHER--------------")
         recibos_tecno = cls.last_update()
         cls.create_actualizacion(False)
+        tipo = recibo[columns_doc.index('tipo')].strip
+        nro = recibo[columns_doc.index('Numero_documento')]
+        id = tipo+'-'+str(nro)
         if recibos_tecno:
-            columns_doc = cls.get_columns_db_tecno('Documentos')
+            #columns_doc = cls.get_columns_db_tecno('Documentos')
             pool = Pool()
             Invoice = pool.get('account.invoice')
             for recibo in recibos_tecno:
-                tipo = recibo[columns_doc.index('tipo')].strip
-                nro = recibo[columns_doc.index('Numero_documento')]
-                id = tipo+'-'+str(nro)
                 try:
                     invoice, = Invoice.search([('number','=',+"'"+id+"'")])
                     Invoice.pay_with_voucher([invoice])
