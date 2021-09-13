@@ -218,14 +218,14 @@ class Sale(metaclass=PoolMeta):
 
     #Función encargada de consultar si existe un producto dado de la bd TecnoCarnes
     @classmethod
-    def buscar_venta(cls, id):
-        Sale = Pool().get('sale.sale')
+    def buscar_producto(cls, id_producto):
+        Product = Pool().get('product.product')
         try:
-            sale, = Sale.search([('id_tecno', '=', id)])
+            producto, = Product.search([('id_tecno', '=', id_producto)])
         except ValueError:
             return False
         else:
-            return sale
+            return producto
 
     #Función encargada de traer los datos de la bd TecnoCarnes con una fecha dada.
     @classmethod

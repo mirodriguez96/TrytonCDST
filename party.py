@@ -143,7 +143,7 @@ class Party(ModelSQL, ModelView):
     #Función encargada de verificar, actualizar e insertar las direcciones pertenecientes a un tercero dado
     @classmethod
     def update_address(cls, party):
-        address_tecno = cls.get_address_db_tecno(party.id)
+        address_tecno = cls.get_address_db_tecno(party.id_number)
         #Consultamos si existen direcciones para el tercero
         if address_tecno:
             columna_direcciones = cls.get_columns_db_tecno('Terceros_Dir')
@@ -174,7 +174,7 @@ class Party(ModelSQL, ModelView):
     #Función encargada de verificar, actualizar e insertar los metodos de contacto pertenecientes a un tercero dado
     @classmethod
     def update_contact(cls, party):
-        contacts_tecno = cls.get_contacts_db_tecno(party.id)
+        contacts_tecno = cls.get_contacts_db_tecno(party.id_number)
         #Consultamos si existen contactos para el tercero
         if contacts_tecno:
             columns_contact = cls.get_columns_db_tecno('Terceros_Contactos')
