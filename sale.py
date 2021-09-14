@@ -267,7 +267,7 @@ class Sale(metaclass=PoolMeta):
     def buscar_venta(cls, id):
         Sale = Pool().get('sale.sale')
         try:
-            producto, = Sale.search([('id_tecno', '=', id)])
+            sale, = Sale.search([('id_tecno', '=', id)])
         except ValueError:
             return False
         else:
