@@ -38,7 +38,7 @@ class Voucher(ModelSQL, ModelView):
             pool = Pool()
             Invoice = pool.get('account.invoice')
             for recibo in recibos_tecno:
-                tipo = recibo[columns_doc.index('tipo')].strip
+                tipo = str(recibo[columns_doc.index('tipo')].strip)
                 nro = str(recibo[columns_doc.index('Numero_documento')])
                 idf = tipo+'-'+nro
                 try:
