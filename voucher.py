@@ -46,7 +46,7 @@ class Voucher(ModelSQL, ModelView):
                 cont += 1
                 print(idf)
                 try:
-                    invoice = Invoice.search([('number','=',"'"+idf+"'")])
+                    invoice = Invoice.search([('number','=',idf)])
                     print(invoice)
                     for inv in invoice:
                         Invoice.pay_with_voucher([inv])

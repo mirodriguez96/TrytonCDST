@@ -17,10 +17,10 @@ class Configuration(ModelSQL, ModelView):
     'Configuration'
     __name__ = 'conector.configuration'
 
-    server = fields.Char('Server', required=True)
-    db = fields.Char('Database', required=True)
-    user = fields.Char('User', required=True)
-    password = fields.Char('Password', required=True)
+    server = fields.Char('Server', required=True, help="Example: tcp:ip,port")
+    db = fields.Char('Database', required=True, help="Enter the name of the database without leaving spaces")
+    user = fields.Char('User', required=True, help="Enter the user of the database without leaving spaces")
+    password = fields.Char('Password', required=True, help="Enter the password of the database without leaving spaces")
 
     @classmethod 
     def __setup__(cls):
