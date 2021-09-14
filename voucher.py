@@ -38,9 +38,9 @@ class Voucher(ModelSQL, ModelView):
             pool = Pool()
             Invoice = pool.get('account.invoice')
             for recibo in recibos_tecno:
-                tipo = str(recibo[columns_doc.index('tipo')].strip)
-                nro = str(recibo[columns_doc.index('Numero_documento')])
-                idf = tipo+'-'+nro
+                tipo = str(recibo[columns_doc.index('Tipo_Docto_Base')].strip)
+                nro = str(recibo[columns_doc.index('Numero_Docto_Base')])
+                idf = nro+'-'+tipo
                 try:
                     invoice, = Invoice.search([('number','=',idf)])
                     Invoice.pay_with_voucher([invoice])
