@@ -46,8 +46,10 @@ class Voucher(ModelSQL, ModelView):
                 cont += 1
                 print(idf)
                 try:
-                    invoice, = Invoice.search([('number','=',+"'"+idf+"'")])
-                    Invoice.pay_with_voucher([invoice])
+                    invoice = Invoice.search([('number','=',+"'"+idf+"'")])
+                    print(invoice)
+                    for inv in invoice:
+                        Invoice.pay_with_voucher([inv])
                 except:
                     raise UserError("Error, no se encontró la factura del recibo: ", )
         pass
