@@ -56,84 +56,86 @@ class Sale(metaclass=PoolMeta):
                 numero_doc = vent[coluns_doc.index('Numero_documento')]
                 tipo_doc = vent[coluns_doc.index('tipo')].strip()
                 id_venta = str(numero_doc)+'-'+tipo_doc
-                venta = Sale()
-                venta.number = tipo_doc+'-'+str(numero_doc)
-                venta.id_tecno = id_venta
-                venta.description = vent[coluns_doc.index('notas')].replace('\n', ' ').replace('\r', '')
-                venta.invoice_method = 'order'
-                venta.invoice_type = 'M'
-                fecha = str(vent[coluns_doc.index('Fecha_Orden_Venta')]).split()[0].split('-')
-                fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
-                venta.sale_date = fecha_date
-                venta.shipment_method = 'order'
-                try:
-                    party, = Party.search([('id_number', '=', vent[coluns_doc.index('nit_Cedula')])])
-                except:
-                    raise UserError("No se econtro el tercero con id: ", vent[coluns_doc.index('nit_Cedula')])
-                venta.party = party.id
-                address = Address.search([('party', '=', party.id)], limit=1)
-                venta.invoice_address = address[0].id
-                venta.shipment_address = address[0].id
-                #Ahora traemos las lineas de producto para la venta a procesar
-                documentos_linea = cls.get_line_where(str(numero_doc), str(tipo_doc))
-                col_line = cls.get_columns_db_tecno('Documentos_Lin')
-                #create_line = []
-                for lin in documentos_linea:
-                    producto = cls.buscar_producto(str(lin[col_line.index('IdProducto')]))
-                    if producto:
-                        #print(producto.code)
-                        template, = Template.search([('id', '=', producto.template)])
-                        line = SaleLine()
-                        id_t = lin[col_line.index('tipo')].strip()+'-'+str(lin[col_line.index('seq')])+'-'+str(lin[col_line.index('Numero_Documento')])+'-'+str(lin[col_line.index('IdBodega')])
-                        line.id_tecno = id_t
-                        line.product = producto
-                        if vent[coluns_doc.index('sw')] == 2:
-                            line.quantity = -abs(int(lin[col_line.index('Cantidad_Facturada')]))
-                            venta.reference = tipo_doc+'-'+str(numero_doc)
-                        else:
-                            line.quantity = abs(int(lin[col_line.index('Cantidad_Facturada')]))
-                            venta.reference = vent[coluns_doc.index('Tipo_Docto_Base')].strip()+'-'+str(vent[coluns_doc.index('Numero_Docto_Base')])
-                        line.unit_price = lin[col_line.index('Valor_Unitario')]
-                        line.sale = venta
-                        line.type = 'line'
-                        line.unit = template.default_uom
-                        #Agregar impuestos a la venta
-                        taxc = CustomerTax.search([('category', '=', template.account_category)])
-                        if taxc:
-                            tax = Taxes()
-                            tax.line = line
-                            tax.tax = taxc[0].tax
+                existe = cls.buscar_venta(id_venta)
+                if not existe:
+                    venta = Sale()
+                    venta.number = tipo_doc+'-'+str(numero_doc)
+                    venta.id_tecno = id_venta
+                    venta.description = vent[coluns_doc.index('notas')].replace('\n', ' ').replace('\r', '')
+                    venta.invoice_method = 'order'
+                    venta.invoice_type = 'M'
+                    fecha = str(vent[coluns_doc.index('Fecha_Orden_Venta')]).split()[0].split('-')
+                    fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
+                    venta.sale_date = fecha_date
+                    venta.shipment_method = 'order'
+                    try:
+                        party, = Party.search([('id_number', '=', vent[coluns_doc.index('nit_Cedula')])])
+                    except:
+                        raise UserError("No se econtro el tercero con id: ", vent[coluns_doc.index('nit_Cedula')])
+                    venta.party = party.id
+                    address = Address.search([('party', '=', party.id)], limit=1)
+                    venta.invoice_address = address[0].id
+                    venta.shipment_address = address[0].id
+                    #Ahora traemos las lineas de producto para la venta a procesar
+                    documentos_linea = cls.get_line_where(str(numero_doc), str(tipo_doc))
+                    col_line = cls.get_columns_db_tecno('Documentos_Lin')
+                    #create_line = []
+                    for lin in documentos_linea:
+                        producto = cls.buscar_producto(str(lin[col_line.index('IdProducto')]))
+                        if producto:
+                            #print(producto.code)
+                            template, = Template.search([('id', '=', producto.template)])
+                            line = SaleLine()
+                            id_t = lin[col_line.index('tipo')].strip()+'-'+str(lin[col_line.index('seq')])+'-'+str(lin[col_line.index('Numero_Documento')])+'-'+str(lin[col_line.index('IdBodega')])
+                            line.id_tecno = id_t
+                            line.product = producto
+                            if vent[coluns_doc.index('sw')] == 2:
+                                line.quantity = -abs(int(lin[col_line.index('Cantidad_Facturada')]))
+                                venta.reference = tipo_doc+'-'+str(numero_doc)
+                            else:
+                                line.quantity = abs(int(lin[col_line.index('Cantidad_Facturada')]))
+                                venta.reference = vent[coluns_doc.index('Tipo_Docto_Base')].strip()+'-'+str(vent[coluns_doc.index('Numero_Docto_Base')])
+                            line.unit_price = lin[col_line.index('Valor_Unitario')]
+                            line.sale = venta
+                            line.type = 'line'
+                            line.unit = template.default_uom
+                            #Agregar impuestos a la venta
+                            taxc = CustomerTax.search([('category', '=', template.account_category)])
+                            if taxc:
+                                tax = Taxes()
+                                tax.line = line
+                                tax.tax = taxc[0].tax
+                                line.save()
+                                tax.save()
+                            #Verificamos si hay descuento para la linea de producto y se agrega su respectivo descuento
+                            if lin[col_line.index('Porcentaje_Descuento_1')] > 0:
+                                porcentaje = lin[col_line.index('Porcentaje_Descuento_1')]/100
+                                line.base_price = lin[col_line.index('Valor_Unitario')]
+                                line.discount_rate = Decimal(str(porcentaje))
+                                line.on_change_discount_rate()
                             line.save()
-                            tax.save()
-                        #Verificamos si hay descuento para la linea de producto y se agrega su respectivo descuento
-                        if lin[col_line.index('Porcentaje_Descuento_1')] > 0:
-                            porcentaje = lin[col_line.index('Porcentaje_Descuento_1')]/100
-                            line.base_price = lin[col_line.index('Valor_Unitario')]
-                            line.discount_rate = Decimal(str(porcentaje))
-                            line.on_change_discount_rate()
-                        line.save()
-                    else:
-                        raise UserError("Error, no existe el producto con la siguiente id: ", str(lin[col_line.index('IdProducto')]))
-                #Procesamos la venta para generar la factura y procedemos a rellenar los campos de la factura
-                venta.state = 'confirmed'
-                venta.process([venta])
-                #venta.save()
-                #invoice, = Invoice.search([('id','=',id_invoice[0])])
-                invoice, = venta.invoices
-                invoice.operation_type = 10
-                invoice.number = tipo_doc+'-'+str(numero_doc)
-                invoice.reference = tipo_doc+'-'+str(numero_doc)
-                invoice.invoice_date = fecha_date
-                #Se agrega en la descripcion el nombre del tipo de documento de la tabla en sqlserver
-                desc = cls.get_tipo_dcto(tipo_doc)
-                if desc:
-                    invoice.description = desc[0][columns_tipodoc.index('TipoDoctos')].replace('\n', ' ').replace('\r', '')
-                Invoice.validate_invoice([invoice])
-                #Verificamos que el total de la tabla en sqlserver coincidan, para contabilizar la factura
-                total = Invoice.get_amount([invoice], 'total_amount')
-                total_tecno = Decimal(vent[coluns_doc.index('valor_total')])
-                if total['total_amount'][invoice.id] == total_tecno:
-                    Invoice.post_batch([invoice])
+                        else:
+                            raise UserError("Error, no existe el producto con la siguiente id: ", str(lin[col_line.index('IdProducto')]))
+                    #Procesamos la venta para generar la factura y procedemos a rellenar los campos de la factura
+                    venta.state = 'confirmed'
+                    venta.process([venta])
+                    #venta.save()
+                    #invoice, = Invoice.search([('id','=',id_invoice[0])])
+                    invoice, = venta.invoices
+                    invoice.operation_type = 10
+                    invoice.number = tipo_doc+'-'+str(numero_doc)
+                    invoice.reference = tipo_doc+'-'+str(numero_doc)
+                    invoice.invoice_date = fecha_date
+                    #Se agrega en la descripcion el nombre del tipo de documento de la tabla en sqlserver
+                    desc = cls.get_tipo_dcto(tipo_doc)
+                    if desc:
+                        invoice.description = desc[0][columns_tipodoc.index('TipoDoctos')].replace('\n', ' ').replace('\r', '')
+                    Invoice.validate_invoice([invoice])
+                    #Verificamos que el total de la tabla en sqlserver coincidan, para contabilizar la factura
+                    total = Invoice.get_amount([invoice], 'total_amount')
+                    total_tecno = Decimal(vent[coluns_doc.index('valor_total')])
+                    if total['total_amount'][invoice.id] == total_tecno:
+                        Invoice.post_batch([invoice])
                 #invoice.save()
                 #create_invoice.append(invoice)
             #Sale.save(create_sale)
@@ -260,6 +262,16 @@ class Sale(metaclass=PoolMeta):
             actualizacion, = Actualizacion.search([('name', '=','VENTAS')])
             actualizacion.name = 'VENTAS'
             actualizacion.save()
+
+    @classmethod
+    def buscar_venta(cls, id):
+        Sale = Pool().get('sale.sale')
+        try:
+            producto, = Sale.search([('id_tecno', '=', id)])
+        except ValueError:
+            return False
+        else:
+            return True
 
 
 #Heredamos del modelo sale.line para agregar el campo id_tecno
