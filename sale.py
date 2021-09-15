@@ -263,14 +263,17 @@ class Sale(metaclass=PoolMeta):
             actualizacion.name = 'VENTAS'
             actualizacion.save()
 
+    #Metodo encargado de buscar si exste una venta
     @classmethod
     def buscar_venta(cls, id):
         Sale = Pool().get('sale.sale')
         try:
             sale, = Sale.search([('id_tecno', '=', id)])
         except ValueError:
+            print('No Existe')
             return False
         else:
+            print('Existe')
             return True
 
 
