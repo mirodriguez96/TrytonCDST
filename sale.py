@@ -90,7 +90,7 @@ class Sale(metaclass=PoolMeta):
                             line.id_tecno = id_t
                             line.product = producto
                             if vent[coluns_doc.index('sw')] == 2:
-                                line.quantity = -abs(int(lin[col_line.index('Cantidad_Facturada')]))
+                                line.quantity = (abs(int(lin[col_line.index('Cantidad_Facturada')])))*-1
                                 venta.reference = tipo_doc+'-'+str(numero_doc)
                             else:
                                 line.quantity = abs(int(lin[col_line.index('Cantidad_Facturada')]))
@@ -119,9 +119,8 @@ class Sale(metaclass=PoolMeta):
                     #Procesamos la venta para generar la factura y procedemos a rellenar los campos de la factura
                     venta.state = 'confirmed'
                     venta.process([venta])
-                    #venta.save()
-                    #invoice, = Invoice.search([('id','=',id_invoice[0])])
                     invoice, = venta.invoices
+                    venta.save()
                     invoice.operation_type = 10
                     invoice.number = tipo_doc+'-'+str(numero_doc)
                     invoice.reference = tipo_doc+'-'+str(numero_doc)
@@ -136,7 +135,7 @@ class Sale(metaclass=PoolMeta):
                     total_tecno = Decimal(vent[coluns_doc.index('valor_total')])
                     if total['total_amount'][invoice.id] == total_tecno:
                         Invoice.post_batch([invoice])
-                #invoice.save()
+                    invoice.save()
                 #create_invoice.append(invoice)
             #Sale.save(create_sale)
 
