@@ -37,13 +37,13 @@ class Voucher(ModelSQL, ModelView):
             columns_doc = cls.get_columns_db_tecno('Documentos')
             pool = Pool()
             Invoice = pool.get('account.invoice')
-            cont = 1410
+            #cont = 1410
             for recibo in recibos_tecno:
                 tipo = str(recibo[columns_doc.index('Tipo_Docto_Base')].strip)
                 nro = str(recibo[columns_doc.index('Numero_Docto_Base')])
-                #idf = nro+'-'+tipo
-                idf = '146-'+str(cont)
-                cont += 1
+                idf = nro+'-'+tipo
+                #idf = '146-'+str(cont)
+                #cont += 1
                 print(idf)
                 try:
                     invoice = Invoice.search([('number','=',idf)])
@@ -51,7 +51,7 @@ class Voucher(ModelSQL, ModelView):
                     for inv in invoice:
                         Invoice.pay_with_voucher([inv])
                 except:
-                    raise UserError("Error, no se encontró la factura del recibo: ", )
+                    raise UserError("Error, no se encontró la factura: ", idf)
         pass
 
     #Función encargada de consultar las columnas pertenecientes a 'x' tabla de la bd de TecnoCarnes
