@@ -165,7 +165,7 @@ class Sale(metaclass=PoolMeta):
             Config = Pool().get('conector.configuration')
             conexion = Config.conexion()
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT * FROM dbo.Documentos_Lin WHERE sw = "+sw+" Numero_Documento = "+nro+" AND tipo = "+tipo)
+                query = cursor.execute("SELECT * FROM dbo.Documentos_Lin WHERE sw = "+sw+" AND Numero_Documento = "+nro+" AND tipo = "+tipo)
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY Documentos_Lin: ", e)
