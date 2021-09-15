@@ -50,8 +50,8 @@ class Voucher(ModelSQL, ModelView):
                     print(invoice)
                     for inv in invoice:
                         Invoice.pay_with_voucher([inv])
-                except:
-                    raise UserError("Error, no se encontró la factura: ", idf)
+                except Exception:
+                    raise UserError("Error, al generar el recibo: ", Exception)
         pass
 
     #Función encargada de consultar las columnas pertenecientes a 'x' tabla de la bd de TecnoCarnes
@@ -116,3 +116,4 @@ class Voucher(ModelSQL, ModelView):
             actualizacion, = Actualizacion.search([('name', '=','RECIBOS')])
             actualizacion.name = 'RECIBOS'
             actualizacion.save()
+

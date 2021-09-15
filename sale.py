@@ -53,9 +53,10 @@ class Sale(metaclass=PoolMeta):
             #Procedemos a realizar una venta
             for vent in ventas_tecno:
                 #FIX EXISTE? R/NO TIENE ULTIMA MODIFICACION
+                sw = vent[coluns_doc.index('sw')]
                 numero_doc = vent[coluns_doc.index('Numero_documento')]
                 tipo_doc = vent[coluns_doc.index('tipo')].strip()
-                id_venta = str(numero_doc)+'-'+tipo_doc
+                id_venta = str(sw)+'-'+tipo_doc+'-'+str(numero_doc)
                 existe = cls.buscar_venta(id_venta)
                 if not existe:
                     venta = Sale()
@@ -77,24 +78,26 @@ class Sale(metaclass=PoolMeta):
                     venta.invoice_address = address[0].id
                     venta.shipment_address = address[0].id
                     #Ahora traemos las lineas de producto para la venta a procesar
-                    documentos_linea = cls.get_line_where(str(numero_doc), str(tipo_doc))
+                    documentos_linea = cls.get_line_where(str(sw), str(numero_doc), str(tipo_doc))
                     col_line = cls.get_columns_db_tecno('Documentos_Lin')
                     #create_line = []
                     for lin in documentos_linea:
                         producto = cls.buscar_producto(str(lin[col_line.index('IdProducto')]))
                         if producto:
-                            #print(producto.code)
                             template, = Template.search([('id', '=', producto.template)])
                             line = SaleLine()
-                            id_t = lin[col_line.index('tipo')].strip()+'-'+str(lin[col_line.index('seq')])+'-'+str(lin[col_line.index('Numero_Documento')])+'-'+str(lin[col_line.index('IdBodega')])
+                            seq = lin[col_line.index('seq')]
+                            id_bodega = lin[col_line.index('IdBodega')]
+                            id_t = str(sw)+'-'+tipo_doc+'-'+str(seq)+'-'+str(numero_doc)+'-'+str(id_bodega)
                             line.id_tecno = id_t
                             line.product = producto
                             if vent[coluns_doc.index('sw')] == 2:
                                 line.quantity = (abs(int(lin[col_line.index('Cantidad_Facturada')])))*-1
-                                venta.reference = tipo_doc+'-'+str(numero_doc)
+                                #Se indica a que documento hace referencia la devolucion
+                                venta.reference = vent[coluns_doc.index('Tipo_Docto_Base')].strip()+'-'+str(vent[coluns_doc.index('Numero_Docto_Base')])
                             else:
                                 line.quantity = abs(int(lin[col_line.index('Cantidad_Facturada')]))
-                                venta.reference = vent[coluns_doc.index('Tipo_Docto_Base')].strip()+'-'+str(vent[coluns_doc.index('Numero_Docto_Base')])
+                                venta.reference = tipo_doc+'-'+str(numero_doc)
                             line.unit_price = lin[col_line.index('Valor_Unitario')]
                             line.sale = venta
                             line.type = 'line'
@@ -139,21 +142,8 @@ class Sale(metaclass=PoolMeta):
                 #create_invoice.append(invoice)
             #Sale.save(create_sale)
 
-    #Esta función se encarga de traer todos los datos de una tabla dada de la bd TecnoCarnes
-    @classmethod
-    def get_data_db_tecno(cls, table): #TESTS
-        data = []
-        try:
-            Config = Pool().get('conector.configuration')
-            conexion = Config.conexion()
-            with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT TOP (5) * FROM dbo."+table+" WHERE sw = 1")
-                data = list(query.fetchall())
-        except Exception as e:
-            print("ERROR QUERY "+table+": ", e)
-        return data
 
-    #Metodo encargado de traer el tipo de documento de la bd TecnoCarnes
+    #Metodo encargado de traer el tipo de documento de la bd
     @classmethod
     def get_tipo_dcto(cls, id):
         data = []
@@ -167,21 +157,21 @@ class Sale(metaclass=PoolMeta):
             print("ERROR QUERY TblTipoDoctos: ", e)
         return data
 
-    #Esta función se encarga de traer todos los datos de una tabla dada de la bd TecnoCarnes
+    #Esta función se encarga de traer todos los datos de una tabla dada de la bd
     @classmethod
-    def get_line_where(cls, id, tipo):
+    def get_line_where(cls, sw, nro, tipo):
         data = []
         try:
             Config = Pool().get('conector.configuration')
             conexion = Config.conexion()
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT * FROM dbo.Documentos_Lin WHERE Numero_Documento = "+id+" AND tipo = "+tipo)
+                query = cursor.execute("SELECT * FROM dbo.Documentos_Lin WHERE sw = "+sw+" Numero_Documento = "+nro+" AND tipo = "+tipo)
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY Documentos_Lin: ", e)
         return data
 
-    #Función encargada de consultar las columnas pertenecientes a 'x' tabla de la bd de TecnoCarnes
+    #Función encargada de consultar las columnas pertenecientes a 'x' tabla de la bd
     @classmethod
     def get_columns_db_tecno(cls, table):
         columns = []
@@ -196,7 +186,7 @@ class Sale(metaclass=PoolMeta):
             print("ERROR QUERY "+table+": ", e)
         return columns
 
-    #Esta función se encarga de traer todos los datos de una tabla dada de acuerdo al rango de fecha dada de la bd TecnoCarnes
+    #Esta función se encarga de traer todos los datos de una tabla dada de acuerdo al rango de fecha dada de la bd
     @classmethod
     def get_data_where_tecno(cls, table, date):
         data = []
@@ -204,6 +194,7 @@ class Sale(metaclass=PoolMeta):
             Config = Pool().get('conector.configuration')
             conexion = Config.conexion()
             with conexion.cursor() as cursor:
+                #(sw = 1  ventas) (sw = 2 devoluciones)
                 query = cursor.execute("SELECT * FROM dbo."+table+" WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2)")
                 data = list(query.fetchall())
         except Exception as e:
@@ -217,7 +208,7 @@ class Sale(metaclass=PoolMeta):
         result = fecha.strftime('%Y-%d-%m %H:%M:%S')
         return result
 
-    #Función encargada de consultar si existe un producto dado de la bd TecnoCarnes
+    #Función encargada de consultar si existe un producto dado de la bd
     @classmethod
     def buscar_producto(cls, id_producto):
         Product = Pool().get('product.product')
@@ -228,7 +219,7 @@ class Sale(metaclass=PoolMeta):
         else:
             return producto
 
-    #Función encargada de traer los datos de la bd TecnoCarnes con una fecha dada.
+    #Función encargada de traer los datos de la bd con una fecha dada.
     @classmethod
     def last_update(cls):
         Actualizacion = Pool().get('conector.actualizacion')
