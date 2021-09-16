@@ -39,12 +39,13 @@ class Voucher(ModelSQL, ModelView):
             #pool = Pool()
             #Invoice = pool.get('account.invoice')
             for doc in documentos_db:
+                print(doc)
                 tipo = str(doc[columns_doc.index('tipo')].strip)
                 nro = str(doc[columns_doc.index('Numero_documento')])
                 print(tipo, nro)
                 recibos = cls.get_recibos(tipo, nro)
-                for rec in recibos:
-                    print(rec[columns_rec.index('tipo_aplica')], rec[columns_rec.index('numero_aplica')])
+                #for rec in recibos:
+                #    print(rec[columns_rec.index('tipo_aplica')], rec[columns_rec.index('numero_aplica')])
 
 
     #Función encargada de consultar las columnas pertenecientes a 'x' tabla de la bd de TecnoCarnes
@@ -70,7 +71,7 @@ class Voucher(ModelSQL, ModelView):
             Config = Pool().get('conector.configuration')
             conexion = Config.conexion()
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT TOP(20) * FROM dbo."+table+" WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND sw = 5")
+                query = cursor.execute("SELECT TOP(20) * FROM dbo."+table+" WHERE sw = 5 AND fecha_hora >= CAST('"+date+"' AS datetime)")
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY get_data_where_tecno: ", e)
