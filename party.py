@@ -39,7 +39,6 @@ class Party(ModelSQL, ModelView):
         terceros_tecno = cls.last_update()
         cls.create_actualizacion(False)
         if terceros_tecno:
-            """"""
             columnas_terceros = cls.get_columns_db_tecno('TblTerceros')
             columnas_contactos = cls.get_columns_db_tecno('Terceros_Contactos')
             columna_direcciones = cls.get_columns_db_tecno('Terceros_Dir')
@@ -50,29 +49,37 @@ class Party(ModelSQL, ModelView):
             es, = Lang.search([('code', '=', 'es_419')])
             Mcontact = pool.get('party.contact_mechanism')
             to_create = []
-
+            #Comenzamos a recorrer los terceros traidos por la consulta
             for ter in terceros_tecno:
-                exists = cls.find_party(ter[columnas_terceros.index('nit_cedula')].strip())
+                nit_cedula = ter[columnas_terceros.index('nit_cedula')].strip()
+                tipo_identificacion = cls.id_type(ter[columnas_terceros.index('tipo_identificacion')])
+                nombre = ter[columnas_terceros.index('nombre')].strip()
+                PrimerNombre = ter[columnas_terceros.index('PrimerNombre')].strip()
+                SegundoNombre = ter[columnas_terceros.index('SegundoNombre')].strip()
+                PrimerApellido = ter[columnas_terceros.index('PrimerApellido')].strip()
+                SegundoApellido = ter[columnas_terceros.index('SegundoApellido')].strip()
+                TipoPersona = cls.person_type(ter[columnas_terceros.index('TipoPersona')].strip())
+                ciiu = ter[columnas_terceros.index('IdActividadEconomica')]
+                TipoContribuyente = cls.tax_regime(ter[columnas_terceros.index('IdTipoContribuyente')])
+                exists = cls.find_party(nit_cedula)
                 #Ahora verificamos si el tercero existe en la bd de tryton
                 if exists:
                     ultimo_cambio = ter[columnas_terceros.index('Ultimo_Cambio_Registro')]
-                    #Ahora vamos a verificar si el cambio más reciente fue hecho en la bd TecnoCarnes para actualizarlo
+                    #Ahora vamos a verificar si el cambio más reciente fue hecho en la bd sqlserver para actualizarlo
                     if (ultimo_cambio and exists.write_date and ultimo_cambio > exists.write_date) or (ultimo_cambio and not exists.write_date and ultimo_cambio > exists.create_date):
-                        exists.type_document = cls.id_type(ter[columnas_terceros.index('tipo_identificacion')])
-                        exists.id_number = ter[columnas_terceros.index('nit_cedula')].strip()
-                        exists.name = ter[columnas_terceros.index('nombre')].strip()
-                        exists.first_name = ter[columnas_terceros.index('PrimerNombre')].strip()
-                        exists.second_name = ter[columnas_terceros.index('SegundoNombre')].strip()
-                        exists.first_family_name = ter[columnas_terceros.index('PrimerApellido')].strip()
-                        exists.second_family_name = ter[columnas_terceros.index('SegundoApellido')].strip()
-                        exists.type_person = cls.person_type(ter[columnas_terceros.index('TipoPersona')].strip())
+                        exists.type_document = tipo_identificacion
+                        exists.name = nombre
+                        exists.first_name = PrimerNombre
+                        exists.second_name = SegundoNombre
+                        exists.first_family_name = PrimerApellido
+                        exists.second_family_name = SegundoApellido
+                        exists.type_person = TipoPersona
                         if exists.type_person == 'persona_juridica':
                             exists.declarante = True
                         #Verificación e inserción codigo ciiu
-                        ciiu = ter[columnas_terceros.index('IdActividadEconomica')]
                         if ciiu and ciiu != 0:
                             exists.ciiu_code = ciiu
-                        exists.regime_tax = cls.tax_regime(ter[columnas_terceros.index('IdTipoContribuyente')])
+                        exists.regime_tax = TipoContribuyente
                         exists.lang = es
                         #Actualización de la dirección y metodos de contacto
                         cls.update_address(exists)
@@ -81,27 +88,24 @@ class Party(ModelSQL, ModelView):
                 else:
                     #Creando tercero junto con sus direcciones y metodos de contactos
                     tercero = Party()
-                    tercero.create_date = ter[columnas_terceros.index('fecha_creacion')]
-                    tercero.type_document = cls.id_type(ter[columnas_terceros.index('tipo_identificacion')])
-                    tercero.id_number = ter[columnas_terceros.index('nit_cedula')].strip()
-                    tercero.name = ter[columnas_terceros.index('nombre')].strip()
-                    tercero.first_name = ter[columnas_terceros.index('PrimerNombre')].strip()
-                    tercero.second_name = ter[columnas_terceros.index('SegundoNombre')].strip()
-                    tercero.first_family_name = ter[columnas_terceros.index('PrimerApellido')].strip()
-                    tercero.second_family_name = ter[columnas_terceros.index('SegundoApellido')].strip()
-                    tercero.write_date = ter[columnas_terceros.index('Ultimo_Cambio_Registro')]
+                    tercero.type_document = tipo_identificacion
+                    tercero.id_number = nit_cedula
+                    tercero.name = nombre
+                    tercero.first_name = PrimerNombre
+                    tercero.second_name = SegundoNombre
+                    tercero.first_family_name = PrimerApellido
+                    tercero.second_family_name = SegundoApellido
                     #Equivalencia tipo de persona y asignación True en declarante
-                    tercero.type_person = cls.person_type(ter[columnas_terceros.index('TipoPersona')].strip())
+                    tercero.type_person = TipoPersona
                     if tercero.type_person == 'persona_juridica':
                         tercero.declarante = True
                     #Verificación e inserción codigo ciiu
-                    ciiu = ter[columnas_terceros.index('IdActividadEconomica')]
                     if ciiu and ciiu != 0:
                         tercero.ciiu_code = ciiu
                     #Equivalencia regimen de impuestos
-                    tercero.regime_tax = cls.tax_regime(ter[columnas_terceros.index('IdTipoContribuyente')])
+                    tercero.regime_tax = TipoContribuyente
                     tercero.lang = es
-                    direcciones_tecno = cls.get_address_db_tecno(tercero.id_number)
+                    direcciones_tecno = cls.get_address_db_tecno(nit_cedula)
                     if direcciones_tecno:
                         for direc in direcciones_tecno:
                             if direc[columna_direcciones.index('codigo_direccion')] == 1:
@@ -113,10 +117,10 @@ class Party(ModelSQL, ModelView):
                             direccion.country = 50
                             direccion.name = direc[columna_direcciones.index('Barrio')].strip()
                             direccion.party = tercero
-                            direccion.party_name = tercero.name
+                            direccion.party_name = nombre
                             direccion.street = direc[columna_direcciones.index('direccion')].strip()
                             direccion.save()
-                    contactos_tecno = cls.get_contacts_db_tecno(tercero.id_number)
+                    contactos_tecno = cls.get_contacts_db_tecno(nit_cedula)
                     if contactos_tecno:
                         for cont in contactos_tecno:
                             #Creacion e inserccion de metodo de contacto phone
@@ -139,6 +143,7 @@ class Party(ModelSQL, ModelView):
                             contacto.save()
                     to_create.append(tercero)
             Party.save(to_create)
+
 
     #Función encargada de verificar, actualizar e insertar las direcciones pertenecientes a un tercero dado
     @classmethod
@@ -171,6 +176,7 @@ class Party(ModelSQL, ModelView):
                     address.street = add[columna_direcciones.index('direccion')].strip()
                     address.save()
 
+
     #Función encargada de verificar, actualizar e insertar los metodos de contacto pertenecientes a un tercero dado
     @classmethod
     def update_contact(cls, party):
@@ -184,18 +190,14 @@ class Party(ModelSQL, ModelView):
                 nombre = cont[columns_contact.index('Nombre')].strip()+' ('+cont[columns_contact.index('Cargo')].strip()+')'
                 contact1 = Contacts.search([('id_tecno', '=', id_tecno+'-1')])
                 contact2 = Contacts.search([('id_tecno', '=', id_tecno+'-2')])
-                #Luego de consultar si existen contactos en tryton, comenzamos a actualizarlas con la db TecnoCarnes
+                Lang = Pool().get('ir.lang')
+                es, = Lang.search([('code', '=', 'es_419')])
+                #Verificamos y creamos el metodo de contacto phone, en caso de ser necesario
                 if contact1:
                     contact1.value = cont[columns_contact.index('Telefono')].strip()
                     contact1.name = nombre
                     contact1.save()
-                elif contact2:
-                    contact2.value = cont[columns_contact.index('Email')].strip()
-                    contact2.name = nombre
-                    contact2.save()
                 else:
-                    Lang = Pool().get('ir.lang')
-                    es, = Lang.search([('code', '=', 'es_419')])
                     #Creacion e inserccion de metodo de contacto phone
                     contacto = Contacts()
                     contacto.id_tecno = id_tecno+'-1'
@@ -205,6 +207,12 @@ class Party(ModelSQL, ModelView):
                     contacto.language = es
                     contacto.party = party
                     contacto.save()
+                #Verificamos y creamos el metodo de contacto email, en caso de ser necesario
+                if contact2:
+                    contact2.value = cont[columns_contact.index('Email')].strip()
+                    contact2.name = nombre
+                    contact2.save()
+                else:
                     #Creacion e inserccion de metodo de contacto email
                     contacto = Contacts()
                     contacto.id_tecno = id_tecno+'-2'
@@ -214,6 +222,7 @@ class Party(ModelSQL, ModelView):
                     contacto.language = es
                     contacto.party = party
                     contacto.save()
+
 
     #Función encargada de retornar el tercero de acuerdo a su id_number
     @classmethod

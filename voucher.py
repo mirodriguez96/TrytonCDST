@@ -34,19 +34,31 @@ class Voucher(ModelSQL, ModelView):
         documentos_db = cls.last_update()
         cls.create_actualizacion(False)
         if documentos_db:
+            cls.update_paymode()
             columns_doc = cls.get_columns_db_tecno('Documentos')
             columns_rec = cls.get_columns_db_tecno('Documentos_Cruce')
-            #pool = Pool()
-            #Invoice = pool.get('account.invoice')
+            pool = Pool()
+            Voucher = pool.get('account.voucher')
+            Line = pool.get('account.voucher.line')
+            MoveLine = pool.get('account.move.line')
             for doc in documentos_db:
                 print(doc)
                 tipo = str(doc[columns_doc.index('tipo')].strip)
                 nro = str(doc[columns_doc.index('Numero_documento')])
                 print(tipo, nro)
                 recibos = cls.get_recibos(tipo, nro)
-                #for rec in recibos:
-                #    print(rec[columns_rec.index('tipo_aplica')], rec[columns_rec.index('numero_aplica')])
+                if recibos:
+                    voucher = Voucher()
+                    for rec in recibos:
+                        ref = str(rec[columns_rec.index('tipo_aplica')])+'-'+str(rec[columns_rec.index('numero_aplica')])
+                        print(rec[columns_rec.index('tipo_aplica')], rec[columns_rec.index('numero_aplica')])
+                        move_line = MoveLine.search([('reference', '=', ref)])
+                    voucher.line = move_line
 
+
+    @classmethod
+    def update_paymode(cls):
+        pass
 
     #Función encargada de consultar las columnas pertenecientes a 'x' tabla de la bd de TecnoCarnes
     @classmethod
@@ -125,3 +137,9 @@ class Voucher(ModelSQL, ModelView):
             actualizacion.name = 'RECIBOS'
             actualizacion.save()
 
+
+
+class VoucherPayMode(ModelSQL, ModelView):
+    'Voucher Pay Mode'
+    __name__ = 'account.voucher.paymode'
+    id_tecno = fields.Char('Id Tabla Sqlserver', required=False)
