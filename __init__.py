@@ -24,6 +24,7 @@ def register():
         configuration.Configuration,
         voucher.Cron,
         voucher.Voucher,
+        voucher.VoucherPayMode,
         #wiz.ActualizarVentas,
         module='conector', type_='model')
 

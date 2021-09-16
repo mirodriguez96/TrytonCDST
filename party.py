@@ -49,6 +49,8 @@ class Party(ModelSQL, ModelView):
             es, = Lang.search([('code', '=', 'es_419')])
             Mcontact = pool.get('party.contact_mechanism')
             to_create = []
+            create_address = []
+            create_contact = []
             #Comenzamos a recorrer los terceros traidos por la consulta
             for ter in terceros_tecno:
                 nit_cedula = ter[columnas_terceros.index('nit_cedula')].strip()
@@ -115,11 +117,14 @@ class Party(ModelSQL, ModelView):
                             direccion.id_tecno = direc[columna_direcciones.index('nit')].strip()+'-'+str(direc[columna_direcciones.index('codigo_direccion')])
                             direccion.city = direc[columna_direcciones.index('ciudad')].strip()
                             direccion.country = 50
-                            direccion.name = direc[columna_direcciones.index('Barrio')].strip()
+                            barrio = direc[columna_direcciones.index('Barrio')].strip()
+                            if barrio:
+                                direccion.name = barrio
                             direccion.party = tercero
                             direccion.party_name = nombre
                             direccion.street = direc[columna_direcciones.index('direccion')].strip()
-                            direccion.save()
+                            create_address.append(direccion)
+                            #direccion.save()
                     contactos_tecno = cls.get_contacts_db_tecno(nit_cedula)
                     if contactos_tecno:
                         for cont in contactos_tecno:
@@ -131,7 +136,8 @@ class Party(ModelSQL, ModelView):
                             contacto.name = cont[columnas_contactos.index('Nombre')].strip()+' ('+cont[columnas_contactos.index('Cargo')].strip()+')'
                             contacto.language = es
                             contacto.party = tercero
-                            contacto.save()
+                            create_contact.append(contacto)
+                            #contacto.save()
                             #Creacion e inserccion de metodo de contacto email
                             contacto = Mcontact()
                             contacto.id_tecno = str(cont[columnas_contactos.index('IdContacto')])+'-2'
@@ -140,9 +146,12 @@ class Party(ModelSQL, ModelView):
                             contacto.name = cont[columnas_contactos.index('Nombre')].strip()+' ('+cont[columnas_contactos.index('Cargo')].strip()+')'
                             contacto.language = es
                             contacto.party = tercero
-                            contacto.save()
+                            create_contact.append(contacto)
+                            #contacto.save()
                     to_create.append(tercero)
             Party.save(to_create)
+            Address.save(create_address)
+            Mcontact.save(create_contact)
 
 
     #Función encargada de verificar, actualizar e insertar las direcciones pertenecientes a un tercero dado
@@ -160,7 +169,9 @@ class Party(ModelSQL, ModelView):
                     if add[columna_direcciones.index('codigo_direccion')] == 1:
                         party.commercial_name = add[columna_direcciones.index('NombreSucursal')].strip()
                     address.city = add[columna_direcciones.index('ciudad')].strip()
-                    address.name = add[columna_direcciones.index('Barrio')].strip()
+                    barrio = add[columna_direcciones.index('Barrio')].strip()
+                    if barrio:
+                        address.name = barrio
                     address.street = add[columna_direcciones.index('direccion')].strip()
                     address.save()
                 else:
@@ -170,7 +181,9 @@ class Party(ModelSQL, ModelView):
                     address.id_tecno = id_tecno
                     address.city = add[columna_direcciones.index('ciudad')].strip()
                     address.country = 50
-                    address.name = add[columna_direcciones.index('Barrio')].strip()
+                    barrio = add[columna_direcciones.index('Barrio')].strip()
+                    if barrio:
+                        address.name = barrio
                     address.party = party
                     address.party_name = party.name
                     address.street = add[columna_direcciones.index('direccion')].strip()

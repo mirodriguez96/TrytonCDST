@@ -7,6 +7,7 @@ import datetime
 __all__ = [
     'Voucher',
     'Cron',
+    'VoucherPayMode',
     ]
 
 
@@ -35,8 +36,9 @@ class Voucher(ModelSQL, ModelView):
         cls.create_actualizacion(False)
         if documentos_db:
             cls.update_paymode()
-            columns_doc = cls.get_columns_db_tecno('Documentos')
-            columns_rec = cls.get_columns_db_tecno('Documentos_Cruce')
+            """
+            columns_doc = cls.get_columns_db('Documentos')
+            columns_rec = cls.get_columns_db('Documentos_Cruce')
             pool = Pool()
             Voucher = pool.get('account.voucher')
             Line = pool.get('account.voucher.line')
@@ -54,15 +56,37 @@ class Voucher(ModelSQL, ModelView):
                         print(rec[columns_rec.index('tipo_aplica')], rec[columns_rec.index('numero_aplica')])
                         move_line = MoveLine.search([('reference', '=', ref)])
                     voucher.line = move_line
+            """
 
 
     @classmethod
     def update_paymode(cls):
-        pass
+        columns_fp = cls.get_columns_db('TblFormaPago')
+        forma_pago = cls.get_formapago()
+        PayMode = Pool().get('account.voucher.paymode')
+        for fp in forma_pago:
+            idt = str(fp[columns_fp.index('IdFormaPago')])
+            paym = PayMode.search([('id_tecno', '=', idt)])
+            if paym:
+                paym[0].name = fp[columns_fp('FormaPago')]
+            else:
+                paym = PayMode()
+                paym.id_tecno = idt
+                paym.name = fp[columns_fp('FormaPago')]
+                paym.payment_type = 'cash'
+                paym.kind = 'both'
+                """
+                paym.sequence_payment
+                paym.sequence_multipayment
+                paym.sequence_receipt
+                paym.account
+                """
+            paym.save()
+
 
     #Función encargada de consultar las columnas pertenecientes a 'x' tabla de la bd de TecnoCarnes
     @classmethod
-    def get_columns_db_tecno(cls, table):
+    def get_columns_db(cls, table):
         columns = []
         try:
             Config = Pool().get('conector.configuration')
@@ -74,6 +98,19 @@ class Voucher(ModelSQL, ModelView):
         except Exception as e:
             print("ERROR QUERY "+table+": ", e)
         return columns
+
+    @classmethod
+    def get_formapago(cls):
+        data = []
+        try:
+            Config = Pool().get('conector.configuration')
+            conexion = Config.conexion()
+            with conexion.cursor() as cursor:
+                query = cursor.execute("SELECT * FROM dbo.TblFormaPago")
+                data = list(query.fetchall())
+        except Exception as e:
+            print("ERROR QUERY get_formapago: ", e)
+        return data
 
     #Esta función se encarga de traer todos los datos de una tabla dada de acuerdo al rango de fecha dada de la bd TecnoCarnes
     @classmethod
