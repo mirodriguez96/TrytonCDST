@@ -260,10 +260,8 @@ class Sale(metaclass=PoolMeta):
         try:
             sale, = Sale.search([('id_tecno', '=', id)])
         except ValueError:
-            print('No Existe')
             return False
         else:
-            print('Existe')
             return True
 
 

@@ -31,28 +31,20 @@ class Voucher(ModelSQL, ModelView):
     @classmethod
     def import_voucher(cls):
         print("--------------RUN VOUCHER--------------")
-        recibos_tecno = cls.last_update()
+        documentos_db = cls.last_update()
         cls.create_actualizacion(False)
-        if recibos_tecno:
+        if documentos_db:
             columns_doc = cls.get_columns_db_tecno('Documentos')
-            pool = Pool()
-            Invoice = pool.get('account.invoice')
-            #cont = 1410
-            for recibo in recibos_tecno:
-                tipo = str(recibo[columns_doc.index('Tipo_Docto_Base')].strip)
-                nro = str(recibo[columns_doc.index('Numero_Docto_Base')])
-                idf = nro+'-'+tipo
-                #idf = '146-'+str(cont)
-                #cont += 1
-                print(idf)
-                try:
-                    invoice = Invoice.search([('number','=',idf)])
-                    print(invoice)
-                    for inv in invoice:
-                        Invoice.pay_with_voucher([inv])
-                except Exception:
-                    raise UserError("Error, al generar el recibo: ", Exception)
-        pass
+            columns_rec = cls.get_columns_db_tecno('Documentos_Cruce')
+            #pool = Pool()
+            #Invoice = pool.get('account.invoice')
+            for doc in documentos_db:
+                tipo = str(doc[columns_doc.index('tipo')].strip)
+                nro = str(doc[columns_doc.index('Numero_documento')])
+                recibos = cls.get_recibos(tipo, nro)
+                for rec in recibos:
+                    print(rec[columns_rec.index('tipo_aplica')], rec[columns_rec.index('numero_aplica')])
+
 
     #Función encargada de consultar las columnas pertenecientes a 'x' tabla de la bd de TecnoCarnes
     @classmethod
@@ -81,6 +73,20 @@ class Voucher(ModelSQL, ModelView):
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY get_data_where_tecno: ", e)
+        return data
+
+    #Metodo encargado de obtener los recibos pagados de un documento dado
+    @classmethod
+    def get_recibos(cls, tipo, nro):
+        data = []
+        try:
+            Config = Pool().get('conector.configuration')
+            conexion = Config.conexion()
+            with conexion.cursor() as cursor:
+                query = cursor.execute("SELECT * FROM dbo.Documentos_Cruce WHERE sw = 5 AND tipo = "+tipo+" AND numero ="+nro)
+                data = list(query.fetchall())
+        except Exception as e:
+            print("ERROR QUERY get_recibos: ", e)
         return data
 
     #Función encargada de traer los datos de la bd TecnoCarnes con una fecha dada.
