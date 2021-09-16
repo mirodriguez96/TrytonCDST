@@ -243,7 +243,8 @@ class Party(ModelSQL, ModelView):
         Party = Pool().get('party.party')
         try:
             party, = Party.search([('id_number', '=', id)])
-        except ValueError:
+        except Exception as e:
+            print(e)
             return False
         else:
             return party
