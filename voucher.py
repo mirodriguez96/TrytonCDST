@@ -41,6 +41,7 @@ class Voucher(ModelSQL, ModelView):
             for doc in documentos_db:
                 tipo = str(doc[columns_doc.index('tipo')].strip)
                 nro = str(doc[columns_doc.index('Numero_documento')])
+                print(tipo, nro)
                 recibos = cls.get_recibos(tipo, nro)
                 for rec in recibos:
                     print(rec[columns_rec.index('tipo_aplica')], rec[columns_rec.index('numero_aplica')])
@@ -83,7 +84,7 @@ class Voucher(ModelSQL, ModelView):
             Config = Pool().get('conector.configuration')
             conexion = Config.conexion()
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT * FROM dbo.Documentos_Cruce WHERE sw = 5 AND tipo = "+tipo+" AND numero ="+nro+"")
+                query = cursor.execute("SELECT * FROM dbo.Documentos_Cruce WHERE sw = 5 AND tipo = "+tipo+" AND numero ="+nro)
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY get_recibos: ", e)
