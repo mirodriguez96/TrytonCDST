@@ -33,12 +33,6 @@ class Sale(metaclass=PoolMeta):
     @classmethod
     def import_data_sale(cls):
         print("--------------RUN VENTAS--------------")
-        Sale = Pool().get('sale.sale')
-        venta = Sale.search([('state', '=', 'confirmed')])
-        for sale in venta:
-            Sale.process([sale])
-            sale.save()
-        """
         ventas_tecno = cls.last_update()
         cls.create_actualizacion(False)
         if ventas_tecno:
@@ -125,9 +119,9 @@ class Sale(metaclass=PoolMeta):
                             raise UserError("Error, no existe el producto con la siguiente id: ", str(lin[col_line.index('IdProducto')]))
                     #Procesamos la venta para generar la factura y procedemos a rellenar los campos de la factura
                     venta.state = 'confirmed'
-                    venta.process([venta])
-                    if sw == 2:
-                        venta.process([venta])
+                    Sale.process([venta])
+                    if venta.state == 'confirmed':
+                        Sale.process([venta])
                     invoice, = venta.invoices
                     venta.save()
                     invoice.operation_type = 10
@@ -147,7 +141,6 @@ class Sale(metaclass=PoolMeta):
                     invoice.save()
                 #create_invoice.append(invoice)
             #Sale.save(create_sale)
-            """
 
 
     #Metodo encargado de traer el tipo de documento de la bd
