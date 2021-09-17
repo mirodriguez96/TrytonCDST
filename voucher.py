@@ -78,7 +78,7 @@ class Voucher(ModelSQL, ModelView):
                         line.on_change_move_line()
                         line.save()
                     #voucher.lines = line
-                    voucher.save()
+                    Voucher.process([voucher])
 
 
     @classmethod
