@@ -159,7 +159,8 @@ class Voucher(ModelSQL, ModelView):
             conexion = Config.conexion()
             with conexion.cursor() as cursor:
                 query = cursor.execute("SELECT TOP(20) * FROM dbo."+table+" WHERE sw = 5 AND fecha_hora >= CAST('"+date+"' AS datetime)")
-                data = list(query.fetchall())
+                for q in query.fetchall():
+                    data.append(q[0])
         except Exception as e:
             print("ERROR QUERY get_data: ", e)
         return data
