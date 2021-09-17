@@ -48,6 +48,7 @@ class Voucher(ModelSQL, ModelView):
             for doc in documentos_db:
                 print(doc)
                 nit_cedula = doc[columns_doc.index('nit_Cedula')].strip
+                print(nit_cedula)
                 tercero, = Party.search([('id_number', '=', nit_cedula)])
                 tipo = doc[columns_doc.index('tipo')].strip
                 nro = str(doc[columns_doc.index('Numero_documento')])
