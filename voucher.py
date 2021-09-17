@@ -47,7 +47,8 @@ class Voucher(ModelSQL, ModelView):
             PayMode = Pool().get('account.voucher.paymode')
             print(documentos_db)
             for doc in documentos_db:
-                print(doc[0])
+                doc = list(doc)
+                print(doc)
                 nit_cedula = doc[columns_doc.index('nit_Cedula')].strip
                 print(nit_cedula)
                 tercero, = Party.search([('id_number', '=', nit_cedula)])
@@ -158,9 +159,8 @@ class Voucher(ModelSQL, ModelView):
             Config = Pool().get('conector.configuration')
             conexion = Config.conexion()
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT TOP(20) * FROM dbo."+table+" WHERE sw = 5 AND fecha_hora >= CAST('"+date+"' AS datetime)")
-                for q in query.fetchall():
-                    data.append(q[0])
+                query = cursor.execute("SELECT TOP(10) * FROM dbo."+table+" WHERE sw = 5 AND fecha_hora >= CAST('"+date+"' AS datetime)")
+                data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY get_data: ", e)
         return data
