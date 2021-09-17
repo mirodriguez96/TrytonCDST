@@ -45,16 +45,12 @@ class Voucher(ModelSQL, ModelView):
             MoveLine = pool.get('account.move.line')
             Party = pool.get('party.party')
             PayMode = Pool().get('account.voucher.paymode')
-            print(documentos_db)
             for doc in documentos_db:
-                #doc = list(doc)
-                print(doc)
                 nit_cedula = doc[columns_doc.index('nit_Cedula')].strip()
-                print(nit_cedula)
+                print('nit_cedula:', nit_cedula)
                 tercero, = Party.search([('id_number', '=', nit_cedula)])
                 tipo = doc[columns_doc.index('tipo')].strip()
                 nro = str(doc[columns_doc.index('Numero_documento')])
-                print(tipo, nro)
                 recibos = cls.get_recibos(tipo, nro)
                 if recibos:
                     voucher = Voucher()
@@ -75,8 +71,7 @@ class Voucher(ModelSQL, ModelView):
                         line = Line()
                         line.voucher = voucher
                         ref = str(rec[columns_rec.index('tipo_aplica')])+'-'+str(rec[columns_rec.index('numero_aplica')])
-                        print(rec[columns_rec.index('tipo_aplica')], rec[columns_rec.index('numero_aplica')])
-                        move_line, = MoveLine.search([('reference', '=', ref), ('party', '=', tercero.id)])
+                        move_line, = MoveLine.search([('reference', '=', ref), ('party', '=', tercero)])
                         line.move_line = move_line
                         line.on_change_move_line()
                         line.save()
