@@ -92,8 +92,9 @@ class Voucher(ModelSQL, ModelView):
             idt = str(fp[columns_fp.index('IdFormaPago')])
             paym = PayMode.search([('id_tecno', '=', idt)])
             if paym:
-                paym[0].name = fp[columns_fp.index('FormaPago')]
-                paym.save()
+                for pm in paym:
+                    pm.name = fp[columns_fp.index('FormaPago')]
+                    paym.save()
             else:
                 journal, = Journal.search([('code', '=', 'REV')])
                 paym = PayMode()
