@@ -149,6 +149,7 @@ class Party(ModelSQL, ModelView):
                             create_contact.append(contacto)
                             #contacto.save()
                     to_create.append(tercero)
+                    #tercero.save()
             Party.save(to_create)
             Address.save(create_address)
             Mcontact.save(create_contact)
@@ -243,10 +244,8 @@ class Party(ModelSQL, ModelView):
         Party = Pool().get('party.party')
         party = Party.search([('id_number', '=', id)])
         if party:
-            print('Encontro', id)
             return party[0]
         else:
-            print('NO Se Encontro', id)
             return False
 
     #Función encargada de realizar la equivalencia entre los tipo de documentos de la db

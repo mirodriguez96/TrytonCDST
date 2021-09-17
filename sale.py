@@ -33,6 +33,12 @@ class Sale(metaclass=PoolMeta):
     @classmethod
     def import_data_sale(cls):
         print("--------------RUN VENTAS--------------")
+        Sale = Pool().get('sale.sale')
+        venta = Sale.search([('state', '=', 'confirmed')])
+        for sale in venta:
+            Sale.process([sale])
+            sale.save()
+        """
         ventas_tecno = cls.last_update()
         cls.create_actualizacion(False)
         if ventas_tecno:
@@ -141,6 +147,7 @@ class Sale(metaclass=PoolMeta):
                     invoice.save()
                 #create_invoice.append(invoice)
             #Sale.save(create_sale)
+            """
 
 
     #Metodo encargado de traer el tipo de documento de la bd
