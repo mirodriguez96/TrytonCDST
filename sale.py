@@ -89,7 +89,7 @@ class Sale(metaclass=PoolMeta):
                             id_t = str(sw)+'-'+tipo_doc+'-'+str(seq)+'-'+str(numero_doc)+'-'+str(id_bodega)
                             line.id_tecno = id_t
                             line.product = producto
-                            if vent[coluns_doc.index('sw')] == 2:
+                            if sw == 2:
                                 line.quantity = (abs(int(lin[col_line.index('Cantidad_Facturada')])))*-1
                                 #Se indica a que documento hace referencia la devolucion
                                 venta.reference = vent[coluns_doc.index('Tipo_Docto_Base')].strip()+'-'+str(vent[coluns_doc.index('Numero_Docto_Base')])
@@ -120,6 +120,8 @@ class Sale(metaclass=PoolMeta):
                     #Procesamos la venta para generar la factura y procedemos a rellenar los campos de la factura
                     venta.state = 'confirmed'
                     venta.process([venta])
+                    if sw == 2:
+                        venta.process([venta])
                     invoice, = venta.invoices
                     venta.save()
                     invoice.operation_type = 10

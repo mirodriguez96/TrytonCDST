@@ -241,16 +241,14 @@ class Party(ModelSQL, ModelView):
     @classmethod
     def find_party(cls, id):
         Party = Pool().get('party.party')
-        try:
-            party, = Party.search([('id_number', '=', id)])
-        except Exception as e:
-            print(e)
-            return False
+        party = Party.search([('id_number', '=', id)])
+        if party:
+            return party[0]
         else:
-            return party
+            return False
 
-    #Función encargada de realizar la equivalencia entre los tipo de documentos de la db TecnoCarnes
-    # y los tipo de documentos del modulo account_col de presik
+    #Función encargada de realizar la equivalencia entre los tipo de documentos de la db
+    #y los tipos de documentos del modulo account_col de presik
     @classmethod
     def id_type(cls, type):
         #Equivalencia tipo de identificacion
