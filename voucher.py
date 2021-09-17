@@ -93,6 +93,7 @@ class Voucher(ModelSQL, ModelView):
             paym = PayMode.search([('id_tecno', '=', idt)])
             if paym:
                 paym[0].name = fp[columns_fp.index('FormaPago')]
+                paym.save()
             else:
                 journal, = Journal.search([('code', '=', 'REV')])
                 paym = PayMode()
@@ -115,7 +116,7 @@ class Voucher(ModelSQL, ModelView):
                 paym.account = 48 #Revisar
                 #Codigo clasificacion tipo de pago
                 paym.payment_means_code = 10 #Revisar
-            paym.save()
+                paym.save()
 
 
     #Función encargada de consultar las columnas pertenecientes a 'x' tabla de la bd de TecnoCarnes
