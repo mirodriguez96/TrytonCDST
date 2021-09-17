@@ -89,6 +89,7 @@ class Voucher(ModelSQL, ModelView):
         forma_pago = cls.get_formapago()
         PayMode = Pool().get('account.voucher.paymode')
         Journal = Pool().get('account.journal')
+        Seq = Pool().get('ir.sequence')
         for fp in forma_pago:
             idt = str(fp[columns_fp.index('IdFormaPago')])
             paym = PayMode.search([('id_tecno', '=', idt)])
@@ -102,13 +103,17 @@ class Voucher(ModelSQL, ModelView):
                 paym.payment_type = 'cash'
                 paym.kind = 'both'
                 paym.journal = journal
-                Seq = Pool().get('ir.sequence')
+                """
                 sequence_payment, = Seq.search([('name', '=', 'Voucher Payment')])
                 sequence_multipayment, = Seq.search([('name', '=', 'Voucher Multipayment')])
                 sequence_receipt, = Seq.search([('name', '=', 'Voucher Receipt')])
                 paym.sequence_payment = sequence_payment
                 paym.sequence_multipayment = sequence_multipayment
                 paym.sequence_receipt = sequence_receipt
+                """
+                paym.sequence_payment = 27
+                paym.sequence_multipayment = 28
+                paym.sequence_receipt = 26
                 paym.account = 48 #Revisar
             paym.save()
 
