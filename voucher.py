@@ -45,8 +45,9 @@ class Voucher(ModelSQL, ModelView):
             MoveLine = pool.get('account.move.line')
             Party = pool.get('party.party')
             PayMode = Pool().get('account.voucher.paymode')
+            print(documentos_db)
             for doc in documentos_db:
-                print(doc)
+                print(doc[0])
                 nit_cedula = doc[columns_doc.index('nit_Cedula')].strip
                 print(nit_cedula)
                 tercero, = Party.search([('id_number', '=', nit_cedula)])
@@ -94,7 +95,6 @@ class Voucher(ModelSQL, ModelView):
             paym = PayMode.search([('id_tecno', '=', idt)])
             if paym:
                 for pm in paym:
-                    print(pm)
                     pm.name = fp[columns_fp.index('FormaPago')]
                     PayMode.save(paym)
             else:
@@ -152,7 +152,7 @@ class Voucher(ModelSQL, ModelView):
 
     #Esta función se encarga de traer todos los datos de una tabla dada de acuerdo al rango de fecha dada de la bd TecnoCarnes
     @classmethod
-    def get_data_where_tecno(cls, table, date):
+    def get_data(cls, table, date):
         data = []
         try:
             Config = Pool().get('conector.configuration')
@@ -161,7 +161,7 @@ class Voucher(ModelSQL, ModelView):
                 query = cursor.execute("SELECT TOP(20) * FROM dbo."+table+" WHERE sw = 5 AND fecha_hora >= CAST('"+date+"' AS datetime)")
                 data = list(query.fetchall())
         except Exception as e:
-            print("ERROR QUERY get_data_where_tecno: ", e)
+            print("ERROR QUERY get_data: ", e)
         return data
 
     #Metodo encargado de obtener los recibos pagados de un documento dado
@@ -208,7 +208,7 @@ class Voucher(ModelSQL, ModelView):
             fecha = datetime.date(2021,1,1)
             cls.create_actualizacion(True)
         fecha = fecha.strftime('%Y-%d-%m %H:%M:%S')
-        data = cls.get_data_where_tecno('Documentos', fecha)
+        data = cls.get_data('Documentos', fecha)
         return data
 
     #Crea o actualiza un registro de la tabla actualización en caso de ser necesario
