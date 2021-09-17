@@ -36,7 +36,6 @@ class Voucher(ModelSQL, ModelView):
         cls.create_actualizacion(False)
         if documentos_db:
             cls.update_paymode()
-            """
             columns_doc = cls.get_columns_db('Documentos')
             columns_rec = cls.get_columns_db('Documentos_Cruce')
             columns_tip = cls.get_columns_db('Documentos_Che')
@@ -62,10 +61,10 @@ class Voucher(ModelSQL, ModelView):
                     paym, = PayMode.search([('id_tecno', '=', idt)])
                     voucher.payment_mode = paym
                     voucher.voucher_type = 'receipt'
-                    fecha = str(doc[coluns_doc.index('fecha_hora')]).split()[0].split('-')
+                    fecha = str(doc[columns_doc.index('fecha_hora')]).split()[0].split('-')
                     fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
                     voucher.date = fecha_date
-                    nota = doc[coluns_doc.index('notas')].replace('\n', ' ').replace('\r', '')
+                    nota = doc[columns_doc.index('notas')].replace('\n', ' ').replace('\r', '')
                     if nota:
                         voucher.description = nota
                     voucher.reference = tipo+'-'+nro
@@ -80,7 +79,6 @@ class Voucher(ModelSQL, ModelView):
                         line.save()
                     #voucher.lines = line
                     voucher.save()
-            """
 
 
     @classmethod
@@ -111,11 +109,12 @@ class Voucher(ModelSQL, ModelView):
                 paym.sequence_multipayment = sequence_multipayment
                 paym.sequence_receipt = sequence_receipt
                 """
-                paym.sequence_payment = 27
-                paym.sequence_multipayment = 28
-                paym.sequence_receipt = 26
+                paym.sequence_payment = 27 #Revisar
+                paym.sequence_multipayment = 28 #Revisar
+                paym.sequence_receipt = 26 #Revisar
                 paym.account = 48 #Revisar
-                paym.payment_means_code = 10
+                #Codigo clasificacion tipo de pago
+                paym.payment_means_code = 10 #Revisar
             paym.save()
 
 
