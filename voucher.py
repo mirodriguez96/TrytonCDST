@@ -115,6 +115,7 @@ class Voucher(ModelSQL, ModelView):
                 paym.sequence_multipayment = 28
                 paym.sequence_receipt = 26
                 paym.account = 48 #Revisar
+                paym.payment_means_code = 10
             paym.save()
 
 
