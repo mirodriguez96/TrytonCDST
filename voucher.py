@@ -88,23 +88,28 @@ class Voucher(ModelSQL, ModelView):
         columns_fp = cls.get_columns_db('TblFormaPago')
         forma_pago = cls.get_formapago()
         PayMode = Pool().get('account.voucher.paymode')
+        Journal = Pool().get('account.journal')
         for fp in forma_pago:
             idt = str(fp[columns_fp.index('IdFormaPago')])
             paym = PayMode.search([('id_tecno', '=', idt)])
             if paym:
                 paym[0].name = fp[columns_fp.index('FormaPago')]
             else:
+                journal, = Journal.search([('code', '=', 'REV')])
                 paym = PayMode()
                 paym.id_tecno = idt
                 paym.name = fp[columns_fp.index('FormaPago')]
                 paym.payment_type = 'cash'
                 paym.kind = 'both'
-                """
-                paym.sequence_payment
-                paym.sequence_multipayment
-                paym.sequence_receipt
-                paym.account
-                """
+                paym.journal = journal
+                Seq = Pool().get('ir.sequence')
+                sequence_payment, = Seq.search([('name', '=', 'Voucher Payment')])
+                sequence_multipayment, = Seq.search([('name', '=', 'Voucher Multipayment')])
+                sequence_receipt, = Seq.search([('name', '=', 'Voucher Receipt')])
+                paym.sequence_payment = sequence_payment
+                paym.sequence_multipayment = sequence_multipayment
+                paym.sequence_receipt = sequence_receipt
+                paym.account = 48 #Revisar
             paym.save()
 
 
