@@ -243,8 +243,10 @@ class Party(ModelSQL, ModelView):
         Party = Pool().get('party.party')
         party = Party.search([('id_number', '=', id)])
         if party:
+            print('Encontro', id)
             return party[0]
         else:
+            print('NO Se Encontro', id)
             return False
 
     #Función encargada de realizar la equivalencia entre los tipo de documentos de la db
@@ -346,7 +348,7 @@ class Party(ModelSQL, ModelView):
             Config = Pool().get('conector.configuration')
             conexion = Config.conexion()
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT * FROM dbo."+table+" WHERE fecha_creacion >= CAST('"+date+"' AS datetime) OR Ultimo_Cambio_Registro >= CAST('"+date+"' AS datetime)")
+                query = cursor.execute("SELECT TOP(200) * FROM dbo."+table+" WHERE fecha_creacion >= CAST('"+date+"' AS datetime) OR Ultimo_Cambio_Registro >= CAST('"+date+"' AS datetime)")
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY get_data_where_tecno: ", e)
