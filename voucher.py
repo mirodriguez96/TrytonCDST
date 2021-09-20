@@ -96,7 +96,7 @@ class Voucher(ModelSQL, ModelView):
             paym = PayMode.search([('id_tecno', '=', idt)])
             if paym:
                 for pm in paym:
-                    sequence_payment, = Seq.search([('id', '=', 27)])
+                    sequence_payment, = Seq.search([('name', '=', 'Voucher Payment')])
                     pm.sequence_payment = sequence_payment #Revisar
                     pm.name = fp[columns_fp.index('FormaPago')]
                     PayMode.save(paym)
