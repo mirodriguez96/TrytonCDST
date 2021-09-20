@@ -67,6 +67,7 @@ class Voucher(ModelSQL, ModelView):
                     if nota:
                         voucher.description = nota
                     voucher.reference = tipo+'-'+nro
+                    voucher.account = 294
                     for rec in recibos:
                         line = Line()
                         line.voucher = voucher
@@ -75,7 +76,6 @@ class Voucher(ModelSQL, ModelView):
                         line.move_line = move_line
                         line.on_change_move_line()
                         line.save()
-                    #voucher.lines = line
                     Voucher.process([voucher])
 
 

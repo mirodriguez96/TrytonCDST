@@ -209,6 +209,7 @@ class Party(ModelSQL, ModelView):
                 es, = Lang.search([('code', '=', 'es_419')])
                 #Verificamos y creamos el metodo de contacto phone, en caso de ser necesario
                 if contact1:
+                    contact1 = contact1[0]
                     contact1.value = cont[columns_contact.index('Telefono')].strip()
                     contact1.name = nombre
                     contact1.save()
@@ -224,6 +225,7 @@ class Party(ModelSQL, ModelView):
                     contacto.save()
                 #Verificamos y creamos el metodo de contacto email, en caso de ser necesario
                 if contact2:
+                    contact2 = contact2[0]
                     contact2.value = cont[columns_contact.index('Email')].strip()
                     contact2.name = nombre
                     contact2.save()
