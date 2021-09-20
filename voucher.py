@@ -92,15 +92,12 @@ class Voucher(ModelSQL, ModelView):
         forma_pago = cls.get_formapago()
         PayMode = Pool().get('account.voucher.paymode')
         Journal = Pool().get('account.journal')
-        Seq = Pool().get('ir.sequence')
+        Account = Pool().get('account.account')
         for fp in forma_pago:
             idt = str(fp[columns_fp.index('IdFormaPago')])
             paym = PayMode.search([('id_tecno', '=', idt)])
             if paym:
                 for pm in paym:
-                    
-                    #sequence_payment, = Seq.search([('name', '=', 'Voucher Payment')])
-                    pm.sequence_payment = sequence_payment[0] #Revisar
                     pm.name = fp[columns_fp.index('FormaPago')]
                     PayMode.save(paym)
             else:
@@ -117,9 +114,11 @@ class Voucher(ModelSQL, ModelView):
                 paym.sequence_payment = sequence_payment[0]
                 paym.sequence_multipayment = sequence_multipayment[0]
                 paym.sequence_receipt = sequence_receipt[0]
-                paym.account = 294 #Revisar
-                #Codigo clasificacion tipo de pago
-                paym.payment_means_code = 10 #Revisar
+                #Se busca la cuenta de caja general para asignarle al paymode
+                account = Account.search([('code', '=', '110505')])
+                paym.account = account
+                #Codigo clasificacion tipo de pago ('10' => 'Efectivo')
+                paym.payment_means_code = 10
                 paym.save()
 
 
