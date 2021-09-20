@@ -2,6 +2,7 @@ from trytond.model import ModelView, ModelSQL, fields
 from trytond.pool import Pool, PoolMeta
 from trytond.exceptions import UserError
 from trytond.transaction import Transaction
+from decimal import Decimal
 
 import datetime
 
@@ -38,7 +39,7 @@ class Voucher(ModelSQL, ModelView):
         cls.create_actualizacion(False)
         if documentos_db:
             cls.update_paymode()
-            """
+            
             columns_doc = cls.get_columns_db('Documentos')
             columns_rec = cls.get_columns_db('Documentos_Cruce')
             columns_tip = cls.get_columns_db('Documentos_Che')
@@ -72,18 +73,23 @@ class Voucher(ModelSQL, ModelView):
                     if nota:
                         voucher.description = nota
                     voucher.reference = tipo+'-'+nro
-                    #voucher.account = 294
                     for rec in recibos:
                         line = Line()
                         line.voucher = voucher
+                        line.amount = Decimal(rec[columns_rec.index('valor')])
                         ref = str(rec[columns_rec.index('tipo_aplica')])+'-'+str(rec[columns_rec.index('numero_aplica')])
-                        move_line, = MoveLine.search([('reference', '=', ref), ('party', '=', tercero.id)])
+                        try:
+                            move_line, = MoveLine.search([('reference', '=', ref), ('party', '=', tercero.id)])
+                        except ValueError:
+                            print(ref)
+                            print(ValueError)
+                        line.reference = ref
                         line.move_line = move_line
                         line.on_change_move_line()
                         line.save()
-                    voucher.on_change_lines()
+                    Voucher.on_change_lines(voucher)
                     Voucher.process([voucher])
-            """
+            
 
 
     @classmethod
@@ -158,7 +164,7 @@ class Voucher(ModelSQL, ModelView):
             Config = Pool().get('conector.configuration')
             conexion = Config.conexion()
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT TOP(3) * FROM dbo."+table+" WHERE sw = 5 AND fecha_hora >= CAST('"+date+"' AS datetime)")
+                query = cursor.execute("SELECT TOP(20) * FROM dbo."+table+" WHERE sw = 5 AND fecha_hora >= CAST('"+date+"' AS datetime)")
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY get_data: ", e)
