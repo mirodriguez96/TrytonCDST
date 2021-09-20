@@ -75,7 +75,7 @@ class Voucher(ModelSQL, ModelView):
                         line.voucher = voucher
                         ref = str(rec[columns_rec.index('tipo_aplica')])+'-'+str(rec[columns_rec.index('numero_aplica')])
                         move_line, = MoveLine.search([('reference', '=', ref), ('party', '=', tercero.id)])
-                        line.move_line = line.get_move_line(move_line.id)
+                        line.move_line = move_line
                         line.on_change_move_line()
                         line.save()
                     voucher.on_change_lines()
@@ -94,6 +94,8 @@ class Voucher(ModelSQL, ModelView):
             paym = PayMode.search([('id_tecno', '=', idt)])
             if paym:
                 for pm in paym:
+                    sequence_payment, = Seq.search([('name', '=', 'Voucher Payment')])
+                    pm.sequence_payment = sequence_payment #Revisar
                     pm.name = fp[columns_fp.index('FormaPago')]
                     PayMode.save(paym)
             else:
@@ -104,15 +106,16 @@ class Voucher(ModelSQL, ModelView):
                 paym.payment_type = 'cash'
                 paym.kind = 'both'
                 paym.journal = journal
-                """
+                
                 sequence_payment, = Seq.search([('name', '=', 'Voucher Payment')])
+                """
                 sequence_multipayment, = Seq.search([('name', '=', 'Voucher Multipayment')])
                 sequence_receipt, = Seq.search([('name', '=', 'Voucher Receipt')])
                 paym.sequence_payment = sequence_payment
                 paym.sequence_multipayment = sequence_multipayment
                 paym.sequence_receipt = sequence_receipt
                 """
-                paym.sequence_payment = 27 #Revisar
+                paym.sequence_payment = sequence_payment #Revisar
                 paym.sequence_multipayment = 28 #Revisar
                 paym.sequence_receipt = 26 #Revisar
                 paym.account = 294 #Revisar
