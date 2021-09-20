@@ -36,6 +36,7 @@ class Voucher(ModelSQL, ModelView):
         cls.create_actualizacion(False)
         if documentos_db:
             cls.update_paymode()
+            """
             columns_doc = cls.get_columns_db('Documentos')
             columns_rec = cls.get_columns_db('Documentos_Cruce')
             columns_tip = cls.get_columns_db('Documentos_Che')
@@ -80,6 +81,7 @@ class Voucher(ModelSQL, ModelView):
                         line.save()
                     voucher.on_change_lines()
                     Voucher.process([voucher])
+            """
 
 
     @classmethod
