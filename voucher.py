@@ -50,45 +50,50 @@ class Voucher(ModelSQL, ModelView):
             Party = pool.get('party.party')
             PayMode = Pool().get('account.voucher.paymode')
             for doc in documentos_db:
-                nit_cedula = doc[columns_doc.index('nit_Cedula')].strip()
-                print('nit_cedula:', nit_cedula)
-                tercero, = Party.search([('id_number', '=', nit_cedula)])
+                sw = str(doc[columns_doc.index('sw')])
                 tipo = doc[columns_doc.index('tipo')].strip()
                 nro = str(doc[columns_doc.index('Numero_documento')])
-                recibos = cls.get_recibos(tipo, nro)
-                if recibos:
-                    voucher = Voucher()
-                    voucher.id_tecno = '5-'+tipo+nro
-                    voucher.party = tercero
-                    tipo_pago, = cls.get_tipo_pago(tipo, nro)
-                    idt = tipo_pago[columns_tip.index('forma_pago')]
-                    paym, = PayMode.search([('id_tecno', '=', idt)])
-                    voucher.payment_mode = paym
-                    voucher.on_change_payment_mode()
-                    voucher.voucher_type = 'receipt'
-                    fecha = str(doc[columns_doc.index('fecha_hora')]).split()[0].split('-')
-                    fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
-                    voucher.date = fecha_date
-                    nota = doc[columns_doc.index('notas')].replace('\n', ' ').replace('\r', '')
-                    if nota:
-                        voucher.description = nota
-                    voucher.reference = tipo+'-'+nro
-                    for rec in recibos:
-                        line = Line()
-                        line.voucher = voucher
-                        line.amount = Decimal(rec[columns_rec.index('valor')])
-                        ref = str(rec[columns_rec.index('tipo_aplica')])+'-'+str(rec[columns_rec.index('numero_aplica')])
-                        try:
-                            move_line, = MoveLine.search([('reference', '=', ref), ('party', '=', tercero.id)])
-                        except ValueError:
-                            print(ref)
-                            print(ValueError)
-                        line.reference = ref
-                        line.move_line = move_line
-                        line.on_change_move_line()
-                        line.save()
-                    Voucher.on_change_lines(voucher)
-                    Voucher.process([voucher])
+                existe = cls.find_voucher(sw+'-'+tipo+'-'+nro)
+                if existe:
+                    print('YA EXISTE')
+                else:
+                    nit_cedula = doc[columns_doc.index('nit_Cedula')].strip()
+                    print('nit_cedula:', nit_cedula)
+                    tercero, = Party.search([('id_number', '=', nit_cedula)])
+                    recibos = cls.get_recibos(tipo, nro)
+                    if recibos:
+                        voucher = Voucher()
+                        voucher.id_tecno = sw+'-'+tipo+'-'+nro
+                        voucher.party = tercero
+                        tipo_pago, = cls.get_tipo_pago(tipo, nro)
+                        idt = tipo_pago[columns_tip.index('forma_pago')]
+                        paym, = PayMode.search([('id_tecno', '=', idt)])
+                        voucher.payment_mode = paym
+                        voucher.on_change_payment_mode()
+                        voucher.voucher_type = 'receipt'
+                        fecha = str(doc[columns_doc.index('fecha_hora')]).split()[0].split('-')
+                        fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
+                        voucher.date = fecha_date
+                        nota = doc[columns_doc.index('notas')].replace('\n', ' ').replace('\r', '')
+                        if nota:
+                            voucher.description = nota
+                        voucher.reference = tipo+'-'+nro
+                        for rec in recibos:
+                            line = Line()
+                            line.voucher = voucher
+                            line.amount = Decimal(rec[columns_rec.index('valor')])
+                            ref = str(rec[columns_rec.index('tipo_aplica')])+'-'+str(rec[columns_rec.index('numero_aplica')])
+                            try:
+                                move_line, = MoveLine.search([('reference', '=', ref), ('party', '=', tercero.id)])
+                            except ValueError:
+                                print(ref)
+                                print(ValueError)
+                            line.reference = ref
+                            line.move_line = move_line
+                            line.on_change_move_line()
+                            line.save()
+                        Voucher.on_change_lines(voucher)
+                        Voucher.process([voucher])
             
 
 
@@ -127,6 +132,16 @@ class Voucher(ModelSQL, ModelView):
                 paym.payment_means_code = 10
                 paym.save()
 
+
+    #Metodo encargado de consultar y verificar si existe un voucher con la id de la BD
+    @classmethod
+    def find_voucher(cls, idt):
+        Voucher = Pool().get('account.voucher')
+        voucher = Voucher.search([('id_tecno', '=', idt)])
+        if voucher:
+            return voucher[0]
+        else:
+            return False
 
     #Función encargada de consultar las columnas pertenecientes a 'x' tabla de la bd de TecnoCarnes
     @classmethod
@@ -232,7 +247,7 @@ class Voucher(ModelSQL, ModelView):
             actualizacion.name = 'RECIBOS'
             actualizacion.save()
 
-#Función encargada de consultar la dirección de un tercero dado
+#Función encargada de consultar la secuencia de un voucher dado
     @classmethod
     def find_seq(cls, name):
         Sequence = Pool().get('ir.sequence')
