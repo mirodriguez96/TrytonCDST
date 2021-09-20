@@ -58,7 +58,6 @@ class Voucher(ModelSQL, ModelView):
                     print('YA EXISTE')
                 else:
                     nit_cedula = doc[columns_doc.index('nit_Cedula')].strip()
-                    print('nit_cedula:', nit_cedula)
                     tercero, = Party.search([('id_number', '=', nit_cedula)])
                     recibos = cls.get_recibos(tipo, nro)
                     if recibos:
@@ -79,15 +78,16 @@ class Voucher(ModelSQL, ModelView):
                             voucher.description = nota
                         voucher.reference = tipo+'-'+nro
                         for rec in recibos:
-                            line = Line()
-                            line.voucher = voucher
-                            line.amount = Decimal(rec[columns_rec.index('valor')])
                             ref = str(rec[columns_rec.index('tipo_aplica')])+'-'+str(rec[columns_rec.index('numero_aplica')])
                             try:
                                 move_line, = MoveLine.search([('reference', '=', ref), ('party', '=', tercero.id)])
                             except ValueError:
                                 print(ref)
                                 print(ValueError)
+                                break
+                            line = Line()
+                            line.voucher = voucher
+                            line.amount = Decimal(rec[columns_rec.index('valor')])
                             line.reference = ref
                             line.move_line = move_line
                             line.on_change_move_line()
@@ -95,7 +95,6 @@ class Voucher(ModelSQL, ModelView):
                         voucher.on_change_lines()
                         Voucher.process([voucher])
                         voucher.save()
-            
 
 
     @classmethod
