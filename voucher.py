@@ -71,7 +71,7 @@ class Voucher(ModelSQL, ModelView):
                         line = Line()
                         line.voucher = voucher
                         ref = str(rec[columns_rec.index('tipo_aplica')])+'-'+str(rec[columns_rec.index('numero_aplica')])
-                        move_line, = MoveLine.search([('reference', '=', ref), ('party', '=', tercero)])
+                        move_line, = MoveLine.search([('reference', '=', ref), ('party', '=', tercero.id)])
                         line.move_line = move_line
                         line.on_change_move_line()
                         line.save()
@@ -112,7 +112,7 @@ class Voucher(ModelSQL, ModelView):
                 paym.sequence_payment = 27 #Revisar
                 paym.sequence_multipayment = 28 #Revisar
                 paym.sequence_receipt = 26 #Revisar
-                paym.account = 48 #Revisar
+                paym.account = 294 #Revisar
                 #Codigo clasificacion tipo de pago
                 paym.payment_means_code = 10 #Revisar
                 paym.save()

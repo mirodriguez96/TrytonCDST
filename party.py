@@ -115,7 +115,7 @@ class Party(ModelSQL, ModelView):
                             #Creacion e inserccion de direccion
                             direccion = Address()
                             direccion.id_tecno = direc[columna_direcciones.index('nit')].strip()+'-'+str(direc[columna_direcciones.index('codigo_direccion')])
-                            direccion.city = direc[columna_direcciones.index('ciudad')].strip()
+                            #direccion.city = direc[columna_direcciones.index('ciudad')].strip()
                             direccion.country = 50
                             barrio = direc[columna_direcciones.index('Barrio')].strip()
                             if barrio:
