@@ -98,7 +98,7 @@ class Voucher(ModelSQL, ModelView):
             paym = PayMode.search([('id_tecno', '=', idt)])
             if paym:
                 for pm in paym:
-                    sequence_payment = cls.find_seq('Voucher Payment')
+                    
                     #sequence_payment, = Seq.search([('name', '=', 'Voucher Payment')])
                     pm.sequence_payment = sequence_payment[0] #Revisar
                     pm.name = fp[columns_fp.index('FormaPago')]
@@ -111,18 +111,12 @@ class Voucher(ModelSQL, ModelView):
                 paym.payment_type = 'cash'
                 paym.kind = 'both'
                 paym.journal = journal
-                
-                sequence_payment, = Seq.search([('name', '=', 'Voucher Payment')])
-                """
-                sequence_multipayment, = Seq.search([('name', '=', 'Voucher Multipayment')])
-                sequence_receipt, = Seq.search([('name', '=', 'Voucher Receipt')])
-                paym.sequence_payment = sequence_payment
-                paym.sequence_multipayment = sequence_multipayment
-                paym.sequence_receipt = sequence_receipt
-                """
-                paym.sequence_payment = sequence_payment #Revisar
-                paym.sequence_multipayment = 28 #Revisar
-                paym.sequence_receipt = 26 #Revisar
+                sequence_payment = cls.find_seq('Voucher Payment')
+                sequence_multipayment = cls.find_seq('Voucher Multipayment')
+                sequence_receipt = cls.find_seq('Voucher Receipt')
+                paym.sequence_payment = sequence_payment[0]
+                paym.sequence_multipayment = sequence_multipayment[0]
+                paym.sequence_receipt = sequence_receipt[0]
                 paym.account = 294 #Revisar
                 #Codigo clasificacion tipo de pago
                 paym.payment_means_code = 10 #Revisar
