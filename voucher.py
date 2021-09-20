@@ -59,6 +59,7 @@ class Voucher(ModelSQL, ModelView):
                     idt = tipo_pago[columns_tip.index('forma_pago')]
                     paym, = PayMode.search([('id_tecno', '=', idt)])
                     voucher.payment_mode = paym
+                    voucher.on_change_payment_mode()
                     voucher.voucher_type = 'receipt'
                     fecha = str(doc[columns_doc.index('fecha_hora')]).split()[0].split('-')
                     fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
@@ -67,7 +68,7 @@ class Voucher(ModelSQL, ModelView):
                     if nota:
                         voucher.description = nota
                     voucher.reference = tipo+'-'+nro
-                    voucher.account = 294
+                    #voucher.account = 294
                     for rec in recibos:
                         line = Line()
                         line.voucher = voucher
