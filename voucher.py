@@ -39,7 +39,6 @@ class Voucher(ModelSQL, ModelView):
         cls.create_actualizacion(False)
         if documentos_db:
             cls.update_paymode()
-            
             columns_doc = cls.get_columns_db('Documentos')
             columns_rec = cls.get_columns_db('Documentos_Cruce')
             columns_tip = cls.get_columns_db('Documentos_Che')
@@ -48,7 +47,7 @@ class Voucher(ModelSQL, ModelView):
             Line = pool.get('account.voucher.line')
             MoveLine = pool.get('account.move.line')
             Party = pool.get('party.party')
-            PayMode = Pool().get('account.voucher.paymode')
+            PayMode = pool.get('account.voucher.paymode')
             for doc in documentos_db:
                 sw = str(doc[columns_doc.index('sw')])
                 tipo = doc[columns_doc.index('tipo')].strip()
@@ -79,19 +78,18 @@ class Voucher(ModelSQL, ModelView):
                         voucher.reference = tipo+'-'+nro
                         for rec in recibos:
                             ref = str(rec[columns_rec.index('tipo_aplica')])+'-'+str(rec[columns_rec.index('numero_aplica')])
-                            try:
-                                move_line, = MoveLine.search([('reference', '=', ref), ('party', '=', tercero.id)])
-                            except ValueError:
+                            move_line = MoveLine.search([('reference', '=', ref), ('party', '=', tercero.id)])
+                            if move_line:
+                                line = Line()
+                                line.voucher = voucher
+                                line.amount = Decimal(rec[columns_rec.index('valor')])
+                                line.reference = ref
+                                line.move_line = move_line[0]
+                                line.on_change_move_line()
+                                line.save()
+                            else:
                                 print(ref)
                                 print(ValueError)
-                                break
-                            line = Line()
-                            line.voucher = voucher
-                            line.amount = Decimal(rec[columns_rec.index('valor')])
-                            line.reference = ref
-                            line.move_line = move_line
-                            line.on_change_move_line()
-                            line.save()
                         voucher.on_change_lines()
                         Voucher.process([voucher])
                         voucher.save()
