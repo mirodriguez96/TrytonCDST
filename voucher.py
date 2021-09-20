@@ -1,6 +1,8 @@
 from trytond.model import ModelView, ModelSQL, fields
 from trytond.pool import Pool, PoolMeta
 from trytond.exceptions import UserError
+from trytond.transaction import Transaction
+
 import datetime
 
 
@@ -96,6 +98,8 @@ class Voucher(ModelSQL, ModelView):
             paym = PayMode.search([('id_tecno', '=', idt)])
             if paym:
                 for pm in paym:
+                    se = cls.find_seq()
+                    print(se)
                     sequence_payment, = Seq.search([('name', '=', 'Voucher Payment')])
                     pm.sequence_payment = sequence_payment #Revisar
                     pm.name = fp[columns_fp.index('FormaPago')]
@@ -230,6 +234,15 @@ class Voucher(ModelSQL, ModelView):
             actualizacion.name = 'RECIBOS'
             actualizacion.save()
 
+#Función encargada de consultar la dirección de un tercero dado
+    @classmethod
+    def find_seq(cls):
+        Sequence = Pool().get('ir.sequence')
+        seq = Sequence.__table__()
+        cursor = Transaction().connection.cursor()
+        cursor.execute(*seq.select(where=(seq.name == 'Voucher Payment')))
+        result = cursor.fetchall()
+        return result
 
 class VoucherPayMode(ModelSQL, ModelView):
     'Voucher Pay Mode'
