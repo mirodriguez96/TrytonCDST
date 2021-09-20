@@ -75,7 +75,7 @@ class Voucher(ModelSQL, ModelView):
                         line.voucher = voucher
                         ref = str(rec[columns_rec.index('tipo_aplica')])+'-'+str(rec[columns_rec.index('numero_aplica')])
                         move_line, = MoveLine.search([('reference', '=', ref), ('party', '=', tercero.id)])
-                        line.move_line = move_line
+                        line.move_line = line.get_move_line(move_line.id)
                         line.on_change_move_line()
                         line.save()
                     voucher.on_change_lines()
