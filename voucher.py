@@ -92,8 +92,9 @@ class Voucher(ModelSQL, ModelView):
                             line.move_line = move_line
                             line.on_change_move_line()
                             line.save()
-                        Voucher.on_change_lines(voucher)
+                        voucher.on_change_lines()
                         Voucher.process([voucher])
+                        voucher.save()
             
 
 
@@ -179,7 +180,7 @@ class Voucher(ModelSQL, ModelView):
             Config = Pool().get('conector.configuration')
             conexion = Config.conexion()
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT TOP(20) * FROM dbo."+table+" WHERE sw = 5 AND fecha_hora >= CAST('"+date+"' AS datetime)")
+                query = cursor.execute("SELECT TOP(40) * FROM dbo."+table+" WHERE sw = 5 AND fecha_hora >= CAST('"+date+"' AS datetime)")
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY get_data: ", e)
