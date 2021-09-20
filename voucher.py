@@ -116,7 +116,7 @@ class Voucher(ModelSQL, ModelView):
                 paym.sequence_receipt = sequence_receipt[0]
                 #Se busca la cuenta de caja general para asignarle al paymode
                 account = Account.search([('code', '=', '110505')])
-                paym.account = account
+                paym.account = account.id
                 #Codigo clasificacion tipo de pago ('10' => 'Efectivo')
                 paym.payment_means_code = 10
                 paym.save()
