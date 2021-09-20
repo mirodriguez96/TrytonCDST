@@ -82,14 +82,14 @@ class Voucher(ModelSQL, ModelView):
                             if move_line:
                                 line = Line()
                                 line.voucher = voucher
+                                line.amount_original = move_line[0].debit
                                 line.amount = Decimal(rec[columns_rec.index('valor')])
                                 line.reference = ref
                                 line.move_line = move_line[0]
                                 line.on_change_move_line()
                                 line.save()
                             else:
-                                print(ref)
-                                print(ValueError)
+                                print('NO ENCONTRO: ', ref)
                         voucher.on_change_lines()
                         #Voucher.process([voucher])
                         voucher.save()
@@ -107,13 +107,13 @@ class Voucher(ModelSQL, ModelView):
             paym = PayMode.search([('id_tecno', '=', idt)])
             if paym:
                 for pm in paym:
-                    pm.name = fp[columns_fp.index('FormaPago')]
+                    pm.name = fp[columns_fp.index('FormaPago')].strip()
                     PayMode.save(paym)
             else:
                 journal, = Journal.search([('code', '=', 'REV')])
                 paym = PayMode()
                 paym.id_tecno = idt
-                paym.name = fp[columns_fp.index('FormaPago')]
+                paym.name = fp[columns_fp.index('FormaPago')].strip()
                 paym.payment_type = 'cash'
                 paym.kind = 'both'
                 paym.journal = journal
