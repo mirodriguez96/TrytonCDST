@@ -83,10 +83,10 @@ class Voucher(ModelSQL, ModelView):
                                 line = Line()
                                 line.voucher = voucher
                                 line.amount_original = move_line[0].debit
-                                line.amount = Decimal(rec[columns_rec.index('valor')])
                                 line.reference = ref
                                 line.move_line = move_line[0]
                                 line.on_change_move_line()
+                                line.amount = Decimal(rec[columns_rec.index('valor')])
                                 line.save()
                             else:
                                 print('NO ENCONTRO: ', ref)
