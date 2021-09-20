@@ -173,7 +173,7 @@ class Party(ModelSQL, ModelView):
                     address.city = add[columna_direcciones.index('ciudad')].strip()
                     barrio = add[columna_direcciones.index('Barrio')].strip()
                     if barrio:
-                        address[0].name = barrio
+                        address.name = barrio
                     address.street = add[columna_direcciones.index('direccion')].strip()
                     address.save()
                 else:
