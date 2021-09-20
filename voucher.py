@@ -54,6 +54,7 @@ class Voucher(ModelSQL, ModelView):
                 recibos = cls.get_recibos(tipo, nro)
                 if recibos:
                     voucher = Voucher()
+                    voucher.id_tecno = '5-'+tipo+nro
                     voucher.party = tercero
                     tipo_pago, = cls.get_tipo_pago(tipo, nro)
                     idt = tipo_pago[columns_tip.index('forma_pago')]
@@ -155,7 +156,7 @@ class Voucher(ModelSQL, ModelView):
             Config = Pool().get('conector.configuration')
             conexion = Config.conexion()
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT TOP(10) * FROM dbo."+table+" WHERE sw = 5 AND fecha_hora >= CAST('"+date+"' AS datetime)")
+                query = cursor.execute("SELECT TOP(4) * FROM dbo."+table+" WHERE sw = 5 AND fecha_hora >= CAST('"+date+"' AS datetime)")
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY get_data: ", e)
