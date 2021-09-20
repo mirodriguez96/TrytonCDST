@@ -98,10 +98,9 @@ class Voucher(ModelSQL, ModelView):
             paym = PayMode.search([('id_tecno', '=', idt)])
             if paym:
                 for pm in paym:
-                    se = cls.find_seq()
-                    print(se)
-                    sequence_payment, = Seq.search([('name', '=', 'Voucher Payment')])
-                    pm.sequence_payment = sequence_payment #Revisar
+                    sequence_payment = cls.find_seq('Voucher Payment')
+                    #sequence_payment, = Seq.search([('name', '=', 'Voucher Payment')])
+                    pm.sequence_payment = sequence_payment[0] #Revisar
                     pm.name = fp[columns_fp.index('FormaPago')]
                     PayMode.save(paym)
             else:
@@ -236,13 +235,13 @@ class Voucher(ModelSQL, ModelView):
 
 #Función encargada de consultar la dirección de un tercero dado
     @classmethod
-    def find_seq(cls):
+    def find_seq(cls, name):
         Sequence = Pool().get('ir.sequence')
         seq = Sequence.__table__()
         cursor = Transaction().connection.cursor()
-        cursor.execute(*seq.select(where=(seq.name == 'Voucher Payment')))
+        cursor.execute(*seq.select(where=(seq.name == name)))
         result = cursor.fetchall()
-        return result
+        return result[0]
 
 class VoucherPayMode(ModelSQL, ModelView):
     'Voucher Pay Mode'
