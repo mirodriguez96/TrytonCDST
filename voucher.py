@@ -91,7 +91,7 @@ class Voucher(ModelSQL, ModelView):
                                 print(ref)
                                 print(ValueError)
                         voucher.on_change_lines()
-                        Voucher.process([voucher])
+                        #Voucher.process([voucher])
                         voucher.save()
 
 
