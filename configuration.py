@@ -1,6 +1,7 @@
 from trytond.model import ModelSQL, ModelView, fields
 from trytond.pool import Pool
 from trytond.exceptions import UserError
+from trytond.bus import notify
 
 try:
     import pyodbc
@@ -22,7 +23,7 @@ class Configuration(ModelSQL, ModelView):
     user = fields.Char('User', required=True, help="Enter the user of the database without leaving spaces")
     password = fields.Char('Password', required=True, help="Enter the password of the database without leaving spaces")
 
-    @classmethod 
+    @classmethod
     def __setup__(cls):
         super(Configuration, cls).__setup__()
         cls._buttons.update({
@@ -37,6 +38,7 @@ class Configuration(ModelSQL, ModelView):
             try:
                 conexion = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER='+str(record.server)+';DATABASE='+str(record.db)+';UID='+str(record.user)+';PWD='+str(record.password))
                 print("Conexion sqlserver exitosa !")
+                notify('Conexion sqlserver exitosa !', priority=3)
             except Exception as e:
                 print('Error sql server: ', e)
                 raise UserError('Error al conectarse a la base de datos (SQL Server): ', str(e))
