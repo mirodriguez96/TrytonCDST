@@ -37,7 +37,7 @@ class Configuration(ModelSQL, ModelView):
         for record in records:
             try:
                 conexion = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER='+str(record.server)+';DATABASE='+str(record.db)+';UID='+str(record.user)+';PWD='+str(record.password))
-                print("Conexion sqlserver exitosa !")
+                #print("Conexion sqlserver exitosa !")
                 notify('Conexion sqlserver exitosa !', priority=3)
             except Exception as e:
                 print('Error sql server: ', e)
