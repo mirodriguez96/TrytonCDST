@@ -53,9 +53,7 @@ class Voucher(ModelSQL, ModelView):
                 tipo = doc[columns_doc.index('tipo')].strip()
                 nro = str(doc[columns_doc.index('Numero_documento')])
                 existe = cls.find_voucher(sw+'-'+tipo+'-'+nro)
-                if existe:
-                    print('YA EXISTE')
-                else:
+                if not existe:
                     nit_cedula = doc[columns_doc.index('nit_Cedula')].strip()
                     tercero, = Party.search([('id_number', '=', nit_cedula)])
                     recibos = cls.get_recibos(tipo, nro)

@@ -1,8 +1,8 @@
 import datetime
 from trytond.model import ModelSQL, ModelView, fields
 from trytond.pool import Pool, PoolMeta
-from trytond.transaction import Transaction
-#from trytond.exceptions import UserError
+#from trytond.transaction import Transaction
+from trytond.exceptions import UserError
 
 
 __all__ = [
@@ -373,7 +373,8 @@ class Party(ModelSQL, ModelView):
                 query = cursor.execute("SELECT * FROM dbo.Terceros_Dir WHERE nit = '"+id+"'")
                 address = list(query.fetchall())
         except Exception as e:
-            print("ERROR QUERY ADDRESS: ", e)
+            print("ERROR QUERY (get_address_db_tecno): ", e)
+            raise UserError(f"Error Query Terceros_Dir: {e}")
         return address
 
     #Función encargada de consultar los metodos de contactos pertenecientes a un tercero en la bd TecnoCarnes
@@ -387,7 +388,8 @@ class Party(ModelSQL, ModelView):
                 query = cursor.execute("SELECT * FROM dbo.Terceros_Contactos WHERE Nit_Cedula = '"+id+"'")
                 contacts = list(query.fetchall())
         except Exception as e:
-            print("ERROR QUERY CONTACTS: ", e)
+            print("ERROR QUERY (get_contacts_db_tecno): ", e)
+            raise UserError(f"Error Query Terceros_Contactos: {e}")
         return contacts
 
     #Función encargada de traer los datos de la bd TecnoCarnes con una fecha dada.
