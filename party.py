@@ -3,7 +3,6 @@ from trytond.model import ModelSQL, ModelView, fields
 from trytond.pool import Pool, PoolMeta
 from trytond.transaction import Transaction
 #from trytond.exceptions import UserError
-#from conexion import conexion
 
 
 __all__ = [
@@ -37,7 +36,7 @@ class Party(ModelSQL, ModelView):
     def update_parties(cls):
         print("---------------RUN TERCEROS---------------")
         terceros_tecno = cls.last_update()
-        cls.create_actualizacion(False)
+        cls.create_or_update()
         if terceros_tecno:
             columnas_terceros = cls.get_columns_db_tecno('TblTerceros')
             columnas_contactos = cls.get_columns_db_tecno('Terceros_Contactos')
@@ -90,6 +89,7 @@ class Party(ModelSQL, ModelView):
                 else:
                     #Creando tercero junto con sus direcciones y metodos de contactos
                     tercero = Party()
+                    print('Tercero a crear:', nit_cedula)
                     tercero.type_document = tipo_identificacion
                     tercero.id_number = nit_cedula
                     tercero.name = nombre
@@ -247,6 +247,7 @@ class Party(ModelSQL, ModelView):
         Party = Pool().get('party.party')
         party = Party.search([('id_number', '=', id)])
         if party:
+            print('Tercero existente:', id)
             return party[0]
         else:
             return False
@@ -294,24 +295,24 @@ class Party(ModelSQL, ModelView):
             return None
 
     #Función encargada de consultar la dirección de un tercero dado
-    @classmethod
-    def find_address(cls, party):
-        Address = Pool().get('party.address')
-        address = Address.__table__()
-        cursor = Transaction().connection.cursor()
-        cursor.execute(*address.select(where=(address.party == party.id)))
-        result = cursor.fetchall()
-        return result
+    #@classmethod
+    #def find_address(cls, party):
+    #    Address = Pool().get('party.address')
+    #    address = Address.__table__()
+    #    cursor = Transaction().connection.cursor()
+    #    cursor.execute(*address.select(where=(address.party == party.id)))
+    #    result = cursor.fetchall()
+    #    return result
 
     #Función encargada de consultar el metodo de contacto de un tercero dado
-    @classmethod
-    def find_contact_mechanism(cls, party):
-        Contact = Pool().get('party.contact_mechanism')
-        contact = Contact.__table__()
-        cursor = Transaction().connection.cursor()
-        cursor.execute(*contact.select(where=(contact.party == party.id)))
-        result = cursor.fetchall()
-        return result
+    #@classmethod
+    #def find_contact_mechanism(cls, party):
+    #    Contact = Pool().get('party.contact_mechanism')
+    #    contact = Contact.__table__()
+    #    cursor = Transaction().connection.cursor()
+    #    cursor.execute(*contact.select(where=(contact.party == party.id)))
+    #    result = cursor.fetchall()
+    #    return result
 
     #Función encargada de consultar las columnas pertenecientes a 'x' tabla de la bd de TecnoCarnes
     @classmethod
@@ -405,19 +406,19 @@ class Party(ModelSQL, ModelView):
 
     #Crea o actualiza un registro de la tabla actualización en caso de ser necesario
     @classmethod
-    def create_actualizacion(cls, create):
+    def create_or_update(cls):
         Actualizacion = Pool().get('conector.actualizacion')
-        if create:
-            #Se crea un registro con la actualización realizada
-            actualizar = Actualizacion()
-            actualizar.name = 'TERCEROS'
-            actualizar.save()
-        else:
-            #Se busca un registro con la actualización realizada
+        actualizacion = Actualizacion.search([('name', '=','TERCEROS')])
+        if actualizacion:
+            #Se busca un registro con la actualización
             actualizacion, = Actualizacion.search([('name', '=','TERCEROS')])
             actualizacion.name = 'TERCEROS'
             actualizacion.save()
-
+        else:
+            #Se crea un registro con la actualización
+            actualizar = Actualizacion()
+            actualizar.name = 'TERCEROS'
+            actualizar.save()
 
 #Herencia del party.address e insercción del campo id_tecno
 class PartyAddress(ModelSQL, ModelView):
