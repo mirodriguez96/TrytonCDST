@@ -246,7 +246,7 @@ class Party(ModelSQL, ModelView):
     def find_party(cls, id):
         Party = Pool().get('party.party')
         try:
-            party, = Party.search([('id_number', '=', id)])
+            party, = Party.search([('id_number', '=', f'{id}')])
             return party
         except Exception as e:
             print(e)
