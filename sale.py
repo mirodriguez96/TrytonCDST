@@ -100,12 +100,21 @@ class Sale(metaclass=PoolMeta):
                             line.sale = venta
                             line.type = 'line'
                             line.unit = template.default_uom
+                            line.on_change_product(line)
                             #Agregar impuestos a la venta
-                            taxc = CustomerTax.search([('category', '=', template.account_category)])
-                            if taxc:
+                            #taxc = CustomerTax.search([('category', '=', template.account_category)])
+                            #if taxc:
+                            #    tax = Taxes()
+                            #    tax.line = line
+                            #    tax.tax = taxc[0].tax
+                            #    line.save()
+                            #    tax.save()
+                            #Aplicamos una misma retención para todas las ventas
+                            retencion, = Taxes.serach([('name', '=', 'RET. RENTA 0,4%')])
+                            if lin[col_line.index('Porcentaje_ReteFuente')] > 0:
                                 tax = Taxes()
                                 tax.line = line
-                                tax.tax = taxc[0].tax
+                                tax.tax = retencion
                                 line.save()
                                 tax.save()
                             #Verificamos si hay descuento para la linea de producto y se agrega su respectivo descuento
@@ -195,7 +204,7 @@ class Sale(metaclass=PoolMeta):
             conexion = Config.conexion()
             with conexion.cursor() as cursor:
                 #(sw = 1  ventas) (sw = 2 devoluciones)
-                query = cursor.execute("SELECT * FROM dbo."+table+" WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2)")
+                query = cursor.execute("SELECT TOP(100) * FROM dbo."+table+" WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2)")
                 data = list(query.fetchall())
         except Exception as e:
             raise UserError('ERROR QUERY get_data_where_tecno: ', str(e))
