@@ -36,7 +36,7 @@ class Voucher(ModelSQL, ModelView):
     def import_voucher(cls):
         print("--------------RUN VOUCHER--------------")
         documentos_db = cls.last_update()
-        cls.create_actualizacion(False)
+        cls.create_or_update()
         if documentos_db:
             cls.update_paymode()
             columns_doc = cls.get_columns_db('Documentos')
@@ -232,18 +232,19 @@ class Voucher(ModelSQL, ModelView):
 
     #Crea o actualiza un registro de la tabla actualización en caso de ser necesario
     @classmethod
-    def create_actualizacion(cls, create):
+    def create_or_update(cls):
         Actualizacion = Pool().get('conector.actualizacion')
-        if create:
-            #Se crea un registro con la actualización realizada
-            actualizar = Actualizacion()
-            actualizar.name = 'RECIBOS'
-            actualizar.save()
-        else:
-            #Se busca un registro con la actualización realizada
+        actualizacion = Actualizacion.search([('name', '=','RECIBOS')])
+        if actualizacion:
+            #Se busca un registro con la actualización
             actualizacion, = Actualizacion.search([('name', '=','RECIBOS')])
             actualizacion.name = 'RECIBOS'
             actualizacion.save()
+        else:
+            #Se crea un registro con la actualización
+            actualizar = Actualizacion()
+            actualizar.name = 'RECIBOS'
+            actualizar.save()
 
 #Función encargada de consultar la secuencia de un voucher dado
     @classmethod

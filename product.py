@@ -35,7 +35,7 @@ class Product(ModelSQL, ModelView):
     def update_products(cls):
         print("---------------RUN PRODUCTOS---------------")
         productos_tecno = cls.last_update()
-        cls.create_actualizacion(False)
+        cls.create_or_update()
         col_pro = cls.get_columns_db_tecno('TblProducto')
         col_gproducto = cls.get_columns_db_tecno('TblGrupoProducto')
         grupos_producto = cls.get_data_db_tecno('TblGrupoProducto')
@@ -254,25 +254,25 @@ class Product(ModelSQL, ModelView):
                 fecha = (ultima_actualizacion[0].create_date - datetime.timedelta(hours=5))
         else:
             fecha = datetime.date(1,1,1)
-            cls.create_actualizacion(True)
         fecha = fecha.strftime('%Y-%d-%m %H:%M:%S')
         data = cls.get_data_where_tecno('TblProducto', fecha)
         return data
 
     #Crea o actualiza un registro de la tabla actualización en caso de ser necesario
     @classmethod
-    def create_actualizacion(cls, create):
+    def create_or_update(cls, create):
         Actualizacion = Pool().get('conector.actualizacion')
-        if create:
-            #Se crea un registro con la actualización realizada
-            actualizar = Actualizacion()
-            actualizar.name = 'PRODUCTOS'
-            actualizar.save()
-        else:
-            #Se busca un registro con la actualización realizada
+        actualizacion = Actualizacion.search([('name', '=','PRODUCTOS')])
+        if actualizacion:
+            #Se busca un registro con la actualización
             actualizacion, = Actualizacion.search([('name', '=','PRODUCTOS')])
             actualizacion.name = 'PRODUCTOS'
             actualizacion.save()
+        else:
+            #Se crea un registro con la actualización
+            actualizar = Actualizacion()
+            actualizar.name = 'PRODUCTOS'
+            actualizar.save()
 
     #Selecciona el impuesto equivalente en TecnoCarnes
     @classmethod

@@ -245,12 +245,17 @@ class Party(ModelSQL, ModelView):
     @classmethod
     def find_party(cls, id):
         Party = Pool().get('party.party')
-        party = Party.search([('id_number', '=', id)])
-        if party:
-            print('Tercero existente:', id)
-            return party[0]
-        else:
+        try:
+            party, = Party.search([('id_number', '=', id)])
+            return party
+        except Exception as e:
+            print(e)
             return False
+        #if party:
+        #    print('Tercero existente:', id)
+        #    return party[0]
+        #else:
+        #    return False
 
     #Función encargada de realizar la equivalencia entre los tipo de documentos de la db
     #y los tipos de documentos del modulo account_col de presik

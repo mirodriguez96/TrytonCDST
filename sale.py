@@ -34,7 +34,7 @@ class Sale(metaclass=PoolMeta):
     def import_data_sale(cls):
         print("--------------RUN VENTAS--------------")
         ventas_tecno = cls.last_update()
-        cls.create_actualizacion(False)
+        cls.create_or_update()
         if ventas_tecno:
             pool = Pool()
             Sale = pool.get('sale.sale')
@@ -242,25 +242,25 @@ class Sale(metaclass=PoolMeta):
                 fecha = (ultima_actualizacion[0].create_date - datetime.timedelta(hours=5))
         else:
             fecha = datetime.date(2021,1,1)
-            cls.create_actualizacion(True)
         fecha = fecha.strftime('%Y-%d-%m %H:%M:%S')
         data = cls.get_data_where_tecno('Documentos', fecha)
         return data
 
     #Crea o actualiza un registro de la tabla actualización en caso de ser necesario
     @classmethod
-    def create_actualizacion(cls, create):
+    def create_or_update(cls, create):
         Actualizacion = Pool().get('conector.actualizacion')
-        if create:
-            #Se crea un registro con la actualización realizada
-            actualizar = Actualizacion()
-            actualizar.name = 'VENTAS'
-            actualizar.save()
-        else:
-            #Se busca un registro con la actualización realizada
+        actualizacion = Actualizacion.search([('name', '=','VENTAS')])
+        if actualizacion:
+            #Se busca un registro con la actualización
             actualizacion, = Actualizacion.search([('name', '=','VENTAS')])
             actualizacion.name = 'VENTAS'
             actualizacion.save()
+        else:
+            #Se crea un registro con la actualización
+            actualizar = Actualizacion()
+            actualizar.name = 'VENTAS'
+            actualizar.save()
 
     #Metodo encargado de buscar si exste una venta
     @classmethod
