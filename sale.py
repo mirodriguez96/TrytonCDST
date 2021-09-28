@@ -255,7 +255,7 @@ class Sale(metaclass=PoolMeta):
             #Se busca un registro con la actualización
             actualizacion, = Actualizacion.search([('name', '=','VENTAS')])
             actualizacion.name = 'VENTAS'
-            actualizacion.save() 
+            actualizacion.save()
         else:
             #Se crea un registro con la actualización
             actualizar = Actualizacion()
