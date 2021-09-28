@@ -122,8 +122,8 @@ class Party(ModelSQL, ModelView):
                             direccion.party = tercero
                             direccion.party_name = nombre
                             direccion.street = direc[columna_direcciones.index('direccion')].strip()
-                            create_address.append(direccion)
-                            #direccion.save()
+                            #create_address.append(direccion)
+                            direccion.save()
                     contactos_tecno = cls.get_contacts_db_tecno(nit_cedula)
                     if contactos_tecno:
                         for cont in contactos_tecno:
@@ -135,8 +135,8 @@ class Party(ModelSQL, ModelView):
                             contacto.name = cont[columnas_contactos.index('Nombre')].strip()+' ('+cont[columnas_contactos.index('Cargo')].strip()+')'
                             contacto.language = es
                             contacto.party = tercero
-                            create_contact.append(contacto)
-                            #contacto.save()
+                            #create_contact.append(contacto)
+                            contacto.save()
                             #Creacion e inserccion de metodo de contacto email
                             contacto = Mcontact()
                             contacto.id_tecno = str(cont[columnas_contactos.index('IdContacto')])+'-2'
@@ -145,11 +145,11 @@ class Party(ModelSQL, ModelView):
                             contacto.name = cont[columnas_contactos.index('Nombre')].strip()+' ('+cont[columnas_contactos.index('Cargo')].strip()+')'
                             contacto.language = es
                             contacto.party = tercero
-                            create_contact.append(contacto)
-                            #contacto.save()
-                    to_create.append(tercero)
-                    #tercero.save()
-            Party.save(to_create)
+                            #create_contact.append(contacto)
+                            contacto.save()
+                    #to_create.append(tercero)
+                    tercero.save()
+            #Party.save(to_create)
             Address.save(create_address)
             Mcontact.save(create_contact)
 
