@@ -101,7 +101,6 @@ class Sale(metaclass=PoolMeta):
                             line.unit = template.default_uom
                             line.on_change_product() #TEST
                             line.unit_price = lin[col_line.index('Valor_Unitario')]
-                            line.discount = 0
                             #Agregar impuestos a la venta
                             #taxc = CustomerTax.search([('category', '=', template.account_category)])
                             #if taxc:
@@ -130,8 +129,8 @@ class Sale(metaclass=PoolMeta):
                     #Procesamos la venta para generar la factura y procedemos a rellenar los campos de la factura
                     venta.state = 'confirmed'
                     Sale.process([venta])
-                    if venta.state == 'confirmed':
-                        Sale.process([venta])
+                    #if venta.state == 'confirmed':
+                    #    Sale.process([venta])
                     invoice, = venta.invoices
                     venta.save()
                     invoice.operation_type = 10
@@ -205,7 +204,7 @@ class Sale(metaclass=PoolMeta):
             conexion = Config.conexion()
             with conexion.cursor() as cursor:
                 #(sw = 1  ventas) (sw = 2 devoluciones)
-                query = cursor.execute("SELECT TOP(100) * FROM dbo."+table+" WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2)")
+                query = cursor.execute("SELECT * FROM dbo."+table+" WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2)")
                 data = list(query.fetchall())
         except Exception as e:
             raise UserError('ERROR QUERY get_data_where_tecno: ', str(e))

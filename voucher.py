@@ -100,7 +100,7 @@ class Voucher(ModelSQL, ModelView):
                                     line.amount = Decimal(rec[columns_rec.index('retencion')])
                                     line.save()
                             else:
-                                print('NO ENCONTRO: ', ref)
+                                print('NO ENCONTRO LINEA: ', ref)
                         voucher.on_change_lines()
                         #Voucher.process([voucher])
                         voucher.save()
