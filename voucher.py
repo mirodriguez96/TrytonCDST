@@ -90,15 +90,15 @@ class Voucher(ModelSQL, ModelView):
                                     retencion, = Tax.serach([('name', '=', 'RET. RENTA 0,4%')])
                                     line.tax = retencion
                                 line.save()
-                                #if rec[columns_rec.index('retencion')] > 0:
-                                #    retencion, = Tax.serach([('name', '=', 'RET. RENTA 0,4%')])
-                                #    line = Line()
-                                #    line.account = 547 #RET
-                                #    line.detail = 'retencion'
-                                #    line.voucher = voucher
-                                #    line.type = 'tax'
-                                #    line.amount = Decimal(rec[columns_rec.index('retencion')])
-                                #    line.save()
+                                if rec[columns_rec.index('retencion')] > 0:
+                                    retencion, = Tax.serach([('name', '=', 'RET. RENTA 0,4%')])
+                                    line = Line()
+                                    line.account = 547 #RET
+                                    line.detail = 'retencion'
+                                    line.voucher = voucher
+                                    line.type = 'tax'
+                                    line.amount = Decimal(rec[columns_rec.index('retencion')])
+                                    line.save()
                             else:
                                 print('NO ENCONTRO: ', ref)
                         voucher.on_change_lines()

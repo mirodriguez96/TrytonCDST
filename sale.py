@@ -100,7 +100,7 @@ class Sale(metaclass=PoolMeta):
                             line.sale = venta
                             line.type = 'line'
                             line.unit = template.default_uom
-                            line.on_change_product(line) #TEST
+                            line.on_change_product() #TEST
                             #Agregar impuestos a la venta
                             #taxc = CustomerTax.search([('category', '=', template.account_category)])
                             #if taxc:
