@@ -110,7 +110,7 @@ class Sale(metaclass=PoolMeta):
                             #    line.save()
                             #    tax.save()
                             #Aplicamos una misma retención para todas las ventas
-                            retencion, = Tax.serach([('name', '=', 'RET. RENTA 0,4%')])
+                            retencion, = Tax.search([('name', '=', 'RET. RENTA 0,4%')])
                             if lin[col_line.index('Porcentaje_ReteFuente')] > 0:
                                 tax = Taxes()
                                 tax.line = line
