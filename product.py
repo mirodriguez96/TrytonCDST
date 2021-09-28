@@ -260,7 +260,7 @@ class Product(ModelSQL, ModelView):
 
     #Crea o actualiza un registro de la tabla actualización en caso de ser necesario
     @classmethod
-    def create_or_update(cls, create):
+    def create_or_update(cls):
         Actualizacion = Pool().get('conector.actualizacion')
         actualizacion = Actualizacion.search([('name', '=','PRODUCTOS')])
         if actualizacion:

@@ -89,7 +89,6 @@ class Party(ModelSQL, ModelView):
                 else:
                     #Creando tercero junto con sus direcciones y metodos de contactos
                     tercero = Party()
-                    print('Tercero a crear:', nit_cedula)
                     tercero.type_document = tipo_identificacion
                     tercero.id_number = nit_cedula
                     tercero.name = nombre
@@ -246,12 +245,9 @@ class Party(ModelSQL, ModelView):
     def find_party(cls, id):
         Party = Pool().get('party.party')
         try:
-            print(f'->{id}<-')
             party, = Party.search([('id_number', '=', id)])
-            print(party)
             return party
         except Exception as e:
-            print(e)
             return False
         #if party:
         #    print('Tercero existente:', id)

@@ -48,6 +48,7 @@ class Voucher(ModelSQL, ModelView):
             MoveLine = pool.get('account.move.line')
             Party = pool.get('party.party')
             PayMode = pool.get('account.voucher.paymode')
+            Tax = pool.get('account.tax')
             for doc in documentos_db:
                 sw = str(doc[columns_doc.index('sw')])
                 tipo = doc[columns_doc.index('tipo')].strip()
@@ -85,7 +86,20 @@ class Voucher(ModelSQL, ModelView):
                                 line.move_line = move_line[0]
                                 line.on_change_move_line()
                                 line.amount = Decimal(rec[columns_rec.index('valor')])
+                                if rec[columns_rec.index('retencion')] > 0:
+                                    retencion, = Tax.serach([('name', '=', 'RET. RENTA 0,4%')])
+                                    line.tax = retencion
                                 line.save()
+                                if rec[columns_rec.index('retencion')] > 0:
+                                    retencion, = Tax.serach([('name', '=', 'RET. RENTA 0,4%')])
+                                    line = Line()
+                                    line.account = 547 #RET
+                                    line.detail = 'retencion'
+                                    line.voucher = voucher
+                                    line.type = 'tax'
+                                    line.amount = Decimal(rec[columns_rec.index('retencion')])
+                                    line.save()
+
                             else:
                                 print('NO ENCONTRO: ', ref)
                         voucher.on_change_lines()

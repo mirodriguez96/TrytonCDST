@@ -40,6 +40,7 @@ class Sale(metaclass=PoolMeta):
             Sale = pool.get('sale.sale')
             SaleLine = pool.get('sale.line')
             Invoice = pool.get('account.invoice')
+            Tax = pool.get('account.tax')
             Taxes = pool.get('sale.line-account.tax')
             CustomerTax = pool.get('product.category-customer-account.tax')
             Party = pool.get('party.party')
@@ -50,7 +51,6 @@ class Sale(metaclass=PoolMeta):
             #create_sale = []
             #Procedemos a realizar una venta
             for vent in ventas_tecno:
-                #FIX EXISTE? R/NO TIENE ULTIMA MODIFICACION
                 sw = vent[coluns_doc.index('sw')]
                 numero_doc = vent[coluns_doc.index('Numero_documento')]
                 tipo_doc = vent[coluns_doc.index('tipo')].strip()
@@ -100,7 +100,7 @@ class Sale(metaclass=PoolMeta):
                             line.sale = venta
                             line.type = 'line'
                             line.unit = template.default_uom
-                            line.on_change_product(line)
+                            line.on_change_product(line) #TEST
                             #Agregar impuestos a la venta
                             #taxc = CustomerTax.search([('category', '=', template.account_category)])
                             #if taxc:
@@ -110,7 +110,7 @@ class Sale(metaclass=PoolMeta):
                             #    line.save()
                             #    tax.save()
                             #Aplicamos una misma retención para todas las ventas
-                            retencion, = Taxes.serach([('name', '=', 'RET. RENTA 0,4%')])
+                            retencion, = Tax.serach([('name', '=', 'RET. RENTA 0,4%')])
                             if lin[col_line.index('Porcentaje_ReteFuente')] > 0:
                                 tax = Taxes()
                                 tax.line = line
@@ -248,7 +248,7 @@ class Sale(metaclass=PoolMeta):
 
     #Crea o actualiza un registro de la tabla actualización en caso de ser necesario
     @classmethod
-    def create_or_update(cls, create):
+    def create_or_update(cls):
         Actualizacion = Pool().get('conector.actualizacion')
         actualizacion = Actualizacion.search([('name', '=','VENTAS')])
         if actualizacion:
