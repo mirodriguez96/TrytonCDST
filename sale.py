@@ -101,6 +101,7 @@ class Sale(metaclass=PoolMeta):
                             line.unit = template.default_uom
                             line.on_change_product() #TEST
                             line.unit_price = lin[col_line.index('Valor_Unitario')]
+                            line.discount = 0
                             #Agregar impuestos a la venta
                             #taxc = CustomerTax.search([('category', '=', template.account_category)])
                             #if taxc:
