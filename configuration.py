@@ -44,7 +44,8 @@ class Configuration(ModelSQL, ModelView):
                 print('Error sql server: ', e)
                 raise UserError('Conexión sqlserver: ', str(e))
             finally:
-                conexion.close()
+                if conexion:
+                    conexion.close()
 
     #Función encargada de enviar la conexión configurada con los datos del primer registro
     @classmethod
