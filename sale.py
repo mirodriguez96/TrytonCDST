@@ -96,11 +96,11 @@ class Sale(metaclass=PoolMeta):
                             else:
                                 line.quantity = abs(int(lin[col_line.index('Cantidad_Facturada')]))
                                 venta.reference = tipo_doc+'-'+str(numero_doc)
-                            line.unit_price = lin[col_line.index('Valor_Unitario')]
                             line.sale = venta
                             line.type = 'line'
                             line.unit = template.default_uom
                             line.on_change_product() #TEST
+                            line.unit_price = lin[col_line.index('Valor_Unitario')]
                             #Agregar impuestos a la venta
                             #taxc = CustomerTax.search([('category', '=', template.account_category)])
                             #if taxc:
