@@ -36,16 +36,13 @@ class Configuration(ModelSQL, ModelView):
     def test_conexion(cls, records):
         for record in records:
             try:
-                conexion = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER='+str(record.server)+';DATABASE='+str(record.db)+';UID='+str(record.user)+';PWD='+str(record.password))
-                print("Conexion sqlserver exitosa !")
-                #notify('Conexion sqlserver exitosa !', priority=3)
-                raise UserError('Conexión sqlserver: ', 'Exitosa !')
+                with pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER='+str(record.server)+';DATABASE='+str(record.db)+';UID='+str(record.user)+';PWD='+str(record.password)) as conexion:
+                    print("Conexion sqlserver exitosa !")
+                    raise UserError('Conexión sqlserver: ', 'Exitosa !')
             except Exception as e:
                 print('Error sql server: ', e)
                 raise UserError('Conexión sqlserver: ', str(e))
-            finally:
-                if conexion:
-                    conexion.close()
+
 
     #Función encargada de enviar la conexión configurada con los datos del primer registro
     @classmethod
