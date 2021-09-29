@@ -97,6 +97,7 @@ class Voucher(ModelSQL, ModelView):
                                     line.detail = 'retencion'
                                     line.voucher = voucher
                                     line.type = 'tax'
+                                    line.tax = retencion
                                     line.amount = Decimal(rec[columns_rec.index('retencion')])
                                     line.save()
                             else:
