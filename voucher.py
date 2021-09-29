@@ -87,6 +87,7 @@ class Voucher(ModelSQL, ModelView):
                                 line.move_line = move_line[0]
                                 line.on_change_move_line()
                                 line.amount = Decimal(rec[columns_rec.index('valor')])
+                                line.save()
                                 #Descuentos
                                 if rec[columns_rec.index('descuento')] > 0:
                                     account, = Account.search([('code', '=', '530535')])
@@ -148,11 +149,12 @@ class Voucher(ModelSQL, ModelView):
                                     line.tax = retencion
                                     line.amount = Decimal(rec[columns_rec.index('retencion')])
                                     line.save()
+                                voucher.on_change_lines()
+                                #Voucher.process([voucher])
+                                voucher.save()
                             else:
                                 print('NO ENCONTRO LINEA: ', ref)
-                        voucher.on_change_lines()
-                        #Voucher.process([voucher])
-                        voucher.save()
+                        
 
 
     @classmethod
