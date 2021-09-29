@@ -87,11 +87,11 @@ class Voucher(ModelSQL, ModelView):
                                 line.on_change_move_line()
                                 line.amount = Decimal(rec[columns_rec.index('valor')])
                                 if rec[columns_rec.index('retencion')] > 0:
-                                    retencion, = Tax.serach([('name', '=', 'RET. RENTA 0,4%')])
+                                    retencion, = Tax.search([('name', '=', 'RET. RENTA 0,4%')])
                                     line.tax = retencion
                                 line.save()
                                 if rec[columns_rec.index('retencion')] > 0:
-                                    retencion, = Tax.serach([('name', '=', 'RET. RENTA 0,4%')])
+                                    retencion, = Tax.search([('name', '=', 'RET. RENTA 0,4%')])
                                     line = Line()
                                     line.account = 547 #RET
                                     line.detail = 'retencion'
