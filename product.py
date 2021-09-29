@@ -2,7 +2,7 @@ from trytond.model import ModelSQL, ModelView, fields
 from trytond.pool import Pool, PoolMeta
 import datetime
 from decimal import Decimal
-#from conexion import conexion
+from trytond.exceptions import UserError
 
 
 __all__ = [
@@ -100,28 +100,28 @@ class Product(ModelSQL, ModelView):
                 udm_producto = cls.udm_producto(producto[col_pro.index('unidad_Inventario')])
                 vendible = cls.vendible_producto(producto[col_pro.index('TipoProducto')])
                 valor_unitario = producto[col_pro.index('valor_unitario')]
-                costo_unitario = producto[col_pro.index('costo_unitario')]
+                #costo_unitario = producto[col_pro.index('costo_unitario')]
                 ultimo_cambio = producto[col_pro.index('Ultimo_Cambio_Registro')]
                 if existe:
                     #if (True):
                     if (ultimo_cambio and existe.write_date and ultimo_cambio > existe.write_date) or (ultimo_cambio and not existe.write_date and ultimo_cambio > existe.create_date):
                         existe.template.name = nombre_producto
+                        existe.template.code = id_producto
                         existe.template.type = tipo_producto
                         existe.template.default_uom = udm_producto
                         existe.template.salable = vendible
                         if vendible:
                             existe.template.sale_uom = udm_producto
                         existe.template.list_price = valor_unitario
-                        existe.cost_price = costo_unitario
+                        #existe.cost_price = costo_unitario
                         existe.template.categories = [categoria_producto]
                         existe.template.account_category = categoria_contable.id
-                        #print(categoria_contable.id)
                         existe.template.save()
                 else:
                     prod = Producto()
                     prod.id_tecno = id_producto
                     temp = Template_Product()
-                    #temp.code = id_producto
+                    temp.code = id_producto
                     temp.name = nombre_producto
                     temp.type = tipo_producto
                     temp.default_uom = udm_producto
@@ -129,7 +129,7 @@ class Product(ModelSQL, ModelView):
                     if vendible:
                         temp.sale_uom = udm_producto
                     temp.list_price = valor_unitario
-                    prod.cost_price = costo_unitario
+                    #prod.cost_price = costo_unitario
                     temp.categories = [categoria_producto]
                     temp.account_category = categoria_contable.id
                     prod.template = temp
@@ -274,21 +274,24 @@ class Product(ModelSQL, ModelView):
             actualizar.name = 'PRODUCTOS'
             actualizar.save()
 
-    #Selecciona el impuesto equivalente en TecnoCarnes
+    #Selecciona el impuesto equivalente en la bd Sqlserver
     @classmethod
     def select_tax(cls, tax):
         Tax = Pool().get('account.tax')
-        if tax == 3:
-            tax, = Tax.search([('name', '=', 'IVA 19,0%')])
-            return tax.id
-        elif tax == 4:
-            tax, = Tax.search([('name', '=', 'IVA 5,0%')])
-            return tax.id
-        elif tax == 5:
-            tax, = Tax.search([('name', '=', 'IVA SERVICIOS 19,0%')])
-            return tax.id
-        else:
-            return False
+        try:
+            if tax == 3:
+                tax, = Tax.search([('name', '=', 'IVA 19,0%')])
+                return tax.id
+            elif tax == 4:
+                tax, = Tax.search([('name', '=', 'IVA 5,0%')])
+                return tax.id
+            elif tax == 5:
+                tax, = Tax.search([('name', '=', 'IVA SERVICIOS 19,0%')])
+                return tax.id
+            else:
+                return False
+        except Exception as e:
+            raise UserError("Error al seleccionar el impuesto para la categoria: ", e)
 
 #Herencia del party.contact_mechanism e insercción del campo id_tecno
 class ProductCategory(ModelSQL, ModelView):
