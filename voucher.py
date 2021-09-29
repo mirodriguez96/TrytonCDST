@@ -44,6 +44,7 @@ class Voucher(ModelSQL, ModelView):
             columns_tip = cls.get_columns_db('Documentos_Che')
             pool = Pool()
             Account = pool.get('account.account')
+            Invoice = pool.get('account.invoice')
             Voucher = pool.get('account.voucher')
             Line = pool.get('account.voucher.line')
             MoveLine = pool.get('account.move.line')
@@ -92,6 +93,7 @@ class Voucher(ModelSQL, ModelView):
                                 if rec[columns_rec.index('descuento')] > 0:
                                     account, = Account.search([('code', '=', '530535')])
                                     line = Line()
+                                    line.party = tercero
                                     line.account = account
                                     line.voucher = voucher
                                     line.detail = 'DESCUENTO'
@@ -102,59 +104,71 @@ class Voucher(ModelSQL, ModelView):
                                 if rec[columns_rec.index('retencion')] > 0:
                                     retencion, = Tax.search([('name', '=', 'RET. RENTA 0,4%')])
                                     line = Line()
+                                    line.party = tercero
                                     line.account = 547 #RET
                                     line.detail = 'RETENCION'
                                     line.voucher = voucher
                                     line.type = 'tax'
                                     line.tax = retencion
                                     line.amount = Decimal(rec[columns_rec.index('retencion')])
+                                    line.reference = ref
                                     line.save()
                                 if rec[columns_rec.index('retencion_iva')] > 0:
                                     retencion, = Tax.search([('name', '=', 'RET. RENTA 0,4%')])
                                     line = Line()
+                                    line.party = tercero
                                     line.account = 547 #RET
                                     line.detail = 'RETENCION'
                                     line.voucher = voucher
                                     line.type = 'tax'
                                     line.tax = retencion
                                     line.amount = Decimal(rec[columns_rec.index('retencion')])
+                                    line.reference = ref
                                     line.save()
                                 if rec[columns_rec.index('retencion_ica')] > 0:
                                     retencion, = Tax.search([('name', '=', 'RET. RENTA 0,4%')])
                                     line = Line()
+                                    line.party = tercero
                                     line.account = 547 #RET
                                     line.detail = 'RETENCION'
                                     line.voucher = voucher
                                     line.type = 'tax'
                                     line.tax = retencion
                                     line.amount = Decimal(rec[columns_rec.index('retencion')])
+                                    line.reference = ref
                                     line.save()
                                 if rec[columns_rec.index('retencion2')] > 0:
                                     retencion, = Tax.search([('name', '=', 'RET. RENTA 0,4%')])
                                     line = Line()
+                                    line.party = tercero
                                     line.account = 547 #RET
                                     line.detail = 'RETENCION'
                                     line.voucher = voucher
                                     line.type = 'tax'
                                     line.tax = retencion
                                     line.amount = Decimal(rec[columns_rec.index('retencion')])
+                                    line.reference = ref
                                     line.save()
                                 if rec[columns_rec.index('retencion3')] > 0:
                                     retencion, = Tax.search([('name', '=', 'RET. RENTA 0,4%')])
                                     line = Line()
+                                    line.party = tercero
                                     line.account = 547 #RET
                                     line.detail = 'RETENCION'
                                     line.voucher = voucher
                                     line.type = 'tax'
                                     line.tax = retencion
                                     line.amount = Decimal(rec[columns_rec.index('retencion')])
+                                    line.reference = ref
                                     line.save()
+                                #Se procede a comparar los totales
                                 voucher.on_change_lines()
-                                #Voucher.process([voucher])
-                                voucher.save()
+                                invoice, = Invoice.search([('reference', '=', ref)])
+                                if Decimal(invoice.untaxed_amount) == Decimal(voucher.amount_to_pay):
+                                    voucher.process()
                             else:
                                 print('NO ENCONTRO LINEA: ', ref)
-                        
+                        voucher.save()
 
 
     @classmethod
