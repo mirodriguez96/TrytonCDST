@@ -129,8 +129,8 @@ class Sale(metaclass=PoolMeta):
                     #Procesamos la venta para generar la factura y procedemos a rellenar los campos de la factura
                     venta.state = 'confirmed'
                     Sale.process([venta])
-                    #if venta.state == 'confirmed':
-                    #    Sale.process([venta])
+                    if venta.state == 'confirmed':
+                        Sale.process([venta])
                     invoice, = venta.invoices
                     venta.save()
                     invoice.operation_type = 10
