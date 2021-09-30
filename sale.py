@@ -129,7 +129,8 @@ class Sale(metaclass=PoolMeta):
                     #Procesamos la venta para generar la factura y procedemos a rellenar los campos de la factura
                     venta.draft([venta])
                     print('draft: ', venta.state)
-                    venta.quote([venta])
+                    #venta.quote([venta])
+                    venta.state = 'quotation'
                     print('quote: ', venta.state)
                     venta.confirm([venta])
                     print('confirm: ', venta.state)
