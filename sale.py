@@ -110,13 +110,13 @@ class Sale(metaclass=PoolMeta):
                             #    line.save()
                             #    tax.save()
                             #Aplicamos una misma retención para todas las ventas
-                            retencion, = Tax.search([('name', '=', 'RET. RENTA 0,4%')])
-                            if lin[col_line.index('Porcentaje_ReteFuente')] > 0:
-                                tax = Taxes()
-                                tax.line = line
-                                tax.tax = retencion
-                                line.save()
-                                tax.save()
+                            #retencion, = Tax.search([('name', '=', 'RET. RENTA 0,4%')])
+                            #if lin[col_line.index('Porcentaje_ReteFuente')] > 0:
+                            #    tax = Taxes()
+                            #    tax.line = line
+                            #    tax.tax = retencion
+                            #    line.save()
+                            #    tax.save()
                             #Verificamos si hay descuento para la linea de producto y se agrega su respectivo descuento
                             if lin[col_line.index('Porcentaje_Descuento_1')] > 0:
                                 porcentaje = lin[col_line.index('Porcentaje_Descuento_1')]/100
@@ -127,17 +127,9 @@ class Sale(metaclass=PoolMeta):
                         else:
                             raise UserError("Error, no existe el producto con la siguiente id: ", str(lin[col_line.index('IdProducto')]))
                     #Procesamos la venta para generar la factura y procedemos a rellenar los campos de la factura
-                    venta.draft([venta])
-                    print('draft: ', venta.state)
-                    #venta.quote([venta])
-                    #print('quote: ', venta.state)
-                    #venta.confirm([venta])
-                    #print('confirm: ', venta.state)
                     venta.state = 'confirmed'
-                    venta.proceed([venta])
-                    print('proceed: ', venta.state)
+                    print('state: ', venta.state)
                     if venta.state == 'confirmed':
-                        venta.process([venta])
                         venta.process([venta])
                         print('process....')
                     invoice, = venta.invoices
