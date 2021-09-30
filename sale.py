@@ -32,7 +32,7 @@ class Sale(metaclass=PoolMeta):
 
     @classmethod
     def import_data_sale(cls):
-        print("--------------RUN VENTAS--------------")
+        print("--------------RUN VENTAS TEST--------------")
         ventas_tecno = cls.last_update()
         cls.create_or_update()
         if ventas_tecno:
@@ -204,7 +204,7 @@ class Sale(metaclass=PoolMeta):
             conexion = Config.conexion()
             with conexion.cursor() as cursor:
                 #(sw = 1  ventas) (sw = 2 devoluciones)
-                query = cursor.execute("SELECT * FROM dbo."+table+" WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2)")
+                query = cursor.execute("SELECT TOP(50) * FROM dbo."+table+" WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2)")
                 data = list(query.fetchall())
         except Exception as e:
             raise UserError('ERROR QUERY get_data_where_tecno: ', str(e))
