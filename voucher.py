@@ -81,6 +81,7 @@ class Voucher(ModelSQL, ModelView):
                             ref = str(rec[columns_rec.index('tipo_aplica')])+'-'+str(rec[columns_rec.index('numero_aplica')])
                             move_line = MoveLine.search([('reference', '=', ref), ('party', '=', tercero.id)])
                             if move_line:
+                                print(ref)
                                 line = Line()
                                 line.voucher = voucher
                                 line.amount_original = move_line[0].debit
