@@ -128,11 +128,14 @@ class Sale(metaclass=PoolMeta):
                             raise UserError("Error, no existe el producto con la siguiente id: ", str(lin[col_line.index('IdProducto')]))
                     #Procesamos la venta para generar la factura y procedemos a rellenar los campos de la factura
                     venta.draft([venta])
+                    print('draft: ', venta.state)
                     venta.quote([venta])
+                    print('quote: ', venta.state)
                     venta.confirm([venta])
+                    print('confirm: ', venta.state)
                     venta.proceed([venta])
-                    print(venta.state)
-                    if venta.state == 'confirmed':
+                    print('proceed: ', venta.state)
+                    if venta.state == 'processing':
                         venta.process([venta])
                         print('process....')
                     invoice, = venta.invoices
