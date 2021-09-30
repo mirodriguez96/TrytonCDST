@@ -138,6 +138,7 @@ class Sale(metaclass=PoolMeta):
                     print('proceed: ', venta.state)
                     if venta.state == 'confirmed':
                         venta.process([venta])
+                        venta.process([venta])
                         print('process....')
                     invoice, = venta.invoices
                     venta.save()
