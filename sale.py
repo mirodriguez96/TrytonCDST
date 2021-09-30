@@ -130,10 +130,10 @@ class Sale(metaclass=PoolMeta):
                     venta.draft([venta])
                     print('draft: ', venta.state)
                     #venta.quote([venta])
-                    venta.state = 'quotation'
-                    print('quote: ', venta.state)
-                    venta.confirm([venta])
-                    print('confirm: ', venta.state)
+                    #print('quote: ', venta.state)
+                    #venta.confirm([venta])
+                    #print('confirm: ', venta.state)
+                    venta.state = 'confirmed'
                     venta.proceed([venta])
                     print('proceed: ', venta.state)
                     if venta.state == 'processing':
