@@ -32,7 +32,7 @@ class Sale(metaclass=PoolMeta):
 
     @classmethod
     def import_data_sale(cls):
-        print("--------------RUN VENTAS TEST--------------")
+        print("--------------RUN VENTAS--------------")
         ventas_tecno = cls.last_update()
         cls.create_or_update()
         if ventas_tecno:
