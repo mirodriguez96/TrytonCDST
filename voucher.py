@@ -167,7 +167,6 @@ class Voucher(ModelSQL, ModelView):
                                 invoice, = Invoice.search([('reference', '=', ref)])
                                 if Decimal(invoice.untaxed_amount) == Decimal(voucher.amount_to_pay):
                                     Voucher.process([voucher])
-                                    print('Totales iguales')
                             else:
                                 print('OJO NO ENCONTRO LINEA: ', ref)
                         voucher.save()

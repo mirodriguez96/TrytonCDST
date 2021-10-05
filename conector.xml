@@ -3,7 +3,12 @@
 <tryton>
     <data>
         <!-- entry points -->
-        <menuitem name="Conector CDST" id="menu_importa" sequence="1" active="1"/>
+        <record model="ir.ui.icon" id="conector_icon">
+            <field name="name">tryton-conector</field>
+            <field name="path">icons/tryton-conector.svg</field>
+        </record>
+
+        <menuitem name="Conector CDST" id="menu_importa" sequence="1" active="1" icon="tryton-conector"/>
         <!-- ################### -->
         <!-- # Actualizaciones # -->
         <!-- ################### -->

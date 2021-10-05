@@ -106,7 +106,7 @@ class Product(ModelSQL, ModelView):
                     #if (True):
                     if (ultimo_cambio and existe.write_date and ultimo_cambio > existe.write_date) or (ultimo_cambio and not existe.write_date and ultimo_cambio > existe.create_date):
                         existe.template.name = nombre_producto
-                        existe.template.code = id_producto
+                        #existe.template.code = id_producto
                         existe.template.type = tipo_producto
                         existe.template.default_uom = udm_producto
                         existe.template.salable = vendible
