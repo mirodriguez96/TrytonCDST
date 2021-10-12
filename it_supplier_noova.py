@@ -321,7 +321,8 @@ class ElectronicPayrollCdst(object):
             noova["Devengados"]["LAnticipos"] = data
 
         if "FondoPension" in dic["Deducciones"]:
-            pass
+            noova["Deducciones"]["FondoPension"]["Nvfon_porc"] = dic["Deducciones"]["FondoPension"]["Porcentaje"]
+            noova["Deducciones"]["FondoPension"]["Nvfon_dedu"] = dic["Deducciones"]["FondoPension"]["Deduccion"]
 
         if "FondoSP" in dic["Deducciones"]:
             pass
