@@ -536,7 +536,7 @@ class ElectronicPayroll(object):
                     }
                 subelements[concept] = e
             
-            if concept == 'FondoPension':
+            elif concept == 'FondoPension':
                 e = {
                     "Porcentaje":'4.00',
                     "Deduccion":rvalue(line.amount, 2)
