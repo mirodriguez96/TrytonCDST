@@ -228,7 +228,7 @@ class ElectronicPayrollCdst(object):
         }
         data_val = self._validate_data(dict_res, noova)
         data = json.dumps(data_val, indent=4)
-        #print(data)
+        print(data)
         return data
 
     def _validate_data(self, dic, noova):
