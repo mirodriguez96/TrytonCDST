@@ -7,6 +7,7 @@ import product
 import sale
 import configuration
 import voucher
+from . import electronic_payroll_wizard
 
 def register():
     Pool.register(
@@ -25,10 +26,9 @@ def register():
         voucher.Cron,
         voucher.Voucher,
         voucher.VoucherPayMode,
-        #wiz.ActualizarVentas,
         module='conector', type_='model')
 
     Pool.register(
-        #wiz.ActualizarVentas,
+        electronic_payroll_wizard.PayrollElectronicCdst,
         module='conector', type_='wizard')
 
