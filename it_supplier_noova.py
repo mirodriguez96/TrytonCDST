@@ -319,10 +319,12 @@ class ElectronicPayrollCdst(object):
             for h in dic["Devengados"]["OtrosTag"]:
                 data.append(dic["Devengados"]["OtrosTag"][h])
             noova["Devengados"]["LAnticipos"] = data
+        
+        print(dic["Deducciones"].keys())
 
-        if "FondoPension" in dic["Deducciones"]:
-            noova["Deducciones"]["FondoPension"]["Nvfon_porc"] = dic["FondoPension"]["Porcentaje"]
-            noova["Deducciones"]["FondoPension"]["Nvfon_dedu"] = dic["FondoPension"]["Deduccion"]
+        if "FondoPension" in dic["Deducciones"].keys():
+            noova["Deducciones"]["FondoPension"]["Nvfon_porc"] = dic["Deducciones"]["FondoPension"]["Porcentaje"]
+            noova["Deducciones"]["FondoPension"]["Nvfon_dedu"] = dic["Deducciones"]["FondoPension"]["Deduccion"]
 
         if "FondoSP" in dic["Deducciones"]:
             pass
