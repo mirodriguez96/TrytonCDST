@@ -542,6 +542,7 @@ class ElectronicPayroll(object):
                     "Deduccion":rvalue(line.amount, 2)
                 }
                 subelements[concept] = e
+                print(subelements)
 
             elif concept in WAGE_TYPE['FondoSP']:
                 if 'FondoSP' not in subelements.keys():
