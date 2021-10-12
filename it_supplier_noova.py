@@ -67,7 +67,7 @@ class ElectronicPayrollCdst(object):
     def _create_json_noova(self, dict):
         dict_res = dict
         noova = {
-            "Nvsuc_codi": "44", # Código de la sucursal configurada en Noova
+            "Nvsuc_codi": "1", # Código de la sucursal configurada en Noova
             "Nvnom_pref": dict_res["NumeroSecuenciaXML"]["Prefijo"], #
             "Nvnom_cons": dict_res["NumeroSecuenciaXML"]["Consecutivo"], #
             "Nvnom_nume": dict_res["NumeroSecuenciaXML"]["Numero"], #
