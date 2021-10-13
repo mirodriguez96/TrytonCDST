@@ -1,0 +1,31 @@
+#
+msgid ""
+msgstr "Content-Type: text/plain; charset=utf-8\n"
+
+msgctxt "field:conector.configuration,server:"
+msgid "Server"
+msgstr "Servidor"
+
+msgctxt "field:conector.configuration,db:"
+msgid "Database"
+msgstr "Base de datos"
+
+msgctxt "field:conector.configuration,user:"
+msgid "User"
+msgstr "Usuario"
+
+msgctxt "field:conector.configuration,password:"
+msgid "Password"
+msgstr "Contraseña"
+
+msgctxt "field:conector.actualizacion,name:"
+msgid "Update"
+msgstr "Actualización"
+
+msgctxt "model:ir.action,name:act_payrollelectronic_cdst"
+msgid "Send supplier it"
+msgstr "Enviar al proveedor tecnologico"
+
+msgctxt "model:ir.action,name:act_config"
+msgid "Configuration"
+msgstr "Configuración"

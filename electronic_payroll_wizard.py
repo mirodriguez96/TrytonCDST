@@ -16,7 +16,7 @@ class PayrollElectronicCdst(Wizard):
         ids = Transaction().context['active_ids']
 
         for payroll in PayrollElectronic.browse(ids):
-            if payroll.state == 'processed':
+            if payroll.state == 'processed' and payroll.electronic_state == 'none':
                 if payroll.payroll_type is None:
                     continue
                 if payroll.validate_for_send():
@@ -25,7 +25,9 @@ class PayrollElectronicCdst(Wizard):
                     configuration = Configuration(1)
                     _ = ElectronicPayrollCdst(payroll, configuration)
                     #Mensaje para pruebas
-                    raise UserError('MENSAJE', 'Nomina enviada al proveedor tecnologico')
+                    #raise UserError('MENSAJE', 'Nomina enviada al proveedor tecnologico')
                 else:
                     payroll.get_message('Nomina no valida para enviar')
+            else:
+                payroll.get_message('Nomina no valida para enviar (estados).')
         return 'end'

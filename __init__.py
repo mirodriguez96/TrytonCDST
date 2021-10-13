@@ -8,9 +8,11 @@ import sale
 import configuration
 import voucher
 from . import electronic_payroll_wizard
+from . import company
 
 def register():
     Pool.register(
+        company.Company,
         conector.Actualizacion,
         party.Party,
         party.PartyAddress,

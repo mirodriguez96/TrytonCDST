@@ -2,8 +2,9 @@
 #! -*- coding: utf8 -*-
 import json
 from builder_phase import ElectronicPayroll
-import xmltodict
+#import xmltodict
 import requests
+import base64
 
 class ElectronicPayrollCdst(object):
 
@@ -28,8 +29,6 @@ class ElectronicPayrollCdst(object):
         if ec_payroll.status != 'ok':
             self.payroll.get_message(ec_payroll.status)
         xml_payroll = ec_payroll.make(self.payroll.payroll_type)
-        #xml_payroll = json.dumps(xml_payroll, indent=4)
-        #print(xml_payroll)
         #self.payroll.xml_payroll = xml_payroll
         #self.payroll.file_name_xml = file_name
         #self.payroll.save()
@@ -39,35 +38,44 @@ class ElectronicPayrollCdst(object):
 
     # Consumo API noova
     def _send_noova(self, dict):
-        url = 'https://dev.noova.com.co/api-vph/api/NomNominas'
+        if self.payroll.company.url_supplier and self.payroll.company.auth_supplier and self.payroll.company.host_supplier and self.payroll.company.supplier_code:
+            url = self.payroll.company.url_supplier
+            auth = self.payroll.company.auth_supplier
+            host = self.payroll.company.host_supplier
+            sucode = self.payroll.company.supplier_code
+        else:
+            self.payroll.get_message('Missing fields in company | supplier it')
+        auth = auth.encode('utf-8')
+        auth = base64.b64encode(auth)
+        auth = auth.decode('utf-8')
         header = {
-            'Authorization': 'Basic ODExMDE5MDkySW50ZTp3QjZJcmlnWDFv',
+            'Authorization': 'Basic '+auth,
             'Content-Type': 'application/json',
-            'Host': 'dev.noova.com.co',
+            'Host': host,
             'Content-Length': '967',
             'Expect': '100-continue',
             'Connection': 'Keep-Alive'
         }
-        data = self._create_json_noova(dict)
-        print(data)
+        data = self._create_json_noova(dict, sucode)
         response = requests.post(url, headers=header, data=data)
-        self.payroll.get_message(response.text)
+        #self.payroll.get_message(response.text)
         if response.status_code == 200:
             #res = response.json()
             #xml_signed = encode_payroll(res['xml_base64_bytes'], 'decode')
             #self.payroll.xml_payroll = xml_signed.encode('utf8')
-            #self.payroll.electronic_state = 'signed'
-            # self.payroll.save()
+            self.payroll.electronic_state = 'submitted'
+            self.payroll.electronic_message = response.text
+            self.payroll.save()
             # return response
             print("CONEXION EXITOSA")
         else:
-            print(response)
+            self.payroll.get_message(response.text)
 
 
-    def _create_json_noova(self, dict):
+    def _create_json_noova(self, dict, sucode):
         dict_res = dict
         noova = {
-            "Nvsuc_codi": "1", # Código de la sucursal configurada en Noova
+            "Nvsuc_codi": sucode, # Código de la sucursal configurada en Noova
             "Nvnom_pref": dict_res["NumeroSecuenciaXML"]["Prefijo"], #
             "Nvnom_cons": dict_res["NumeroSecuenciaXML"]["Consecutivo"], #
             "Nvnom_nume": dict_res["NumeroSecuenciaXML"]["Numero"], #
