@@ -124,7 +124,7 @@ class ElectronicPayrollCdst(object):
                 "Nvtra_pape": dict_res["Trabajador"]["PrimerApellido"],
                 "Nvtra_sape": dict_res["Trabajador"]["SegundoApellido"],
                 "Nvtra_pnom": dict_res["Trabajador"]["PrimerNombre"],
-                "Nvtra_onom": dict_res["Trabajador"]["OtrosNombres"],
+                #"Nvtra_onom": dict_res["Trabajador"]["OtrosNombres"],
                 "Nvtra_ltpa": dict_res["Trabajador"]["LugarTrabajoPais"],
                 "Nvtra_ltde": dict_res["Trabajador"]["LugarTrabajoDepartamentoEstado"],
                 "Nvtra_ltci": dict_res["Trabajador"]["LugarTrabajoMunicipioCiudad"],
@@ -242,6 +242,9 @@ class ElectronicPayrollCdst(object):
     def _validate_data(self, dic, noova):
         if "Notas" in dic.keys():
            noova["LNotas"] = [dic["Notas"]]
+        
+        if self.payroll.employee.party.second_name:
+            noova["Trabajador"]["Nvtra_onom"] = dic["Trabajador"]["OtrosNombres"]
         
         if self.payroll.bank_payment:
             noova["Pago"]["Nvpag_banc"] = dic["Pago"]["Banco"]
