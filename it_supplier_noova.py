@@ -17,9 +17,9 @@ class ElectronicPayrollCdst(object):
     def _create_electronic_payroll_phase(self):
 
         ec_payroll = ElectronicPayroll(self.payroll, self.config)
-        _type = 'nie' #Nomina individual
-        if self.payroll.payroll_type != '102':
-            _type = 'niae' #Nomina individual ajuste
+        #_type = 'nie' #Nomina individual
+        #if self.payroll.payroll_type != '102':
+        #    _type = 'niae' #Nomina individual ajuste
         
         #prefix = self.config.payroll_electronic_sequence.prefix
         #seq = self.payroll.number.split(prefix, maxsplit=1)
@@ -62,7 +62,7 @@ class ElectronicPayrollCdst(object):
         if response.status_code == 200:
             #res = response.json()
             #xml_signed = encode_payroll(res['xml_base64_bytes'], 'decode')
-            #self.payroll.xml_payroll = xml_signed.encode('utf8')
+            self.payroll.xml_payroll = data.encode('utf8')
             self.payroll.electronic_state = 'submitted'
             self.payroll.electronic_message = response.text
             self.payroll.save()
@@ -251,21 +251,22 @@ class ElectronicPayrollCdst(object):
             noova["Pago"]["Nvpag_tcue"] = dic["Pago"]["TipoCuenta"]
             noova["Pago"]["Nvpag_ncue"] = dic["Pago"]["NumeroCuenta"]
         
-        #if "HEDs" in dic["Devengados"].keys():
-        #    horas = []
-        #    for h in dic["Devengados"]["HEDs"]:
-        #        val = {
-        #            "Nvcom_fini": h["FechaInicio"],
-        #            "Nvcom_ffin": h["FechaFin"],
-        #            "Nvcom_cant": h["Cantidad"],
-        #            "Nvcom_pago": h["Pago"],
-        #            "Nvhor_porc": h["Porcentaje"]
-        #        }
-        #        horas.append(val)
-        #    noova["Devengados"]["LHorasExtras"] = horas
+        if "HEDs" in dic["Devengados"].keys():
+            horas = []
+            for h in dic["Devengados"]["HEDs"]:
+                val = {
+                    #"Nvcom_fini": h["FechaInicio"],
+                    #"Nvcom_ffin": h["FechaFin"],
+                    "Nvcom_cant": dic["Devengados"]["HEDs"][h]["Cantidad"],
+                    "Nvcom_pago": dic["Devengados"]["HEDs"][h]["Pago"],
+                    "Nvhor_tipo": h,
+                    "Nvhor_porc": dic["Devengados"]["HEDs"][h]["Porcentaje"]
+                }
+                horas.append(val)
+            noova["Devengados"]["LHorasExtras"] = horas
 
         if "Vacaciones" in dic["Devengados"].keys():
-            horas = []
+            data = []
             for h in dic["Devengados"]["Vacaciones"]:
                 if "VacacionesComunes" in h.keys():
                     val = {
@@ -281,28 +282,37 @@ class ElectronicPayrollCdst(object):
                         "Nvcom_pago": h["Pago"],
                         "Nvvac_tipo": h["2"]
                     }
-                horas.append(val)
-            noova["Devengados"]["LVacaciones"] = horas
+                data.append(val)
+            noova["Devengados"]["LVacaciones"] = data
 
         if "Primas" in dic["Devengados"].keys():
             noova["Devengados"]["Primas"]["Nvpri_cant"] = dic["Devengados"]["Primas"]["Cantidad"]
             noova["Devengados"]["Primas"]["Nvpri_pago"] = dic["Devengados"]["Primas"]["Pago"],
             
-            if "PagoNs" in dic["Devengados"]["Primas"]:
+            if "PagoNs" in dic["Devengados"]["Primas"].keys():
                 noova["Devengados"]["Primas"]["Nvpri_pagn"] = dic["Devengados"]["PagoNs"]
         
-        #if "Cesantias" in dic["Devengados"].keys():
-        #    noova["Devengados"]["Cesantias"]["Nvces_pago"]
+        if "Cesantias" in dic["Devengados"].keys():
+            if "IntCesantias" in dic["Devengados"]["Cesantias"].keys():
+                val = {
+                    "Nvces_porc": dic["Devengados"]["Cesantias"]["Porcentaje"],
+                    "Nvces_pagi": dic["Devengados"]["Cesantias"]["IntCesantias"]
+                }
+            else:
+                val = {
+                    "Nvces_pago": dic["Devengados"]["Cesantias"]["Cesantias"]
+                }
+            noova["Devengados"]["Cesantias"] = val
 
         if "Incapacidades" in dic["Devengados"].keys():
             horas = []
             for h in dic["Devengados"]["Incapacidades"]:
                 val = {
-                    "Nvcom_fini": h["FechaInicio"],
-                    "Nvcom_ffin": h["FechaFin"],
-                    "Nvcom_cant": h["Cantidad"],
-                    "Nvcom_pago": h["Pago"],
-                    "Nvinc_tipo": h["1"]
+                    "Nvcom_fini": dic["Devengados"]["Incapacidades"][h]["FechaInicio"],
+                    "Nvcom_ffin": dic["Devengados"]["Incapacidades"][h]["FechaFin"],
+                    "Nvcom_cant": dic["Devengados"]["Incapacidades"][h]["Cantidad"],
+                    "Nvcom_pago": dic["Devengados"]["Incapacidades"][h]["Pago"],
+                    "Nvinc_tipo": dic["Devengados"]["Incapacidades"][h]["Tipo"]
                 }
                 horas.append(val)
             noova["Devengados"]["LIncapacidades"] = horas
@@ -338,13 +348,27 @@ class ElectronicPayrollCdst(object):
             }
             noova["Deducciones"]["FondoPension"] = val
 
-        if "FondoSP" in dic["Deducciones"]:
-            pass
+        if "FondoSP" in dic["Deducciones"].keys():
+            if "FondoSPSUB" in dic["Deduccio"]["FondoSP"]:
+                val = {
+                    "Nvfsp_posb": dic["Deduccio"]["FondoSP"]["Porcentaje"],
+                    "Nvfsp_desb": dic["Deduccio"]["FondoSP"]["Deduccion"]
+                }
+            else:
+                val = {
+                    "Nvfsp_porc": dic["Deduccio"]["FondoSP"]["Porcentaje"],
+                    "Nvfsp_dedu": dic["Deduccio"]["FondoSP"]["Deduccion"]
+                }
+            noova["Deducciones"]["FondoSP"] = val
 
-        if "Sindicatos" in dic["Deducciones"]:
-            pass
+        if "Sindicatos" in dic["Deducciones"].keys():
+            if "Sindicato" in dic["Deducciones"]["Sindicatos"].keys():
+                val = {
+                    "Nvsin_porc": dic["Deducciones"]["Sindicatos"]["Sindicato"]["Porcentaje"],
+                    "Nvsin_dedu": dic["Deducciones"]["Sindicatos"]["Sindicato"]["Deduccion"]
+                }
 
-        if "OtrosD" in dic["Deducciones"]:
+        if "OtrosD" in dic["Deducciones"].keys():
             data = []
             for od in dic["Deducciones"]["OtrosD"]:
                 if dic["Deducciones"]["OtrosD"][od] == "PensionVoluntaria":

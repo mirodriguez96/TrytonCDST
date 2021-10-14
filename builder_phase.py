@@ -393,7 +393,7 @@ class ElectronicPayroll(object):
                 'Pago': rvalue(line.amount, 2)
                 }
                 subelements['HEDs'][concept] = hr
-            
+
             elif concept in WAGE_TYPE['Vacaciones']:
                 if 'Vacaciones' not in subelements.keys():
                     subelements['Vacaciones'] = {}
