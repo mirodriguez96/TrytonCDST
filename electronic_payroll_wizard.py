@@ -24,8 +24,6 @@ class PayrollElectronicCdst(Wizard):
                     Configuration = pool.get('staff.configuration')
                     configuration = Configuration(1)
                     _ = ElectronicPayrollCdst(payroll, configuration)
-                    #Mensaje para pruebas
-                    #raise UserError('MENSAJE', 'Nomina enviada al proveedor tecnologico')
                 else:
                     payroll.get_message('Nomina no valida para enviar')
             else:

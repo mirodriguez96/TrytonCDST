@@ -270,17 +270,17 @@ class ElectronicPayrollCdst(object):
             for h in dic["Devengados"]["Vacaciones"]:
                 if "VacacionesComunes" in h.keys():
                     val = {
-                        "Nvcom_fini": h["FechaInicio"],
-                        "Nvcom_ffin": h["FechaFin"],
-                        "Nvcom_cant": h["Cantidad"],
-                        "Nvcom_pago": h["Pago"],
-                        "Nvvac_tipo": h["1"]
+                        "Nvcom_fini": dic["Devengados"]["Vacaciones"][h]["FechaInicio"],
+                        "Nvcom_ffin": dic["Devengados"]["Vacaciones"][h]["FechaFin"],
+                        "Nvcom_cant": dic["Devengados"]["Vacaciones"][h]["Cantidad"],
+                        "Nvcom_pago": dic["Devengados"]["Vacaciones"][h]["Pago"],
+                        "Nvvac_tipo": dic["Devengados"]["Vacaciones"][h]["1"]
                     }
                 else:
                     val = {
-                        "Nvcom_cant": h["Cantidad"],
-                        "Nvcom_pago": h["Pago"],
-                        "Nvvac_tipo": h["2"]
+                        "Nvcom_cant": dic["Devengados"]["Vacaciones"][h]["Cantidad"],
+                        "Nvcom_pago": dic["Devengados"]["Vacaciones"][h]["Pago"],
+                        "Nvvac_tipo": dic["Devengados"]["Vacaciones"][h]["2"]
                     }
                 data.append(val)
             noova["Devengados"]["LVacaciones"] = data
@@ -379,96 +379,3 @@ class ElectronicPayrollCdst(object):
         
         return noova
 
-"""
-    def _send_electronic_payroll(self):
-        if 1:  # try:
-            if self.config.environment == '2':
-                api_send = API_SEND['2']
-            else:
-                api_send = API_SEND['1']
-
-            res = send_payroll_psk(
-                self.payroll,
-                self.config,
-                api_send,
-                API_SIGN[self.payroll.payroll_type],
-            )
-            if res.get('result') and res.get('result') == 'false':
-                self.payroll.get_message(res['message'])
-                return
-            if self.config.environment == '2':
-                response = res['responseDian']['Envelope']['Body']
-                if 'SendTestSetAsyncResponse' in response:
-                    self.payroll.write([self.payroll], {
-                        'electronic_state': 'submitted',
-                        'cune': self.payroll.get_cune(),
-                        'zip_key': response['SendTestSetAsyncResponse']['ZipKey']
-                    })
-            else:
-                response = res['responseDian']['Envelope']['Body']['SendNominaSyncResponse']['SendNominaSyncResult']
-
-                xml_response_dian = encode_payroll(
-                    response['XmlBase64Bytes'], 'decode')
-                if response['IsValid'] == 'true':
-                    payroll_type = 'nie'
-                    if self.payroll.payroll_type != '102':
-                        payroll_type = 'niae'
-
-                    self.payroll.write([self.payroll], {
-                        'cune': self.payroll.get_cune(self.payroll.payroll_type),
-                        'electronic_state': 'authorized',
-                        'electronic_message': response['StatusMessage'],
-                        'xml_response_dian_': xml_response_dian.encode('utf8'),
-                    })
-                else:
-                    cadena = ''
-                    for r in response['ErrorMessage']['string']:
-                        cadena += r + '\n'
-                    self.payroll.write([self.payroll], {
-                        'rules_fail': cadena,
-                        'electronic_message': response['StatusMessage'],
-                        'electronic_state': 'rejected',
-                        'xml_response_dian_': xml_response_dian.encode('utf8'),
-                    })
-
-        else:  # except Exception as e:
-            self.payroll.get_message('Error de Envio')
-
-    def send_request_status_document(payroll, config):
-        api_send = API_SEND['3']
-        if config and config.environment == '1':
-            api_send = API_SEND['4']
-        res = send_request_status_psk(
-            payroll,
-            api_send,
-        )
-        if not res:
-            payroll.get_message('Error de solicitud')
-
-        if config and config.environment == '1':
-            response = res['responseDian']['Envelope']['Body']['GetStatusResponse']['GetStatusResult']
-        else:
-            response = res['responseDian']['Envelope']['Body']['GetStatusZipResponse']['GetStatusZipResult']['DianResponse']
-        print(response)
-        if response['IsValid'] == 'false':
-            payroll.get_message('Cune no valido')
-        xml_response_dian = encode_payroll(
-            response['XmlBase64Bytes'], 'decode')
-        if response['IsValid'] == 'true':
-            payroll.write([payroll], {
-                'cune': response['XmlDocumentKey'],
-                'electronic_state': 'authorized',
-                'electronic_message': response['StatusMessage'],
-                'xml_response_dian_': xml_response_dian.encode('utf8'),
-            })
-        else:
-            cadena = ''
-            for r in response['ErrorMessage']['string']:
-                cadena += r + '\n'
-            payroll.write([payroll], {
-                'rules_fail': cadena,
-                'electronic_message': response['StatusMessage'],
-                'electronic_state': 'rejected',
-            })
-        return
-"""

@@ -39,7 +39,7 @@ class Party(ModelSQL, ModelView):
         cls.create_or_update()
         if terceros_tecno:
             columnas_terceros = cls.get_columns_db_tecno('TblTerceros')
-            columnas_contactos = cls.get_columns_db_tecno('Terceros_Contactos')
+            #columnas_contactos = cls.get_columns_db_tecno('Terceros_Contactos')
             columna_direcciones = cls.get_columns_db_tecno('Terceros_Dir')
             pool = Pool()
             Party = pool.get('party.party')
@@ -47,7 +47,7 @@ class Party(ModelSQL, ModelView):
             Lang = pool.get('ir.lang')
             es, = Lang.search([('code', '=', 'es_419')])
             Mcontact = pool.get('party.contact_mechanism')
-            to_create = []
+            #to_create = []
             create_address = []
             create_contact = []
             #Comenzamos a recorrer los terceros traidos por la consulta
@@ -59,6 +59,9 @@ class Party(ModelSQL, ModelView):
                 SegundoNombre = ter[columnas_terceros.index('SegundoNombre')].strip()
                 PrimerApellido = ter[columnas_terceros.index('PrimerApellido')].strip()
                 SegundoApellido = ter[columnas_terceros.index('SegundoApellido')].strip()
+                mail = ter[columnas_terceros.index('mail')].strip()
+                telefono = ter[columnas_terceros.index('telefono')].strip()
+                ciudad = ter[columnas_terceros.index('ciudad')].strip()
                 TipoPersona = cls.person_type(ter[columnas_terceros.index('TipoPersona')].strip())
                 ciiu = ter[columnas_terceros.index('IdActividadEconomica')]
                 TipoContribuyente = cls.tax_regime(ter[columnas_terceros.index('IdTipoContribuyente')])
@@ -83,8 +86,8 @@ class Party(ModelSQL, ModelView):
                         exists.regime_tax = TipoContribuyente
                         exists.lang = es
                         #Actualización de la dirección y metodos de contacto
-                        cls.update_address(exists)
-                        cls.update_contact(exists)
+                        #cls.update_address(exists)
+                        #cls.update_contact(exists)
                         exists.save()
                 else:
                     #Creando tercero junto con sus direcciones y metodos de contactos
@@ -110,44 +113,42 @@ class Party(ModelSQL, ModelView):
                     if direcciones_tecno:
                         for direc in direcciones_tecno:
                             if direc[columna_direcciones.index('codigo_direccion')] == 1:
-                                tercero.commercial_name = direc[columna_direcciones.index('NombreSucursal')].strip()
+                                comercial_name = direc[columna_direcciones.index('NombreSucursal')].strip()
+                                if len(comercial_name) > 2:
+                                    tercero.commercial_name = comercial_name
                             #Creacion e inserccion de direccion
                             direccion = Address()
                             direccion.id_tecno = direc[columna_direcciones.index('nit')].strip()+'-'+str(direc[columna_direcciones.index('codigo_direccion')])
-                            direccion.city = direc[columna_direcciones.index('ciudad')].strip()
-                            direccion.country = 50
+                            #direccion.city = direc[columna_direcciones.index('ciudad')].strip()
+                            #direccion.country = 50
                             barrio = direc[columna_direcciones.index('Barrio')].strip()
-                            if barrio:
+                            if barrio and len(barrio) > 2:
                                 direccion.name = barrio
                             direccion.party = tercero
                             direccion.party_name = nombre
-                            direccion.street = direc[columna_direcciones.index('direccion')].strip()
-                            #create_address.append(direccion)
+                            street = direc[columna_direcciones.index('direccion')].strip()
+                            if len(street) > 2:
+                                direccion.street = street
                             direccion.save()
-                    contactos_tecno = cls.get_contacts_db_tecno(nit_cedula)
-                    if contactos_tecno:
-                        for cont in contactos_tecno:
-                            #Creacion e inserccion de metodo de contacto phone
-                            contacto = Mcontact()
-                            contacto.id_tecno = str(cont[columnas_contactos.index('IdContacto')])+'-1'
-                            contacto.type = 'phone'
-                            contacto.value = cont[columnas_contactos.index('Telefono')].strip()
-                            contacto.name = cont[columnas_contactos.index('Nombre')].strip()+' ('+cont[columnas_contactos.index('Cargo')].strip()+')'
-                            contacto.language = es
-                            contacto.party = tercero
-                            #create_contact.append(contacto)
-                            contacto.save()
-                            #Creacion e inserccion de metodo de contacto email
-                            contacto = Mcontact()
-                            contacto.id_tecno = str(cont[columnas_contactos.index('IdContacto')])+'-2'
-                            contacto.type = 'email'
-                            contacto.value = cont[columnas_contactos.index('Email')].strip()
-                            contacto.name = cont[columnas_contactos.index('Nombre')].strip()+' ('+cont[columnas_contactos.index('Cargo')].strip()+')'
-                            contacto.language = es
-                            contacto.party = tercero
-                            #create_contact.append(contacto)
-                            contacto.save()
-                    #to_create.append(tercero)
+                    #Metodos de contactos
+                    if len(mail) > 4:
+                        contacto = Mcontact()
+                        contacto.id_tecno = nit_cedula+'-mail'
+                        contacto.type = 'email'
+                        contacto.value = mail
+                        contacto.name = 'Email'
+                        contacto.language = es
+                        contacto.party = tercero
+                        contacto.save()
+                    if len(telefono) > 4:
+                        contacto = Mcontact()
+                        contacto.id_tecno = nit_cedula+'-tel'
+                        contacto.type = 'phone'
+                        contacto.value = mail
+                        contacto.name = 'Phone'
+                        contacto.language = es
+                        contacto.party = tercero
+                        contacto.save()
                     tercero.save()
             #Party.save(to_create)
             Address.save(create_address)
@@ -169,7 +170,7 @@ class Party(ModelSQL, ModelView):
                     address = address[0]
                     if add[columna_direcciones.index('codigo_direccion')] == 1:
                         party.commercial_name = add[columna_direcciones.index('NombreSucursal')].strip()
-                    address.city = add[columna_direcciones.index('ciudad')].strip()
+                    #address.city = add[columna_direcciones.index('ciudad')].strip()
                     barrio = add[columna_direcciones.index('Barrio')].strip()
                     if barrio:
                         address.name = barrio
