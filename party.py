@@ -38,7 +38,6 @@ class Party(ModelSQL, ModelView):
         cls.create_or_update()
         if terceros_tecno:
             columnas_terceros = cls.get_columns_db_tecno('TblTerceros')
-            #columnas_contactos = cls.get_columns_db_tecno('Terceros_Contactos')
             columna_direcciones = cls.get_columns_db_tecno('Terceros_Dir')
             pool = Pool()
             Party = pool.get('party.party')
@@ -68,7 +67,6 @@ class Party(ModelSQL, ModelView):
                 #Ahora verificamos si el tercero existe en la bd de tryton
                 if exists:
                     ultimo_cambiop = ter[columnas_terceros.index('Ultimo_Cambio_Registro')]
-                    print(ultimo_cambiop)
                     create_date = None
                     write_date = None
                     if exists.write_date:
@@ -111,7 +109,7 @@ class Party(ModelSQL, ModelView):
                             contacto.id_tecno = nit_cedula+'-mail'
                             contacto.type = 'email'
                             contacto.value = mail
-                            contacto.name = 'Correo'
+                            contacto.name = 'correo'
                             contacto.language = es
                             contacto.party = exists
                             contacto.save()
@@ -133,7 +131,7 @@ class Party(ModelSQL, ModelView):
                             contacto.id_tecno = nit_cedula+'-tel'
                             contacto.type = 'phone'
                             contacto.value = telefono
-                            contacto.name = 'Teléfono'
+                            contacto.name = 'telefono'
                             contacto.language = es
                             contacto.party = exists
                             contacto.save()
@@ -259,7 +257,7 @@ class Party(ModelSQL, ModelView):
                         contacto.id_tecno = nit_cedula+'-mail'
                         contacto.type = 'email'
                         contacto.value = mail
-                        contacto.name = 'Email'
+                        contacto.name = 'correo'
                         contacto.language = es
                         contacto.party = tercero
                         contacto.save()
@@ -268,7 +266,7 @@ class Party(ModelSQL, ModelView):
                         contacto.id_tecno = nit_cedula+'-tel'
                         contacto.type = 'phone'
                         contacto.value = telefono
-                        contacto.name = 'Phone'
+                        contacto.name = 'telefono'
                         contacto.language = es
                         contacto.party = tercero
                         contacto.save()
@@ -413,26 +411,6 @@ class Party(ModelSQL, ModelView):
             return'regimen_no_responsable'
         else:
             return None
-
-    #Función encargada de consultar la dirección de un tercero dado
-    #@classmethod
-    #def find_address(cls, party):
-    #    Address = Pool().get('party.address')
-    #    address = Address.__table__()
-    #    cursor = Transaction().connection.cursor()
-    #    cursor.execute(*address.select(where=(address.party == party.id)))
-    #    result = cursor.fetchall()
-    #    return result
-
-    #Función encargada de consultar el metodo de contacto de un tercero dado
-    #@classmethod
-    #def find_contact_mechanism(cls, party):
-    #    Contact = Pool().get('party.contact_mechanism')
-    #    contact = Contact.__table__()
-    #    cursor = Transaction().connection.cursor()
-    #    cursor.execute(*contact.select(where=(contact.party == party.id)))
-    #    result = cursor.fetchall()
-    #    return result
 
     #Función encargada de consultar las columnas pertenecientes a 'x' tabla de la bd de TecnoCarnes
     @classmethod
