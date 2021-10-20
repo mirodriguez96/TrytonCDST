@@ -107,6 +107,7 @@ class Party(ModelSQL, ModelView):
                             if address:
                                 ultimo_cambiod = dir_t[columna_direcciones.index('Ultimo_Cambio_Registro')]
                                 if (ultimo_cambiod and address[0].write_date and ultimo_cambiod > address[0].write_date) or (ultimo_cambiod and not address[0].write_date and ultimo_cambiod > address[0].create_date):
+                                    region = list(dir_t[columna_direcciones.index('CodigoSucursal')].strip())
                                     try:
                                         country_code, = Country.search([('code', '=', 'COL')])
                                         if len(region) > 1:
