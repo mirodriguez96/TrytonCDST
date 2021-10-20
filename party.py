@@ -68,6 +68,10 @@ class Party(ModelSQL, ModelView):
                 #Ahora verificamos si el tercero existe en la bd de tryton
                 if exists:
                     ultimo_cambiop = ter[columnas_terceros.index('Ultimo_Cambio_Registro')]
+                    print(ultimo_cambiop)
+                    print(type(ultimo_cambiop))
+                    print(exists.create_date)
+                    print(type(exists.create_date))
                     #Ahora vamos a verificar si el cambio más reciente fue hecho en la bd sqlserver para actualizarlo
                     if (ultimo_cambiop and exists.write_date and ultimo_cambiop > exists.write_date) or (ultimo_cambiop and not exists.write_date and ultimo_cambiop > exists.create_date):
                         exists.type_document = tipo_identificacion
@@ -109,7 +113,7 @@ class Party(ModelSQL, ModelView):
                                 if (ultimo_cambiod and address[0].write_date and ultimo_cambiod > address[0].write_date) or (ultimo_cambiod and not address[0].write_date and ultimo_cambiod > address[0].create_date):
                                     region = list(dir_t[columna_direcciones.index('CodigoSucursal')].strip())
                                     try:
-                                        country_code, = Country.search([('code', '=', 'COL')])
+                                        country_code, = Country.search([('code', '=', '169')])
                                         if len(region) > 1:
                                             department_code, = Department.search([('code', '=', region[0]+region[1])])
                                             city_code, = City.search([
@@ -161,7 +165,7 @@ class Party(ModelSQL, ModelView):
                             direccion.id_tecno = direc[columna_direcciones.index('nit')].strip()+'-'+str(direc[columna_direcciones.index('codigo_direccion')])
                             region = list(direc[columna_direcciones.index('CodigoSucursal')].strip())
                             try:
-                                country_code, = Country.search([('code', '=', 'COL')])
+                                country_code, = Country.search([('code', '=', '169')])
                                 if len(region) > 1:
                                     department_code, = Department.search([('code', '=', region[0]+region[1])])
                                     city_code, = City.search([
