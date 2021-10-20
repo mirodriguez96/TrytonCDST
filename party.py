@@ -73,10 +73,8 @@ class Party(ModelSQL, ModelView):
                     write_date = None
                     if exists.write_date:
                         write_date = (exists.write_date - datetime.timedelta(hours=5, minutes=5))
-                        print(write_date)
                     elif exists.create_date:
                         create_date = (exists.create_date - datetime.timedelta(hours=5, minutes=5))
-                        print(create_date)
                     #Ahora vamos a verificar si el cambio más reciente fue hecho en la bd sqlserver para actualizarlo
                     if (ultimo_cambiop and write_date and ultimo_cambiop > write_date) or (ultimo_cambiop and not write_date and ultimo_cambiop > create_date):
                         exists.type_document = tipo_identificacion
@@ -98,13 +96,25 @@ class Party(ModelSQL, ModelView):
                     cont_mail = Mcontact.search([('id_tecno', '=', nit_cedula+'-mail')])
                     if cont_mail:
                         cont_mail = cont_mail[0]
-                        if (ultimo_cambiop and cont_mail.write_date and ultimo_cambiop > cont_mail.write_date) or (ultimo_cambiop and not cont_mail.write_date and ultimo_cambiop > cont_mail.create_date):
+                        create_date = None
+                        write_date = None
+                        if cont_mail.write_date:
+                            write_date = (cont_mail.write_date - datetime.timedelta(hours=5, minutes=5))
+                        elif cont_mail.create_date:
+                            create_date = (cont_mail.create_date - datetime.timedelta(hours=5, minutes=5))
+                        if (ultimo_cambiop and write_date and ultimo_cambiop > write_date) or (ultimo_cambiop and not write_date and ultimo_cambiop > create_date):
                             cont_mail.value = mail
                             cont_mail.save()
                     cont_tel = Mcontact.search([('id_tecno', '=', nit_cedula+'-tel')])
                     if cont_tel:
                         cont_tel = cont_tel[0]
-                        if (ultimo_cambiop and cont_tel.write_date and ultimo_cambiop > cont_tel.write_date) or (ultimo_cambiop and not cont_tel.write_date and ultimo_cambiop > cont_tel.create_date):
+                        create_date = None
+                        write_date = None
+                        if cont_tel.write_date:
+                            write_date = (cont_tel.write_date - datetime.timedelta(hours=5, minutes=5))
+                        elif cont_tel.create_date:
+                            create_date = (cont_tel.create_date - datetime.timedelta(hours=5, minutes=5))
+                        if (ultimo_cambiop and write_date and ultimo_cambiop > write_date) or (ultimo_cambiop and not write_date and ultimo_cambiop > create_date):
                             cont_tel.value = telefono
                             cont_tel.save()
                     #Actualización de la dirección
@@ -115,7 +125,13 @@ class Party(ModelSQL, ModelView):
                             address = Address.search([('id_tecno', '=', id_dt)])
                             if address:
                                 ultimo_cambiod = dir_t[columna_direcciones.index('Ultimo_Cambio_Registro')]
-                                if (ultimo_cambiod and address[0].write_date and ultimo_cambiod > address[0].write_date) or (ultimo_cambiod and not address[0].write_date and ultimo_cambiod > address[0].create_date):
+                                create_date = None
+                                write_date = None
+                                if address[0].write_date:
+                                    write_date = (address[0].write_date - datetime.timedelta(hours=5, minutes=5))
+                                elif address[0].create_date:
+                                    create_date = (address[0].create_date - datetime.timedelta(hours=5, minutes=5))
+                                if (ultimo_cambiod and write_date and ultimo_cambiod > write_date) or (ultimo_cambiod and not write_date and ultimo_cambiod > create_date):
                                     region = list(dir_t[columna_direcciones.index('CodigoSucursal')].strip())
                                     try:
                                         country_code, = Country.search([('code', '=', '169')])
