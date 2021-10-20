@@ -1,7 +1,6 @@
 import datetime
 from trytond.model import ModelSQL, ModelView, fields
 from trytond.pool import Pool, PoolMeta
-#from trytond.transaction import Transaction
 from trytond.exceptions import UserError
 
 
@@ -47,9 +46,10 @@ class Party(ModelSQL, ModelView):
             Lang = pool.get('ir.lang')
             es, = Lang.search([('code', '=', 'es_419')])
             Mcontact = pool.get('party.contact_mechanism')
+            Country = pool.get('party.country_code')
+            Department = pool.get('party.department_code')
+            City = pool.get('party.city_code')
             #to_create = []
-            create_address = []
-            create_contact = []
             #Comenzamos a recorrer los terceros traidos por la consulta
             for ter in terceros_tecno:
                 nit_cedula = ter[columnas_terceros.index('nit_cedula')].strip()
@@ -61,16 +61,15 @@ class Party(ModelSQL, ModelView):
                 SegundoApellido = ter[columnas_terceros.index('SegundoApellido')].strip()
                 mail = ter[columnas_terceros.index('mail')].strip()
                 telefono = ter[columnas_terceros.index('telefono')].strip()
-                ciudad = ter[columnas_terceros.index('ciudad')].strip()
                 TipoPersona = cls.person_type(ter[columnas_terceros.index('TipoPersona')].strip())
                 ciiu = ter[columnas_terceros.index('IdActividadEconomica')]
                 TipoContribuyente = cls.tax_regime(ter[columnas_terceros.index('IdTipoContribuyente')])
                 exists = cls.find_party(nit_cedula)
                 #Ahora verificamos si el tercero existe en la bd de tryton
                 if exists:
-                    ultimo_cambio = ter[columnas_terceros.index('Ultimo_Cambio_Registro')]
+                    ultimo_cambiop = ter[columnas_terceros.index('Ultimo_Cambio_Registro')]
                     #Ahora vamos a verificar si el cambio más reciente fue hecho en la bd sqlserver para actualizarlo
-                    if (ultimo_cambio and exists.write_date and ultimo_cambio > exists.write_date) or (ultimo_cambio and not exists.write_date and ultimo_cambio > exists.create_date):
+                    if (ultimo_cambiop and exists.write_date and ultimo_cambiop > exists.write_date) or (ultimo_cambiop and not exists.write_date and ultimo_cambiop > exists.create_date):
                         exists.type_document = tipo_identificacion
                         exists.name = nombre
                         exists.first_name = PrimerNombre
@@ -85,10 +84,51 @@ class Party(ModelSQL, ModelView):
                             exists.ciiu_code = ciiu
                         exists.regime_tax = TipoContribuyente
                         exists.lang = es
-                        #Actualización de la dirección y metodos de contacto
-                        #cls.update_address(exists)
-                        #cls.update_contact(exists)
                         exists.save()
+                    #Actualización de los 2 metodos de contactos principales
+                    cont_mail = Mcontact.search([('id_tecno', '=', nit_cedula+'-mail')])
+                    if cont_mail:
+                        cont_mail = cont_mail[0]
+                        if (ultimo_cambiop and cont_mail.write_date and ultimo_cambiop > cont_mail.write_date) or (ultimo_cambiop and not cont_mail.write_date and ultimo_cambiop > cont_mail.create_date):
+                            cont_mail.value = mail
+                            cont_mail.save()
+                    cont_tel = Mcontact.search([('id_tecno', '=', nit_cedula+'-tel')])
+                    if cont_tel:
+                        cont_tel = cont_tel[0]
+                        if (ultimo_cambiop and cont_tel.write_date and ultimo_cambiop > cont_tel.write_date) or (ultimo_cambiop and not cont_tel.write_date and ultimo_cambiop > cont_tel.create_date):
+                            cont_tel.value = telefono
+                            cont_tel.save()
+                    #Actualización de la dirección
+                    dir_tecno = cls.get_address_db_tecno(nit_cedula)
+                    if dir_tecno:
+                        for dir_t in dir_tecno:
+                            id_dt = dir_t[columna_direcciones.index('nit')].strip()+'-'+str(dir_t[columna_direcciones.index('codigo_direccion')])
+                            address = Address.search([('id_tecno', '=', id_dt)])
+                            if address:
+                                ultimo_cambiod = dir_t[columna_direcciones.index('Ultimo_Cambio_Registro')]
+                                if (ultimo_cambiod and address[0].write_date and ultimo_cambiod > address[0].write_date) or (ultimo_cambiod and not address[0].write_date and ultimo_cambiod > address[0].create_date):
+                                    try:
+                                        country_code, = Country.search([('code', '=', 'COL')])
+                                        if len(region) > 1:
+                                            department_code, = Department.search([('code', '=', region[0]+region[1])])
+                                            city_code, = City.search([
+                                                ('code', '=', region[2]+region[3]+region[4]),
+                                                ('department', '=', department_code)
+                                                ])
+                                            address[0].department_code = department_code
+                                            address[0].city_code = city_code
+                                    except Exception as e:
+                                        raise UserError(f"Error: {e}")
+                                    address[0].country_code = country_code
+                                    barrio = dir_t[columna_direcciones.index('Barrio')].strip()
+                                    if barrio and len(barrio) > 2:
+                                        address[0].name = barrio
+                                    address[0].party = tercero
+                                    address[0].party_name = nombre
+                                    street = dir_t[columna_direcciones.index('direccion')].strip()
+                                    if len(street) > 2:
+                                        address[0].street = street
+                                    address[0].save()
                 else:
                     #Creando tercero junto con sus direcciones y metodos de contactos
                     tercero = Party()
@@ -119,8 +159,20 @@ class Party(ModelSQL, ModelView):
                             #Creacion e inserccion de direccion
                             direccion = Address()
                             direccion.id_tecno = direc[columna_direcciones.index('nit')].strip()+'-'+str(direc[columna_direcciones.index('codigo_direccion')])
-                            #direccion.city = direc[columna_direcciones.index('ciudad')].strip()
-                            #direccion.country = 50
+                            region = list(direc[columna_direcciones.index('CodigoSucursal')].strip())
+                            try:
+                                country_code, = Country.search([('code', '=', 'COL')])
+                                if len(region) > 1:
+                                    department_code, = Department.search([('code', '=', region[0]+region[1])])
+                                    city_code, = City.search([
+                                        ('code', '=', region[2]+region[3]+region[4]),
+                                        ('department', '=', department_code)
+                                        ])
+                                    direccion.department_code = department_code
+                                    direccion.city_code = city_code
+                            except Exception as e:
+                                raise UserError(f"Error: {e}")
+                            direccion.country_code = country_code
                             barrio = direc[columna_direcciones.index('Barrio')].strip()
                             if barrio and len(barrio) > 2:
                                 direccion.name = barrio
@@ -144,17 +196,15 @@ class Party(ModelSQL, ModelView):
                         contacto = Mcontact()
                         contacto.id_tecno = nit_cedula+'-tel'
                         contacto.type = 'phone'
-                        contacto.value = mail
+                        contacto.value = telefono
                         contacto.name = 'Phone'
                         contacto.language = es
                         contacto.party = tercero
                         contacto.save()
                     tercero.save()
             #Party.save(to_create)
-            Address.save(create_address)
-            Mcontact.save(create_contact)
 
-
+    """
     #Función encargada de verificar, actualizar e insertar las direcciones pertenecientes a un tercero dado
     @classmethod
     def update_address(cls, party):
@@ -239,7 +289,7 @@ class Party(ModelSQL, ModelView):
                     contacto.language = es
                     contacto.party = party
                     contacto.save()
-
+    """
 
     #Función encargada de retornar el tercero de acuerdo a su id_number
     @classmethod
@@ -250,11 +300,6 @@ class Party(ModelSQL, ModelView):
             return party
         except Exception as e:
             return False
-        #if party:
-        #    print('Tercero existente:', id)
-        #    return party[0]
-        #else:
-        #    return False
 
     #Función encargada de realizar la equivalencia entre los tipo de documentos de la db
     #y los tipos de documentos del modulo account_col de presik
@@ -331,6 +376,7 @@ class Party(ModelSQL, ModelView):
                     columns.append(q[0])
         except Exception as e:
             print("ERROR QUERY "+table+": ", e)
+            raise UserError(f"ERROR QUERY {table}: {e}")
         return columns
 
     #Esta función se encarga de traer todos los datos de una tabla dada de la bd TecnoCarnes
@@ -345,6 +391,7 @@ class Party(ModelSQL, ModelView):
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY "+table+": ", e)
+            raise UserError(f"ERROR QUERY {table}: {e}")
         return data
 
     #Esta función se encarga de traer todos los datos de una tabla dada de acuerdo al rango de fecha dada de la bd TecnoCarnes
@@ -359,6 +406,7 @@ class Party(ModelSQL, ModelView):
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY get_data_where_tecno: ", e)
+            raise UserError(f"ERROR QUERY {table}: {e}")
         return data
 
     #Función encargada de consultar las direcciones pertenecientes a un tercero en la bd TecnoCarnes
