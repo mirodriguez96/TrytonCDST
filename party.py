@@ -68,14 +68,17 @@ class Party(ModelSQL, ModelView):
                 #Ahora verificamos si el tercero existe en la bd de tryton
                 if exists:
                     ultimo_cambiop = ter[columnas_terceros.index('Ultimo_Cambio_Registro')]
+                    print(ultimo_cambiop)
+                    create_date = None
+                    write_date = None
                     if exists.write_date:
-                        write_date = (exists.write_date - datetime.timedelta(hours=5))
-                        create_date = None
+                        write_date = (exists.write_date - datetime.timedelta(hours=5, minutes=5))
+                        print(write_date)
                     elif exists.create_date:
-                        create_date = (exists.create_date - datetime.timedelta(hours=5))
-                        write_date = None
+                        create_date = (exists.create_date - datetime.timedelta(hours=5, minutes=5))
+                        print(create_date)
                     #Ahora vamos a verificar si el cambio más reciente fue hecho en la bd sqlserver para actualizarlo
-                    if (ultimo_cambiop and exists.write_date and ultimo_cambiop > exists.write_date) or (ultimo_cambiop and not exists.write_date and ultimo_cambiop > exists.create_date):
+                    if (ultimo_cambiop and write_date and ultimo_cambiop > write_date) or (ultimo_cambiop and not write_date and ultimo_cambiop > create_date):
                         exists.type_document = tipo_identificacion
                         exists.name = nombre
                         exists.first_name = PrimerNombre
