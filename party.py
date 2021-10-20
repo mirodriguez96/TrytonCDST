@@ -124,7 +124,6 @@ class Party(ModelSQL, ModelView):
                                     barrio = dir_t[columna_direcciones.index('Barrio')].strip()
                                     if barrio and len(barrio) > 2:
                                         address[0].name = barrio
-                                    address[0].party = tercero
                                     address[0].party_name = nombre
                                     street = dir_t[columna_direcciones.index('direccion')].strip()
                                     if len(street) > 2:
