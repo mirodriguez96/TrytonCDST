@@ -525,16 +525,16 @@ class Party(ModelSQL, ModelView):
 
     #Esta función se encarga de traer todos los datos de una tabla dada de la bd TecnoCarnes
     @classmethod
-    def get_data_db_tecno(cls, table):
+    def get_data_dir_tecno(cls, table, date):
         data = []
         try:
             Config = Pool().get('conector.configuration')
             conexion = Config.conexion()
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT * FROM dbo."+table)
+                query = cursor.execute("SELECT * FROM dbo."+table+" WHERE Ultimo_Cambio_Registro >= CAST('"+date+"' AS datetime)")
                 data = list(query.fetchall())
         except Exception as e:
-            print("ERROR QUERY "+table+": ", e)
+            print("ERROR QUERY get_data_dir_tecno: ", e)
             raise UserError(f"ERROR QUERY {table}: {e}")
         return data
 
@@ -546,7 +546,7 @@ class Party(ModelSQL, ModelView):
             Config = Pool().get('conector.configuration')
             conexion = Config.conexion()
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT TOP(500) * FROM dbo."+table+" WHERE fecha_creacion >= CAST('"+date+"' AS datetime) OR Ultimo_Cambio_Registro >= CAST('"+date+"' AS datetime)")
+                query = cursor.execute("SELECT * FROM dbo."+table+" WHERE fecha_creacion >= CAST('"+date+"' AS datetime) OR Ultimo_Cambio_Registro >= CAST('"+date+"' AS datetime)")
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY get_data_where_tecno: ", e)
@@ -602,7 +602,7 @@ class Party(ModelSQL, ModelView):
         return data
 
     @classmethod
-    def last_update(cls):
+    def last_update_dir(cls):
         Actualizacion = Pool().get('conector.actualizacion')
         #Se consulta la ultima actualización realizada para los terceros
         ultima_actualizacion = Actualizacion.search([('name', '=','TERCEROS')])
@@ -615,7 +615,7 @@ class Party(ModelSQL, ModelView):
         else:
             fecha = datetime.date(9999,9,9)
         fecha = fecha.strftime('%Y-%d-%m %H:%M:%S')
-        data = cls.get_data_where_tecno('Terceros_Dir', fecha)
+        data = cls.get_data_dir_tecno('Terceros_Dir', fecha)
         return data
 
     #Crea o actualiza un registro de la tabla actualización en caso de ser necesario
