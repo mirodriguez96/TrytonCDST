@@ -93,7 +93,7 @@ class Party(ModelSQL, ModelView):
                         exists.lang = es
                         exists.save()
                     #Actualización de los 2 metodos de contactos principales
-                    cls.update_contact(exists, ultimo_cambiop, mail, 'mail')
+                    cls.update_contact(exists, ultimo_cambiop, mail, 'email')
                     cls.update_contact(exists, ultimo_cambiop, telefono, 'phone')
                     #Actualización de la dirección
                     cls.update_address(exists)
@@ -124,7 +124,7 @@ class Party(ModelSQL, ModelView):
                         for direccion in direcciones_tecno:
                             cls.create_address_new(tercero, direccion)
                     #Metodos de contactos
-                    cls.create_contact_type(tercero, mail, 'mail')
+                    cls.create_contact_type(tercero, mail, 'email')
                     cls.create_contact_type(tercero, telefono, 'phone')
                     tercero.save()
             #Party.save(to_create)
@@ -219,7 +219,7 @@ class Party(ModelSQL, ModelView):
             Mcontact = Pool().get('party.contact_mechanism')
             #Buscamos y validamos el contacto
             id_t = party.id_number+'-tel'
-            if type == 'mail':
+            if type == 'email':
                 id_t = party.id_number+'-mail'
             contact = Mcontact.search([('id_tecno', '=', id_t)])
             if contact:
@@ -246,7 +246,7 @@ class Party(ModelSQL, ModelView):
             if type == 'phone':
                 contacto.id_tecno = party.id_number+'-tel'
                 contacto.name = 'telefono'
-            elif type == 'mail':
+            elif type == 'email':
                 contacto.id_tecno = party.id_number+'-mail'
                 contacto.name = 'correo'
             contacto.type = type
