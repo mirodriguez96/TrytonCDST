@@ -34,7 +34,7 @@ class Party(ModelSQL, ModelView):
     @classmethod
     def update_parties(cls):
         print("---------------RUN TERCEROS---------------")
-        terceros_tecno = cls.last_update()
+        terceros_db = cls.last_update()
         direcciones_db = cls.last_update_dir()
         cls.create_or_update()
 
@@ -48,12 +48,11 @@ class Party(ModelSQL, ModelView):
         Department = pool.get('party.department_code')
         City = pool.get('party.city_code')
 
-        if terceros_tecno:
+        if terceros_db:
             columnas_terceros = cls.get_columns_db_tecno('TblTerceros')
-            columna_direcciones = cls.get_columns_db_tecno('Terceros_Dir')
             #to_create = []
             #Comenzamos a recorrer los terceros traidos por la consulta
-            for ter in terceros_tecno:
+            for ter in terceros_db:
                 nit_cedula = ter[columnas_terceros.index('nit_cedula')].strip()
                 tipo_identificacion = cls.id_type(ter[columnas_terceros.index('tipo_identificacion')])
                 nombre = ter[columnas_terceros.index('nombre')].strip()
@@ -94,113 +93,11 @@ class Party(ModelSQL, ModelView):
                         exists.lang = es
                         exists.save()
                     #Actualización de los 2 metodos de contactos principales
-                    cont_mail = Mcontact.search([('id_tecno', '=', nit_cedula+'-mail')])
-                    if cont_mail:
-                        cont_mail = cont_mail[0]
-                        create_date = None
-                        write_date = None
-                        if cont_mail.write_date:
-                            write_date = (cont_mail.write_date - datetime.timedelta(hours=5, minutes=5))
-                        elif cont_mail.create_date:
-                            create_date = (cont_mail.create_date - datetime.timedelta(hours=5, minutes=5))
-                        if (ultimo_cambiop and write_date and ultimo_cambiop > write_date) or (ultimo_cambiop and not write_date and ultimo_cambiop > create_date):
-                            cont_mail.value = mail
-                            cont_mail.save()
-                    else:
-                        if len(mail) > 4:
-                            contacto = Mcontact()
-                            contacto.id_tecno = nit_cedula+'-mail'
-                            contacto.type = 'email'
-                            contacto.value = mail
-                            contacto.name = 'correo'
-                            contacto.language = es
-                            contacto.party = exists
-                            contacto.save()
-                    cont_tel = Mcontact.search([('id_tecno', '=', nit_cedula+'-tel')])
-                    if cont_tel:
-                        cont_tel = cont_tel[0]
-                        create_date = None
-                        write_date = None
-                        if cont_tel.write_date:
-                            write_date = (cont_tel.write_date - datetime.timedelta(hours=5, minutes=5))
-                        elif cont_tel.create_date:
-                            create_date = (cont_tel.create_date - datetime.timedelta(hours=5, minutes=5))
-                        if (ultimo_cambiop and write_date and ultimo_cambiop > write_date) or (ultimo_cambiop and not write_date and ultimo_cambiop > create_date):
-                            cont_tel.value = telefono
-                            cont_tel.save()
-                    else:
-                        if len(telefono) > 4:
-                            contacto = Mcontact()
-                            contacto.id_tecno = nit_cedula+'-tel'
-                            contacto.type = 'phone'
-                            contacto.value = telefono
-                            contacto.name = 'telefono'
-                            contacto.language = es
-                            contacto.party = exists
-                            contacto.save()
+                    cls.update_contact(exists, ultimo_cambiop, mail, 'mail')
+                    cls.update_contact(exists, ultimo_cambiop, telefono, 'phone')
                     #Actualización de la dirección
-                    dir_tecno = cls.get_address_db_tecno(nit_cedula)
-                    if dir_tecno:
-                        for dir_t in dir_tecno:
-                            id_dt = dir_t[columna_direcciones.index('nit')].strip()+'-'+str(dir_t[columna_direcciones.index('codigo_direccion')])
-                            address = Address.search([('id_tecno', '=', id_dt)])
-                            if address:
-                                ultimo_cambiod = dir_t[columna_direcciones.index('Ultimo_Cambio_Registro')]
-                                create_date = None
-                                write_date = None
-                                if address[0].write_date:
-                                    write_date = (address[0].write_date - datetime.timedelta(hours=5, minutes=5))
-                                elif address[0].create_date:
-                                    create_date = (address[0].create_date - datetime.timedelta(hours=5, minutes=5))
-                                if (ultimo_cambiod and write_date and ultimo_cambiod > write_date) or (ultimo_cambiod and not write_date and ultimo_cambiod > create_date):
-                                    region = list(dir_t[columna_direcciones.index('CodigoSucursal')].strip())
-                                    try:
-                                        country_code, = Country.search([('code', '=', '169')])
-                                        if len(region) > 1:
-                                            department_code, = Department.search([('code', '=', region[0]+region[1])])
-                                            city_code, = City.search([
-                                                ('code', '=', region[2]+region[3]+region[4]),
-                                                ('department', '=', department_code)
-                                                ])
-                                            address[0].department_code = department_code
-                                            address[0].city_code = city_code
-                                    except Exception as e:
-                                        raise UserError(f"Error: {e}")
-                                    address[0].country_code = country_code
-                                    barrio = dir_t[columna_direcciones.index('Barrio')].strip()
-                                    if barrio and len(barrio) > 2:
-                                        address[0].name = barrio
-                                    address[0].party_name = nombre
-                                    street = dir_t[columna_direcciones.index('direccion')].strip()
-                                    if len(street) > 2:
-                                        address[0].street = street
-                                    address[0].save()
-                            else:
-                                direccion = Address()
-                                direccion.id_tecno = dir_t[columna_direcciones.index('nit')].strip()+'-'+str(dir_t[columna_direcciones.index('codigo_direccion')])
-                                region = list(dir_t[columna_direcciones.index('CodigoSucursal')].strip())
-                                try:
-                                    country_code, = Country.search([('code', '=', '169')])
-                                    if len(region) > 1:
-                                        department_code, = Department.search([('code', '=', region[0]+region[1])])
-                                        city_code, = City.search([
-                                            ('code', '=', region[2]+region[3]+region[4]),
-                                            ('department', '=', department_code)
-                                            ])
-                                        direccion.department_code = department_code
-                                        direccion.city_code = city_code
-                                except Exception as e:
-                                    raise UserError(f"Error: {e}")
-                                direccion.country_code = country_code
-                                barrio = dir_t[columna_direcciones.index('Barrio')].strip()
-                                if barrio and len(barrio) > 2:
-                                    direccion.name = barrio
-                                direccion.party = exists
-                                direccion.party_name = nombre
-                                street = dir_t[columna_direcciones.index('direccion')].strip()
-                                if len(street) > 2:
-                                    direccion.street = street
-                                direccion.save()
+                    cls.update_address(exists)
+
                 else:
                     #Creando tercero junto con sus direcciones y metodos de contactos
                     tercero = Party()
@@ -221,130 +118,38 @@ class Party(ModelSQL, ModelView):
                     #Equivalencia regimen de impuestos
                     tercero.regime_tax = TipoContribuyente
                     tercero.lang = es
+                    #Creamos las direcciones pertenecientes al tercero
                     direcciones_tecno = cls.get_address_db_tecno(nit_cedula)
                     if direcciones_tecno:
-                        for direc in direcciones_tecno:
-                            if direc[columna_direcciones.index('codigo_direccion')] == 1:
-                                comercial_name = direc[columna_direcciones.index('NombreSucursal')].strip()
-                                if len(comercial_name) > 2:
-                                    tercero.commercial_name = comercial_name
-                            #Creacion e inserccion de direccion
-                            direccion = Address()
-                            direccion.id_tecno = direc[columna_direcciones.index('nit')].strip()+'-'+str(direc[columna_direcciones.index('codigo_direccion')])
-                            region = list(direc[columna_direcciones.index('CodigoSucursal')].strip())
-                            try:
-                                country_code, = Country.search([('code', '=', '169')])
-                                if len(region) > 1:
-                                    department_code, = Department.search([('code', '=', region[0]+region[1])])
-                                    city_code, = City.search([
-                                        ('code', '=', region[2]+region[3]+region[4]),
-                                        ('department', '=', department_code)
-                                        ])
-                                    direccion.department_code = department_code
-                                    direccion.city_code = city_code
-                            except Exception as e:
-                                raise UserError(f"Error: {e}")
-                            direccion.country_code = country_code
-                            barrio = direc[columna_direcciones.index('Barrio')].strip()
-                            if barrio and len(barrio) > 2:
-                                direccion.name = barrio
-                            direccion.party = tercero
-                            direccion.party_name = nombre
-                            street = direc[columna_direcciones.index('direccion')].strip()
-                            if len(street) > 2:
-                                direccion.street = street
-                            direccion.save()
+                        for direccion in direcciones_tecno:
+                            cls.create_address_new(tercero, direccion)
                     #Metodos de contactos
-                    if len(mail) > 4:
-                        contacto = Mcontact()
-                        contacto.id_tecno = nit_cedula+'-mail'
-                        contacto.type = 'email'
-                        contacto.value = mail
-                        contacto.name = 'correo'
-                        contacto.language = es
-                        contacto.party = tercero
-                        contacto.save()
-                    if len(telefono) > 4:
-                        contacto = Mcontact()
-                        contacto.id_tecno = nit_cedula+'-tel'
-                        contacto.type = 'phone'
-                        contacto.value = telefono
-                        contacto.name = 'telefono'
-                        contacto.language = es
-                        contacto.party = tercero
-                        contacto.save()
+                    cls.create_contact_type(tercero, mail, 'mail')
+                    cls.create_contact_type(tercero, telefono, 'phone')
                     tercero.save()
             #Party.save(to_create)
-        else:
-            columna_direcciones = cls.get_columns_db_tecno('Terceros_Dir')
-            if direcciones_db:
-                for dir in direcciones_db:
-                    nit = dir[columna_direcciones.index('nit')].strip()
-                    try:
-                        tercero, = Party.search([('id_number', '=', nit)])
-                    except Exception as e:
-                        raise UserError("ERROR PARTY", f"Error: {e}")
-                    id_dt = nit+'-'+str(dir[columna_direcciones.index('codigo_direccion')])
-                    region = list(dir[columna_direcciones.index('CodigoSucursal')].strip())
-                    address = Address.search([('id_tecno', '=', id_dt)])
-                    if address:
-                        ultimo_cambiod = dir[columna_direcciones.index('Ultimo_Cambio_Registro')]
-                        create_date = None
-                        write_date = None
-                        if address[0].write_date:
-                            write_date = (address[0].write_date - datetime.timedelta(hours=5, minutes=5))
-                        elif address[0].create_date:
-                            create_date = (address[0].create_date - datetime.timedelta(hours=5, minutes=5))
-                        if (ultimo_cambiod and write_date and ultimo_cambiod > write_date) or (ultimo_cambiod and not write_date and ultimo_cambiod > create_date):
-                            try:
-                                country_code, = Country.search([('code', '=', '169')])
-                                if len(region) > 1:
-                                    department_code, = Department.search([('code', '=', region[0]+region[1])])
-                                    city_code, = City.search([
-                                        ('code', '=', region[2]+region[3]+region[4]),
-                                        ('department', '=', department_code)
-                                        ])
-                                    address[0].department_code = department_code
-                                    address[0].city_code = city_code
-                            except Exception as e:
-                                raise UserError("ERROR REGION", f"Error: {e}")
-                            address[0].country_code = country_code
-                            barrio = dir[columna_direcciones.index('Barrio')].strip()
-                            if barrio and len(barrio) > 2:
-                                address[0].name = barrio
-                            address[0].party_name = tercero.name
-                            street = dir[columna_direcciones.index('direccion')].strip()
-                            if len(street) > 2:
-                                address[0].street = street
-                            address[0].save()
-                        else:
-                            direccion = Address()
-                            direccion.id_tecno = id_dt
-                            try:
-                                country_code, = Country.search([('code', '=', '169')])
-                                if len(region) > 1:
-                                    department_code, = Department.search([('code', '=', region[0]+region[1])])
-                                    city_code, = City.search([
-                                        ('code', '=', region[2]+region[3]+region[4]),
-                                        ('department', '=', department_code)
-                                        ])
-                                    direccion.department_code = department_code
-                                    direccion.city_code = city_code
-                            except Exception as e:
-                                raise UserError("ERROR REGION", f"Error: {e}")
-                            direccion.country_code = country_code
-                            barrio = dir[columna_direcciones.index('Barrio')].strip()
-                            if barrio and len(barrio) > 2:
-                                direccion.name = barrio
-                            direccion.party = tercero
-                            direccion.party_name = tercero.name
-                            street = dir[columna_direcciones.index('direccion')].strip()
-                            if len(street) > 2:
-                                direccion.street = street
-                            direccion.save()
-                    else:
-                        direccion = Address()
-                        direccion.id_tecno = id_dt
+
+        if direcciones_db:
+            column_dir = cls.get_columns_db_tecno('Terceros_Dir')
+            for dir in direcciones_db:
+                nit = dir[column_dir.index('nit')].strip()
+                try:
+                    tercero, = Party.search([('id_number', '=', nit)])
+                except Exception as e:
+                    raise UserError("ERROR PARTY", f"Error: {e}")
+                id_t = nit+'-'+str(dir[column_dir.index('codigo_direccion')])
+                address = Address.search([('id_tecno', '=', id_t)])
+                if address:
+                    address = address[0]
+                    ultimo_cambiod = dir[column_dir.index('Ultimo_Cambio_Registro')]
+                    create_date = None
+                    write_date = None
+                    if address.write_date:
+                        write_date = (address.write_date - datetime.timedelta(hours=5, minutes=5))
+                    elif address.create_date:
+                        create_date = (address.create_date - datetime.timedelta(hours=5, minutes=5))
+                    if (ultimo_cambiod and write_date and ultimo_cambiod > write_date) or (ultimo_cambiod and not write_date and ultimo_cambiod > create_date):
+                        region = list(dir[column_dir.index('CodigoSucursal')].strip())
                         try:
                             country_code, = Country.search([('code', '=', '169')])
                             if len(region) > 1:
@@ -353,107 +158,102 @@ class Party(ModelSQL, ModelView):
                                     ('code', '=', region[2]+region[3]+region[4]),
                                     ('department', '=', department_code)
                                     ])
-                                direccion.department_code = department_code
-                                direccion.city_code = city_code
+                                address.department_code = department_code
+                                address.city_code = city_code
                         except Exception as e:
                             raise UserError("ERROR REGION", f"Error: {e}")
-                        direccion.country_code = country_code
-                        barrio = dir[columna_direcciones.index('Barrio')].strip()
+                        address.country_code = country_code
+                        barrio = dir[column_dir.index('Barrio')].strip()
                         if barrio and len(barrio) > 2:
-                            direccion.name = barrio
-                        direccion.party = tercero
-                        direccion.party_name = tercero.name
-                        street = dir[columna_direcciones.index('direccion')].strip()
+                            address.name = barrio
+                        address.party_name = tercero.name
+                        street = dir[column_dir.index('direccion')].strip()
                         if len(street) > 2:
-                            direccion.street = street
-                        direccion.save()
-
-    """
-    #Función encargada de verificar, actualizar e insertar las direcciones pertenecientes a un tercero dado
-    @classmethod
-    def update_address(cls, party):
-        address_tecno = cls.get_address_db_tecno(party.id_number)
-        #Consultamos si existen direcciones para el tercero
-        if address_tecno:
-            columna_direcciones = cls.get_columns_db_tecno('Terceros_Dir')
-            Address = Pool().get('party.address')
-            for add in address_tecno:
-                id_tecno = add[columna_direcciones.index('nit')]+'-'+str(add[columna_direcciones.index('codigo_direccion')])
-                address = Address.search([('id_tecno', '=', id_tecno)])
-                if address:
-                    address = address[0]
-                    if add[columna_direcciones.index('codigo_direccion')] == 1:
-                        party.commercial_name = add[columna_direcciones.index('NombreSucursal')].strip()
-                    #address.city = add[columna_direcciones.index('ciudad')].strip()
-                    barrio = add[columna_direcciones.index('Barrio')].strip()
-                    if barrio:
-                        address.name = barrio
-                    address.street = add[columna_direcciones.index('direccion')].strip()
-                    address.save()
+                            address.street = street
+                        address.save()
                 else:
-                    if add[columna_direcciones.index('codigo_direccion')] == 1:
-                        party.commercial_name = add[columna_direcciones.index('NombreSucursal')].strip()
-                    address = Address()
-                    address.id_tecno = id_tecno
-                    address.city = add[columna_direcciones.index('ciudad')].strip()
-                    address.country = 50
-                    barrio = add[columna_direcciones.index('Barrio')].strip()
-                    if barrio:
-                        address.name = barrio
-                    address.party = party
-                    address.party_name = party.name
-                    address.street = add[columna_direcciones.index('direccion')].strip()
-                    address.save()
+                    cls.create_address_new(tercero, dir)
 
+
+    @classmethod
+    def create_address_new(cls, party, data):
+        Address = Pool().get('party.address')
+        Country = Pool().get('party.country_code')
+        Department = Pool().get('party.department_code')
+        City = Pool().get('party.city_code')
+        column_dir = cls.get_columns_db_tecno('Terceros_Dir')
+        if data[column_dir.index('codigo_direccion')] == 1:
+            comercial_name = data[column_dir.index('NombreSucursal')].strip()
+            if len(comercial_name) > 2:
+                party.commercial_name = comercial_name
+        direccion = Address()
+        direccion.id_tecno = data[column_dir.index('nit')].strip()+'-'+str(data[column_dir.index('codigo_direccion')])
+        region = list(data[column_dir.index('CodigoSucursal')].strip())
+        try:
+            country_code, = Country.search([('code', '=', '169')])
+            if len(region) > 1:
+                department_code, = Department.search([('code', '=', region[0]+region[1])])
+                city_code, = City.search([
+                    ('code', '=', region[2]+region[3]+region[4]),
+                    ('department', '=', department_code)
+                    ])
+                direccion.department_code = department_code
+                direccion.city_code = city_code
+        except Exception as e:
+            raise UserError("ERROR REGION", f"Error: {e}")
+        direccion.country_code = country_code
+        barrio = data[column_dir.index('Barrio')].strip()
+        if barrio and len(barrio) > 2:
+            direccion.name = barrio
+        direccion.party = party
+        direccion.party_name = party.name
+        street = data[column_dir.index('direccion')].strip()
+        if len(street) > 2:
+            direccion.street = street
+        direccion.save()
 
     #Función encargada de verificar, actualizar e insertar los metodos de contacto pertenecientes a un tercero dado
     @classmethod
-    def update_contact(cls, party):
-        contacts_tecno = cls.get_contacts_db_tecno(party.id_number)
-        #Consultamos si existen contactos para el tercero
-        if contacts_tecno:
-            columns_contact = cls.get_columns_db_tecno('Terceros_Contactos')
-            Contacts = Pool().get('party.contact_mechanism')
-            for cont in contacts_tecno:
-                id_tecno = str(cont[columns_contact.index('IdContacto')])
-                nombre = cont[columns_contact.index('Nombre')].strip()+' ('+cont[columns_contact.index('Cargo')].strip()+')'
-                contact1 = Contacts.search([('id_tecno', '=', id_tecno+'-1')])
-                contact2 = Contacts.search([('id_tecno', '=', id_tecno+'-2')])
-                Lang = Pool().get('ir.lang')
-                es, = Lang.search([('code', '=', 'es_419')])
-                #Verificamos y creamos el metodo de contacto phone, en caso de ser necesario
-                if contact1:
-                    contact1 = contact1[0]
-                    contact1.value = cont[columns_contact.index('Telefono')].strip()
-                    contact1.name = nombre
-                    contact1.save()
+    def update_contact(cls, party, ultimo_cambio, value, type):
+        if len(value) > 4:
+            Mcontact = Pool().get('party.contact_mechanism')
+            #Buscamos y validamos el contacto
+            id_t = party.id_number+'-tel'
+            if type == 'mail':
+                id_t = party.id_number+'-mail'
+            contact = Mcontact.search([('id_tecno', '=', id_t)])
+            if contact:
+                contact = contact[0]
+                create_date = None
+                write_date = None
+                if contact.write_date:
+                    write_date = (contact.write_date - datetime.timedelta(hours=5, minutes=5))
                 else:
-                    #Creacion e inserccion de metodo de contacto phone
-                    contacto = Contacts()
-                    contacto.id_tecno = id_tecno+'-1'
-                    contacto.type = 'phone'
-                    contacto.value = cont[columns_contact.index('Telefono')].strip()
-                    contacto.name = nombre
-                    contacto.language = es
-                    contacto.party = party
-                    contacto.save()
-                #Verificamos y creamos el metodo de contacto email, en caso de ser necesario
-                if contact2:
-                    contact2 = contact2[0]
-                    contact2.value = cont[columns_contact.index('Email')].strip()
-                    contact2.name = nombre
-                    contact2.save()
+                    create_date = (contact.create_date - datetime.timedelta(hours=5, minutes=5))
+                if (ultimo_cambio and write_date and ultimo_cambio > write_date) or (ultimo_cambio and not write_date and ultimo_cambio > create_date):
+                    contact.value = value
+                    contact.save()
                 else:
-                    #Creacion e inserccion de metodo de contacto email
-                    contacto = Contacts()
-                    contacto.id_tecno = id_tecno+'-2'
-                    contacto.type = 'email'
-                    contacto.value = cont[columns_contact.index('Email')].strip()
-                    contacto.name = nombre
-                    contacto.language = es
-                    contacto.party = party
-                    contacto.save()
-    """
+                    cls.create_contact_type(party, value, type)
+
+    @classmethod
+    def create_contact_type(cls, party, value, type):
+        Mcontact = Pool().get('party.contact_mechanism')
+        Lang = Pool().get('ir.lang')
+        es, = Lang.search([('code', '=', 'es_419')])
+        if len(value) > 4:
+            contacto = Mcontact()
+            if type == 'phone':
+                contacto.id_tecno = party.id_number+'-tel'
+                contacto.name = 'telefono'
+            elif type == 'mail':
+                contacto.id_tecno = party.id_number+'-mail'
+                contacto.name = 'correo'
+            contacto.type = type
+            contacto.value = value
+            contacto.language = es
+            contacto.party = party
+            contacto.save()
 
     #Función encargada de retornar el tercero de acuerdo a su id_number
     @classmethod
@@ -613,7 +413,7 @@ class Party(ModelSQL, ModelView):
             else:
                 fecha = (ultima_actualizacion[0].create_date - datetime.timedelta(hours=5, minutes=5))
         else:
-            fecha = datetime.date(9999,9,9)
+            return None
         fecha = fecha.strftime('%Y-%d-%m %H:%M:%S')
         data = cls.get_data_dir_tecno('Terceros_Dir', fecha)
         return data
