@@ -95,9 +95,6 @@ class Party(ModelSQL, ModelView):
                     #Actualización de los 2 metodos de contactos principales
                     cls.update_contact(exists, ultimo_cambiop, mail, 'email')
                     cls.update_contact(exists, ultimo_cambiop, telefono, 'phone')
-                    #Actualización de la dirección
-                    cls.update_address(exists)
-
                 else:
                     #Creando tercero junto con sus direcciones y metodos de contactos
                     tercero = Party()
@@ -128,7 +125,7 @@ class Party(ModelSQL, ModelView):
                     cls.create_contact_type(tercero, telefono, 'phone')
                     tercero.save()
             #Party.save(to_create)
-
+        #Actualización de direcciones
         if direcciones_db:
             column_dir = cls.get_columns_db_tecno('Terceros_Dir')
             for dir in direcciones_db:
