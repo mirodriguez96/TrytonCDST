@@ -230,8 +230,8 @@ class Party(ModelSQL, ModelView):
                 if (ultimo_cambio and write_date and ultimo_cambio > write_date) or (ultimo_cambio and not write_date and ultimo_cambio > create_date):
                     contact.value = value
                     contact.save()
-                else:
-                    cls.create_contact_type(party, value, type)
+            else:
+                cls.create_contact_type(party, value, type)
 
     @classmethod
     def create_contact_type(cls, party, value, type):
