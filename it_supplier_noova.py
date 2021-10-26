@@ -64,7 +64,12 @@ class ElectronicPayrollCdst(object):
             res = json.loads(response.text)
             print(res)
             self.payroll.xml_payroll = data.encode('utf8')
-            self.payroll.electronic_state = 'submitted'
+            electronic_state = 'submitted'
+            if res['State'] == 'Exitosa':
+                electronic_state = 'accepted'
+            elif res['State'] == 'Fallida':
+                electronic_state = 'rejected'
+            self.payroll.electronic_state = electronic_state
             self.payroll.cune = res['Cune']
             self.payroll.electronic_message = res['Description']
             self.payroll.rules_fail = res['ErrorList']
