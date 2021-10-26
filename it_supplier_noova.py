@@ -60,12 +60,14 @@ class ElectronicPayrollCdst(object):
         response = requests.post(url, headers=header, data=data)
         #self.payroll.get_message(response.text)
         if response.status_code == 200:
-            print(response.text)
+            print(type(response.text))
+            res = json.loads(response.text)
+            print(res)
             self.payroll.xml_payroll = data.encode('utf8')
             self.payroll.electronic_state = 'submitted'
-            self.payroll.cune = response.text[3]
-            self.payroll.electronic_message = response.text[9]
-            self.payroll.rules_fail = response.text[7]
+            self.payroll.cune = res.text['Cune']
+            self.payroll.electronic_message = res.text['State']
+            self.payroll.rules_fail = res.text['ErrorList']
             self.payroll.save()
             # return response
             print("CONEXION EXITOSA")
