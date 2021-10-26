@@ -63,9 +63,9 @@ class ElectronicPayrollCdst(object):
             print(response.text)
             self.payroll.xml_payroll = data.encode('utf8')
             self.payroll.electronic_state = 'submitted'
-            self.payroll.cune = response.text['Cune']
-            self.payroll.electronic_message = response.text['State']
-            self.payroll.rules_fail = response.text['ErrorList']
+            self.payroll.cune = response.text[3]
+            self.payroll.electronic_message = response.text[9]
+            self.payroll.rules_fail = response.text[7]
             self.payroll.save()
             # return response
             print("CONEXION EXITOSA")
