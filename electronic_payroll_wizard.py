@@ -27,5 +27,5 @@ class PayrollElectronicCdst(Wizard):
                 else:
                     payroll.get_message('Nomina no valida para enviar')
             else:
-                payroll.get_message('Nomina no valida para enviar (estados).')
+                payroll.get_message('Nomina no valida para enviar (estado debe estar en proceso).')
         return 'end'

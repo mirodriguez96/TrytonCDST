@@ -60,11 +60,12 @@ class ElectronicPayrollCdst(object):
         response = requests.post(url, headers=header, data=data)
         #self.payroll.get_message(response.text)
         if response.status_code == 200:
-            #res = response.json()
-            #xml_signed = encode_payroll(res['xml_base64_bytes'], 'decode')
+            print(response.text)
             self.payroll.xml_payroll = data.encode('utf8')
             self.payroll.electronic_state = 'submitted'
-            self.payroll.electronic_message = response.text
+            self.payroll.cune = response.text['Cune']
+            self.payroll.electronic_message = response.text['State']
+            self.payroll.rules_fail = response.text['ErrorList']
             self.payroll.save()
             # return response
             print("CONEXION EXITOSA")
@@ -236,7 +237,7 @@ class ElectronicPayrollCdst(object):
         }
         data_val = self._validate_data(dict_res, noova)
         data = json.dumps(data_val, indent=4)
-        print(data)
+        #print(data)
         return data
 
     def _validate_data(self, dic, noova):
