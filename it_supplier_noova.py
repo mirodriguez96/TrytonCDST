@@ -360,13 +360,13 @@ class ElectronicPayrollCdst(object):
             print(dic["Deducciones"]["FondoSP"])
             if "FondoSPSUB" in dic["Deducciones"]["FondoSP"]:
                 val = {
-                    "Nvfsp_posb": dic["Deducciones"]["FondoSP"]["Porcentaje"],
-                    "Nvfsp_desb": dic["Deducciones"]["FondoSP"]["Deduccion"]
+                    "Nvfsp_posb": dic["Deducciones"]["FondoSP"]["FondoSPSUB"]["Porcentaje"],
+                    "Nvfsp_desb": dic["Deducciones"]["FondoSP"]["FondoSPSUB"]["Deduccion"]
                 }
             else:
                 val = {
-                    "Nvfsp_porc": dic["Deducciones"]["FondoSP"]["Porcentaje"],
-                    "Nvfsp_dedu": dic["Deducciones"]["FondoSP"]["Deduccion"]
+                    "Nvfsp_porc": dic["Deducciones"]["FondoSP"]["FondoSP"]["Porcentaje"],
+                    "Nvfsp_dedu": dic["Deducciones"]["FondoSP"]["FondoSP"]["Deduccion"]
                 }
             noova["Deducciones"]["FondoSP"] = val
 
