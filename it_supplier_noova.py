@@ -357,8 +357,8 @@ class ElectronicPayrollCdst(object):
             noova["Deducciones"]["FondoPension"] = val
 
         if "FondoSP" in dic["Deducciones"].keys():
+            print(dic["Deducciones"]["FondoSP"])
             if "FondoSPSUB" in dic["Deducciones"]["FondoSP"]:
-                print(dic["Deducciones"]["FondoSP"])
                 val = {
                     "Nvfsp_posb": dic["Deducciones"]["FondoSP"]["Porcentaje"],
                     "Nvfsp_desb": dic["Deducciones"]["FondoSP"]["Deduccion"]
