@@ -43,7 +43,6 @@ class Party(ModelSQL, ModelView):
         Address = pool.get('party.address')
         Lang = pool.get('ir.lang')
         es, = Lang.search([('code', '=', 'es_419')])
-        Mcontact = pool.get('party.contact_mechanism')
         Country = pool.get('party.country_code')
         Department = pool.get('party.department_code')
         City = pool.get('party.city_code')

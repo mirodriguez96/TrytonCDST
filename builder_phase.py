@@ -548,9 +548,10 @@ class ElectronicPayroll(object):
                     subelements['FondoSP'] = {}
                 p = line.wage_type.unit_price_formula.split('*')
                 p = Decimal(p[1].strip()) * 100
-                e = {}
-                e['Porcentaje'] = str(p)
-                e['Deduccion'] = rvalue(line.amount, 2)
+                e = {
+                    'Porcentaje': str(p),
+                    'Deduccion': rvalue(line.amount, 2)
+                }
                 subelements['FondoSP'][concept] = e
 
             elif concept in WAGE_TYPE['Sindicatos']:

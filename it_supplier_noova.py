@@ -358,6 +358,7 @@ class ElectronicPayrollCdst(object):
 
         if "FondoSP" in dic["Deducciones"].keys():
             if "FondoSPSUB" in dic["Deducciones"]["FondoSP"]:
+                print(dic["Deducciones"]["FondoSP"])
                 val = {
                     "Nvfsp_posb": dic["Deducciones"]["FondoSP"]["Porcentaje"],
                     "Nvfsp_desb": dic["Deducciones"]["FondoSP"]["Deduccion"]
