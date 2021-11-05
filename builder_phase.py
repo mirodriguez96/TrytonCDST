@@ -434,9 +434,11 @@ class ElectronicPayroll(object):
 
             elif concept in WAGE_TYPE['Incapacidades']:
                 if 'Incapacidades' not in subelements.keys():
-                    subelements['Incapacidades'] = {}
+                    #subelements['Incapacidades'] = {}
                     for l in line.lines_payroll:
                         # line_payroll = l.line_payroll
+                        print(l)
+                        """
                         e = {}
                         e['FechaInicio'] = str(l.start_date)
                         e['FechaFin'] = str(l.end_date)
@@ -444,6 +446,7 @@ class ElectronicPayroll(object):
                         e['Tipo'] = TIPO_INCAPACIDAD[concept]
                         e['Pago'] = rvalue(l.amount, 2)
                         subelements['Incapacidades'][concept] = e
+                        """
 
             elif concept in WAGE_TYPE['Licencias']:
                 if 'Licencias' not in subelements.keys():
