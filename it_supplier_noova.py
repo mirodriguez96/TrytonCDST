@@ -33,7 +33,8 @@ class ElectronicPayrollCdst(object):
         #self.payroll.file_name_xml = file_name
         #self.payroll.save()
         #data = self._create_json_noova(xml_payroll)
-        self._send_noova(xml_payroll)
+
+        #self._send_noova(xml_payroll)
 
 
     # Consumo API noova
