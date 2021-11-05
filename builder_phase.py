@@ -447,7 +447,7 @@ class ElectronicPayroll(object):
                         e['Tipo'] = TIPO_INCAPACIDAD[concept]
                         e['Pago'] = rvalue(l.amount, 2)
                         subelements['Incapacidades'][concept] = e
-                        """"""
+                        """
 
             elif concept in WAGE_TYPE['Licencias']:
                 if 'Licencias' not in subelements.keys():
