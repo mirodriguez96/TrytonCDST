@@ -436,9 +436,8 @@ class ElectronicPayroll(object):
                 if 'Incapacidades' not in subelements.keys():
                     #subelements['Incapacidades'] = {}
                     for l in line.lines_payroll:
-                        l = l.line_payroll
-                        print(l)
-                        print(l.start_date)
+                        print(l.payroll)
+                        print(l.wage_type)
                         """"
                         e = {}
                         e['FechaInicio'] = str(l.start_date)
