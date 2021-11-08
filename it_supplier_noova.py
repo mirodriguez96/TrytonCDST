@@ -113,10 +113,10 @@ class ElectronicPayrollCdst(object):
             #],
             "Empleador": {#
                 "Nvemp_nomb": dict_res["Empleador"]["RazonSocial"],
-                "Nvemp_pape": dict_res["Empleador"]["PrimerApellido"],#opcional
-                "Nvemp_sape": dict_res["Empleador"]["SegundoApellido"],#opcional
-                "Nvemp_pnom": dict_res["Empleador"]["PrimerNombre"],#opcional
-                "Nvemp_onom": dict_res["Empleador"]["OtrosNombres"],#opcional
+                #"Nvemp_pape": dict_res["Empleador"]["PrimerApellido"],#opcional
+                #"Nvemp_sape": dict_res["Empleador"]["SegundoApellido"],#opcional
+                #"Nvemp_pnom": dict_res["Empleador"]["PrimerNombre"],#opcional
+                #"Nvemp_onom": dict_res["Empleador"]["OtrosNombres"],#opcional
                 "Nvemp_nnit": dict_res["Empleador"]["NIT"],
                 "Nvemp_endv": dict_res["Empleador"]["DV"],
                 "Nvemp_pais": dict_res["Empleador"]["Pais"],
@@ -377,7 +377,7 @@ class ElectronicPayrollCdst(object):
                     "Nvsin_porc": dic["Deducciones"]["Sindicatos"]["Sindicato"]["Porcentaje"],
                     "Nvsin_dedu": dic["Deducciones"]["Sindicatos"]["Sindicato"]["Deduccion"]
                 }
-
+        #Se pregunta si en la nómina hay otras deducciones y se agregan en caso de haber.
         if "OtrosD" in dic["Deducciones"].keys():
             data = []
             for od in dic["Deducciones"]["OtrosD"]:
