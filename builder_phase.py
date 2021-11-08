@@ -434,12 +434,9 @@ class ElectronicPayroll(object):
 
             elif concept in WAGE_TYPE['Incapacidades']:
                 if 'Incapacidades' not in subelements.keys():
-                    #subelements['Incapacidades'] = {}
+                    subelements['Incapacidades'] = {}
                     for l in line.lines_payroll:
-                        for pl in l:
-                            print(pl)
-                        print(l.quantity)
-                        """"
+                        # line_payroll = l.line_payroll
                         e = {}
                         e['FechaInicio'] = str(l.start_date)
                         e['FechaFin'] = str(l.end_date)
@@ -447,7 +444,6 @@ class ElectronicPayroll(object):
                         e['Tipo'] = TIPO_INCAPACIDAD[concept]
                         e['Pago'] = rvalue(l.amount, 2)
                         subelements['Incapacidades'][concept] = e
-                        """
 
             elif concept in WAGE_TYPE['Licencias']:
                 if 'Licencias' not in subelements.keys():
@@ -534,15 +530,19 @@ class ElectronicPayroll(object):
         for line in line_deductions:
             concept = line.wage_type.type_concept_electronic
             if concept == 'Salud':
+                p = line.wage_type.unit_price_formula.split('*')
+                p = Decimal(p[1].strip()) * 100
                 e = {
-                    "Porcentaje":'4.00',
+                    "Porcentaje": str(p),
                     "Deduccion":rvalue(line.amount, 2)
                     }
                 subelements[concept] = e
             
             elif concept == 'FondoPension':
+                p = line.wage_type.unit_price_formula.split('*')
+                p = Decimal(p[1].strip()) * 100
                 e = {
-                    "Porcentaje":'4.00',
+                    "Porcentaje": str(p),
                     "Deduccion":rvalue(line.amount, 2)
                 }
                 subelements[concept] = e

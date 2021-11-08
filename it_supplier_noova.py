@@ -34,7 +34,7 @@ class ElectronicPayrollCdst(object):
         #self.payroll.save()
         #data = self._create_json_noova(xml_payroll)
 
-        #self._send_noova(xml_payroll)
+        self._send_noova(xml_payroll)
 
 
     # Consumo API noova
@@ -113,10 +113,10 @@ class ElectronicPayrollCdst(object):
             #],
             "Empleador": {#
                 "Nvemp_nomb": dict_res["Empleador"]["RazonSocial"],
-                #"Nvemp_pape": dict_res["Empleador"]["@PrimerApellido"],#opcional
-                #"Nvemp_sape": dict_res["Empleador"]["@SegundoApellido"],#opcional
-                #"Nvemp_pnom": dict_res["Empleador"]["@PrimerNombre"],#opcional
-                #"Nvemp_onom": dict_res["Empleador"]["@OtrosNombres"],#opcional
+                "Nvemp_pape": dict_res["Empleador"]["@PrimerApellido"],#opcional
+                "Nvemp_sape": dict_res["Empleador"]["@SegundoApellido"],#opcional
+                "Nvemp_pnom": dict_res["Empleador"]["@PrimerNombre"],#opcional
+                "Nvemp_onom": dict_res["Empleador"]["@OtrosNombres"],#opcional
                 "Nvemp_nnit": dict_res["Empleador"]["NIT"],
                 "Nvemp_endv": dict_res["Empleador"]["DV"],
                 "Nvemp_pais": dict_res["Empleador"]["Pais"],
