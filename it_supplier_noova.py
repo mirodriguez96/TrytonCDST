@@ -81,12 +81,13 @@ class ElectronicPayrollCdst(object):
             self.payroll.get_message(response.text)
 
 
+    #Funcion encargada de crear el archivo json con los datos que se le envian al proveedor tecnologico (noova)
     def _create_json_noova(self, dict, sucode):
         dict_res = dict
         noova = {
             "Nvsuc_codi": sucode, # Código de la sucursal configurada en Noova
-            "Nvnom_pref": dict_res["NumeroSecuenciaXML"]["Prefijo"], #
-            "Nvnom_cons": dict_res["NumeroSecuenciaXML"]["Consecutivo"], #
+            "Nvnom_pref": dict_res["NumeroSecuenciaXML"]["Prefijo"], #prefijo de nomina
+            "Nvnom_cons": dict_res["NumeroSecuenciaXML"]["Consecutivo"], #consecutivo para la nomina
             "Nvnom_nume": dict_res["NumeroSecuenciaXML"]["Numero"], #
             "Nvope_tipo": "NM", #Tipo de operación nómina (siempre debe ir "NM")
             #"Nvnom_redo": "", #Se utiliza para cuando se utilice el redondeo en el Documento
@@ -245,10 +246,14 @@ class ElectronicPayrollCdst(object):
         }
         data_val = self._validate_data(dict_res, noova)
         data = json.dumps(data_val, indent=4)
-        #print(data)
         return data
 
+
+    #Esta funcion se encarga de validar los datos que no son obligatorios en Tryton pero que hacen parte de la nomina a enviar
+    #Recibe como entrada dos diccionarios. el primero es el diccionario con los valores de tryton y el segundo es el diccionario con los valores a enviar a noova
+    #Devuelve el diccionario con los nuevos campos para enviar a noova
     def _validate_data(self, dic, noova):
+
         if "Notas" in dic.keys():
            noova["LNotas"] = [dic["Notas"]]
         
@@ -264,8 +269,8 @@ class ElectronicPayrollCdst(object):
             horas = []
             for h in dic["Devengados"]["HEDs"]:
                 val = {
-                    #"Nvcom_fini": h["FechaInicio"],
-                    #"Nvcom_ffin": h["FechaFin"],
+                    #"Nvcom_fini": h["FechaInicio"], #OPCIONAL
+                    #"Nvcom_ffin": h["FechaFin"], #OPCIONAL
                     "Nvcom_cant": dic["Devengados"]["HEDs"][h]["Cantidad"],
                     "Nvcom_pago": dic["Devengados"]["HEDs"][h]["Pago"],
                     "Nvhor_tipo": h,
@@ -387,6 +392,6 @@ class ElectronicPayrollCdst(object):
                 else:
                     data.append(dic["Deducciones"]["OtrosD"][od])
             noova["Deducciones"]["LOtrasDeducciones"] = data
-        
-        return noova
 
+        #SE RETORNA EL DICCIONARIO PARA NOOVA CON LOS CAMPOS NUEVOS
+        return noova

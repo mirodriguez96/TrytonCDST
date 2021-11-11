@@ -178,11 +178,11 @@ class ElectronicPayroll(object):
     #    root = etree.parse(NomIndA).getroot()
     #    return root
 
-    def _get_payroll_period(self):
 
+    def _get_payroll_period(self):
         start_date = self.payroll.contract.start_date
-        # if start_date < self.payroll.start:
-        #     start_date = ''
+        if start_date < self.payroll.start:
+             start_date = ''
         end_date = None
         settlement_start_date, settlement_end_date = None, None
         if self.payroll.contract.finished_date and self.payroll.end <= self.payroll.contract.finished_date:
@@ -399,7 +399,7 @@ class ElectronicPayroll(object):
                     subelements['Vacaciones'] = {}
                 if concept == 'VacacionesComunes':
                     for l in line.lines_payroll:
-                        # line_payroll = l.line_payroll
+                        #line_payroll = l.line_payroll
                         e ={
                             "FechaInicio":str(l.start_date),
                             "FechaFin":str(l.end_date),
