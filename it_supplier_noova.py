@@ -278,19 +278,19 @@ class ElectronicPayrollCdst(object):
             data = []
             for h in dic["Devengados"]["Vacaciones"]:
                 print(h)
-                if "VacacionesComunes" == h: #FIX
+                if h == "VacacionesComunes":
                     val = {
                         "Nvcom_fini": dic["Devengados"]["Vacaciones"][h]["FechaInicio"],
                         "Nvcom_ffin": dic["Devengados"]["Vacaciones"][h]["FechaFin"],
                         "Nvcom_cant": dic["Devengados"]["Vacaciones"][h]["Cantidad"],
                         "Nvcom_pago": dic["Devengados"]["Vacaciones"][h]["Pago"],
-                        "Nvvac_tipo": dic["Devengados"]["Vacaciones"][h]["1"]
+                        "Nvvac_tipo": "1"
                     }
                 else:
                     val = {
                         "Nvcom_cant": dic["Devengados"]["Vacaciones"][h]["Cantidad"],
                         "Nvcom_pago": dic["Devengados"]["Vacaciones"][h]["Pago"],
-                        "Nvvac_tipo": dic["Devengados"]["Vacaciones"][h]["2"]
+                        "Nvvac_tipo": "2"
                     }
                 data.append(val)
             noova["Devengados"]["LVacaciones"] = data
