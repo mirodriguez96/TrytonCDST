@@ -277,7 +277,8 @@ class ElectronicPayrollCdst(object):
         if "Vacaciones" in dic["Devengados"].keys():
             data = []
             for h in dic["Devengados"]["Vacaciones"]:
-                if "VacacionesComunes" in h.keys():
+                print(h)
+                if "VacacionesComunes" == h: #FIX
                     val = {
                         "Nvcom_fini": dic["Devengados"]["Vacaciones"][h]["FechaInicio"],
                         "Nvcom_ffin": dic["Devengados"]["Vacaciones"][h]["FechaFin"],
