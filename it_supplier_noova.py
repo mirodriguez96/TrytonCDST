@@ -94,7 +94,7 @@ class ElectronicPayrollCdst(object):
             "Nvnom_devt": dict_res["DevengadosTotal"],
             "Nvnom_dedt": dict_res["DeduccionesTotal"],
             "Nvnom_comt": dict_res["ComprobanteTotal"],
-            "Nvnom_fpag": dict_res["FechasPagos"]["FechaPago"][0],
+            #"Nvnom_fpag": dict_res["FechasPagos"]["FechaPago"][0],
             #"Nvnom_cnov": "", #Duda
             "Periodo": { #
                 "Nvper_fing": dict_res["Periodo"]["FechaIngreso"],
@@ -254,6 +254,9 @@ class ElectronicPayrollCdst(object):
     #Devuelve el diccionario con los nuevos campos para enviar a noova
     def _validate_data(self, dic, noova):
 
+        lfpag = len(dic["FechasPagos"]["FechaPago"])
+        noova["Nvnom_fpag"] = dic["FechasPagos"]["FechaPago"][lfpag-1]
+
         if "Notas" in dic.keys():
            noova["LNotas"] = [dic["Notas"]]
         
@@ -301,12 +304,21 @@ class ElectronicPayrollCdst(object):
             noova["Devengados"]["LVacaciones"] = data
 
         if "Primas" in dic["Devengados"].keys():
-            noova["Devengados"]["Primas"]["Nvpri_cant"] = dic["Devengados"]["Primas"]["Cantidad"]
-            noova["Devengados"]["Primas"]["Nvpri_pago"] = dic["Devengados"]["Primas"]["Pago"],
-            
+            if "PrimasS" in dic["Devengados"]["Primas"].keys():
+                val = {
+                    "Nvpri_cant": dic["Devengados"]["Primas"]["Cantidad"],
+                    "Nvpri_pago": dic["Devengados"]["Primas"]["Pago"]
+                }
+                noova["Devengados"]["Primas"] = val
             if "PagoNs" in dic["Devengados"]["Primas"].keys():
-                noova["Devengados"]["Primas"]["Nvpri_pagn"] = dic["Devengados"]["PagoNs"]
-        
+                val = {
+                    "Nvpri_pagn": dic["Devengados"]['Primas']["PagoNs"]
+                }
+                if "Primas" in noova["Devengados"].keys():
+                    noova["Devengados"]["Primas"]["Nvpri_pagn"] = dic["Devengados"]['Primas']["PagoNs"]
+                else:
+                    noova["Devengados"]["Primas"] = val
+
         if "Cesantias" in dic["Devengados"].keys():
             if "IntCesantias" in dic["Devengados"]["Cesantias"].keys():
                 val = {
