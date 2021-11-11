@@ -181,8 +181,9 @@ class ElectronicPayroll(object):
 
     def _get_payroll_period(self):
         start_date = self.payroll.contract.start_date
-        if start_date < self.payroll.start:
-             start_date = ''
+        print(start_date)
+        #if start_date < self.payroll.start:
+        #     start_date = ''
         end_date = None
         settlement_start_date, settlement_end_date = None, None
         if self.payroll.contract.finished_date and self.payroll.end <= self.payroll.contract.finished_date:

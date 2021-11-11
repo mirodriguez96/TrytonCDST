@@ -88,7 +88,7 @@ class ElectronicPayrollCdst(object):
             "Nvsuc_codi": sucode, # Código de la sucursal configurada en Noova
             "Nvnom_pref": dict_res["NumeroSecuenciaXML"]["Prefijo"], #prefijo de nomina
             "Nvnom_cons": dict_res["NumeroSecuenciaXML"]["Consecutivo"], #consecutivo para la nomina
-            "Nvnom_nume": dict_res["NumeroSecuenciaXML"]["Numero"], #
+            "Nvnom_nume": dict_res["NumeroSecuenciaXML"]["Numero"], #Es la union del prefijo y consecutivo
             "Nvope_tipo": "NM", #Tipo de operación nómina (siempre debe ir "NM")
             #"Nvnom_redo": "", #Se utiliza para cuando se utilice el redondeo en el Documento
             "Nvnom_devt": dict_res["DevengadosTotal"],
