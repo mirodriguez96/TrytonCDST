@@ -18,8 +18,8 @@ class ElectronicPayrollCdst(object):
 
         ec_payroll = ElectronicPayroll(self.payroll, self.config)
         #_type = 'nie' #Nomina individual
-        #if self.payroll.payroll_type != '102':
-        #    _type = 'niae' #Nomina individual ajuste
+        if self.payroll.payroll_type != '102' and self.payroll.payroll_type != '103':
+            self.payroll.get_message("Wrong payroll type for supplier it.")
         
         #prefix = self.config.payroll_electronic_sequence.prefix
         #seq = self.payroll.number.split(prefix, maxsplit=1)
@@ -104,10 +104,10 @@ class ElectronicPayrollCdst(object):
                 "Nvper_tlab": dict_res["Periodo"]["TiempoLaborado"]
             },
             "InformacionGeneral": { #
-                "Nvinf_tnom": dict_res["InformacionGeneral"]["TipoXML"],
+                #"Nvinf_tnom": dict_res["InformacionGeneral"]["TipoXML"],
                 "Nvinf_pnom": dict_res["InformacionGeneral"]["PeriodoNomina"],
                 "Nvinf_tmon": dict_res["InformacionGeneral"]["TipoMoneda"],
-                #"Nvinf_mtrm": dict_res["InformacionGeneral"]["@TRM"] #Tasa Representativa del mercado
+                #"Nvinf_mtrm": dict_res["InformacionGeneral"]["TRM"] #Tasa Representativa del mercado
             },
             #"LNotas": [
             #    ""
