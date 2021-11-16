@@ -15,32 +15,27 @@ class ElectronicPayrollCdst(object):
         self._create_electronic_payroll_phase()
 
     def _create_electronic_payroll_phase(self):
-
         ec_payroll = ElectronicPayroll(self.payroll, self.config)
-        #_type = 'nie' #Nomina individual
+        #Validamos que el tipo de Nomina sea correcto
         if self.payroll.payroll_type != '102' and self.payroll.payroll_type != '103':
             self.payroll.get_message("Wrong payroll type for supplier it.")
-        
-        #prefix = self.config.payroll_electronic_sequence.prefix
-        #seq = self.payroll.number.split(prefix, maxsplit=1)
-        #file_name = _type + \
-        #    self.payroll.company.party.id_number.zfill(
-        #        10) + hex(int(seq[1])).zfill(8) + '.xml'
+
         if ec_payroll.status != 'ok':
             self.payroll.get_message(ec_payroll.status)
         xml_payroll = ec_payroll.make(self.payroll.payroll_type)
-        #self.payroll.xml_payroll = xml_payroll
-        #self.payroll.file_name_xml = file_name
-        #self.payroll.save()
-        #data = self._create_json_noova(xml_payroll)
 
         self._send_noova(xml_payroll)
 
 
     # Consumo API noova
     def _send_noova(self, dict):
-        if self.payroll.company.url_supplier and self.payroll.company.auth_supplier and self.payroll.company.host_supplier and self.payroll.company.supplier_code:
-            url = self.payroll.company.url_supplier
+        #Validamos que los datos del proveedor tecnologico este completo
+        if self.payroll.company.url_supplier and self.payroll.company.auth_supplier and self.payroll.company.url_supplier_test and self.payroll.company.host_supplier and self.payroll.company.supplier_code:
+            #Se valida en que entorno (prueba o producción) se va ha enviar la nómina
+            if self.payroll.config.environment == '1':
+                url = self.payroll.company.url_supplier
+            if self.payroll.config.environment == '2':
+                url = self.payroll.company.url_supplier_test
             auth = self.payroll.company.auth_supplier
             host = self.payroll.company.host_supplier
             sucode = self.payroll.company.supplier_code
@@ -59,7 +54,6 @@ class ElectronicPayrollCdst(object):
         }
         data = self._create_json_noova(dict, sucode)
         response = requests.post(url, headers=header, data=data)
-        #self.payroll.get_message(response.text)
         if response.status_code == 200:
             print(type(response.text))
             res = json.loads(response.text)

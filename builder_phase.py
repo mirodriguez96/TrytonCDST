@@ -168,17 +168,7 @@ class ElectronicPayroll(object):
                 self.status = MESSAGES[k]
                 break
 
-    #def _get_head_psk(self):
-    #    NomInd = open(path + '/Nomina_Individual_Electronica_V1.0.xml', 'r')
-    #    root = etree.parse(NomInd).getroot()
-    #    return root
-
-    #def _get_credit_head_psk(self):
-    #    NomIndA = open(path + '/Nomina_Individual_Ajuste_Electronica_V1.0.xml', 'r')
-    #    root = etree.parse(NomIndA).getroot()
-    #    return root
-
-
+    #
     def _get_payroll_period(self):
         start_date = self.payroll.contract.start_date
         print(start_date)
@@ -370,6 +360,7 @@ class ElectronicPayroll(object):
 
         for line in line_payments:
             concept = line.wage_type.type_concept_electronic
+
             if concept == 'Basico':
                 basico = {}
                 factor = 1.0
@@ -401,7 +392,7 @@ class ElectronicPayroll(object):
                 if concept == 'VacacionesComunes':
                     for l in line.lines_payroll:
                         #line_payroll = l.line_payroll
-                        e ={
+                        e ={ #FIX
                             "FechaInicio":str(l.start_date),
                             "FechaFin":str(l.end_date),
                             "Cantidad":rvalue(l.quantity, 0),
@@ -629,7 +620,6 @@ class ElectronicPayroll(object):
             dic_invoice["NumeroSecuenciaXML"] = (self._get_sequence())
             dic_invoice["LugarGeneracionXML"] = (self._get_place_generation())
             dic_invoice["ProveedorXML"] = (self._get_provider())
-            #xml_invoice.append(self._get_qrcode())
             dic_invoice["InformacionGeneral"] = (self._get_general_information())
             # xml_invoice.append(self._get_notes())
             dic_invoice["Empleador"] = (self._get_information_company())

@@ -2,6 +2,8 @@
 <data>
     <xpath expr="/form/notebook/page[@id='reports']" position="after">
         <page string="Supplier it" id="supplier_it">
+            <label name="url_supplier_test"/>
+            <field name="url_supplier_test"/>
             <label name="url_supplier"/>
             <field name="url_supplier"/>
             <label name="auth_supplier"/>
