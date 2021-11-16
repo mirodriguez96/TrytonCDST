@@ -1,0 +1,1402 @@
+<?xml version='1.0'?>
+<!-- This file is part of Tryton.  The COPYRIGHT file at the top level of
+this repository contains the full copyright notices and license terms. -->
+<tryton>
+    <data>
+        <record model="account.tax.group" id="tax_group_sale">
+            <field name="name">Ventas</field>
+            <field name="code">Ventas</field>
+            <field name="kind">sale</field>
+        </record>
+        <record model="account.tax.group" id="tax_group_purchase">
+            <field name="name">Compras</field>
+            <field name="code">Compras</field>
+            <field name="kind">purchase</field>
+        </record>
+        <record model="account.tax.group" id="tax_group_both">
+            <field name="name">Ambos</field>
+            <field name="code">Ambos</field>
+            <field name="kind">both</field>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_co">
+            <field name="name">PLAN DE IMPUESTOS COLOMBIA 2019</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_1">
+            <field name="name">DECLARACION DEL IMPUESTO SOBRE LAS VENTAS – IVA (FORMULARIO 300)</field>
+            <field name="parent" ref="taxcode_co"/>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_11">
+            <field name="name">INGRESOS</field>
+            <field name="parent" ref="taxcode_1"/>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_1101">
+            <field name="name">POR OPERACIONES GRAVADAS AL 5%</field>
+            <field name="parent" ref="taxcode_11"/>
+            <field name="code">27</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_1102">
+            <field name="name">POR OPERACIONES GRAVADAS A LA TARIFA GENERAL</field>
+            <field name="parent" ref="taxcode_11"/>
+            <field name="code">28</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_1103">
+            <field name="name">A.I.U POR OPERACIONES GRAVADAS (BASE GRAVABLE ESPECIAL)</field>
+            <field name="parent" ref="taxcode_11"/>
+            <field name="code">29</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_1104">
+            <field name="name">POR EXPORTACION DE BIENES</field>
+            <field name="parent" ref="taxcode_11"/>
+            <field name="code">30</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_1105">
+            <field name="name">POR EXPORTACION DE SERVICIOS</field>
+            <field name="parent" ref="taxcode_11"/>
+            <field name="code">31</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_1106">
+            <field name="name">POR VENTAS A SOCIEDADES DE COMERCIALIZACION INTERNACIONAL</field>
+            <field name="parent" ref="taxcode_11"/>
+            <field name="code">32</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_1107">
+            <field name="name">POR VENTAS A ZONAS FRANCAS</field>
+            <field name="parent" ref="taxcode_11"/>
+            <field name="code">33</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_1108">
+            <field name="name">POR JUEGOS DE SUERTE Y AZAR</field>
+            <field name="parent" ref="taxcode_11"/>
+            <field name="code">34</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_1109">
+            <field name="name">POR OPERACIONES EXENTAS (ARTS. 477, 478 Y 481 E.T.)</field>
+            <field name="parent" ref="taxcode_11"/>
+            <field name="code">35</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_1110">
+            <field name="name">POR VENTA DE CERVEZA DE PRODUCCIÓN NACIONAL O IMPORTADA</field>
+            <field name="parent" ref="taxcode_11"/>
+            <field name="code">36</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_1111">
+            <field name="name">POR OPERACIONES EXCLUIDAS</field>
+            <field name="parent" ref="taxcode_11"/>
+            <field name="code">37</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_1112">
+            <field name="name">POR OPERACIONES NO GRAVADAS</field>
+            <field name="parent" ref="taxcode_11"/>
+            <field name="code">38</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_1113">
+            <field name="name">DEVOLUCIONES EN VENTAS ANULADAS, RESCINDIDAS O RESUELTAS</field>
+            <field name="parent" ref="taxcode_11"/>
+            <field name="code">40</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_12">
+            <field name="name">COMPRAS</field>
+            <field name="parent" ref="taxcode_1"/>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_1201">
+            <field name="name">IMPORTACIONES</field>
+            <field name="parent" ref="taxcode_12"/>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_120101">
+            <field name="name">DE BIENES GRAVADOS A LA TARIFA DEL 5%</field>
+            <field name="parent" ref="taxcode_1201"/>
+            <field name="code">42</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_120102">
+            <field name="name">DE BIENES GRAVADOS A LA TARIFA GENERAL</field>
+            <field name="parent" ref="taxcode_1201"/>
+            <field name="code">43</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_120103">
+            <field name="name">DE BIENES Y SERVICIOS GRAVADOS PROVENIENTES DE ZONAS FRANCAS</field>
+            <field name="parent" ref="taxcode_1201"/>
+            <field name="code">44</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_120104">
+            <field name="name">DE BIENES NO GRAVADOS</field>
+            <field name="parent" ref="taxcode_1201"/>
+            <field name="code">45</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_120105">
+            <field name="name">DE BIENES Y SERVICIOS NO GRAVADOS PROVENIENTES DE ZONAS FRANCAS</field>
+            <field name="parent" ref="taxcode_1201"/>
+            <field name="code">46</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_120106">
+            <field name="name">DE SERVICIOS</field>
+            <field name="parent" ref="taxcode_1201"/>
+            <field name="code">47</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_1202">
+            <field name="name">NACIONALES</field>
+            <field name="parent" ref="taxcode_12"/>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_120201">
+            <field name="name">DE BIENES GRAVADOS A LA TARIFA DEL 5%</field>
+            <field name="parent" ref="taxcode_1202"/>
+            <field name="code">48</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_120202">
+            <field name="name">DE BIENES GRAVADOS A LA TARIFA GENERAL</field>
+            <field name="parent" ref="taxcode_1202"/>
+            <field name="code">49</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_120203">
+            <field name="name">DE SERVICIOS GRAVADOS A LA TARIFA DEL 5%</field>
+            <field name="parent" ref="taxcode_1202"/>
+            <field name="code">50</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_120204">
+            <field name="name">DE SERVICIOS GRAVADOS A LA TARIFA GENERAL</field>
+            <field name="parent" ref="taxcode_1202"/>
+            <field name="code">51</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_120205">
+            <field name="name">DE BIENES Y SERVICIOS EXCLUIDOS, EXENTOS Y NO GRAVADOS</field>
+            <field name="parent" ref="taxcode_1202"/>
+            <field name="code">52</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_1203">
+            <field name="name">DEVOLUCIONES EN COMPRAS ANULADAS, RESCINDIDAS O RESUELTAS EN ESTE PERIODO</field>
+            <field name="parent" ref="taxcode_12"/>
+            <field name="code">54</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_13">
+            <field name="name">LIQUIDACION PRIVADA</field>
+            <field name="parent" ref="taxcode_1"/>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_1301">
+            <field name="name">IMPUESTO GENERADO</field>
+            <field name="parent" ref="taxcode_13"/>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_130101">
+            <field name="name">A LA TARIFA DEL 5%</field>
+            <field name="parent" ref="taxcode_1301"/>
+            <field name="code">56</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_130102">
+            <field name="name">A LA TARIFA GENERAL</field>
+            <field name="parent" ref="taxcode_1301"/>
+            <field name="code">57</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_130103">
+            <field name="name">SOBRE A.I.U. EN OPERACIONES GRAVADAS (BASE GRAVABLE ESPECIAL)</field>
+            <field name="parent" ref="taxcode_1301"/>
+            <field name="code">58</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_130104">
+            <field name="name">EN JUEGOS DE SUERTE Y AZAR</field>
+            <field name="parent" ref="taxcode_1301"/>
+            <field name="code">59</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_130105">
+            <field name="name">EN VENTA CERVEZA DE PRODUCCIÓN NACIONAL O IMPORTADA</field>
+            <field name="parent" ref="taxcode_1301"/>
+            <field name="code">60</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_130106">
+            <field name="name">EN RETIRO DE INVENTARIO PARA ACTIVOS FIJOS CONSUMO, MUESTRA GRATIS O DONACIONES</field>
+            <field name="parent" ref="taxcode_1301"/>
+            <field name="code">61</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_130107">
+            <field name="name">IVA RECUPERADO POR DEVOLUCIONES EN COMPRAS ANULADAS, RESCINDIDAS O RESUELTAS</field>
+            <field name="parent" ref="taxcode_1301"/>
+            <field name="code">62</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_1302">
+            <field name="name">IMPUESTO DESCONTABLE</field>
+            <field name="parent" ref="taxcode_13"/>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_130201">
+            <field name="name">POR IMPORTACIONES GRAVADAS A LA TARIFA DEL 5%</field>
+            <field name="parent" ref="taxcode_1302"/>
+            <field name="code">64</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_130202">
+            <field name="name">POR IMPORTACIONES GRAVADAS A LA TARIFA GENERAL</field>
+            <field name="parent" ref="taxcode_1302"/>
+            <field name="code">65</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_130203">
+            <field name="name">DE BIENES Y SERVICIOS GRAVADOS PROVENIENTES DE ZONAS FRANCAS</field>
+            <field name="parent" ref="taxcode_1302"/>
+            <field name="code">66</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_130204">
+            <field name="name">POR COMPRAS DE BIENES GRAVADOS A LA TARIFA DEL 5%</field>
+            <field name="parent" ref="taxcode_1302"/>
+            <field name="code">67</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_130205">
+            <field name="name">POR COMPRAS DE BIENES GRAVADOS A LA TARIFA GENERAL</field>
+            <field name="parent" ref="taxcode_1302"/>
+            <field name="code">68</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_130206">
+            <field name="name">POR SERVICIOS GRAVADOS A LA TARIFA DEL 5%</field>
+            <field name="parent" ref="taxcode_1302"/>
+            <field name="code">69</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_130207">
+            <field name="name">POR SERVICIOS GRAVADOS A LA TARIFA GENERAL</field>
+            <field name="parent" ref="taxcode_1302"/>
+            <field name="code">70</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_130208">
+            <field name="name">IVA RETENIDO EN OPERACIONES CON RÉGIMEN SIMPLIFICADO</field>
+            <field name="parent" ref="taxcode_1302"/>
+            <field name="code">72</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_130209">
+            <field name="name">IVA RETENIDO POR SERVICIOS PRESTADOS EN COLOMBIA POR NO DOMICILIADOS O NO RESIDENTES</field>
+            <field name="parent" ref="taxcode_1302"/>
+            <field name="code">73</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_130210">
+            <field name="name">IVA RESULTANTE DE DEVOLUCIONES EN VENTAS, ANULADAS, RESCINDIDAS O RESUELTAS</field>
+            <field name="parent" ref="taxcode_1302"/>
+            <field name="code">74</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_130211">
+            <field name="name">IVA DESCONTABLE POR IMPUESTO NACIONAL A LA GASOLINA Y AL ACPM</field>
+            <field name="parent" ref="taxcode_1302"/>
+            <field name="code">75</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_130212">
+            <field name="name">AJUSTE IMPUESTOS DESCONTABLES (PERDIDAS, HURTO O CASTIGO DE INVENTARIOS)</field>
+            <field name="parent" ref="taxcode_1302"/>
+            <field name="code">76</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_1303">
+            <field name="name">RETENCIONES POR IVA QUE LE PRACTICARON</field>
+            <field name="parent" ref="taxcode_13"/>
+            <field name="code">81</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_2">
+            <field name="name">DECLARACION DE RETENCIONES EN LA FUENTE (FORMULARIO 350)</field>
+            <field name="parent" ref="taxcode_co"/>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_21">
+            <field name="name">A TITULO DE IMPUESTO SOBRE LA RENTA Y COMPLEMENTARIO</field>
+            <field name="parent" ref="taxcode_2"/>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_2101">
+            <field name="name">BASE SUJETA A RETENCION PARA PAGOS O ABONOS EN CUENTA</field>
+            <field name="parent" ref="taxcode_21"/>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_210101">
+            <field name="name">PAGOS O ABONOS EN CUENTA A EMPLEADOS SUJETOS A RETENCION (ART. 383 ET)</field>
+            <field name="parent" ref="taxcode_2101"/>
+            <field name="code">27</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_210102">
+            <field name="name">PAGOS O ABONOS EN CUENTA A EMPLEADOS SUJETOS A RETENCION (ART. 384 ET)</field>
+            <field name="parent" ref="taxcode_2101"/>
+            <field name="code">28</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_210103">
+            <field name="name">PAGOS O ABONOS EN CUENTA A TRABAJADORES POR CUENTA PROPIA</field>
+            <field name="parent" ref="taxcode_2101"/>
+            <field name="code">29</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_210104">
+            <field name="name">PAGOS POR CONCEPTO DE SALARIOS A CONTRIBUYENTES QUE NO PERTENECEN A LA CATEGORÍA DE EMPLEADOS</field>
+            <field name="parent" ref="taxcode_2101"/>
+            <field name="code">30</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_210105">
+            <field name="name">HONORARIOS Y COMISIONES</field>
+            <field name="parent" ref="taxcode_2101"/>
+            <field name="code">31</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_210106">
+            <field name="name">SERVICIOS</field>
+            <field name="parent" ref="taxcode_2101"/>
+            <field name="code">32</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_210107">
+            <field name="name">ARRENDAMIENTOS (MUEBLES E INMUEBLES)</field>
+            <field name="parent" ref="taxcode_2101"/>
+            <field name="code">33</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_210108">
+            <field name="name">COMPRAS</field>
+            <field name="parent" ref="taxcode_2101"/>
+            <field name="code">34</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_210109">
+            <field name="name">DIVIDENDOS Y PARTICIPACIONES</field>
+            <field name="parent" ref="taxcode_2101"/>
+            <field name="code">35</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_210110">
+            <field name="name">RENDIMIENTOS FINANCIEROS</field>
+            <field name="parent" ref="taxcode_2101"/>
+            <field name="code">36</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_210111">
+            <field name="name">TRANSACCIONES CON TARJETAS DEBITO Y CREDITO</field>
+            <field name="parent" ref="taxcode_2101"/>
+            <field name="code">37</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_210112">
+            <field name="name">CONTRATOS DE CONSTRUCCIÓN</field>
+            <field name="parent" ref="taxcode_2101"/>
+            <field name="code">38</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_210113">
+            <field name="name">ENAJENACION DE ACTIVOS FIJOS DE PERSONAS NATURALES ANTE NOTARIOS Y AUTORIDADES DE TRANSITO</field>
+            <field name="parent" ref="taxcode_2101"/>
+            <field name="code">39</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_210114">
+            <field name="name">LOTERIAS, RIFAS, APUESTAS Y SIMILARES</field>
+            <field name="parent" ref="taxcode_2101"/>
+            <field name="code">40</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_210115">
+            <field name="name">OTROS PAGOS SUJETOS A RETENCION</field>
+            <field name="parent" ref="taxcode_2101"/>
+            <field name="code">41</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_2102">
+            <field name="name">RETENCIONES A TITULO DE RENTA POR PAGOS O ABONOS EN CUENTA</field>
+            <field name="parent" ref="taxcode_21"/>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_210201">
+            <field name="name">PAGOS O ABONOS EN CUENTA A EMPLEADOS SUJETOS A RETENCION (ART. 383 ET)</field>
+            <field name="parent" ref="taxcode_2102"/>
+            <field name="code">42</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_210202">
+            <field name="name">PAGOS O ABONOS EN CUENTA A EMPLEADOS SUJETOS A RETENCION (ART. 384 ET)</field>
+            <field name="parent" ref="taxcode_2102"/>
+            <field name="code">43</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_210203">
+            <field name="name">PAGOS O ABONOS EN CUENTA A TRABAJADORES POR CUENTA PROPIA</field>
+            <field name="parent" ref="taxcode_2102"/>
+            <field name="code">44</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_210204">
+            <field name="name">PAGOS POR CONCEPTO DE SALARIOS A CONTRIBUYENTES QUE NO PERTENECEN A LA CATEGORÍA DE EMPLEADOS</field>
+            <field name="parent" ref="taxcode_2102"/>
+            <field name="code">45</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_210205">
+            <field name="name">HONORARIOS Y COMISIONES</field>
+            <field name="parent" ref="taxcode_2102"/>
+            <field name="code">46</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_210206">
+            <field name="name">SERVICIOS</field>
+            <field name="parent" ref="taxcode_2102"/>
+            <field name="code">47</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_210207">
+            <field name="name">ARRENDAMIENTOS (MUEBLES E INMUEBLES)</field>
+            <field name="parent" ref="taxcode_2102"/>
+            <field name="code">48</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_210208">
+            <field name="name">COMPRAS</field>
+            <field name="parent" ref="taxcode_2102"/>
+            <field name="code">49</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_210209">
+            <field name="name">DIVIDENDOS Y PARTICIPACIONES</field>
+            <field name="parent" ref="taxcode_2102"/>
+            <field name="code">50</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_210210">
+            <field name="name">RENDIMIENTOS FINANCIEROS</field>
+            <field name="parent" ref="taxcode_2102"/>
+            <field name="code">51</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_210211">
+            <field name="name">TRANSACCIONES CON TARJETAS DEBITO Y CREDITO</field>
+            <field name="parent" ref="taxcode_2102"/>
+            <field name="code">52</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_210212">
+            <field name="name">CONTRATOS DE CONSTRUCCIÓN</field>
+            <field name="parent" ref="taxcode_2102"/>
+            <field name="code">53</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_210213">
+            <field name="name">ENAJENACION DE ACTIVOS FIJOS DE PERSONAS NATURALES ANTE NOTARIOS Y AUTORIDADES DE TRANSITO</field>
+            <field name="parent" ref="taxcode_2102"/>
+            <field name="code">54</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_210214">
+            <field name="name">LOTERIAS, RIFAS, APUESTAS Y SIMILARES</field>
+            <field name="parent" ref="taxcode_2102"/>
+            <field name="code">55</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_210215">
+            <field name="name">OTROS PAGOS SUJETOS A RETENCION</field>
+            <field name="parent" ref="taxcode_2102"/>
+            <field name="code">56</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_2103">
+            <field name="name">RETENCIONES A TITULO DE RENTA PRACTICADAS POR PAGOS O ABONOS EN CUENTA AL EXTERIOR</field>
+            <field name="parent" ref="taxcode_21"/>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_210301">
+            <field name="name">A PAISES SIN CONVENIO</field>
+            <field name="parent" ref="taxcode_2103"/>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_21030101">
+            <field name="name">ENAJENACION DE ACTIVOS FIJOS Y OTRAS RETENCIONES</field>
+            <field name="parent" ref="taxcode_210301"/>
+            <field name="code">57</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_21030102">
+            <field name="name">DIVIDENDOS Y PARTICIPACIONES</field>
+            <field name="parent" ref="taxcode_210301"/>
+            <field name="code">58</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_21030103">
+            <field name="name">RENDIMIENTOS FINANCIEROS</field>
+            <field name="parent" ref="taxcode_210301"/>
+            <field name="code">59</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_21030104">
+            <field name="name">PAGOS POR EXPLOTACION DE INTANGIBLES</field>
+            <field name="parent" ref="taxcode_210301"/>
+            <field name="code">60</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_21030105">
+            <field name="name">SERVICIOS</field>
+            <field name="parent" ref="taxcode_210301"/>
+            <field name="code">61</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_21030106">
+            <field name="name">SERVICIOS TÉCNICOS, ASISTENCIA TÉCNICA, CONSULTORÍA</field>
+            <field name="parent" ref="taxcode_210301"/>
+            <field name="code">62</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_210302">
+            <field name="name">A PAISES CON CONVENIO VIGENTE</field>
+            <field name="parent" ref="taxcode_2103"/>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_21030201">
+            <field name="name">ENAJENACION DE ACTIVOS FIJOS Y OTRAS RETENCIONES</field>
+            <field name="parent" ref="taxcode_210302"/>
+            <field name="code">63</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_21030202">
+            <field name="name">DIVIDENDOS Y PARTICIPACIONES</field>
+            <field name="parent" ref="taxcode_210302"/>
+            <field name="code">64</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_21030203">
+            <field name="name">RENDIMIENTOS FINANCIEROS</field>
+            <field name="parent" ref="taxcode_210302"/>
+            <field name="code">65</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_21030204">
+            <field name="name">PAGOS POR EXPLOTACION DE INTANGIBLES</field>
+            <field name="parent" ref="taxcode_210302"/>
+            <field name="code">66</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_21030205">
+            <field name="name">SERVICIOS</field>
+            <field name="parent" ref="taxcode_210302"/>
+            <field name="code">67</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_21030206">
+            <field name="name">SERVICIOS TÉCNICOS, ASISTENCIA TÉCNICA, CONSULTORÍA</field>
+            <field name="parent" ref="taxcode_210302"/>
+            <field name="code">68</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_2104">
+            <field name="name">AUTORETENCIONES</field>
+            <field name="parent" ref="taxcode_21"/>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_210401">
+            <field name="name">VENTAS</field>
+            <field name="parent" ref="taxcode_2104"/>
+            <field name="code">69</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_210402">
+            <field name="name">HONORARIOS</field>
+            <field name="parent" ref="taxcode_2104"/>
+            <field name="code">70</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_210403">
+            <field name="name">COMISIONES</field>
+            <field name="parent" ref="taxcode_2104"/>
+            <field name="code">71</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_210404">
+            <field name="name">SERVICIOS</field>
+            <field name="parent" ref="taxcode_2104"/>
+            <field name="code">72</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_210405">
+            <field name="name">RENDIMIENTOS FINANCIEROS</field>
+            <field name="parent" ref="taxcode_2104"/>
+            <field name="code">73</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_210406">
+            <field name="name">OTROS CONCEPTOS</field>
+            <field name="parent" ref="taxcode_2104"/>
+            <field name="code">74</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_22">
+            <field name="name">RETENCIONES PRACTICADAS A TITULO DE IMPUESTO SOBRE LAS VENTAS (I.V.A.)</field>
+            <field name="parent" ref="taxcode_2"/>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_2201">
+            <field name="name">A RESPONSABLES DEL REGIMEN COMUN</field>
+            <field name="parent" ref="taxcode_22"/>
+            <field name="code">77</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_2202">
+            <field name="name">POR COMPRAS Y/O SERVICIOS A RESPONSABLES DEL REGIMEN SIMPLIFICADO</field>
+            <field name="parent" ref="taxcode_22"/>
+            <field name="code">78</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_2203">
+            <field name="name">PRACTICADAS POR SERVICIOS A NO RESIDENTES O NO DOMICILIADOS</field>
+            <field name="parent" ref="taxcode_22"/>
+            <field name="code">79</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_23">
+            <field name="name">RETENCIONES PRACTICADAS A TITULO DE TIMBRE NACIONAL</field>
+            <field name="parent" ref="taxcode_2"/>
+            <field name="code">82</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_3">
+            <field name="name">DECLARACION DE AUTORETENCIONES EN LA FUENTE DEL CREE (FORMULARIO 360)</field>
+            <field name="parent" ref="taxcode_co"/>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_31">
+            <field name="name">[BASE] A LA TARIFA DEL 0,4%</field>
+            <field name="parent" ref="taxcode_3"/>
+            <field name="code">28</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_32">
+            <field name="name">[BASE] A LA TARIFA DEL 0,8%</field>
+            <field name="parent" ref="taxcode_3"/>
+            <field name="code">29</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_33">
+            <field name="name">[BASE] A LA TARIFA DEL 1,6%</field>
+            <field name="parent" ref="taxcode_3"/>
+            <field name="code">30</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_34">
+            <field name="name">[AUTORENTENCION] A LA TARIFA DEL 0,4%</field>
+            <field name="parent" ref="taxcode_3"/>
+            <field name="code">32</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_35">
+            <field name="name">[AUTORENTENCION] A LA TARIFA DEL 0,8%</field>
+            <field name="parent" ref="taxcode_3"/>
+            <field name="code">33</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_36">
+            <field name="name">[AUTORENTENCION] A LA TARIFA DEL 1,6%</field>
+            <field name="parent" ref="taxcode_3"/>
+            <field name="code">34</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_4">
+            <field name="name">DECLARACION DE IMPUESTO SOBRE LA RENTA PARA LA EQUIDAD CREE (FORMULARIO 140)</field>
+            <field name="parent" ref="taxcode_co"/>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_41">
+            <field name="name">BASE GRAVABLE IMPUESTO SOBRE LA RENTA PARA LA EQUIDAD CREE</field>
+            <field name="parent" ref="taxcode_4"/>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_4101">
+            <field name="name">INGRESOS BRUTOS</field>
+            <field name="parent" ref="taxcode_41"/>
+            <field name="code">28</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_4102">
+            <field name="name">RENTAS BRUTAS ESPECIALES</field>
+            <field name="parent" ref="taxcode_41"/>
+            <field name="code">29</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_4103">
+            <field name="name">DEVOLUCIONES, REBAJAS Y DESCUENTOS</field>
+            <field name="parent" ref="taxcode_41"/>
+            <field name="code">30</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_4104">
+            <field name="name">INGRESOS NO CONSTITUTIVOS DE RENTA</field>
+            <field name="parent" ref="taxcode_41"/>
+            <field name="code">31</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_4105">
+            <field name="name">COSTOS</field>
+            <field name="parent" ref="taxcode_41"/>
+            <field name="code">33</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_4106">
+            <field name="name">DEDUCCIONES</field>
+            <field name="parent" ref="taxcode_41"/>
+            <field name="code">34</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_4107">
+            <field name="name">RENTA EXENTA</field>
+            <field name="parent" ref="taxcode_41"/>
+            <field name="code">35</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_4108">
+            <field name="name">RENTA POR RECUPERACION DE DEDUCCIONES</field>
+            <field name="parent" ref="taxcode_41"/>
+            <field name="code">36</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_42">
+            <field name="name">LIQUIDACION PRIVADA</field>
+            <field name="parent" ref="taxcode_4"/>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_4201">
+            <field name="name">AUTORETENCIONES A TITULO DE CREE</field>
+            <field name="parent" ref="taxcode_42"/>
+            <field name="code">42</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_4202">
+            <field name="name">OTRAS RETENCIONES A TITULO DE CREE</field>
+            <field name="parent" ref="taxcode_42"/>
+            <field name="code">43</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_5">
+            <field name="name">DECLARACION DE RENTA Y COMPLEMENTARIOS (FORMULARIO 110)</field>
+            <field name="parent" ref="taxcode_co"/>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_51">
+            <field name="name">AUTORETENCIONES</field>
+            <field name="parent" ref="taxcode_5"/>
+            <field name="code">77</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_52">
+            <field name="name">OTRAS RETENCIONES</field>
+            <field name="parent" ref="taxcode_5"/>
+            <field name="code">78</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_53">
+            <field name="name">ANTICIPO RENTA POR EL AÑO GRAVABLE</field>
+            <field name="parent" ref="taxcode_5"/>
+            <field name="code">80</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_6">
+            <field name="name">DECLARACION RETENCION EN LA FUENTE DE INDUSTRIA Y COMERCIO – RETEICA</field>
+            <field name="parent" ref="taxcode_co"/>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_61">
+            <field name="name">BASE DE RETENCION ICA</field>
+            <field name="parent" ref="taxcode_6"/>
+            <field name="code">101</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_62">
+            <field name="name">RETENCION ICA</field>
+            <field name="parent" ref="taxcode_6"/>
+            <field name="code">102</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_63">
+            <field name="name">BASE ANTICIPO RETENCION ICA</field>
+            <field name="parent" ref="taxcode_6"/>
+            <field name="code">103</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.code.template" id="taxcode_64">
+            <field name="name">ANTICIPO RENTENCION ICA</field>
+            <field name="parent" ref="taxcode_6"/>
+            <field name="code">104</field>
+            <field name="account" ref="pc"/>
+        </record>
+        <record model="account.tax.template" id="tax_1">
+            <field name="name">IVA BIENES 5,0%</field>
+            <field name="description">IVA BIENES 5,0%</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_purchase"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('0.05')"/>
+            <field name="invoice_account" ref="pc_24080101"/>
+            <field name="credit_note_account" ref="pc_24080101"/>
+        </record>
+        <record model="account.tax.template" id="tax_2">
+            <field name="name">IVA BIENES 19,0%</field>
+            <field name="description">IVA BIENES 19,0%</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_purchase"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('0.19')"/>
+            <field name="invoice_account" ref="pc_24080102"/>
+            <field name="credit_note_account" ref="pc_24080102"/>
+        </record>
+        <record model="account.tax.template" id="tax_3">
+            <field name="name">IVA SERVICIOS 5,0%</field>
+            <field name="description">IVA SERVICIOS 5,0%</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_purchase"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('0.05')"/>
+            <field name="invoice_account" ref="pc_24080103"/>
+            <field name="credit_note_account" ref="pc_24080103"/>
+        </record>
+        <record model="account.tax.template" id="tax_4">
+            <field name="name">IVA SERVICIOS 19,0%</field>
+            <field name="description">IVA SERVICIOS 19,0%</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_purchase"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('0.19')"/>
+            <field name="invoice_account" ref="pc_24080104"/>
+            <field name="credit_note_account" ref="pc_24080104"/>
+        </record>
+        <record model="account.tax.template" id="tax_5">
+            <field name="name">BIENES Y SERVICIOS EXCLUIDOS, EXENTOS Y NO GRAVADOS</field>
+            <field name="description">BIENES Y SERVICIOS EXCLUIDOS, EXENTOS Y NO GRAVADOS</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_purchase"/>
+            <field name="type">none</field>
+        </record>
+        <record model="account.tax.template" id="tax_10">
+            <field name="name">RET. HONORARIOS Y COMISIONES 10%</field>
+            <field name="description">RET. HONORARIOS Y COMISIONES 10%</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_purchase"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('-0.1')"/>
+            <field name="invoice_account" ref="pc_23651501"/>
+            <field name="credit_note_account" ref="pc_23651501"/>
+        </record>
+        <record model="account.tax.template" id="tax_11">
+            <field name="name">RET. HONORARIOS Y COMISIONES 11%</field>
+            <field name="description">RET. HONORARIOS Y COMISIONES 11%</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_purchase"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('-0.11')"/>
+            <field name="invoice_account" ref="pc_23651502"/>
+            <field name="credit_note_account" ref="pc_23651502"/>
+        </record>
+        <record model="account.tax.template" id="tax_12">
+            <field name="name">RET. SERVICIOS EN GENERAL 4% (DEC)</field>
+            <field name="description">RET. SERVICIOS EN GENERAL 4% (DEC)</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_purchase"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('-0.04')"/>
+            <field name="invoice_account" ref="pc_23652501"/>
+            <field name="credit_note_account" ref="pc_23652501"/>
+        </record>
+        <record model="account.tax.template" id="tax_13">
+            <field name="name">RET. SERVICIOS EN GENERAL 6% (NO DEC)</field>
+            <field name="description">RET. SERVICIOS EN GENERAL 6% (NO DEC)</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_purchase"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('-0.06')"/>
+            <field name="invoice_account" ref="pc_23652502"/>
+            <field name="credit_note_account" ref="pc_23652502"/>
+        </record>
+        <record model="account.tax.template" id="tax_14">
+            <field name="name">RET. SERVICIOS TRANSPORTE CARGA 1%</field>
+            <field name="description">RET. SERVICIOS TRANSPORTE CARGA 1%</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_purchase"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('-0.01')"/>
+            <field name="invoice_account" ref="pc_23652503"/>
+            <field name="credit_note_account" ref="pc_23652503"/>
+        </record>
+        <record model="account.tax.template" id="tax_15">
+            <field name="name">RET. SERVICIOS TRANSPORTE PASAJEROS (TERRESTRE) 3,5%</field>
+            <field name="description">RET. SERVICIOS TRANSPORTE PASAJEROS (TERRESTRE) 3,5%</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_purchase"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('-0.035')"/>
+            <field name="invoice_account" ref="pc_23652504"/>
+            <field name="credit_note_account" ref="pc_23652504"/>
+        </record>
+        <record model="account.tax.template" id="tax_16">
+            <field name="name">RET. SERVICIOS TRANSPORTE PASAJEROS (AEREO, MARITIMO) 1%</field>
+            <field name="description">RET. SERVICIOS TRANSPORTE PASAJEROS (AEREO, MARITIMO) 1%</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_purchase"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('-0.01')"/>
+            <field name="invoice_account" ref="pc_23652505"/>
+            <field name="credit_note_account" ref="pc_23652505"/>
+        </record>
+        <record model="account.tax.template" id="tax_17">
+            <field name="name">RET. SERVICIOS DE HOTELES, RESTAURANTES, HOSPEDAJE. 3,5%</field>
+            <field name="description">RET. SERVICIOS DE HOTELES, RESTAURANTES, HOSPEDAJE. 3,5%</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_purchase"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('-0.035')"/>
+            <field name="invoice_account" ref="pc_23652506"/>
+            <field name="credit_note_account" ref="pc_23652506"/>
+        </record>
+        <record model="account.tax.template" id="tax_18">
+            <field name="name">RET. SERVICIOS DE SALUD 2%</field>
+            <field name="description">RET. SERVICIOS DE SALUD 2%</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_purchase"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('-0.02')"/>
+            <field name="invoice_account" ref="pc_23652507"/>
+            <field name="credit_note_account" ref="pc_23652507"/>
+        </record>
+        <record model="account.tax.template" id="tax_19">
+            <field name="name">RET. SERVICIOS DE VIGILANCIA Y ASEO 2,0%</field>
+            <field name="description">RET. SERVICIOS DE VIGILANCIA Y ASEO 2,0%</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_purchase"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('-0.02')"/>
+            <field name="invoice_account" ref="pc_23652508"/>
+            <field name="credit_note_account" ref="pc_23652508"/>
+        </record>
+        <record model="account.tax.template" id="tax_20">
+            <field name="name">RET. ARRENDAMIENTO DE BIENES RAICES 3,5%</field>
+            <field name="description">RET. ARRENDAMIENTO DE BIENES RAICES 3,5%</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_purchase"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('-0.035')"/>
+            <field name="invoice_account" ref="pc_23653001"/>
+            <field name="credit_note_account" ref="pc_23653001"/>
+        </record>
+        <record model="account.tax.template" id="tax_21">
+            <field name="name">RET. LICENCIAMIENTO DE SOFTWARE 3,5%</field>
+            <field name="description">RET. LICENCIAMIENTO DE SOFTWARE 3,5%</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_purchase"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('-0.035')"/>
+            <field name="invoice_account" ref="pc_23653002"/>
+            <field name="credit_note_account" ref="pc_23653002"/>
+        </record>
+        <record model="account.tax.template" id="tax_22">
+            <field name="name">RET. ARRENDAMIENTO DE BIENES MUEBLES 4,0%</field>
+            <field name="description">RET. ARRENDAMIENTO DE BIENES MUEBLES 4,0%</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_purchase"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('-0.04')"/>
+            <field name="invoice_account" ref="pc_23653003"/>
+            <field name="credit_note_account" ref="pc_23653003"/>
+        </record>
+        <record model="account.tax.template" id="tax_23">
+            <field name="name">RET. COMPRAS EN GENERAL 2,5% (DEC)</field>
+            <field name="description">RET. COMPRAS EN GENERAL 2,5% (DEC)</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_purchase"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('-0.025')"/>
+            <field name="invoice_account" ref="pc_23654001"/>
+            <field name="credit_note_account" ref="pc_23654001"/>
+        </record>
+        <record model="account.tax.template" id="tax_24">
+            <field name="name">RET. COMPRAS EN GENERAL 3,5% (NO DEC)</field>
+            <field name="description">RET. COMPRAS EN GENERAL 3,5% (NO DEC)</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_purchase"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('-0.035')"/>
+            <field name="invoice_account" ref="pc_23654002"/>
+            <field name="credit_note_account" ref="pc_23654002"/>
+        </record>
+        <record model="account.tax.template" id="tax_25">
+            <field name="name">RET. ADQUISICIÓN DE VEHÍCULOS 1,0%</field>
+            <field name="description">RET. ADQUISICIÓN DE VEHÍCULOS 1,0%</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_purchase"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('-0.01')"/>
+            <field name="invoice_account" ref="pc_23654003"/>
+            <field name="credit_note_account" ref="pc_23654003"/>
+        </record>
+        <record model="account.tax.template" id="tax_26">
+            <field name="name">RET. COMPRA DE COMBUSTIBLES O DERIVADOS DEL PETROLEO 0,1%</field>
+            <field name="description">RET. COMPRA DE COMBUSTIBLES O DERIVADOS DEL PETROLEO 0,1%</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_purchase"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('-0.001')"/>
+            <field name="invoice_account" ref="pc_23654004"/>
+            <field name="credit_note_account" ref="pc_23654004"/>
+        </record>
+        <record model="account.tax.template" id="tax_27">
+            <field name="name">RET. COMPRAS DE BIENES Y PRODUCTOS AGRÍCOLAS O PECUARIOS SIN PROCESAMIENTO INDUSTRIAL. 1,5%</field>
+            <field name="description">RET. COMPRAS DE BIENES Y PRODUCTOS AGRÍCOLAS O PECUARIOS SIN PROCESAMIENTO INDUSTRIAL. 1,5%</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_purchase"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('-0.015')"/>
+            <field name="invoice_account" ref="pc_23654005"/>
+            <field name="credit_note_account" ref="pc_23654005"/>
+        </record>
+        <record model="account.tax.template" id="tax_28">
+            <field name="name">RET. ADQUISICIÓN DE BIENES RAÍCES 2,5%</field>
+            <field name="description">RET. ADQUISICIÓN DE BIENES RAÍCES 2,5%</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_purchase"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('-0.025')"/>
+            <field name="invoice_account" ref="pc_23654006"/>
+            <field name="credit_note_account" ref="pc_23654006"/>
+        </record>
+        <record model="account.tax.template" id="tax_29">
+            <field name="name">RETENCION ICA 6 x 1000</field>
+            <field name="description">RETENCION ICA 6 x 1000</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_purchase"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('-0.006')"/>
+            <field name="invoice_account" ref="pc_236801"/>
+            <field name="credit_note_account" ref="pc_236801"/>
+        </record>
+        <record model="account.tax.template" id="tax_30">
+            <field name="name">AUTO RET. RENTA 0,4%</field>
+            <field name="description">AUTO RET. RENTA 0,4%</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_sale"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('0.004')"/>
+            <field name="invoice_account" ref="pc_23657502"/>
+            <field name="credit_note_account" ref="pc_23657502"/>
+        </record>
+        <record model="account.tax.template" id="tax_31">
+            <field name="name">AUTO RET. RENTA 0,8%</field>
+            <field name="description">AUTO RET. RENTA 0,8%</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_sale"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('0.008')"/>
+            <field name="invoice_account" ref="pc_23657503"/>
+            <field name="credit_note_account" ref="pc_23657503"/>
+        </record>
+        <record model="account.tax.template" id="tax_32">
+            <field name="name">AUTO RET. RENTA 1,6%</field>
+            <field name="description">AUTO RET. RENTA 1,6%</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_sale"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('0.016')"/>
+            <field name="invoice_account" ref="pc_23657504"/>
+            <field name="credit_note_account" ref="pc_23657504"/>
+        </record>
+        <record model="account.tax.template" id="tax_33">
+            <field name="name">RET. RENTA 0,4%</field>
+            <field name="description">RET. RENTA 0,4%</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_sale"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('-0.004')"/>
+            <field name="invoice_account" ref="pc_13551502"/>
+            <field name="credit_note_account" ref="pc_13551502"/>
+        </record>
+        <record model="account.tax.template" id="tax_34">
+            <field name="name">RET. RENTA 0,8%</field>
+            <field name="description">RET. RENTA 0,8%</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_sale"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('-0.008')"/>
+            <field name="invoice_account" ref="pc_13551503"/>
+            <field name="credit_note_account" ref="pc_13551503"/>
+        </record>
+        <record model="account.tax.template" id="tax_35">
+            <field name="name">RET. RENTA 1,6%</field>
+            <field name="description">RET. RENTA 1,6%</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_sale"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('-0.016')"/>
+            <field name="invoice_account" ref="pc_13551504"/>
+            <field name="credit_note_account" ref="pc_13551504"/>
+        </record>
+        <record model="account.tax.template" id="tax_36">
+            <field name="name">IVA 5,0%</field>
+            <field name="description">IVA 5,0%</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_sale"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('0.05')"/>
+            <field name="invoice_account" ref="pc_24080201"/>
+            <field name="credit_note_account" ref="pc_24080201"/>
+        </record>
+        <record model="account.tax.template" id="tax_37">
+            <field name="name">IVA 19,0%</field>
+            <field name="description">IVA 19,0%</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_sale"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('0.19')"/>
+            <field name="invoice_account" ref="pc_24080202"/>
+            <field name="credit_note_account" ref="pc_24080202"/>
+        </record>
+        <record model="account.tax.template" id="tax_38">
+            <field name="name">EXCLUIDOS</field>
+            <field name="description">EXCLUIDOS</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_sale"/>
+            <field name="type">none</field>
+        </record>
+        <record model="account.tax.template" id="tax_39">
+            <field name="name">NO GRAVADOS</field>
+            <field name="description">NO GRAVADOS</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_sale"/>
+            <field name="type">none</field>
+        </record>
+        <record model="account.tax.template" id="tax_40">
+            <field name="name">ANTICIPO RET. HONORARIOS Y COMISIONES 10%</field>
+            <field name="description">ANTICIPO RET. HONORARIOS Y COMISIONES 10%</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_sale"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('-0.1')"/>
+            <field name="invoice_account" ref="pc_13551501"/>
+            <field name="credit_note_account" ref="pc_13551501"/>
+        </record>
+        <record model="account.tax.template" id="tax_41">
+            <field name="name">ANTICIPO RET. HONORARIOS Y COMISIONES 11%</field>
+            <field name="description">ANTICIPO RET. HONORARIOS Y COMISIONES 11%</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_sale"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('-0.11')"/>
+            <field name="invoice_account" ref="pc_13551501"/>
+            <field name="credit_note_account" ref="pc_13551501"/>
+        </record>
+        <record model="account.tax.template" id="tax_42">
+            <field name="name">ANTICIPO RET. SERVICIOS EN GENERAL 4% (DEC)</field>
+            <field name="description">ANTICIPO RET. SERVICIOS EN GENERAL 4% (DEC)</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_sale"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('-0.04')"/>
+            <field name="invoice_account" ref="pc_13551501"/>
+            <field name="credit_note_account" ref="pc_13551501"/>
+        </record>
+        <record model="account.tax.template" id="tax_43">
+            <field name="name">ANTICIPO RET. SERVICIOS EN GENERAL 6% (NO DEC)</field>
+            <field name="description">ANTICIPO RET. SERVICIOS EN GENERAL 6% (NO DEC)</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_sale"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('-0.06')"/>
+            <field name="invoice_account" ref="pc_13551501"/>
+            <field name="credit_note_account" ref="pc_13551501"/>
+        </record>
+        <record model="account.tax.template" id="tax_44">
+            <field name="name">ANTICIPO RET. SERVICIOS TRANSPORTE CARGA 1%</field>
+            <field name="description">ANTICIPO RET. SERVICIOS TRANSPORTE CARGA 1%</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_sale"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('-0.01')"/>
+            <field name="invoice_account" ref="pc_13551501"/>
+            <field name="credit_note_account" ref="pc_13551501"/>
+        </record>
+        <record model="account.tax.template" id="tax_45">
+            <field name="name">ANTICIPO RET. SERVICIOS TRANSPORTE PASAJEROS (TERRESTRE) 3,5%</field>
+            <field name="description">ANTICIPO RET. SERVICIOS TRANSPORTE PASAJEROS (TERRESTRE) 3,5%</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_sale"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('-0.035')"/>
+            <field name="invoice_account" ref="pc_13551501"/>
+            <field name="credit_note_account" ref="pc_13551501"/>
+        </record>
+        <record model="account.tax.template" id="tax_46">
+            <field name="name">ANTICIPO RET. SERVICIOS TRANSPORTE PASAJEROS (AEREO, MARITIMO) 1%</field>
+            <field name="description">ANTICIPO RET. SERVICIOS TRANSPORTE PASAJEROS (AEREO, MARITIMO) 1%</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_sale"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('-0.01')"/>
+            <field name="invoice_account" ref="pc_13551501"/>
+            <field name="credit_note_account" ref="pc_13551501"/>
+        </record>
+        <record model="account.tax.template" id="tax_47">
+            <field name="name">ANTICIPO RET. SERVICIOS DE HOTELES, RESTAURANTES, HOSPEDAJE. 3,5%</field>
+            <field name="description">ANTICIPO RET. SERVICIOS DE HOTELES, RESTAURANTES, HOSPEDAJE. 3,5%</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_sale"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('-0.035')"/>
+            <field name="invoice_account" ref="pc_13551501"/>
+            <field name="credit_note_account" ref="pc_13551501"/>
+        </record>
+        <record model="account.tax.template" id="tax_48">
+            <field name="name">ANTICIPO RET. SERVICIOS DE VIGILANCIA Y ASEO 2,0%</field>
+            <field name="description">ANTICIPO RET. SERVICIOS DE VIGILANCIA Y ASEO 2,0%</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_sale"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('-0.02')"/>
+            <field name="invoice_account" ref="pc_13551501"/>
+            <field name="credit_note_account" ref="pc_13551501"/>
+        </record>
+        <record model="account.tax.template" id="tax_49">
+            <field name="name">ANTICIPO RET. ARRENDAMIENTO DE BIENES RAÍCES 3,5%</field>
+            <field name="description">ANTICIPO RET. ARRENDAMIENTO DE BIENES RAÍCES 3,5%</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_sale"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('-0.035')"/>
+            <field name="invoice_account" ref="pc_13551501"/>
+            <field name="credit_note_account" ref="pc_13551501"/>
+        </record>
+        <record model="account.tax.template" id="tax_50">
+            <field name="name">ANTICIPO RET. SERVICIOS DE SALUD 2%</field>
+            <field name="description">ANTICIPO RET. SERVICIOS DE SALUD 2%</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_sale"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('-0.02')"/>
+            <field name="invoice_account" ref="pc_13551501"/>
+            <field name="credit_note_account" ref="pc_13551501"/>
+        </record>
+        <record model="account.tax.template" id="tax_51">
+            <field name="name">ANTICIPO RET. SERVICIOS DE LICENCIAMIENTO DE SOFTWARE 3,5%</field>
+            <field name="description">ANTICIPO RET. SERVICIOS DE LICENCIAMIENTO DE SOFTWARE 3,5%</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_sale"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('-0.035')"/>
+            <field name="invoice_account" ref="pc_13551501"/>
+            <field name="credit_note_account" ref="pc_13551501"/>
+        </record>
+        <record model="account.tax.template" id="tax_52">
+            <field name="name">ANTICIPO RET. COMPRAS EN GENERAL 2,5% (DEC)</field>
+            <field name="description">ANTICIPO RET. COMPRAS EN GENERAL 2,5% (DEC)</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_sale"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('-0.025')"/>
+            <field name="invoice_account" ref="pc_13551501"/>
+            <field name="credit_note_account" ref="pc_13551501"/>
+        </record>
+        <record model="account.tax.template" id="tax_53">
+            <field name="name">ANTICIPO RET. COMPRAS EN GENERAL 3,5% (NO DEC)</field>
+            <field name="description">ANTICIPO RET. COMPRAS EN GENERAL 3,5% (NO DEC)</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_sale"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('-0.035')"/>
+            <field name="invoice_account" ref="pc_13551501"/>
+            <field name="credit_note_account" ref="pc_13551501"/>
+        </record>
+        <record model="account.tax.template" id="tax_54">
+            <field name="name">ANTICIPO RET. ADQUISICIÓN DE VEHÍCULOS 1,0%</field>
+            <field name="description">ANTICIPO RET. ADQUISICIÓN DE VEHÍCULOS 1,0%</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_sale"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('-0.01')"/>
+            <field name="invoice_account" ref="pc_13551501"/>
+            <field name="credit_note_account" ref="pc_13551501"/>
+        </record>
+        <record model="account.tax.template" id="tax_55">
+            <field name="name">ANTICIPO RET. COMPRA DE COMBUSTIBLES O DERIVADOS DEL PETROLEO 0,1%</field>
+            <field name="description">ANTICIPO RET. COMPRA DE COMBUSTIBLES O DERIVADOS DEL PETROLEO 0,1%</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_sale"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('-0.001')"/>
+            <field name="invoice_account" ref="pc_13551501"/>
+            <field name="credit_note_account" ref="pc_13551501"/>
+        </record>
+        <record model="account.tax.template" id="tax_56">
+            <field name="name">ANTICIPO RET. COMPRAS DE BIENES Y PRODUCTOS AGRÍCOLAS O PECUARIOS SIN PROCESAMIENTO INDUSTRIAL. 1,5%</field>
+            <field name="description">ANTICIPO RET. COMPRAS DE BIENES Y PRODUCTOS AGRÍCOLAS O PECUARIOS SIN PROCESAMIENTO INDUSTRIAL. 1,5%</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_sale"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('-0.015')"/>
+            <field name="invoice_account" ref="pc_13551501"/>
+            <field name="credit_note_account" ref="pc_13551501"/>
+        </record>
+        <record model="account.tax.template" id="tax_57">
+            <field name="name">ANTICIPO RET. ADQUISICIÓN DE BIENES RAÍCES 2,5%</field>
+            <field name="description">ANTICIPO RET. ADQUISICIÓN DE BIENES RAÍCES 2,5%</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_sale"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('-0.025')"/>
+            <field name="invoice_account" ref="pc_13551501"/>
+            <field name="credit_note_account" ref="pc_13551501"/>
+        </record>
+        <record model="account.tax.template" id="tax_58">
+            <field name="name">ANTICIPO RET. ARRENDAMIENTO DE BIENES MUEBLES 4,0%</field>
+            <field name="description">ANTICIPO RET. ARRENDAMIENTO DE BIENES MUEBLES 4,0%</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_sale"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('-0.04')"/>
+            <field name="invoice_account" ref="pc_13551501"/>
+            <field name="credit_note_account" ref="pc_13551501"/>
+        </record>
+        <record model="account.tax.template" id="tax_59">
+            <field name="name">ANTICIPO DE RETENCION ICA 6 x 1000</field>
+            <field name="description">ANTICIPO DE RETENCION ICA 6 x 1000</field>
+            <field name="account" ref="pc"/>
+            <field name="group" ref="tax_group_sale"/>
+            <field name="type">percentage</field>
+            <field name="rate" eval="Decimal('-0.006')"/>
+            <field name="invoice_account" ref="pc_135510"/>
+            <field name="credit_note_account" ref="pc_135510"/>
+        </record>
+    </data>
+</tryton>
