@@ -54,11 +54,11 @@ class Party(ModelSQL, ModelView):
             for ter in terceros_db:
                 nit_cedula = ter[columnas_terceros.index('nit_cedula')].strip()
                 tipo_identificacion = cls.id_type(ter[columnas_terceros.index('tipo_identificacion')])
-                nombre = ter[columnas_terceros.index('nombre')].strip()
-                PrimerNombre = ter[columnas_terceros.index('PrimerNombre')].strip()
-                SegundoNombre = ter[columnas_terceros.index('SegundoNombre')].strip()
-                PrimerApellido = ter[columnas_terceros.index('PrimerApellido')].strip()
-                SegundoApellido = ter[columnas_terceros.index('SegundoApellido')].strip()
+                nombre = cls.delete_caracter(ter[columnas_terceros.index('nombre')].strip()).upper()
+                PrimerNombre = cls.delete_caracter(ter[columnas_terceros.index('PrimerNombre')].strip()).upper()
+                SegundoNombre = cls.delete_caracter(ter[columnas_terceros.index('SegundoNombre')].strip()).upper()
+                PrimerApellido = cls.delete_caracter(ter[columnas_terceros.index('PrimerApellido')].strip()).upper()
+                SegundoApellido = cls.delete_caracter(ter[columnas_terceros.index('SegundoApellido')].strip()).upper()
                 mail = ter[columnas_terceros.index('mail')].strip()
                 telefono = ter[columnas_terceros.index('telefono')].strip()
                 TipoPersona = cls.person_type(ter[columnas_terceros.index('TipoPersona')].strip())
@@ -148,15 +148,18 @@ class Party(ModelSQL, ModelView):
                         region = list(dir[column_dir.index('CodigoSucursal')].strip())
                         try:
                             country_code, = Country.search([('code', '=', '169')])
-                            if len(region) > 1:
-                                department_code, = Department.search([('code', '=', region[0]+region[1])])
-                                city_code, = City.search([
-                                    ('code', '=', region[2]+region[3]+region[4]),
-                                    ('department', '=', department_code)
-                                    ])
-                                address.department_code = department_code
-                                address.city_code = city_code
+                            if len(region) > 4:
+                                department_code = Department.search([('code', '=', region[0]+region[1])])
+                                if department_code:
+                                    address.department_code = department_code[0]
+                                    city_code = City.search([
+                                        ('code', '=', region[2]+region[3]+region[4]),
+                                        ('department', '=', department_code[0])
+                                        ])
+                                    if city_code:
+                                        address.city_code = city_code[0]
                         except Exception as e:
+                            print(e)
                             raise UserError("ERROR REGION", f"Error: {e}")
                         address.country_code = country_code
                         barrio = dir[column_dir.index('Barrio')].strip()
@@ -179,7 +182,7 @@ class Party(ModelSQL, ModelView):
         City = Pool().get('party.city_code')
         column_dir = cls.get_columns_db_tecno('Terceros_Dir')
         if data[column_dir.index('codigo_direccion')] == 1:
-            comercial_name = data[column_dir.index('NombreSucursal')].strip()
+            comercial_name = cls.delete_caracter(data[column_dir.index('NombreSucursal')].strip()).upper()
             if len(comercial_name) > 2:
                 party.commercial_name = comercial_name
         direccion = Address()
@@ -187,15 +190,18 @@ class Party(ModelSQL, ModelView):
         region = list(data[column_dir.index('CodigoSucursal')].strip())
         try:
             country_code, = Country.search([('code', '=', '169')])
-            if len(region) > 1:
-                department_code, = Department.search([('code', '=', region[0]+region[1])])
-                city_code, = City.search([
-                    ('code', '=', region[2]+region[3]+region[4]),
-                    ('department', '=', department_code)
-                    ])
-                direccion.department_code = department_code
-                direccion.city_code = city_code
+            if len(region) > 4:
+                department_code = Department.search([('code', '=', region[0]+region[1])])
+                if department_code:
+                    direccion.department_code = department_code[0]
+                    city_code = City.search([
+                        ('code', '=', region[2]+region[3]+region[4]),
+                        ('department', '=', department_code[0])
+                        ])
+                    if city_code:
+                        direccion.city_code = city_code[0]
         except Exception as e:
+            print(e)
             raise UserError("ERROR REGION", f"Error: {e}")
         direccion.country_code = country_code
         barrio = data[column_dir.index('Barrio')].strip()
@@ -250,6 +256,19 @@ class Party(ModelSQL, ModelView):
             contacto.language = es
             contacto.party = party
             contacto.save()
+
+    #Función encargada de eliminar caracteres especiales y convertir string en alfanumerico
+    @classmethod
+    def delete_caracter(cls, word):
+        list_word = word.split(" ")
+        result = ''
+        for word in list_word:
+            res = ''.join(filter(str.isalnum, word))
+            if result != '':
+                result = result+' '+res
+            else:
+                result = res
+        return result
 
     #Función encargada de retornar el tercero de acuerdo a su id_number
     @classmethod

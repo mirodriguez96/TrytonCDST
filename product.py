@@ -37,49 +37,49 @@ class Product(ModelSQL, ModelView):
         productos_tecno = cls.last_update()
         cls.create_or_update()
         col_pro = cls.get_columns_db_tecno('TblProducto')
-        col_gproducto = cls.get_columns_db_tecno('TblGrupoProducto')
-        grupos_producto = cls.get_data_db_tecno('TblGrupoProducto')
+        #col_gproducto = cls.get_columns_db_tecno('TblGrupoProducto')
+        #grupos_producto = cls.get_data_db_tecno('TblGrupoProducto')
         impuestos = cls.get_data_db_tecno('TblImpuesto')
         col_impuestos = cls.get_columns_db_tecno('TblImpuesto')
 
         #Creación o actualización de las categorias de los productos
         Category = Pool().get('product.category')
-        to_categorias = []
-        for categoria in grupos_producto:
-            id_tecno = str(categoria[col_gproducto.index('IdGrupoProducto')])
-            existe = cls.buscar_categoria(id_tecno)
-            if existe:
-                existe.name = categoria[col_gproducto.index('GrupoProducto')].strip()
-                existe.save()
-            else:
-                categoria_prod = Category()
-                categoria_prod.id_tecno = id_tecno
-                categoria_prod.name = categoria[col_gproducto.index('GrupoProducto')].strip()
-                to_categorias.append(categoria_prod)
-        Category.save(to_categorias)
+        #to_categorias = []
+        #for categoria in grupos_producto:
+        #    id_tecno = str(categoria[col_gproducto.index('IdGrupoProducto')])
+        #    existe = cls.buscar_categoria(id_tecno)
+        #    if existe:
+        #        existe.name = categoria[col_gproducto.index('GrupoProducto')].strip()
+        #        existe.save()
+        #    else:
+        #        categoria_prod = Category()
+        #        categoria_prod.id_tecno = id_tecno
+        #        categoria_prod.name = categoria[col_gproducto.index('GrupoProducto')].strip()
+        #        to_categorias.append(categoria_prod)
+        #Category.save(to_categorias)
 
         #FIX
-        #Creación de categorias contables
-        CustomerTax = Pool().get('product.category-customer-account.tax')
+        #Creación de categorias contables (SOLO CREA LAS CATEGORIAS)
+        #CustomerTax = Pool().get('product.category-customer-account.tax')
         to_contable = []
         for imp in impuestos:
             id_tecno = 'imp-'+str(imp[col_impuestos.index('IdImpuesto')])
             existe = cls.buscar_categoria(id_tecno)
-            if existe:
-                existe.name = imp[col_impuestos.index('Impuesto')].strip()
-                existe.accounting = True
-                existe.save()
-            else:
+            if not existe:
+            #    existe.name = imp[col_impuestos.index('Impuesto')].strip()
+            #    existe.accounting = True
+            #    existe.save()
+            #else:
                 categoria_prod = Category()
                 categoria_prod.id_tecno = id_tecno
                 categoria_prod.name = imp[col_impuestos.index('Impuesto')].strip()
                 categoria_prod.accounting = True
-                impuesto = cls.select_tax(imp[col_impuestos.index('IdImpuesto')]) #FIX
-                if impuesto:
-                    tax = CustomerTax()
-                    tax.category = categoria_prod
-                    tax.tax = impuesto
-                    tax.save()
+                #impuesto = cls.select_tax(imp[col_impuestos.index('IdImpuesto')]) #SE DEBE CONFIGURAR POR EL CONTADOR
+                #if impuesto:
+                #    tax = CustomerTax()
+                #    tax.category = categoria_prod
+                #    tax.tax = impuesto
+                #    tax.save()
                 to_contable.append(categoria_prod)
         Category.save(to_contable)
 
@@ -91,9 +91,9 @@ class Product(ModelSQL, ModelView):
             for producto in productos_tecno:
                 id_producto = str(producto[col_pro.index('IdProducto')])
                 existe = cls.buscar_producto(id_producto)
-                id_tecno = str(producto[col_pro.index('IdGrupoProducto')])
+                #id_tecno = str(producto[col_pro.index('IdGrupoProducto')])
                 imp_tecno = 'imp-'+str(producto[col_pro.index('Impuesto_venta')])
-                categoria_producto, = Category.search([('id_tecno', '=', id_tecno)])
+                #categoria_producto, = Category.search([('id_tecno', '=', id_tecno)])
                 categoria_contable, = Category.search([('id_tecno', '=', imp_tecno)])
                 nombre_producto = producto[col_pro.index('Producto')].strip()
                 tipo_producto = cls.tipo_producto(producto[col_pro.index('maneja_inventario')])
@@ -114,7 +114,7 @@ class Product(ModelSQL, ModelView):
                             existe.template.sale_uom = udm_producto
                         existe.template.list_price = valor_unitario
                         #existe.cost_price = costo_unitario
-                        existe.template.categories = [categoria_producto]
+                        #existe.template.categories = [categoria_producto]
                         existe.template.account_category = categoria_contable.id
                         existe.template.save()
                 else:
@@ -130,7 +130,7 @@ class Product(ModelSQL, ModelView):
                         temp.sale_uom = udm_producto
                     temp.list_price = valor_unitario
                     #prod.cost_price = costo_unitario
-                    temp.categories = [categoria_producto]
+                    #temp.categories = [categoria_producto]
                     temp.account_category = categoria_contable.id
                     prod.template = temp
                     to_producto.append(prod)

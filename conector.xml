@@ -8,7 +8,7 @@
             <field name="path">icons/tryton-conector.svg</field>
         </record>
 
-        <menuitem name="Conector CDST" id="menu_importa" sequence="1" active="1" icon="tryton-conector"/>
+        <menuitem name="Conector Tecno" id="menu_importa" sequence="1" active="1" icon="tryton-conector"/>
         <!-- ################### -->
         <!-- # Actualizaciones # -->
         <!-- ################### -->
