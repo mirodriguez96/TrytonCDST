@@ -1,4 +1,0 @@
-
-    [trytond.modules]
-    conector = trytond.modules.conector
-    

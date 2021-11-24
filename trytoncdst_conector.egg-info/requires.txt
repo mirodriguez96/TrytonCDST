@@ -1,7 +1,0 @@
-python-sql>=0.4
-trytond<6.1,>=6.0
-trytond_account_invoice<6.1,>=6.0
-trytond_party<6.1,>=6.0
-trytond_product<6.1,>=6.0
-trytond_sale<6.1,>=6.0
-trytond_sale_discount<6.1,>=6.0
