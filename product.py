@@ -41,22 +41,28 @@ class Product(ModelSQL, ModelView):
 
         #Creación o actualización de las categorias de los productos
         Category = Pool().get('product.category')
-        to_category = []
+        #to_category = []
         for modelo in modelos:
             id_tecno = modelo[0]
-            nombre = modelo[1].strip()
+            nombre = str(id_tecno)+' - '+modelo[1].strip()
+            
             existe = cls.buscar_categoria(id_tecno)
             if existe:
                 existe.name = nombre
                 existe.accounting = True
+                cls.set_account(modelo, existe)
                 existe.save()
             else:
                 categoria = Category()
                 categoria.id_tecno = id_tecno
                 categoria.name = nombre
                 categoria.accounting = True
-                to_category.append(categoria)
-        Category.save(to_category)
+                categoria.save()
+                cls.set_account(modelo, categoria)
+                
+                #to_category.append(categoria)
+        #print(to_category)
+        #Category.save(to_category)
 
         if productos_tecno:
             #Creación de los productos con su respectiva categoria e información
@@ -74,7 +80,7 @@ class Product(ModelSQL, ModelView):
                 else:
                     categoria = Category()
                     categoria.id_tecno = id_categoria
-                    categoria.name = 'SIN MODELO'
+                    categoria.name = 'sin modelo'
                     categoria.accounting = True
                     categoria_contable = categoria
                     categoria.save()
@@ -132,6 +138,25 @@ class Product(ModelSQL, ModelView):
         else:
             return categoria_producto
     
+    @classmethod
+    def set_account(cls, modelo, category):
+        Account = Pool().get('account.account')
+        CategoryAccount = Pool().get('product.category.account')
+
+        l_expense = list(modelo[2])
+        expense = False
+        if l_expense[0] != '1':
+            expense = Account.search([('code', '=', modelo[2])])
+        revenue = Account.search([('code', '=', modelo[3])])
+        return_sale = Account.search([('code', '=', modelo[4])])
+
+        CategoryAccount, = CategoryAccount.search([('category', '=', category.id)])
+        if expense:
+            CategoryAccount.account_expense = expense[0]
+        if revenue:
+            CategoryAccount.account_revenue = revenue[0]
+        if return_sale:
+            category.account_return_sale = return_sale[0]
 
     #Esta función se encarga de traer todos los datos de una tabla dada de la bd TecnoCarnes
     @classmethod
@@ -141,7 +166,7 @@ class Product(ModelSQL, ModelView):
             Config = Pool().get('conector.configuration')
             conexion = Config.conexion()
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT IdModelos, max(Modelos) FROM dbo.TblModelos group by IdModelos")
+                query = cursor.execute("SELECT IdModelos, max(Modelos), max(cuenta1), max(cuenta3), max(cuenta4) FROM dbo.TblModelos group by IdModelos")
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY get_modelos_tecno: ", e)

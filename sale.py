@@ -199,7 +199,7 @@ class Sale(metaclass=PoolMeta):
                 za.parent = almacen
                 almacen.input_location = za
                 za.save()
-
+                
                 almacen.save()
 
     @classmethod
