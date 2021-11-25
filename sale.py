@@ -9,6 +9,7 @@ __all__ = [
     'Sale',
     'SaleLine',
     'Cron',
+    "Location"
     ]
 
 
@@ -48,6 +49,7 @@ class Sale(metaclass=PoolMeta):
             Template = pool.get('product.template')
             coluns_doc = cls.get_columns_db_tecno('Documentos')
             columns_tipodoc = cls.get_columns_db_tecno('TblTipoDoctos')
+            cls.import_warehouse()
             #create_sale = []
             #Procedemos a realizar una venta
             for vent in ventas_tecno:
@@ -152,6 +154,67 @@ class Sale(metaclass=PoolMeta):
                 #create_invoice.append(invoice)
             #Sale.save(create_sale)
 
+
+    @classmethod
+    def import_warehouse(cls):
+        location = Pool().get('stock.location')
+        bodegas = cls.get_data_table('TblBodega')
+        columns = cls.get_columns_db_tecno('TblBodega')
+
+        for bodega in bodegas:
+            id_tecno = bodega[columns.index('IdBodega')]
+            nombre = bodega[columns.index('Bodega')].strip()
+
+            existe = location.search([('id_tecno', '=', id_tecno)])
+
+            if existe:
+                existe[0].name = nombre
+                existe[0].save()
+            else:
+                almacen = location()
+                almacen.id_tecno = id_tecno
+                almacen.name = nombre
+                almacen.type = 'warehouse'
+                #zona de entrada
+                ze = location()
+                ze.id_tecno = 'ze-'+str(id_tecno)
+                ze.name = 'ZE '+nombre
+                ze.type = 'storage'
+                ze.parent = almacen
+                almacen.input_location = ze
+                ze.save()
+                #zona de salida
+                zs = location()
+                zs.id_tecno = 'zs-'+str(id_tecno)
+                zs.name = 'ZS '+nombre
+                zs.type = 'storage'
+                zs.parent = almacen
+                almacen.input_location = zs
+                zs.save()
+                #zona de almacenamiento
+                za = location()
+                za.id_tecno = 'za-'+str(id_tecno)
+                za.name = 'ZA '+nombre
+                za.type = 'storage'
+                za.parent = almacen
+                almacen.input_location = za
+                za.save()
+
+                almacen.save()
+
+    @classmethod
+    def get_data_table(cls, table):
+        data = []
+        try:
+            Config = Pool().get('conector.configuration')
+            conexion = Config.conexion()
+            with conexion.cursor() as cursor:
+                query = cursor.execute("SELECT * FROM dbo."+table+"")
+                data = list(query.fetchall())
+        except Exception as e:
+            print("ERROR QUERY get_data_table: ", e)
+            raise UserError('ERROR QUERY get_data_table: ', str(e))
+        return data
 
     #Metodo encargado de traer el tipo de documento de la bd
     @classmethod
@@ -279,4 +342,12 @@ class Sale(metaclass=PoolMeta):
 class SaleLine(metaclass=PoolMeta):
     'SaleLine'
     __name__ = 'sale.line'
+    id_tecno = fields.Char('Id Tabla Sqlserver', required=False)
+
+
+#Heredamos del modelo stock.location para agregar el campo id_tecno que nos servira de relación con db sqlserver
+class Location(metaclass=PoolMeta):
+    "Location"
+    __name__ = 'stock.location'
+
     id_tecno = fields.Char('Id Tabla Sqlserver', required=False)

@@ -37,51 +37,26 @@ class Product(ModelSQL, ModelView):
         productos_tecno = cls.last_update()
         cls.create_or_update()
         col_pro = cls.get_columns_db_tecno('TblProducto')
-        #col_gproducto = cls.get_columns_db_tecno('TblGrupoProducto')
-        #grupos_producto = cls.get_data_db_tecno('TblGrupoProducto')
-        impuestos = cls.get_data_db_tecno('TblImpuesto')
-        col_impuestos = cls.get_columns_db_tecno('TblImpuesto')
+        modelos = cls.get_modelos_tecno()
 
         #Creación o actualización de las categorias de los productos
         Category = Pool().get('product.category')
-        #to_categorias = []
-        #for categoria in grupos_producto:
-        #    id_tecno = str(categoria[col_gproducto.index('IdGrupoProducto')])
-        #    existe = cls.buscar_categoria(id_tecno)
-        #    if existe:
-        #        existe.name = categoria[col_gproducto.index('GrupoProducto')].strip()
-        #        existe.save()
-        #    else:
-        #        categoria_prod = Category()
-        #        categoria_prod.id_tecno = id_tecno
-        #        categoria_prod.name = categoria[col_gproducto.index('GrupoProducto')].strip()
-        #        to_categorias.append(categoria_prod)
-        #Category.save(to_categorias)
-
-        #FIX
-        #Creación de categorias contables (SOLO CREA LAS CATEGORIAS)
-        #CustomerTax = Pool().get('product.category-customer-account.tax')
-        to_contable = []
-        for imp in impuestos:
-            id_tecno = 'imp-'+str(imp[col_impuestos.index('IdImpuesto')])
+        to_category = []
+        for modelo in modelos:
+            id_tecno = modelo[0]
+            nombre = modelo[1].strip()
             existe = cls.buscar_categoria(id_tecno)
-            if not existe:
-            #    existe.name = imp[col_impuestos.index('Impuesto')].strip()
-            #    existe.accounting = True
-            #    existe.save()
-            #else:
-                categoria_prod = Category()
-                categoria_prod.id_tecno = id_tecno
-                categoria_prod.name = imp[col_impuestos.index('Impuesto')].strip()
-                categoria_prod.accounting = True
-                #impuesto = cls.select_tax(imp[col_impuestos.index('IdImpuesto')]) #SE DEBE CONFIGURAR POR EL CONTADOR
-                #if impuesto:
-                #    tax = CustomerTax()
-                #    tax.category = categoria_prod
-                #    tax.tax = impuesto
-                #    tax.save()
-                to_contable.append(categoria_prod)
-        Category.save(to_contable)
+            if existe:
+                existe.name = nombre
+                existe.accounting = True
+                existe.save()
+            else:
+                categoria = Category()
+                categoria.id_tecno = id_tecno
+                categoria.name = nombre
+                categoria.accounting = True
+                to_category.append(categoria)
+        Category.save(to_category)
 
         if productos_tecno:
             #Creación de los productos con su respectiva categoria e información
@@ -91,10 +66,18 @@ class Product(ModelSQL, ModelView):
             for producto in productos_tecno:
                 id_producto = str(producto[col_pro.index('IdProducto')])
                 existe = cls.buscar_producto(id_producto)
-                #id_tecno = str(producto[col_pro.index('IdGrupoProducto')])
-                imp_tecno = 'imp-'+str(producto[col_pro.index('Impuesto_venta')])
-                #categoria_producto, = Category.search([('id_tecno', '=', id_tecno)])
-                categoria_contable, = Category.search([('id_tecno', '=', imp_tecno)])
+                id_categoria = producto[col_pro.index('contable')]
+                #print(id_categoria)
+                categoria_contable = Category.search([('id_tecno', '=', id_categoria)])
+                if categoria_contable:
+                    categoria_contable = categoria_contable[0]
+                else:
+                    categoria = Category()
+                    categoria.id_tecno = id_categoria
+                    categoria.name = 'SIN MODELO'
+                    categoria.accounting = True
+                    categoria_contable = categoria
+                    categoria.save()
                 nombre_producto = producto[col_pro.index('Producto')].strip()
                 tipo_producto = cls.tipo_producto(producto[col_pro.index('maneja_inventario')])
                 udm_producto = cls.udm_producto(producto[col_pro.index('unidad_Inventario')])
@@ -106,7 +89,6 @@ class Product(ModelSQL, ModelView):
                     #if (True):
                     if (ultimo_cambio and existe.write_date and ultimo_cambio > existe.write_date) or (ultimo_cambio and not existe.write_date and ultimo_cambio > existe.create_date):
                         existe.template.name = nombre_producto
-                        #existe.template.code = id_producto
                         existe.template.type = tipo_producto
                         existe.template.default_uom = udm_producto
                         existe.template.salable = vendible
@@ -125,6 +107,8 @@ class Product(ModelSQL, ModelView):
                     temp.name = nombre_producto
                     temp.type = tipo_producto
                     temp.default_uom = udm_producto
+                    temp.purchasable = True
+                    temp.purchase_uom = udm_producto
                     temp.salable = vendible
                     if vendible:
                         temp.sale_uom = udm_producto
@@ -147,6 +131,22 @@ class Product(ModelSQL, ModelView):
             return False
         else:
             return categoria_producto
+    
+
+    #Esta función se encarga de traer todos los datos de una tabla dada de la bd TecnoCarnes
+    @classmethod
+    def get_modelos_tecno(cls):
+        data = []
+        try:
+            Config = Pool().get('conector.configuration')
+            conexion = Config.conexion()
+            with conexion.cursor() as cursor:
+                query = cursor.execute("SELECT IdModelos, max(Modelos) FROM dbo.TblModelos group by IdModelos")
+                data = list(query.fetchall())
+        except Exception as e:
+            print("ERROR QUERY get_modelos_tecno: ", e)
+            raise UserError("ERROR QUERY get_modelos_tecno: ", str(e))
+        return data
 
     #Función encargada de consultar si existe un producto dado de la bd TecnoCarnes
     @classmethod

@@ -23,6 +23,7 @@ def register():
         product.Cron,
         sale.Sale,
         sale.SaleLine,
+        sale.Location,
         sale.Cron,
         configuration.Configuration,
         voucher.Cron,
