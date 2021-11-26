@@ -142,21 +142,34 @@ class Product(ModelSQL, ModelView):
     def set_account(cls, modelo, category):
         Account = Pool().get('account.account')
         CategoryAccount = Pool().get('product.category.account')
-
+        #Gastos
         l_expense = list(modelo[2])
         expense = False
-        if l_expense[0] != '1':
+        if int(l_expense[0]) >= 5:
             expense = Account.search([('code', '=', modelo[2])])
-        revenue = Account.search([('code', '=', modelo[3])])
-        return_sale = Account.search([('code', '=', modelo[4])])
+        #Ingresos
+        l_revenue = list(modelo[3])
+        revenue = False
+        if l_revenue[0] == '4':
+            revenue = Account.search([('code', '=', modelo[3])])
+        #Devolucion venta
+        l_return_sale = list(modelo[4])
+        return_sale = False
+        if int(l_return_sale[0]) >= 4:
+            return_sale = Account.search([('code', '=', modelo[4])])
 
         CategoryAccount, = CategoryAccount.search([('category', '=', category.id)])
         if expense:
+            #print('Gastos: ', modelo[2])
             CategoryAccount.account_expense = expense[0]
         if revenue:
+            #print('Ingresos: ', modelo[3])
             CategoryAccount.account_revenue = revenue[0]
         if return_sale:
+            #print('Devolucion: ', modelo[4])
             category.account_return_sale = return_sale[0]
+            category.save()
+        CategoryAccount.save()
 
     #Esta función se encarga de traer todos los datos de una tabla dada de la bd TecnoCarnes
     @classmethod
