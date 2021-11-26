@@ -89,11 +89,20 @@ class Product(ModelSQL, ModelView):
                 udm_producto = cls.udm_producto(producto[col_pro.index('unidad_Inventario')])
                 vendible = cls.vendible_producto(producto[col_pro.index('TipoProducto')])
                 valor_unitario = producto[col_pro.index('valor_unitario')]
-                #costo_unitario = producto[col_pro.index('costo_unitario')]
-                ultimo_cambio = producto[col_pro.index('Ultimo_Cambio_Registro')]
+                #En caso de existir el producto se procede a verificar su ultimo cambio y a modificar
                 if existe:
+                    ultimo_cambio = producto[col_pro.index('Ultimo_Cambio_Registro')]
+                    create_date = None
+                    write_date = None
+                    if existe.write_date:
+                        write_date = (existe.write_date - datetime.timedelta(hours=5, minutes=5))
+                    elif existe.create_date:
+                        create_date = (existe.create_date - datetime.timedelta(hours=5, minutes=5))
+                    print(ultimo_cambio, create_date, existe.write_date)
+                    print(ultimo_cambio and write_date and ultimo_cambio > write_date)
+                    print(ultimo_cambio and not write_date and ultimo_cambio > create_date)
                     #if (True):
-                    if (ultimo_cambio and existe.write_date and ultimo_cambio > existe.write_date) or (ultimo_cambio and not existe.write_date and ultimo_cambio > existe.create_date):
+                    if (ultimo_cambio and write_date and ultimo_cambio > write_date) or (ultimo_cambio and not write_date and ultimo_cambio > create_date):
                         existe.template.name = nombre_producto
                         existe.template.type = tipo_producto
                         existe.template.default_uom = udm_producto
@@ -101,8 +110,6 @@ class Product(ModelSQL, ModelView):
                         if vendible:
                             existe.template.sale_uom = udm_producto
                         existe.template.list_price = valor_unitario
-                        #existe.cost_price = costo_unitario
-                        #existe.template.categories = [categoria_producto]
                         existe.template.account_category = categoria_contable.id
                         existe.template.save()
                 else:
@@ -119,8 +126,6 @@ class Product(ModelSQL, ModelView):
                     if vendible:
                         temp.sale_uom = udm_producto
                     temp.list_price = valor_unitario
-                    #prod.cost_price = costo_unitario
-                    #temp.categories = [categoria_producto]
                     temp.account_category = categoria_contable.id
                     prod.template = temp
                     to_producto.append(prod)
