@@ -80,7 +80,7 @@ class Product(ModelSQL, ModelView):
                 else:
                     categoria = Category()
                     categoria.id_tecno = id_categoria
-                    categoria.name = 'sin modelo'
+                    categoria.name = str(id_categoria)+' - sin modelo'
                     categoria.accounting = True
                     categoria_contable = categoria
                     categoria.save()
@@ -179,7 +179,7 @@ class Product(ModelSQL, ModelView):
             Config = Pool().get('conector.configuration')
             conexion = Config.conexion()
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT IdModelos, max(Modelos), max(cuenta1), max(cuenta3), max(cuenta4) FROM dbo.TblModelos group by IdModelos")
+                query = cursor.execute("SELECT IdModelos, Modelos, cuenta1, cuenta3, cuenta4 FROM dbo.vistamodelos")
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY get_modelos_tecno: ", e)

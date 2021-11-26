@@ -175,30 +175,33 @@ class Sale(metaclass=PoolMeta):
                 almacen.id_tecno = id_tecno
                 almacen.name = nombre
                 almacen.type = 'warehouse'
+                
                 #zona de entrada
                 ze = location()
                 ze.id_tecno = 'ze-'+str(id_tecno)
                 ze.name = 'ZE '+nombre
                 ze.type = 'storage'
                 ze.parent = almacen
-                almacen.input_location = ze
                 ze.save()
+                almacen.input_location = ze
+                
                 #zona de salida
                 zs = location()
                 zs.id_tecno = 'zs-'+str(id_tecno)
                 zs.name = 'ZS '+nombre
                 zs.type = 'storage'
                 zs.parent = almacen
-                almacen.input_location = zs
                 zs.save()
+                almacen.output_location = zs
+                
                 #zona de almacenamiento
                 za = location()
                 za.id_tecno = 'za-'+str(id_tecno)
                 za.name = 'ZA '+nombre
                 za.type = 'storage'
                 za.parent = almacen
-                almacen.input_location = za
                 za.save()
+                almacen.storage_location = za
                 
                 almacen.save()
 
