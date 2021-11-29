@@ -13,8 +13,8 @@ PAYMENT_TYPE = [
 class PaymentTerm(metaclass=PoolMeta):
     __name__ = 'account.invoice.payment_term'
 
-    payment_type = fields.Selection(PAYMENT_TYPE, 'Payment Type',
-        required=True)
+    payment_type = fields.Selection(PAYMENT_TYPE, 'Payment Type', required=True)
+    id_tecno = fields.Char('Id Tabla Sqlserver', required=False)
 
     @staticmethod
     def default_payment_type():

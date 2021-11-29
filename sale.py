@@ -40,18 +40,20 @@ class Sale(metaclass=PoolMeta):
             pool = Pool()
             Sale = pool.get('sale.sale')
             SaleLine = pool.get('sale.line')
-            Invoice = pool.get('account.invoice')
-            location = Pool().get('stock.location')
+            #Invoice = pool.get('account.invoice')
+            location = pool.get('stock.location')
+            payment_term = pool.get('account.invoice.payment_term')
             #Tax = pool.get('account.tax')
             #Taxes = pool.get('sale.line-account.tax')
             #CustomerTax = pool.get('product.category-customer-account.tax')
             Party = pool.get('party.party')
             Address = pool.get('party.address')
-            Template = pool.get('product.template')
+            #Template = pool.get('product.template')
             coluns_doc = cls.get_columns_db_tecno('Documentos')
             columns_tipodoc = cls.get_columns_db_tecno('TblTipoDoctos')
             cls.import_warehouse()
-
+            cls.import_payment_term()
+            
             col_param = cls.get_columns_db_tecno('TblParametro')
             venta_pos = cls.get_data_parametros('8')
             venta_electronica = cls.get_data_parametros('9')
@@ -97,9 +99,20 @@ class Sale(metaclass=PoolMeta):
                         sale.invoice_address = address[0].id
                         sale.shipment_address = address[0].id
                     #Se indica a que bodega pertenece
-                    bodega = location.search([('id_tecno', '=', venta[coluns_doc.index('bodega')])])
-                    if bodega:
-                        sale.warehouse = bodega[0]
+                    try:
+                        bodega, = location.search([('id_tecno', '=', venta[coluns_doc.index('bodega')])])
+                    except Exception as e:
+                        print(e)
+                        raise UserError("No se econtro la bodega: ", venta[coluns_doc.index('bodega')])
+                    sale.warehouse = bodega
+                    #Se le asigna el plazo de pago correspondiente
+                    try:
+                        condicion = venta[coluns_doc.index('condicion')]
+                        plazo_pago, = payment_term.search([('id_tecno', '=', condicion)])
+                    except Exception as e:
+                        print(e)
+                        raise UserError("No se econtro el plazo de pago: ", condicion)
+                    sale.payment_term = plazo_pago
                     #Ahora traemos las lineas de producto para la venta a procesar
                     documentos_linea = cls.get_line_where(str(sw), str(numero_doc), str(tipo_doc))
                     col_line = cls.get_columns_db_tecno('Documentos_Lin')
@@ -125,7 +138,7 @@ class Sale(metaclass=PoolMeta):
                         line.sale = sale
                         line.type = 'line'
                         line.unit = producto.template.default_uom
-                        line.on_change_product() #TEST
+                        #line.on_change_product() #TEST
                         line.unit_price = lin[col_line.index('Valor_Unitario')]
 
                         #Agregar impuestos a la venta
@@ -158,7 +171,7 @@ class Sale(metaclass=PoolMeta):
                     sale.confirm([sale])
                     #Se requiere procesar de forma 'manual' la venta para que genere la factura
                     sale.process([sale])
-                    print(len(sale.shipments), len(sale.shipment_returns), len(sale.invoices))
+                    #print(len(sale.shipments), len(sale.shipment_returns), len(sale.invoices))
                     invoice, = sale.invoices
                     #invoice.operation_type = 10
                     invoice.number = tipo_doc+'-'+str(numero_doc)
@@ -234,6 +247,45 @@ class Sale(metaclass=PoolMeta):
                 almacen.production_location = prod
                 
                 almacen.save()
+
+
+    @classmethod
+    def import_payment_term(cls):
+        payment_term = Pool().get('account.invoice.payment_term')
+        condiciones_pago = cls.get_data_table('TblCondiciones_pago')
+        columns = cls.get_columns_db_tecno('TblCondiciones_pago')
+
+        for condiciones in condiciones_pago:
+            id_tecno = condiciones[columns.index('IdCondiciones_pago')]
+            nombre = condiciones[columns.index('Condiciones_pago')].strip()
+            dias = int(condiciones[columns.index('dias_vcto')])
+
+            existe = payment_term.search([('id_tecno', '=', id_tecno)])
+
+            if existe:
+                existe[0].name = nombre
+                #existe[0].lines.relativedeltas.days = dias
+                line, = existe[0].lines
+                delta, = line.relativedeltas
+                delta.days = dias
+                existe[0].save()
+            else:
+                payment_term_line = Pool().get('account.invoice.payment_term.line')
+                payment_term_line_delta = Pool().get('account.invoice.payment_term.line.delta')
+                #Se crea un nuevo plazo de pago
+                plazo_pago = payment_term()
+                plazo_pago.id_tecno = id_tecno
+                plazo_pago.name = nombre
+                #delta es quien se le indica los días del plazo de pago
+                delta = payment_term_line_delta()
+                delta.days = dias
+                #line es quien se le indica el tipo del plazo de pago
+                line = payment_term_line()
+                line.type = 'remainder'
+                line.relativedeltas = [delta]
+                plazo_pago.lines = [line]
+                plazo_pago.save()
+                
 
     @classmethod
     def get_data_table(cls, table):
@@ -315,7 +367,7 @@ class Sale(metaclass=PoolMeta):
             conexion = Config.conexion()
             with conexion.cursor() as cursor:
                 #(sw = 1  ventas) (sw = 2 devoluciones)
-                query = cursor.execute("SELECT TOP(5) * FROM dbo."+table+" WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2)")
+                query = cursor.execute("SELECT * FROM dbo."+table+" WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2)")
                 data = list(query.fetchall())
         except Exception as e:
             raise UserError('ERROR QUERY get_data_where_tecno: ', str(e))
@@ -399,3 +451,5 @@ class Location(metaclass=PoolMeta):
     __name__ = 'stock.location'
 
     id_tecno = fields.Char('Id Tabla Sqlserver', required=False)
+
+
