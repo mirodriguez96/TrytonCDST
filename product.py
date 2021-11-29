@@ -47,22 +47,14 @@ class Product(ModelSQL, ModelView):
             nombre = str(id_tecno)+' - '+modelo[1].strip()
             
             existe = cls.buscar_categoria(id_tecno)
-            if existe:
-                existe.name = nombre
-                existe.accounting = True
-                cls.set_account(modelo, existe)
-                existe.save()
-            else:
+            if not existe:
                 categoria = Category()
                 categoria.id_tecno = id_tecno
                 categoria.name = nombre
                 categoria.accounting = True
                 categoria.save()
                 cls.set_account(modelo, categoria)
-                
-                #to_category.append(categoria)
-        #print(to_category)
-        #Category.save(to_category)
+
 
         if productos_tecno:
             #Creación de los productos con su respectiva categoria e información
@@ -73,7 +65,6 @@ class Product(ModelSQL, ModelView):
                 id_producto = str(producto[col_pro.index('IdProducto')])
                 existe = cls.buscar_producto(id_producto)
                 id_categoria = producto[col_pro.index('contable')]
-                #print(id_categoria)
                 categoria_contable = Category.search([('id_tecno', '=', id_categoria)])
                 if categoria_contable:
                     categoria_contable = categoria_contable[0]
