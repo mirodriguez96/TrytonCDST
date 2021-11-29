@@ -9,6 +9,7 @@ import configuration
 import voucher
 from . import electronic_payroll_wizard
 from . import company
+from . import payment_term
 
 def register():
     Pool.register(
@@ -29,6 +30,7 @@ def register():
         voucher.Cron,
         voucher.Voucher,
         voucher.VoucherPayMode,
+        payment_term.PaymentTerm,
         module='conector', type_='model')
 
     Pool.register(

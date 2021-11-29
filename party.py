@@ -70,6 +70,7 @@ class Party(ModelSQL, ModelView):
                     ultimo_cambiop = ter[columnas_terceros.index('Ultimo_Cambio_Registro')]
                     create_date = None
                     write_date = None
+                    #LA HORA DEL SISTEMA DE TRYTON TIENE UNA DIFERENCIA HORARIA DE 5 HORAS CON LA DE TECNO
                     if exists.write_date:
                         write_date = (exists.write_date - datetime.timedelta(hours=5, minutes=5))
                     elif exists.create_date:

@@ -94,13 +94,12 @@ class Product(ModelSQL, ModelView):
                     ultimo_cambio = producto[col_pro.index('Ultimo_Cambio_Registro')]
                     create_date = None
                     write_date = None
+                    #LA HORA DEL SISTEMA DE TRYTON TIENE UNA DIFERENCIA HORARIA DE 5 HORAS CON LA DE TECNO
                     if existe.write_date:
                         write_date = (existe.write_date - datetime.timedelta(hours=5, minutes=5))
                     elif existe.create_date:
                         create_date = (existe.create_date - datetime.timedelta(hours=5, minutes=5))
-                    print(ultimo_cambio, create_date, existe.write_date)
-                    print(ultimo_cambio and write_date and ultimo_cambio > write_date)
-                    print(ultimo_cambio and not write_date and ultimo_cambio > create_date)
+                    #print(ultimo_cambio, create_date, write_date)
                     #if (True):
                     if (ultimo_cambio and write_date and ultimo_cambio > write_date) or (ultimo_cambio and not write_date and ultimo_cambio > create_date):
                         existe.template.name = nombre_producto
@@ -143,6 +142,7 @@ class Product(ModelSQL, ModelView):
         else:
             return categoria_producto
     
+    #Función encargada de asignar las cuentas contables a las categorias de los productos
     @classmethod
     def set_account(cls, modelo, category):
         Account = Pool().get('account.account')
@@ -176,7 +176,7 @@ class Product(ModelSQL, ModelView):
             category.save()
         CategoryAccount.save()
 
-    #Esta función se encarga de traer todos los datos de una tabla dada de la bd TecnoCarnes
+    #Esta función se encarga de traer todos la vista modelos de la bd TecnoCarnes
     @classmethod
     def get_modelos_tecno(cls):
         data = []
