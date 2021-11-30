@@ -613,7 +613,7 @@ class ElectronicPayroll(object):
 #----------------------------------------------- MAKE ELECTRONIC payroll------------------------------------------------------
 
     def make(self, type):
-        if type == '102': #Nomina individual
+        if True: #type == '102': #Nomina individual
             #xml_invoice = self._get_head_psk()
             dic_invoice = {}
             dic_invoice["Periodo"] = self._get_payroll_period()
