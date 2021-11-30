@@ -44,6 +44,7 @@ class ElectronicPayrollCdst(object):
         auth = auth.encode('utf-8')
         auth = base64.b64encode(auth)
         auth = auth.decode('utf-8')
+        #Se crea el encabezado que se enviara al proveedor it
         header = {
             'Authorization': 'Basic '+auth,
             'Content-Type': 'application/json',
@@ -70,7 +71,7 @@ class ElectronicPayrollCdst(object):
             self.payroll.rules_fail = res['ErrorList']
             self.payroll.save()
             # return response
-            print("CONEXION EXITOSA")
+            print("ENVIO DE NOMINA EXITOSO")
         else:
             self.payroll.get_message(response.text)
 
@@ -98,7 +99,7 @@ class ElectronicPayrollCdst(object):
                 "Nvper_tlab": dict_res["Periodo"]["TiempoLaborado"]
             },
             "InformacionGeneral": { #
-                #"Nvinf_tnom": dict_res["InformacionGeneral"]["TipoXML"],
+                "Nvinf_tnom": self.payroll.payroll_type,
                 "Nvinf_pnom": dict_res["InformacionGeneral"]["PeriodoNomina"],
                 "Nvinf_tmon": dict_res["InformacionGeneral"]["TipoMoneda"],
                 #"Nvinf_mtrm": dict_res["InformacionGeneral"]["TRM"] #Tasa Representativa del mercado
@@ -212,8 +213,8 @@ class ElectronicPayrollCdst(object):
             },#
             "Deducciones": {
                 "Salud": {#
-                    "Nvsal_porc": dict_res["Deducciones"]["Salud"]["Porcentaje"],
-                    "Nvsal_dedu": dict_res["Deducciones"]["Salud"]["Deduccion"]
+                    #"Nvsal_porc": dict_res["Deducciones"]["Salud"]["Porcentaje"],
+                    #"Nvsal_dedu": dict_res["Deducciones"]["Salud"]["Deduccion"]
                 },
                 #"FondoPension": {#
                 #    "Nvfon_porc": "4.00",
@@ -249,7 +250,16 @@ class ElectronicPayrollCdst(object):
     def _validate_data(self, dic, noova):
 
         lfpag = len(dic["FechasPagos"]["FechaPago"])
+        print(dic["FechasPagos"]["FechaPago"])
         noova["Nvnom_fpag"] = dic["FechasPagos"]["FechaPago"][lfpag-1]
+
+        #Si el contrato es de aprendiz, su valor es 0 en salud
+        if self.payroll.contract.kind == 'learning':
+            noova["Deducciones"]["Salud"]["Nvsal_porc"] = '0'
+            noova["Deducciones"]["Salud"]["Nvsal_dedu"] = '0'
+        else:
+            noova["Deducciones"]["Salud"]["Nvsal_porc"] = dic["Deducciones"]["Salud"]["Porcentaje"]
+            noova["Deducciones"]["Salud"]["Nvsal_dedu"] = dic["Deducciones"]["Salud"]["Deduccion"]
 
         if "Notas" in dic.keys():
            noova["LNotas"] = [dic["Notas"]]
@@ -282,8 +292,8 @@ class ElectronicPayrollCdst(object):
                 print(h)
                 if h == "VacacionesComunes":
                     val = {
-                        "Nvcom_fini": dic["Devengados"]["Vacaciones"][h]["FechaInicio"],
-                        "Nvcom_ffin": dic["Devengados"]["Vacaciones"][h]["FechaFin"],
+                        #"Nvcom_fini": dic["Devengados"]["Vacaciones"][h]["FechaInicio"], #OPCIONAL
+                        #"Nvcom_ffin": dic["Devengados"]["Vacaciones"][h]["FechaFin"], #OPCIONAL
                         "Nvcom_cant": dic["Devengados"]["Vacaciones"][h]["Cantidad"],
                         "Nvcom_pago": dic["Devengados"]["Vacaciones"][h]["Pago"],
                         "Nvvac_tipo": "1"

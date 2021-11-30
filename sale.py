@@ -73,7 +73,6 @@ class Sale(metaclass=PoolMeta):
                     sale.number = tipo_doc+'-'+str(numero_doc)
                     sale.id_tecno = id_venta
                     sale.description = venta[coluns_doc.index('notas')].replace('\n', ' ').replace('\r', '')
-                    #sale.invoice_method = 'order'
                     #Defino por defecto el tipo de venta por computador
                     sale.invoice_type = 'C'
                     #Se revisa si la venta es clasificada como electronica o pos y se cambia el tipo
@@ -405,7 +404,7 @@ class Sale(metaclass=PoolMeta):
             else:
                 fecha = (ultima_actualizacion[0].create_date - datetime.timedelta(hours=5))
         else:
-            fecha = datetime.date(2021,1,1)
+            fecha = datetime.date(2021,10,1)
         fecha = fecha.strftime('%Y-%d-%m %H:%M:%S')
         data = cls.get_data_where_tecno('Documentos', fecha)
         return data
