@@ -16,7 +16,7 @@ class PayrollElectronicCdst(Wizard):
         ids = Transaction().context['active_ids']
 
         for payroll in PayrollElectronic.browse(ids):
-            if payroll.state == 'processed' and payroll.electronic_state == 'none':
+            if payroll.state == 'processed': #and payroll.electronic_state == 'none'
                 if payroll.payroll_type is None:
                     continue
                 if payroll.validate_for_send():
