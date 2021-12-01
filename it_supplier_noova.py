@@ -32,9 +32,9 @@ class ElectronicPayrollCdst(object):
         #Validamos que los datos del proveedor tecnologico este completo
         if self.payroll.company.url_supplier and self.payroll.company.auth_supplier and self.payroll.company.url_supplier_test and self.payroll.company.host_supplier and self.payroll.company.supplier_code:
             #Se valida en que entorno (prueba o producción) se va ha enviar la nómina
-            if self.payroll.config.environment == '1':
+            if self.config.environment == '1':
                 url = self.payroll.company.url_supplier
-            if self.payroll.config.environment == '2':
+            if self.config.environment == '2':
                 url = self.payroll.company.url_supplier_test
             auth = self.payroll.company.auth_supplier
             host = self.payroll.company.host_supplier

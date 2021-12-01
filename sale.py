@@ -137,26 +137,8 @@ class Sale(metaclass=PoolMeta):
                         line.sale = sale
                         line.type = 'line'
                         line.unit = producto.template.default_uom
-                        #line.on_change_product() #TEST
+                        line.on_change_product() #Comprueba los cambios y trae los impuestos del producto
                         line.unit_price = lin[col_line.index('Valor_Unitario')]
-
-                        #Agregar impuestos a la venta
-                        #taxc = CustomerTax.search([('category', '=', template.account_category)])
-                        #if taxc:
-                        #    tax = Taxes()
-                        #    tax.line = line
-                        #    tax.tax = taxc[0].tax
-                        #    line.save()
-                        #    tax.save()
-                        #Aplicamos una misma retención para todas las ventas
-                        #retencion, = Tax.search([('name', '=', 'RET. RENTA 0,4%')])
-                        #if lin[col_line.index('Porcentaje_ReteFuente')] > 0:
-                        #    tax = Taxes()
-                        #    tax.line = line
-                        #    tax.tax = retencion
-                        #    line.save()
-                        #    tax.save()
-
                         #Verificamos si hay descuento para la linea de producto y se agrega su respectivo descuento
                         if lin[col_line.index('Porcentaje_Descuento_1')] > 0:
                             porcentaje = lin[col_line.index('Porcentaje_Descuento_1')]/100
@@ -404,7 +386,7 @@ class Sale(metaclass=PoolMeta):
             else:
                 fecha = (ultima_actualizacion[0].create_date - datetime.timedelta(hours=5))
         else:
-            fecha = datetime.date(2021,10,1)
+            fecha = datetime.date(2021,1,1)
         fecha = fecha.strftime('%Y-%d-%m %H:%M:%S')
         data = cls.get_data_where_tecno('Documentos', fecha)
         return data
