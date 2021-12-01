@@ -40,15 +40,10 @@ class Sale(metaclass=PoolMeta):
             pool = Pool()
             Sale = pool.get('sale.sale')
             SaleLine = pool.get('sale.line')
-            #Invoice = pool.get('account.invoice')
             location = pool.get('stock.location')
             payment_term = pool.get('account.invoice.payment_term')
-            #Tax = pool.get('account.tax')
-            #Taxes = pool.get('sale.line-account.tax')
-            #CustomerTax = pool.get('product.category-customer-account.tax')
             Party = pool.get('party.party')
             Address = pool.get('party.address')
-            #Template = pool.get('product.template')
             coluns_doc = cls.get_columns_db_tecno('Documentos')
             columns_tipodoc = cls.get_columns_db_tecno('TblTipoDoctos')
             cls.import_warehouse()
@@ -163,10 +158,12 @@ class Sale(metaclass=PoolMeta):
                     if desc:
                         invoice.description = desc[0][columns_tipodoc.index('TipoDoctos')].replace('\n', ' ').replace('\r', '')
                     invoice.validate_invoice([invoice])
-                    #Verificamos que el total de la tabla en sqlserver coincidan, para contabilizar la factura
-                    total = invoice.get_amount([invoice], 'total_amount')
+                    #Verificamos que el total de la tabla en sqlserver coincidan o tengan una diferencia menor a 4 decimales, para contabilizar la factura
+                    total_amount = invoice.get_amount([invoice], 'total_amount')
+                    total = abs(total_amount['total_amount'][invoice.id])
                     total_tecno = Decimal(venta[coluns_doc.index('valor_total')])
-                    if total['total_amount'][invoice.id] == total_tecno:
+                    diferencia_total = abs(total - total_tecno)
+                    if diferencia_total < 0.4:
                         invoice.post_batch([invoice])
                         invoice.post([invoice])
                     invoice.save()
