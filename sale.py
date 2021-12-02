@@ -132,6 +132,7 @@ class Sale(metaclass=PoolMeta):
                         line.sale = sale
                         line.type = 'line'
                         line.unit = producto.template.default_uom
+                        print(id_producto, line.unit)
                         line.on_change_product() #Comprueba los cambios y trae los impuestos del producto
                         line.unit_price = lin[col_line.index('Valor_Unitario')]
                         #Verificamos si hay descuento para la linea de producto y se agrega su respectivo descuento
