@@ -168,10 +168,9 @@ class ElectronicPayroll(object):
                 self.status = MESSAGES[k]
                 break
 
-    #
     def _get_payroll_period(self):
         start_date = self.payroll.contract.start_date
-        print(start_date)
+        #print(start_date)
         #if start_date < self.payroll.start:
         #     start_date = ''
         end_date = None
@@ -199,7 +198,7 @@ class ElectronicPayroll(object):
             "FechaGen":self.issue_date,
             }
         if end_date:
-            print(end_date)
+            #print(end_date)
             payroll_period['FechaRetiro'] = str(end_date)
         return payroll_period
 
@@ -318,25 +317,25 @@ class ElectronicPayroll(object):
         return information
 
     def _get_pay_date(self):
-        pay_dates = {
-            }
+        pay_dates = {}
         pagos = []
         for pay in self.payroll.payrolls_relationship:
             pagos.append(str(pay.date_effective))
         pay_dates["FechaPago"] = pagos
         return pay_dates
     
-    """
-    def _get_predecessor(self, type):
-        if type == '1':
-            predecessor = element.ReemplazandoPredecesor()
-        else:
-            predecessor = element.EliminandoPredecesor()
-        predecessor.set('NumeroPred', )
-        predecessor.set('CUNEPred', )
-        predecessor.set('FechaGenPred', )
+    
+    def _get_predecessor(self): #, type):
+        issue_date, issue_time = self.payroll.original_payroll.get_datetime_local()
+        #if self.payroll.type_note == '1':
+        #    predecessor = element.ReemplazandoPredecesor()
+        #else:
+        #    predecessor = element.EliminandoPredecesor()
+        predecessor = {}
+        predecessor['NumeroPred'] = self.payroll.original_payroll.number
+        predecessor['CUNEPred'] = self.payroll.original_payroll.cune
+        predecessor['FechaGenPred'] = issue_date
         return predecessor
-    """
 
     def _get_type_note(self):
         return {"TipoNota":self.payroll.type_note}
@@ -634,15 +633,21 @@ class ElectronicPayroll(object):
             dic_invoice["DeduccionesTotal"] = deductions
             dic_invoice["ComprobanteTotal"] = net_payment
 
+            #103
+            type_note = self._get_type_note()
+            dic_invoice["TipoNota"] = type_note
+            dic_invoice["Predecesor"] = self._get_predecessor()
+            dic_invoice["Notas"] = self._get_notes()
+
         """
         elif type == '103': #Nomina individual ajuste
             #xml_invoice = self._get_credit_head_psk()
-            xml_invoice = []
+            dic_invoice = {}
             type_note = self._get_type_note()
-            xml_invoice.append(type_note)
+            dic_invoice["TipoNota"] = type_note
             if self.payroll.type_note == '1':
-                replace = element.Reemplazar()
-                replace.append(self._get_predecessor(type_note))
+                #replace = element.Reemplazar()
+                dic_invoice["Predecesor"] = self._get_predecessor(type_note)
                 replace.append(self._get_payroll_period())
                 replace.append(self._get_sequence())
                 replace.append(self._get_place_generation())
@@ -674,6 +679,7 @@ class ElectronicPayroll(object):
                 delete.append(self._get_information_company())
                 xml_invoice.append(delete)
         """
+        
         #exml = etree.tostring(xml_invoice, encoding='UTF-8', pretty_print=True, xml_declaration=True)
         return dic_invoice
 
