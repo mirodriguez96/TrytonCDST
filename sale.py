@@ -359,7 +359,7 @@ class Sale(metaclass=PoolMeta):
                 cant = int(cant/1000)+1
                 for n in range(cant):
                     #(sw = 1  ventas) (sw = 2 devoluciones)
-                    query = cursor.execute("SELECT * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2) ORDER BY sw OFFSET "+n+" ROWS FETCH NEXT 1000 ROWS ONLY")
+                    query = cursor.execute("SELECT * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2) ORDER BY sw OFFSET "+str(n)+" ROWS FETCH NEXT 1000 ROWS ONLY")
                     data = list(query.fetchall())
                     cls.add_sale(data)
         except Exception as e:
