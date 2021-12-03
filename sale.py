@@ -2,6 +2,7 @@ import datetime
 from trytond.model import fields
 from trytond.pool import Pool, PoolMeta
 from trytond.exceptions import UserError
+from trytond.transaction import Transaction
 from decimal import Decimal
 
 
@@ -36,6 +37,10 @@ class Sale(metaclass=PoolMeta):
         print("--------------RUN VENTAS--------------")
         ventas_tecno = cls.last_update()
         cls.create_or_update()
+        #cls.add_venta(ventas_tecno)
+
+    @classmethod
+    def add_sale(cls, ventas_tecno):
         if ventas_tecno:
             pool = Pool()
             Sale = pool.get('sale.sale')
@@ -172,6 +177,7 @@ class Sale(metaclass=PoolMeta):
                         invoice.post([invoice])
                     invoice.save()
                     sale.save()
+                    Transaction().connection.commit()
                     """"""
 
 
@@ -342,19 +348,24 @@ class Sale(metaclass=PoolMeta):
 
     #Esta función se encarga de traer todos los datos de una tabla dada de acuerdo al rango de fecha dada de la bd
     @classmethod
-    def get_data_where_tecno(cls, table, date):
+    def get_data_where_tecno(cls, date):
         data = []
         try:
             Config = Pool().get('conector.configuration')
             conexion = Config.conexion()
             with conexion.cursor() as cursor:
-                #(sw = 1  ventas) (sw = 2 devoluciones)
-                query = cursor.execute("SELECT * FROM dbo."+table+" WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2)")
-                data = list(query.fetchall())
+                cant = cursor.execute("SELECT COUNT(*) FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2)")
+                cant = int(cant.fetchall()[0][0])
+                cant = int(cant/1000)+1
+                for n in range(cant):
+                    #(sw = 1  ventas) (sw = 2 devoluciones)
+                    query = cursor.execute("SELECT * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2) ORDER BY sw OFFSET "+n+" ROWS FETCH NEXT 1000 ROWS ONLY")
+                    data = list(query.fetchall())
+                    cls.add_sale(data)
         except Exception as e:
             raise UserError('ERROR QUERY get_data_where_tecno: ', str(e))
             #print("ERROR QUERY get_data_where_tecno: ", e)
-        return data
+        #return data
 
     #Función encargada de convertir una fecha dada, al formato y orden para consultas sql server
     @classmethod
@@ -389,7 +400,7 @@ class Sale(metaclass=PoolMeta):
         else:
             fecha = datetime.date(2021,1,1)
         fecha = fecha.strftime('%Y-%d-%m %H:%M:%S')
-        data = cls.get_data_where_tecno('Documentos', fecha)
+        data = cls.get_data_where_tecno(fecha)
         return data
 
     #Crea o actualiza un registro de la tabla actualización en caso de ser necesario
