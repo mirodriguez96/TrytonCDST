@@ -6,6 +6,19 @@ from decimal import Decimal
 
 import datetime
 
+PAYMENT_CODES = [
+    ('', ''),
+    ('1', 'Instrumento no definido'),
+    ('10', 'Efectivo'),
+    ('44', 'Nota Cambiaria'),
+    ('20', 'Cheque'),
+    ('48', 'Tarjeta Crédito'),
+    ('49', 'Tarjeta Débito'),
+    ('42', 'Consignación bancaria'),
+    ('47', 'Transferencia Débito Bancaria'),
+    ('45', 'Transferencia Crédito Bancaria'),
+]
+
 
 __all__ = [
     'Voucher',
@@ -336,3 +349,5 @@ class VoucherPayMode(ModelSQL, ModelView):
     'Voucher Pay Mode'
     __name__ = 'account.voucher.paymode'
     id_tecno = fields.Char('Id Tabla Sqlserver', required=False)
+    #Campo habilitado y necesario por módulos de psk al desactivar (electronic_invoice_co)
+    payment_means_code = fields.Selection(PAYMENT_CODES, 'Payment Means Code', required=True)

@@ -59,17 +59,20 @@ class ElectronicPayrollCdst(object):
         print(data)
         response = requests.post(url, headers=header, data=data)
         if response.status_code == 200:
-            print(type(response.text))
+            #print(type(response.text))
             res = json.loads(response.text)
             print(res)
             self.payroll.xml_payroll = data.encode('utf8')
             electronic_state = 'rejected'
-            if res['Result'] == '0':
+            if res['Result'] == 0 and res['State'] == 'Exitosa':
                 electronic_state = 'authorized'
             self.payroll.electronic_state = electronic_state
             self.payroll.cune = res['Cune']
-            self.payroll.electronic_message = res['Description']
-            self.payroll.rules_fail = res['ErrorList']
+            self.payroll.electronic_message = res['State']
+            if res['Result'] == 1:
+                self.payroll.electronic_message = res['Description']
+            if res['ErrorList']:
+                self.payroll.rules_fail = res['ErrorList']
             self.payroll.save()
             # return response
             print("ENVIO EXITOSO DE NOMINA")
@@ -92,14 +95,14 @@ class ElectronicPayrollCdst(object):
             #"Nvnom_comt": dict_res["ComprobanteTotal"],
             #"Nvnom_fpag": dict_res["FechasPagos"]["FechaPago"][0],
             #"Nvnom_cnov": "", #Duda
-            #"Periodo": { #
+            #"Periodo": { #OBLIGATORIO
             #    "Nvper_fing": dict_res["Periodo"]["FechaIngreso"],
             #    #"Nvper_fret": "2020-12-31", #fecha retiro nomina
             #    "Nvper_fpin": dict_res["Periodo"]["FechaLiquidacionInicio"],
             #    "Nvper_fpfi": dict_res["Periodo"]["FechaLiquidacionFin"],
             #    "Nvper_tlab": dict_res["Periodo"]["TiempoLaborado"]
             #},
-            "InformacionGeneral": { #
+            "InformacionGeneral": { #OBLIGATORIO
                 "Nvinf_tnom": self.payroll.payroll_type,
                 #"Nvinf_pnom": dict_res["InformacionGeneral"]["PeriodoNomina"],
                 #"Nvinf_tmon": dict_res["InformacionGeneral"]["TipoMoneda"],
@@ -108,7 +111,7 @@ class ElectronicPayrollCdst(object):
             #"LNotas": [
             #    ""
             #],
-            "Empleador": {#
+            "Empleador": { #OBLIGATORIO
                 "Nvemp_nomb": dict_res["Empleador"]["RazonSocial"],
                 #"Nvemp_pape": dict_res["Empleador"]["PrimerApellido"],#opcional
                 #"Nvemp_sape": dict_res["Empleador"]["SegundoApellido"],#opcional
@@ -121,7 +124,7 @@ class ElectronicPayrollCdst(object):
                 "Nvemp_ciud": dict_res["Empleador"]["MunicipioCiudad"],
                 "Nvemp_dire": dict_res["Empleador"]["Direccion"]
             },
-            #"Trabajador": {#
+            #"Trabajador": {#OBLIGATORIO
             #    "Nvtra_tipo": dict_res["Trabajador"]["TipoTrabajador"],
             #    "Nvtra_stip": dict_res["Trabajador"]["SubTipoTrabajador"],
             #    "Nvtra_arpe": dict_res["Trabajador"]["AltoRiesgoPension"],
@@ -140,7 +143,7 @@ class ElectronicPayrollCdst(object):
             #    "Nvtra_suel": dict_res["Trabajador"]["Sueldo"],
             #    "Nvtra_codt": dict_res["Trabajador"]["CodigoTrabajador"]
             #},
-            #"Pago": {#
+            #"Pago": {#OBLIGATORIO
             #    "Nvpag_form": dict_res["Pago"]["Forma"],
             #    "Nvpag_meto": dict_res["Pago"]["Metodo"],
             #    #"Nvpag_banc": dict_res["Pago"]["Banco"], #Validar
@@ -249,8 +252,6 @@ class ElectronicPayrollCdst(object):
     #Recibe como entrada dos diccionarios. el primero es el diccionario con los valores de tryton y el segundo es el diccionario con los valores a enviar a noova
     #Devuelve el diccionario con los nuevos campos para enviar a noova
     def _validate_data(self, dic, noova):
-
-        
 
         if self.payroll.payroll_type == '103':
             noova["Nvnom_tipo"] = self.payroll.type_note

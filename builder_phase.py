@@ -634,10 +634,11 @@ class ElectronicPayroll(object):
             dic_invoice["ComprobanteTotal"] = net_payment
 
             #103
-            type_note = self._get_type_note()
-            dic_invoice["TipoNota"] = type_note
-            dic_invoice["Predecesor"] = self._get_predecessor()
-            dic_invoice["Notas"] = self._get_notes()
+            if type == '103':
+                type_note = self._get_type_note()
+                dic_invoice["TipoNota"] = type_note
+                dic_invoice["Predecesor"] = self._get_predecessor()
+                dic_invoice["Notas"] = self._get_notes()
 
         """
         elif type == '103': #Nomina individual ajuste

@@ -66,6 +66,7 @@ class Sale(metaclass=PoolMeta):
                 if not existe:
                     sale = Sale()
                     sale.number = tipo_doc+'-'+str(numero_doc)
+                    print(tipo_doc+'-'+str(numero_doc))
                     sale.id_tecno = id_venta
                     sale.description = venta[coluns_doc.index('notas')].replace('\n', ' ').replace('\r', '')
                     #Defino por defecto el tipo de venta por computador
@@ -114,6 +115,8 @@ class Sale(metaclass=PoolMeta):
                     for lin in documentos_linea:
                         id_producto = str(lin[col_line.index('IdProducto')])
                         producto = cls.buscar_producto(id_producto)
+                        if not producto.template.salable:
+                            raise UserError("El siguiente producto no es vendible: ", producto)
                         #template, = Template.search([('id', '=', producto.template)])
                         line = SaleLine()
                         seq = lin[col_line.index('seq')]
@@ -132,7 +135,7 @@ class Sale(metaclass=PoolMeta):
                         line.sale = sale
                         line.type = 'line'
                         line.unit = producto.template.default_uom
-                        print(id_producto, line.unit)
+                        #print(id_producto, line.unit)
                         line.on_change_product() #Comprueba los cambios y trae los impuestos del producto
                         line.unit_price = lin[col_line.index('Valor_Unitario')]
                         #Verificamos si hay descuento para la linea de producto y se agrega su respectivo descuento
