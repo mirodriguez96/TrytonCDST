@@ -141,8 +141,8 @@ class Sale(metaclass=PoolMeta):
                         line.type = 'line'
                         line.unit = producto.template.default_uom
                         #print(id_producto, line.unit)
-                        line.on_change_product() #Comprueba los cambios y trae los impuestos del producto
                         line.unit_price = lin[col_line.index('Valor_Unitario')]
+                        line.on_change_product() #Comprueba los cambios y trae los impuestos del producto
                         #Verificamos si hay descuento para la linea de producto y se agrega su respectivo descuento
                         if lin[col_line.index('Porcentaje_Descuento_1')] > 0:
                             porcentaje = lin[col_line.index('Porcentaje_Descuento_1')]/100
@@ -151,12 +151,11 @@ class Sale(metaclass=PoolMeta):
                             line.on_change_discount_rate()
                         line.save()
                     #Procesamos la venta para generar la factura y procedemos a rellenar los campos de la factura
-                    #sale.draft([sale])
                     sale.quote([sale])
                     sale.confirm([sale])
                     #Se requiere procesar de forma 'manual' la venta para que genere la factura
                     sale.process([sale])
-                    #print(len(sale.shipments), len(sale.shipment_returns), len(sale.invoices))
+                    print(len(sale.shipments), len(sale.shipment_returns), len(sale.invoices))
                     invoice, = sale.invoices
                     #invoice.operation_type = 10
                     invoice.number = tipo_doc+'-'+str(numero_doc)

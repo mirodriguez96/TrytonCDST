@@ -58,6 +58,7 @@ class ElectronicPayrollCdst(object):
         #print(header)
         print(data)
         response = requests.post(url, headers=header, data=data)
+        print(response.text)
         if response.status_code == 200:
             #print(type(response.text))
             res = json.loads(response.text)
@@ -320,11 +321,19 @@ class ElectronicPayrollCdst(object):
         }
 
         noova["Deducciones"] = {
-            "Salud": {}
+            "Salud": {
+                "Nvsal_porc": "",
+                "Nvsal_dedu": ""
+            },
+            "FondoPension": {
+                    "Nvfon_porc": "0",
+                    "Nvfon_dedu": "0"
+                }
         }
 
+        print(dic["Trabajador"]["TipoContrato"])
         #Si el contrato es de aprendiz, su valor es 0 en salud
-        if dic["Trabajador"]["TipoContrato"] == 'learning':
+        if dic["Trabajador"]["TipoContrato"] == '4':
             noova["Deducciones"]["Salud"]["Nvsal_porc"] = '0'
             noova["Deducciones"]["Salud"]["Nvsal_dedu"] = '0'
         else:
