@@ -154,29 +154,33 @@ class Sale(metaclass=PoolMeta):
                     #Procesamos la venta para generar la factura y procedemos a rellenar los campos de la factura
                     sale.quote([sale])
                     sale.confirm([sale])
-                    print(sale.state)
+                    #print(sale.state)
                     #Se requiere procesar de forma 'manual' la venta para que genere la factura
                     sale.process([sale])
-                    print(len(sale.shipments), len(sale.shipment_returns), len(sale.invoices))
-                    invoice, = sale.invoices
-                    #invoice.operation_type = 10
-                    invoice.number = tipo_doc+'-'+str(numero_doc)
-                    invoice.reference = tipo_doc+'-'+str(numero_doc)
-                    invoice.invoice_date = fecha_date
-                    #Se agrega en la descripcion el nombre del tipo de documento de la tabla en sqlserver
-                    desc = cls.get_tipo_dcto(tipo_doc)
-                    if desc:
-                        invoice.description = desc[0][columns_tipodoc.index('TipoDoctos')].replace('\n', ' ').replace('\r', '')
-                    invoice.validate_invoice([invoice])
-                    #Verificamos que el total de la tabla en sqlserver coincidan o tengan una diferencia menor a 4 decimales, para contabilizar la factura
-                    total_amount = invoice.get_amount([invoice], 'total_amount')
-                    total = abs(total_amount['total_amount'][invoice.id])
-                    total_tecno = Decimal(venta[coluns_doc.index('valor_total')])
-                    diferencia_total = abs(total - total_tecno)
-                    if diferencia_total < 0.4:
-                        invoice.post_batch([invoice])
-                        invoice.post([invoice])
-                    invoice.save()
+                    #print(len(sale.shipments), len(sale.shipment_returns), len(sale.invoices))
+                    try:
+                        invoice, = sale.invoices
+                        #invoice.operation_type = 10
+                        invoice.number = tipo_doc+'-'+str(numero_doc)
+                        invoice.reference = tipo_doc+'-'+str(numero_doc)
+                        invoice.invoice_date = fecha_date
+                        #Se agrega en la descripcion el nombre del tipo de documento de la tabla en sqlserver
+                        desc = cls.get_tipo_dcto(tipo_doc)
+                        if desc:
+                            invoice.description = desc[0][columns_tipodoc.index('TipoDoctos')].replace('\n', ' ').replace('\r', '')
+                        invoice.validate_invoice([invoice])
+                        #Verificamos que el total de la tabla en sqlserver coincidan o tengan una diferencia menor a 4 decimales, para contabilizar la factura
+                        total_amount = invoice.get_amount([invoice], 'total_amount')
+                        total = abs(total_amount['total_amount'][invoice.id])
+                        total_tecno = Decimal(venta[coluns_doc.index('valor_total')])
+                        diferencia_total = abs(total - total_tecno)
+                        if diferencia_total < 0.4:
+                            invoice.post_batch([invoice])
+                            invoice.post([invoice])
+                        invoice.save()
+                    except Exception as e:
+                        print(e)
+                        logging.error(e)
                     sale.save()
                     Transaction().connection.commit()
                     """"""
