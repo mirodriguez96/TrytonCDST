@@ -119,6 +119,7 @@ class Sale(metaclass=PoolMeta):
                     #create_line = []
                     for lin in documentos_linea:
                         id_producto = str(lin[col_line.index('IdProducto')])
+                        print(id_producto)
                         producto = cls.buscar_producto(id_producto)
                         if not producto.template.salable:
                             raise UserError("El siguiente producto no es vendible: ", producto)
@@ -153,6 +154,7 @@ class Sale(metaclass=PoolMeta):
                     #Procesamos la venta para generar la factura y procedemos a rellenar los campos de la factura
                     sale.quote([sale])
                     sale.confirm([sale])
+                    print(sale.state)
                     #Se requiere procesar de forma 'manual' la venta para que genere la factura
                     sale.process([sale])
                     print(len(sale.shipments), len(sale.shipment_returns), len(sale.invoices))
