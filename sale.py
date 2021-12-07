@@ -376,8 +376,10 @@ class Sale(metaclass=PoolMeta):
                 cls.add_sale(data)
                 cls.create_or_update() #Se crea o actualiza la fecha de importación
                 faltantes = cursor.execute("SELECT * "+consult)
+                print("FINALIZADO")
                 raise UserError("Documentos faltantes ", list(faltantes.fetchall()))
         except Exception as e:
+            print(e)
             raise UserError('ERROR QUERY get_data_where_tecno: ', str(e))
             #print("ERROR QUERY get_data_where_tecno: ", e)
         #return data

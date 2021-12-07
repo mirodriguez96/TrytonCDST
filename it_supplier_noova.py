@@ -103,28 +103,28 @@ class ElectronicPayrollCdst(object):
             #    "Nvper_fpfi": dict_res["Periodo"]["FechaLiquidacionFin"],
             #    "Nvper_tlab": dict_res["Periodo"]["TiempoLaborado"]
             #},
-            "InformacionGeneral": { #OBLIGATORIO
-                "Nvinf_tnom": self.payroll.payroll_type,
-                #"Nvinf_pnom": dict_res["InformacionGeneral"]["PeriodoNomina"],
-                #"Nvinf_tmon": dict_res["InformacionGeneral"]["TipoMoneda"],
-                #"Nvinf_mtrm": dict_res["InformacionGeneral"]["TRM"] #Tasa Representativa del mercado
-            },
+            #"InformacionGeneral": { #OBLIGATORIO
+            #    "Nvinf_tnom": self.payroll.payroll_type,
+            #    #"Nvinf_pnom": dict_res["InformacionGeneral"]["PeriodoNomina"],
+            #    #"Nvinf_tmon": dict_res["InformacionGeneral"]["TipoMoneda"],
+            #    #"Nvinf_mtrm": dict_res["InformacionGeneral"]["TRM"] #Tasa Representativa del mercado
+            #},
             #"LNotas": [
             #    ""
             #],
-            "Empleador": { #OBLIGATORIO
-                "Nvemp_nomb": dict_res["Empleador"]["RazonSocial"],
-                #"Nvemp_pape": dict_res["Empleador"]["PrimerApellido"],#opcional
-                #"Nvemp_sape": dict_res["Empleador"]["SegundoApellido"],#opcional
-                #"Nvemp_pnom": dict_res["Empleador"]["PrimerNombre"],#opcional
-                #"Nvemp_onom": dict_res["Empleador"]["OtrosNombres"],#opcional
-                "Nvemp_nnit": dict_res["Empleador"]["NIT"],
-                "Nvemp_endv": dict_res["Empleador"]["DV"],
-                "Nvemp_pais": dict_res["Empleador"]["Pais"],
-                "Nvemp_depa": dict_res["Empleador"]["DepartamentoEstado"],
-                "Nvemp_ciud": dict_res["Empleador"]["MunicipioCiudad"],
-                "Nvemp_dire": dict_res["Empleador"]["Direccion"]
-            },
+            #"Empleador": { #OBLIGATORIO
+            #    "Nvemp_nomb": dict_res["Empleador"]["RazonSocial"],
+            #    #"Nvemp_pape": dict_res["Empleador"]["PrimerApellido"],#opcional
+            #    #"Nvemp_sape": dict_res["Empleador"]["SegundoApellido"],#opcional
+            #    #"Nvemp_pnom": dict_res["Empleador"]["PrimerNombre"],#opcional
+            #    #"Nvemp_onom": dict_res["Empleador"]["OtrosNombres"],#opcional
+            #    "Nvemp_nnit": dict_res["Empleador"]["NIT"],
+            #    "Nvemp_endv": dict_res["Empleador"]["DV"],
+            #    "Nvemp_pais": dict_res["Empleador"]["Pais"],
+            #    "Nvemp_depa": dict_res["Empleador"]["DepartamentoEstado"],
+            #    "Nvemp_ciud": dict_res["Empleador"]["MunicipioCiudad"],
+            #    "Nvemp_dire": dict_res["Empleador"]["Direccion"]
+            #},
             #"Trabajador": {#OBLIGATORIO
             #    "Nvtra_tipo": dict_res["Trabajador"]["TipoTrabajador"],
             #    "Nvtra_stip": dict_res["Trabajador"]["SubTipoTrabajador"],
@@ -254,9 +254,15 @@ class ElectronicPayrollCdst(object):
     #Devuelve el diccionario con los nuevos campos para enviar a noova
     def _validate_data(self, dic, noova):
 
+        if self.payroll.type_note != '2':
+            noova["Nvnom_devt"] = dic["DevengadosTotal"]
+            noova["Nvnom_dedt"] = dic["DeduccionesTotal"]
+            noova["Nvnom_comt"] = dic["ComprobanteTotal"]
+            lfpag = len(dic["FechasPagos"]["FechaPago"])
+            noova["Nvnom_fpag"] = dic["FechasPagos"]["FechaPago"][lfpag-1]
+
         if self.payroll.payroll_type == '103':
             noova["Nvnom_tipo"] = self.payroll.type_note
-
             noova["Predecesor"] = {
                 "Nvpre_nume": dic["Predecesor"]["NumeroPred"],
                 "Nvpre_cune": dic["Predecesor"]["CUNEPred"],
@@ -264,14 +270,19 @@ class ElectronicPayrollCdst(object):
             }
 
             if self.payroll.type_note == '2':
+                noova["InformacionGeneral"] = { #OBLIGATORIO
+                    "Nvinf_tnom": self.payroll.payroll_type
+                }
+                noova["Empleador"] = { #OBLIGATORIO
+                    "Nvemp_nomb": dic["Empleador"]["RazonSocial"],
+                    "Nvemp_nnit": dic["Empleador"]["NIT"],
+                    "Nvemp_endv": dic["Empleador"]["DV"],
+                    "Nvemp_pais": dic["Empleador"]["Pais"],
+                    "Nvemp_depa": dic["Empleador"]["DepartamentoEstado"],
+                    "Nvemp_ciud": dic["Empleador"]["MunicipioCiudad"],
+                    "Nvemp_dire": dic["Empleador"]["Direccion"]
+                }
                 return noova
-    
-        noova["Nvnom_devt"] = dic["DevengadosTotal"]
-        noova["Nvnom_dedt"] = dic["DeduccionesTotal"]
-        noova["Nvnom_comt"] = dic["ComprobanteTotal"]
-
-        lfpag = len(dic["FechasPagos"]["FechaPago"])
-        noova["Nvnom_fpag"] = dic["FechasPagos"]["FechaPago"][lfpag-1]
 
         noova["Periodo"] = {
             "Nvper_fing": dic["Periodo"]["FechaIngreso"],
@@ -281,9 +292,29 @@ class ElectronicPayrollCdst(object):
             "Nvper_tlab": dic["Periodo"]["TiempoLaborado"]
         }
 
-        noova["InformacionGeneral"]["Nvinf_pnom"] = dic["InformacionGeneral"]["PeriodoNomina"]
-        noova["InformacionGeneral"]["Nvinf_tmon"] = dic["InformacionGeneral"]["TipoMoneda"]
-        #"Nvinf_mtrm": dict_res["InformacionGeneral"]["TRM"] #Tasa Representativa del mercado
+        noova["InformacionGeneral"] = { #OBLIGATORIO
+            "Nvinf_tnom": self.payroll.payroll_type,
+            "Nvinf_pnom": dic["InformacionGeneral"]["PeriodoNomina"],
+            "Nvinf_tmon": dic["InformacionGeneral"]["TipoMoneda"],
+            #"Nvinf_mtrm": dict_res["InformacionGeneral"]["TRM"] #Tasa Representativa del mercado
+        }
+        
+        if "Notas" in dic.keys():
+           noova["LNotas"] = [dic["Notas"]]
+
+        noova["Empleador"] = { #OBLIGATORIO
+            "Nvemp_nomb": dic["Empleador"]["RazonSocial"],
+            #"Nvemp_pape": dict_res["Empleador"]["PrimerApellido"],#opcional
+            #"Nvemp_sape": dict_res["Empleador"]["SegundoApellido"],#opcional
+            #"Nvemp_pnom": dict_res["Empleador"]["PrimerNombre"],#opcional
+            #"Nvemp_onom": dict_res["Empleador"]["OtrosNombres"],#opcional
+            "Nvemp_nnit": dic["Empleador"]["NIT"],
+            "Nvemp_endv": dic["Empleador"]["DV"],
+            "Nvemp_pais": dic["Empleador"]["Pais"],
+            "Nvemp_depa": dic["Empleador"]["DepartamentoEstado"],
+            "Nvemp_ciud": dic["Empleador"]["MunicipioCiudad"],
+            "Nvemp_dire": dic["Empleador"]["Direccion"]
+        }
 
         noova["Trabajador"] = {
             "Nvtra_tipo": dic["Trabajador"]["TipoTrabajador"],
@@ -322,8 +353,8 @@ class ElectronicPayrollCdst(object):
 
         noova["Deducciones"] = {
             "Salud": {
-                "Nvsal_porc": "",
-                "Nvsal_dedu": ""
+                "Nvsal_porc": "0",
+                "Nvsal_dedu": "0"
             },
             "FondoPension": {
                     "Nvfon_porc": "0",
@@ -333,15 +364,10 @@ class ElectronicPayrollCdst(object):
 
         print(dic["Trabajador"]["TipoContrato"])
         #Si el contrato es de aprendiz, su valor es 0 en salud
-        if dic["Trabajador"]["TipoContrato"] == '4':
-            noova["Deducciones"]["Salud"]["Nvsal_porc"] = '0'
-            noova["Deducciones"]["Salud"]["Nvsal_dedu"] = '0'
-        else:
+        if dic["Trabajador"]["TipoContrato"] != '4':
             noova["Deducciones"]["Salud"]["Nvsal_porc"] = dic["Deducciones"]["Salud"]["Porcentaje"]
             noova["Deducciones"]["Salud"]["Nvsal_dedu"] = dic["Deducciones"]["Salud"]["Deduccion"]
 
-        if "Notas" in dic.keys():
-           noova["LNotas"] = [dic["Notas"]]
         
         if self.payroll.employee.party.second_name:
             noova["Trabajador"]["Nvtra_onom"] = dic["Trabajador"]["OtrosNombres"]
