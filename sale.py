@@ -348,24 +348,34 @@ class Sale(metaclass=PoolMeta):
             print("ERROR QUERY "+table+": ", e)
         return columns
 
+
     #Esta función se encarga de traer todos los datos de una tabla dada de acuerdo al rango de fecha dada de la bd
     @classmethod
-    def get_data_where_tecno(cls, date):
+    def get_data_where_tecno(cls, date): #REVISAR PARA OPTIMIZAR
         data = []
         try:
             Config = Pool().get('conector.configuration')
             conexion = Config.conexion()
             with conexion.cursor() as cursor:
-                cant = cursor.execute("SELECT COUNT(*) FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2)")
-                cant = int(cant.fetchall()[0][0])
-                cant = int(cant/1000)+1
-                for n in range(cant):
-                    #(sw = 1  ventas) (sw = 2 devoluciones)
-                    query = cursor.execute("SELECT * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2) ORDER BY sw OFFSET "+str(n)+" ROWS FETCH NEXT 1000 ROWS ONLY")
-                    data = list(query.fetchall())
-                    cls.add_sale(data)
+                consult = "FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado != 'T'"
+                #cant_importar = cursor.execute("SELECT COUNT(*) "+consult)
+                #total_importar = int(cant_importar.fetchall()[0][0])
+                #cant = int(total_importar/1000)+1
+                #for n in range(cant):
+                #    cant_importados = cursor.execute("SELECT COUNT(*) FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado = 'T'")
+                #    total_importados = int(cant_importados.fetchall()[0][0])
+                #    inicio = 0
+                #    if ((n+1)*1000 - total_importados) == 0:
+                #        pass
+                #    #(sw = 1  ventas) (sw = 2 devoluciones)
+                #    query = cursor.execute("SELECT * "+consult+" ORDER BY sw OFFSET "+str(inicio)+" ROWS FETCH NEXT 1000 ROWS ONLY")
+                #    data = list(query.fetchall())
+                #    cls.add_sale(data)
+                query = cursor.execute("SELECT * "+consult)
+                data = list(query.fetchall())
+                cls.add_sale(data)
                 cls.create_or_update() #Se crea o actualiza la fecha de importación
-                faltantes = cursor.execute("SELECT * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado != 'T'")
+                faltantes = cursor.execute("SELECT * "+consult)
                 raise UserError("Documentos faltantes ", list(faltantes.fetchall()))
         except Exception as e:
             raise UserError('ERROR QUERY get_data_where_tecno: ', str(e))
