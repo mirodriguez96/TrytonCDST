@@ -35,9 +35,8 @@ class Sale(metaclass=PoolMeta):
     @classmethod
     def import_data_sale(cls):
         print("--------------RUN VENTAS--------------")
-        ventas_tecno = cls.last_update()
-        cls.create_or_update()
-        #cls.add_venta(ventas_tecno)
+        cls.create_or_update() #Se crea o actualiza la fecha de importación
+        cls.last_update()
 
     @classmethod
     def add_sale(cls, ventas_tecno):
@@ -119,7 +118,7 @@ class Sale(metaclass=PoolMeta):
                     #create_line = []
                     for lin in documentos_linea:
                         id_producto = str(lin[col_line.index('IdProducto')])
-                        print(id_producto)
+                        #print(id_producto)
                         producto = cls.buscar_producto(id_producto)
                         if not producto.template.salable:
                             raise UserError("El siguiente producto no es vendible: ", producto)
@@ -132,18 +131,18 @@ class Sale(metaclass=PoolMeta):
                         line.product = producto
                         #Se verifica si es una devolución
                         if sw == 2:
-                            line.quantity = (abs(int(lin[col_line.index('Cantidad_Facturada')])))*-1
+                            line.quantity = (abs(round(lin[col_line.index('Cantidad_Facturada')]), 2))*-1
                             #Se indica a que documento hace referencia la devolucion
                             sale.reference = venta[coluns_doc.index('Tipo_Docto_Base')].strip()+'-'+str(venta[coluns_doc.index('Numero_Docto_Base')])
                         else:
-                            line.quantity = abs(int(lin[col_line.index('Cantidad_Facturada')]))
+                            line.quantity = abs(round(lin[col_line.index('Cantidad_Facturada')], 2))
                             sale.reference = tipo_doc+'-'+str(numero_doc)
                         line.sale = sale
                         line.type = 'line'
                         line.unit = producto.template.default_uom
                         #print(id_producto, line.unit)
-                        line.unit_price = lin[col_line.index('Valor_Unitario')]
                         line.on_change_product() #Comprueba los cambios y trae los impuestos del producto
+                        line.unit_price = lin[col_line.index('Valor_Unitario')]
                         #Verificamos si hay descuento para la linea de producto y se agrega su respectivo descuento
                         if lin[col_line.index('Porcentaje_Descuento_1')] > 0:
                             porcentaje = lin[col_line.index('Porcentaje_Descuento_1')]/100
@@ -160,7 +159,6 @@ class Sale(metaclass=PoolMeta):
                     #print(len(sale.shipments), len(sale.shipment_returns), len(sale.invoices))
                     try:
                         invoice, = sale.invoices
-                        #invoice.operation_type = 10
                         invoice.number = tipo_doc+'-'+str(numero_doc)
                         invoice.reference = tipo_doc+'-'+str(numero_doc)
                         invoice.invoice_date = fecha_date
@@ -178,11 +176,11 @@ class Sale(metaclass=PoolMeta):
                             invoice.post_batch([invoice])
                             invoice.post([invoice])
                         invoice.save()
+                        sale.save()
+                        Transaction().connection.commit()
+                        cls.importado(id_venta)
                     except Exception as e:
                         print(e)
-                        logging.error(e)
-                    sale.save()
-                    Transaction().connection.commit()
                     """"""
 
 
@@ -367,10 +365,24 @@ class Sale(metaclass=PoolMeta):
                     query = cursor.execute("SELECT * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2) ORDER BY sw OFFSET "+str(n)+" ROWS FETCH NEXT 1000 ROWS ONLY")
                     data = list(query.fetchall())
                     cls.add_sale(data)
+                faltantes = cursor.execute("SELECT * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado != 'T'")
+                raise UserError("Documentos faltantes ", list(faltantes.fetchall()))
         except Exception as e:
             raise UserError('ERROR QUERY get_data_where_tecno: ', str(e))
             #print("ERROR QUERY get_data_where_tecno: ", e)
         #return data
+
+    @classmethod
+    def importado(cls, id):
+        lista = id.split('-')
+        try:
+            Config = Pool().get('conector.configuration')
+            conexion = Config.conexion()
+            with conexion.cursor() as cursor:
+                cursor.execute("UPDATE dbo.Documentos SET exportado = 'T' WHERE sw ="+lista[0]+" and tipo = "+lista[1]+" and Numero_documento = "+lista[2])
+        except Exception as e:
+            print(e)
+            raise UserError('Error al actualizar como importado: ', e)
 
     #Función encargada de convertir una fecha dada, al formato y orden para consultas sql server
     @classmethod
