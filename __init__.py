@@ -7,6 +7,7 @@ import product
 import sale
 import configuration
 import voucher
+import pay_mode
 from . import electronic_payroll_wizard
 from . import company
 from . import payment_term
@@ -29,7 +30,8 @@ def register():
         configuration.Configuration,
         voucher.Cron,
         voucher.Voucher,
-        voucher.VoucherPayMode,
+        pay_mode.Cron,
+        pay_mode.VoucherPayMode,
         payment_term.PaymentTerm,
         module='conector', type_='model')
 

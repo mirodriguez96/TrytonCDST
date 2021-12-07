@@ -6,24 +6,10 @@ from decimal import Decimal
 
 import datetime
 
-PAYMENT_CODES = [
-    ('', ''),
-    ('1', 'Instrumento no definido'),
-    ('10', 'Efectivo'),
-    ('44', 'Nota Cambiaria'),
-    ('20', 'Cheque'),
-    ('48', 'Tarjeta Crédito'),
-    ('49', 'Tarjeta Débito'),
-    ('42', 'Consignación bancaria'),
-    ('47', 'Transferencia Débito Bancaria'),
-    ('45', 'Transferencia Crédito Bancaria'),
-]
-
-
 __all__ = [
     'Voucher',
     'Cron',
-    'VoucherPayMode',
+    #'VoucherPayMode',
     ]
 
 
@@ -51,7 +37,7 @@ class Voucher(ModelSQL, ModelView):
         documentos_db = cls.last_update()
         cls.create_or_update()
         if documentos_db:
-            cls.update_paymode()
+            #cls.update_paymode()
             columns_doc = cls.get_columns_db('Documentos')
             columns_rec = cls.get_columns_db('Documentos_Cruce')
             columns_tip = cls.get_columns_db('Documentos_Che')
@@ -185,42 +171,6 @@ class Voucher(ModelSQL, ModelView):
                         voucher.save()
 
 
-    @classmethod
-    def update_paymode(cls):
-        columns_fp = cls.get_columns_db('TblFormaPago')
-        forma_pago = cls.get_formapago()
-        PayMode = Pool().get('account.voucher.paymode')
-        Journal = Pool().get('account.journal')
-        Account = Pool().get('account.account')
-        for fp in forma_pago:
-            idt = str(fp[columns_fp.index('IdFormaPago')])
-            paym = PayMode.search([('id_tecno', '=', idt)])
-            if paym:
-                for pm in paym:
-                    pm.name = fp[columns_fp.index('FormaPago')].strip()
-                    PayMode.save(paym)
-            else:
-                journal, = Journal.search([('code', '=', 'REV')])
-                paym = PayMode()
-                paym.id_tecno = idt
-                paym.name = fp[columns_fp.index('FormaPago')].strip()
-                paym.payment_type = 'cash'
-                paym.kind = 'both'
-                paym.journal = journal
-                sequence_payment = cls.find_seq('Voucher Payment')
-                sequence_multipayment = cls.find_seq('Voucher Multipayment')
-                sequence_receipt = cls.find_seq('Voucher Receipt')
-                paym.sequence_payment = sequence_payment[0]
-                paym.sequence_multipayment = sequence_multipayment[0]
-                paym.sequence_receipt = sequence_receipt[0]
-                #Se busca la cuenta de caja general para asignarle al paymode
-                account, = Account.search([('code', '=', '110505')])
-                paym.account = account
-                #Codigo clasificacion tipo de pago ('10' => 'Efectivo')
-                paym.payment_means_code = 10
-                paym.save()
-
-
     #Metodo encargado de consultar y verificar si existe un voucher con la id de la BD
     @classmethod
     def find_voucher(cls, idt):
@@ -334,20 +284,3 @@ class Voucher(ModelSQL, ModelView):
             actualizar = Actualizacion()
             actualizar.name = 'RECIBOS'
             actualizar.save()
-
-#Función encargada de consultar la secuencia de un voucher dado
-    @classmethod
-    def find_seq(cls, name):
-        Sequence = Pool().get('ir.sequence')
-        seq = Sequence.__table__()
-        cursor = Transaction().connection.cursor()
-        cursor.execute(*seq.select(where=(seq.name == name)))
-        result = cursor.fetchall()
-        return result[0]
-
-class VoucherPayMode(ModelSQL, ModelView):
-    'Voucher Pay Mode'
-    __name__ = 'account.voucher.paymode'
-    id_tecno = fields.Char('Id Tabla Sqlserver', required=False)
-    #Campo habilitado y necesario por módulos de psk al desactivar (electronic_invoice_co)
-    payment_means_code = fields.Selection(PAYMENT_CODES, 'Payment Means Code', required=True)
