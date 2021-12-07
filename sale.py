@@ -35,7 +35,6 @@ class Sale(metaclass=PoolMeta):
     @classmethod
     def import_data_sale(cls):
         print("--------------RUN VENTAS--------------")
-        cls.create_or_update() #Se crea o actualiza la fecha de importación
         cls.last_update()
 
     @classmethod
@@ -70,7 +69,7 @@ class Sale(metaclass=PoolMeta):
                 if not existe:
                     sale = Sale()
                     sale.number = tipo_doc+'-'+str(numero_doc)
-                    print(tipo_doc+'-'+str(numero_doc))
+                    #print(tipo_doc+'-'+str(numero_doc))
                     sale.id_tecno = id_venta
                     sale.description = venta[coluns_doc.index('notas')].replace('\n', ' ').replace('\r', '')
                     #Defino por defecto el tipo de venta por computador
@@ -365,6 +364,7 @@ class Sale(metaclass=PoolMeta):
                     query = cursor.execute("SELECT * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2) ORDER BY sw OFFSET "+str(n)+" ROWS FETCH NEXT 1000 ROWS ONLY")
                     data = list(query.fetchall())
                     cls.add_sale(data)
+                cls.create_or_update() #Se crea o actualiza la fecha de importación
                 faltantes = cursor.execute("SELECT * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado != 'T'")
                 raise UserError("Documentos faltantes ", list(faltantes.fetchall()))
         except Exception as e:
