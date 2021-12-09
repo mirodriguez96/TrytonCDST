@@ -1,4 +1,5 @@
 
+from _typeshed import Self
 from decimal import Decimal
 #from lxml import etree, builder
 #from maker_phase import element
@@ -178,6 +179,9 @@ class ElectronicPayroll(object):
         if self.payroll.contract.finished_date and self.payroll.end <= self.payroll.contract.finished_date:
             settlement_end_date = self.payroll.contract.finished_date
             end_date = settlement_end_date
+
+        #print(self.payroll.start)
+        #print(self.payroll.end)
 
         for p in self.payroll.payrolls_relationship:
             if not settlement_start_date:
