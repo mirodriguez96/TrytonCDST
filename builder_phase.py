@@ -170,25 +170,24 @@ class ElectronicPayroll(object):
 
     def _get_payroll_period(self):
         start_date = self.payroll.contract.start_date
-        #print(start_date)
-        #if start_date < self.payroll.start:
-        #     start_date = ''
         end_date = None
-        settlement_start_date, settlement_end_date = None, None
-        if self.payroll.contract.finished_date and self.payroll.end <= self.payroll.contract.finished_date:
-            settlement_end_date = self.payroll.contract.finished_date
-            end_date = settlement_end_date
+        settlement_start_date = None
+        settlement_end_date = None
 
         for p in self.payroll.payrolls_relationship:
             if not settlement_start_date:
                 settlement_start_date = p.start
-            elif settlement_start_date <= p.start:
+            elif settlement_start_date >= p.start:
                 settlement_start_date = p.start
 
             if not settlement_end_date:
                 settlement_end_date = p.end
-            elif settlement_end_date >= p.end:
+            elif settlement_end_date <= p.end:
                 settlement_end_date = p.end
+        
+        if self.payroll.contract.finished_date and self.payroll.end >= self.payroll.contract.finished_date:
+            settlement_end_date = self.payroll.contract.finished_date
+            end_date = settlement_end_date
 
         payroll_period = {
             "FechaIngreso":str(start_date),

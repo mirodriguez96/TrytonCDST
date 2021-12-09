@@ -23,7 +23,7 @@ class ElectronicPayrollCdst(object):
         if ec_payroll.status != 'ok':
             self.payroll.get_message(ec_payroll.status)
         xml_payroll = ec_payroll.make(self.payroll.payroll_type)
-
+        
         self._send_noova(xml_payroll)
 
 
@@ -54,9 +54,10 @@ class ElectronicPayrollCdst(object):
             'Connection': 'Keep-Alive'
         }
         data = self._create_json_noova(dict, sucode)
-        print(url)
+        #print(url)
         #print(header)
         print(data)
+        return
         response = requests.post(url, headers=header, data=data)
         print(response.text)
         if response.status_code == 200:
