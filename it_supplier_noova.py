@@ -56,8 +56,7 @@ class ElectronicPayrollCdst(object):
         data = self._create_json_noova(dict, sucode)
         #print(url)
         #print(header)
-        print(data)
-        return
+        #print(data)
         response = requests.post(url, headers=header, data=data)
         print(response.text)
         if response.status_code == 200:
