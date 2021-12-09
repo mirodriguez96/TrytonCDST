@@ -58,7 +58,7 @@ class ElectronicPayrollCdst(object):
         #print(header)
         #print(data)
         response = requests.post(url, headers=header, data=data)
-        print(response.text)
+        #print(response.text)
         if response.status_code == 200:
             #print(type(response.text))
             res = json.loads(response.text)
@@ -362,7 +362,7 @@ class ElectronicPayrollCdst(object):
                 }
         }
 
-        print(dic["Trabajador"]["TipoContrato"])
+        #print(dic["Trabajador"]["TipoContrato"])
         #Si el contrato es de aprendiz, su valor es 0 en salud
         if dic["Trabajador"]["TipoContrato"] != '4':
             noova["Deducciones"]["Salud"]["Nvsal_porc"] = dic["Deducciones"]["Salud"]["Porcentaje"]
@@ -484,7 +484,7 @@ class ElectronicPayrollCdst(object):
             noova["Deducciones"]["FondoPension"] = val
 
         if "FondoSP" in dic["Deducciones"].keys():
-            print(dic["Deducciones"]["FondoSP"])
+            #print(dic["Deducciones"]["FondoSP"])
             if "FondoSPSUB" in dic["Deducciones"]["FondoSP"]:
                 val = {
                     "Nvfsp_posb": dic["Deducciones"]["FondoSP"]["FondoSPSUB"]["Porcentaje"],
