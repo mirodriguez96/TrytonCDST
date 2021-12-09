@@ -57,6 +57,7 @@ class ElectronicPayrollCdst(object):
         #print(url)
         #print(header)
         #print(data)
+        #return
         response = requests.post(url, headers=header, data=data)
         #print(response.text)
         if response.status_code == 200:
@@ -351,6 +352,15 @@ class ElectronicPayrollCdst(object):
                 }
         }
 
+        if "Transporte" in dic["Devengados"].keys():
+            noova["Devengados"]["Transporte"] = {}
+            if "AuxilioTransporte" in dic["Devengados"]["Transporte"].keys():
+                noova["Devengados"]["Transporte"]["Nvtrn_auxt"] = dic["Devengados"]["Transporte"]["AuxilioTransporte"]
+            if "ViaticoManuAlojS" in dic["Devengados"]["Transporte"].keys():
+                noova["Devengados"]["Transporte"]["Nvtrn_vias"] = dic["Devengados"]["Transporte"]["ViaticoManuAlojS"]
+            if "ViaticoManuAlojNS" in dic["Devengados"]["Transporte"].keys():
+                noova["Devengados"]["Transporte"]["Nvtrn_vins"] = dic["Devengados"]["Transporte"]["ViaticoManuAlojNS"]
+
         noova["Deducciones"] = {
             "Salud": {
                 "Nvsal_porc": "0",
@@ -470,9 +480,27 @@ class ElectronicPayrollCdst(object):
                 data.append(val)
             noova["Devengados"]["LLicencias"] = data
 
+        if "Bonificaciones" in dic["Devengados"].keys():
+            noova["Devengados"]["LBonificaciones"] = []
+            if "BonificacionS" in dic["Devengados"]["Bonificaciones"].keys():
+                #noova["Devengados"]["LBonificaciones"]["Nvbon_bofs"] = dic["Devengados"]["Bonificaciones"]["BonificacionS"]
+                noova["Devengados"]["LBonificaciones"] = [
+                    {
+                        "Nvbon_bofs": dic["Devengados"]["Bonificaciones"]["BonificacionS"]
+                    }
+                ]
+            if "BonificacionNS" in dic["Devengados"]["Bonificaciones"].keys():
+                #noova["Devengados"]["LBonificaciones"]["Nvbon_bons"] = dic["Devengados"]["Bonificaciones"]["BonificacionNS"]
+                noova["Devengados"]["LBonificaciones"] = [
+                    {
+                        "Nvbon_bons": dic["Devengados"]["Bonificaciones"]["BonificacionNS"]
+                    }
+                ]
+
         if "OtrosTag" in dic["Devengados"].keys():
             data = []
             for h in dic["Devengados"]["OtrosTag"]:
+                print(h)
                 data.append(dic["Devengados"]["OtrosTag"][h])
             noova["Devengados"]["LAnticipos"] = data
         
