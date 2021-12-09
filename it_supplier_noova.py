@@ -23,8 +23,8 @@ class ElectronicPayrollCdst(object):
         if ec_payroll.status != 'ok':
             self.payroll.get_message(ec_payroll.status)
         xml_payroll = ec_payroll.make(self.payroll.payroll_type)
-        
-        #self._send_noova(xml_payroll)
+
+        self._send_noova(xml_payroll)
 
 
     # Consumo API noova
