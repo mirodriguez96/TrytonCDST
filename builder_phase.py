@@ -259,9 +259,7 @@ class ElectronicPayroll(object):
         return information
 
     def _get_notes(self):
-        notes = {
-            "Notas": ''
-            }
+        notes = ''
         return notes
 
     def _get_information_company(self):
