@@ -371,12 +371,12 @@ class Sale(metaclass=PoolMeta):
                 #    query = cursor.execute("SELECT * "+consult+" ORDER BY sw OFFSET "+str(inicio)+" ROWS FETCH NEXT 1000 ROWS ONLY")
                 #    data = list(query.fetchall())
                 #    cls.add_sale(data)
-                query = cursor.execute("SELECT * "+consult)
+                query = cursor.execute("SELECT TOP(1000) * "+consult)
                 data = list(query.fetchall())
                 cls.add_sale(data)
-                cls.create_or_update() #Se crea o actualiza la fecha de importación
-                faltantes = cursor.execute("SELECT * "+consult)
-                print("FINALIZADO: ", list(faltantes.fetchall()))
+                #cls.create_or_update() #Se crea o actualiza la fecha de importación
+                #faltantes = cursor.execute("SELECT * "+consult)
+                #print("FINALIZADO: ", list(faltantes.fetchall()))
                 #raise UserError("Documentos faltantes ", list(faltantes.fetchall()))
         except Exception as e:
             print(e)
