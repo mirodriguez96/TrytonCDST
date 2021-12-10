@@ -1,6 +1,7 @@
 
 from decimal import Decimal
 #import json
+import datetime
 import os
 
 EXTRAS = {
@@ -323,10 +324,12 @@ class ElectronicPayroll(object):
         #for pay in self.payroll.payrolls_relationship:
         #    pagos.append(str(pay.date_effective))
         #pay_dates["FechaPago"] = pagos
-        pay_date = None
+        pay_date = datetime.date(999, 1, 1)
         for pay in self.payroll.payrolls_relationship:
-            pay_date = str(pay.date_effective)
-        return pay_date
+            print(pay.date_effective)
+            if pay_date <= pay.date_effective:
+                pay_date = pay.date_effective
+        return str(pay_date)
     
     def _get_predecessor(self):
         issue_date = self.payroll.original_payroll.get_datetime_local()
@@ -576,23 +579,28 @@ class ElectronicPayroll(object):
 
         for line in line_deductions:
             concept = line.wage_type.type_concept_electronic
+
+            subelements['Salud'] = {
+                "Nvsal_porc": "0",
+                "Nvsal_dedu": "0"
+            }
+
+            subelements['FondoPension'] = {
+                "Nvfon_porc": "0",
+                "Nvfon_dedu": "0"
+            }
+
             if concept == 'Salud':
                 p = line.wage_type.unit_price_formula.split('*')
                 p = Decimal(p[1].strip()) * 100
-                e = {
-                    "Nvsal_porc": str(p),
-                    "Nvsal_dedu":rvalue(line.amount, 2)
-                    }
-                subelements[concept] = e
-            
+                subelements['Salud']["Nvsal_porc"] = str(p)
+                subelements['Salud']["Nvsal_dedu"] = rvalue(line.amount, 2)
+
             elif concept == 'FondoPension':
                 p = line.wage_type.unit_price_formula.split('*')
                 p = Decimal(p[1].strip()) * 100
-                e = {
-                    "Nvfon_porc": str(p),
-                    "Nvfon_dedu":rvalue(line.amount, 2)
-                }
-                subelements[concept] = e
+                subelements['FondoPension']["Nvfon_porc"] = str(p)
+                subelements['FondoPension']["Nvfon_dedu"] = rvalue(line.amount, 2)
 
             elif concept in WAGE_TYPE['FondoSP']:
                 if 'FondoSP' not in subelements.keys():
@@ -685,18 +693,8 @@ class ElectronicPayroll(object):
 #----------------------------------------------- MAKE ELECTRONIC payroll------------------------------------------------------
 
     def make(self, type):
-        deducsena = {
-            "Salud": {
-                "Nvsal_porc": "0",
-                "Nvsal_dedu": "0"
-            },
-            "FondoPension": {
-                "Nvfon_porc": "0",
-                "Nvfon_dedu": "0"
-            }
-        }
-        if type == '102': #Nomina individual
-            nom = {}
+        nom = {}
+        if type == '102': #Nomina individua
             nom.update(self._get_sequence())
             gross, deductions, net_payment = self._get_total()
             nom["Nvnom_devt"] = gross
@@ -712,11 +710,8 @@ class ElectronicPayroll(object):
             acrueds, deductions = self._get_lines()
             nom["Devengados"] = acrueds
             nom["Deducciones"] = deductions
-            if not deductions:
-                 nom["Deducciones"] = deducsena
 
         elif type == '103': #Nomina individual de ajuste
-            nom = {}
             nom.update(self._get_sequence())
             type_note = self._get_type_note()
             if type_note == '1':
@@ -736,8 +731,7 @@ class ElectronicPayroll(object):
                 acrueds, deductions = self._get_lines()
                 nom["Devengados"] = acrueds
                 nom["Deducciones"] = deductions
-                if not deductions:
-                 nom["Deducciones"] = deducsena
+
             elif type_note == '2':
                 nom["Nvnom_tipo"] = type_note
                 nom["Predecesor"] = self._get_predecessor()
@@ -746,6 +740,6 @@ class ElectronicPayroll(object):
                 nom["Empleador"] = self._get_information_company()
 
         #data = json.dumps(nom, indent=4)
-        #print(data)
+        #print(nom)
         return nom
 
