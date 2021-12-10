@@ -685,6 +685,16 @@ class ElectronicPayroll(object):
 #----------------------------------------------- MAKE ELECTRONIC payroll------------------------------------------------------
 
     def make(self, type):
+        deducsena = {
+            "Salud": {
+                "Nvsal_porc": "0",
+                "Nvsal_dedu": "0"
+            },
+            "FondoPension": {
+                "Nvfon_porc": "0",
+                "Nvfon_dedu": "0"
+            }
+        }
         if type == '102': #Nomina individual
             nom = {}
             nom.update(self._get_sequence())
@@ -701,9 +711,11 @@ class ElectronicPayroll(object):
             nom["Pago"] = self._get_payment_terms()
             acrueds, deductions = self._get_lines()
             nom["Devengados"] = acrueds
-            nom["Deducciones"] = deductions            
+            nom["Deducciones"] = deductions
+            if not deductions:
+                 nom["Deducciones"] = deducsena
 
-        elif type == '103': #Nomina individual ajuste
+        elif type == '103': #Nomina individual de ajuste
             nom = {}
             nom.update(self._get_sequence())
             type_note = self._get_type_note()
@@ -724,6 +736,8 @@ class ElectronicPayroll(object):
                 acrueds, deductions = self._get_lines()
                 nom["Devengados"] = acrueds
                 nom["Deducciones"] = deductions
+                if not deductions:
+                 nom["Deducciones"] = deducsena
             elif type_note == '2':
                 nom["Nvnom_tipo"] = type_note
                 nom["Predecesor"] = self._get_predecessor()
