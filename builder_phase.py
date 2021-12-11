@@ -454,10 +454,16 @@ class ElectronicPayroll(object):
                 if 'LLicencias' not in subelements.keys():
                     subelements['LLicencias'] = []
                     for l in line.lines_payroll:
+                        tpo = '3'
+                        if concept == 'LicenciaMP':
+                            tipo = '1'
+                        if concept == 'LicenciaR':
+                            tipo = '2'
                         e = {
                             'Nvcom_fini': str(l.start_date),
                             'Nvcom_ffin': str(l.end_date),
-                            'Nvcom_cant': rvalue(l.quantity, 0)
+                            'Nvcom_cant': rvalue(l.quantity, 0),
+                            'Nvlic_tipo': tpo
                         }
                         if concept != 'LicenciaNR':
                             e['Nvcom_pago'] = rvalue(l.amount, 2)
