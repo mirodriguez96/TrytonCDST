@@ -24,8 +24,8 @@ class ElectronicPayrollCdst(object):
             self.payroll.get_message(ec_payroll.status)
         json_payroll = ec_payroll.make(self.payroll.payroll_type)
         data = json.dumps(json_payroll, indent=4)
-        #print(data)
-        self._send_noova(data)
+        print(data)
+        #self._send_noova(data)
 
 
     # Consumo API noova

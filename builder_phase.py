@@ -405,8 +405,8 @@ class ElectronicPayroll(object):
                         e ={
                             #"FechaInicio":str(l.start_date),
                             #"FechaFin":str(l.end_date),
-                            "Nvcom_cant":rvalue(quantity, 0),
-                            "Nvcom_pago":rvalue(l.amount, 2),
+                            "Nvcom_cant": rvalue(quantity, 0),
+                            "Nvcom_pago": rvalue(l.amount, 2),
                             "Nvvac_tipo": "1"
                             }
                         subelements['LVacaciones'].append(e)
@@ -583,18 +583,18 @@ class ElectronicPayroll(object):
     def _get_deductions(self, line_deductions):
         subelements = {}
 
-        for line in line_deductions:
-            concept = line.wage_type.type_concept_electronic
-
-            subelements['Salud'] = {
+        subelements['Salud'] = {
                 "Nvsal_porc": "0",
                 "Nvsal_dedu": "0"
             }
 
-            subelements['FondoPension'] = {
-                "Nvfon_porc": "0",
-                "Nvfon_dedu": "0"
-            }
+        subelements['FondoPension'] = {
+            "Nvfon_porc": "0",
+            "Nvfon_dedu": "0"
+        }
+
+        for line in line_deductions:
+            concept = line.wage_type.type_concept_electronic
 
             if concept == 'Salud':
                 p = line.wage_type.unit_price_formula.split('*')
