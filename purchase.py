@@ -46,7 +46,7 @@ class Purchase(metaclass=PoolMeta):
             Party = pool.get('party.party')
             Address = pool.get('party.address')
             coluns_doc = cls.get_columns_db_tecno('Documentos')
-            columns_tipodoc = cls.get_columns_db_tecno('TblTipoDoctos')
+            #columns_tipodoc = cls.get_columns_db_tecno('TblTipoDoctos')
 
             #Procedemos a realizar una compra
             for compra in compras_tecno:
@@ -61,7 +61,7 @@ class Purchase(metaclass=PoolMeta):
                     purchase.id_tecno = id_compra
                     purchase.description = compra[coluns_doc.index('notas')].replace('\n', ' ').replace('\r', '')
                     #Se trae la fecha de la compra y se adapta al formato correcto para Tryton
-                    fecha = str(compra[coluns_doc.index('Fecha_Orden_compra')]).split()[0].split('-')
+                    fecha = str(compra[coluns_doc.index('fecha_hora')]).split()[0].split('-')
                     fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
                     purchase.purchase_date = fecha_date
                     try:
@@ -92,13 +92,12 @@ class Purchase(metaclass=PoolMeta):
                     #Ahora traemos las lineas de producto para la compra a procesar
                     documentos_linea = cls.get_line_where(str(sw), str(numero_doc), str(tipo_doc))
                     col_line = cls.get_columns_db_tecno('Documentos_Lin')
-                    #create_line = []
                     for lin in documentos_linea:
                         id_producto = str(lin[col_line.index('IdProducto')])
                         #print(id_producto)
                         producto = cls.buscar_producto(id_producto)
-                        if not producto.template.salable:
-                            raise UserError("El siguiente producto no es vendible: ", producto)
+                        if not producto.template.purchasable:
+                            raise UserError("El siguiente producto no es comprable: ", producto)
                         #template, = Template.search([('id', '=', producto.template)])
                         line = PurchaseLine()
                         line.product = producto
@@ -112,11 +111,12 @@ class Purchase(metaclass=PoolMeta):
                         line.unit_price = lin[col_line.index('Valor_Unitario')]
                         line.save()
                     #Procesamos la compra para generar la factura y procedemos a rellenar los campos de la factura
+                    #purchase.save()
                     purchase.quote([purchase])
                     purchase.confirm([purchase])
-                    #print(purchase.state)
+                    print(purchase.state)
                     #Se requiere procesar de forma 'manual' la compra para que genere la factura
-                    purchase.process([purchase])
+                    #purchase.process([purchase])
                     #print(len(purchase.shipments), len(purchase.shipment_returns), len(purchase.invoices))
                     """
                     try:
@@ -240,7 +240,7 @@ class Purchase(metaclass=PoolMeta):
                 #    query = cursor.execute("SELECT * "+consult+" ORDER BY sw OFFSET "+str(inicio)+" ROWS FETCH NEXT 1000 ROWS ONLY")
                 #    data = list(query.fetchall())
                 #    cls.add_purchase(data)
-                query = cursor.execute("SELECT TOP(1000) * "+consult)
+                query = cursor.execute("SELECT TOP(100) * "+consult)
                 data = list(query.fetchall())
                 cls.add_purchase(data)
                 #cls.create_or_update() #Se crea o actualiza la fecha de importación
@@ -249,7 +249,7 @@ class Purchase(metaclass=PoolMeta):
                 #raise UserError("Documentos faltantes ", list(faltantes.fetchall()))
         except Exception as e:
             print(e)
-            #raise UserError('ERROR QUERY get_data_where_tecno: ', str(e))
+            raise UserError('ERROR ', str(e))
             #print("ERROR QUERY get_data_where_tecno: ", e)
         #return data
 
