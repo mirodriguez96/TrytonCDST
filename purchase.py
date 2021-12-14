@@ -153,8 +153,8 @@ class Purchase(metaclass=PoolMeta):
                         print(e)
                         raise UserError("ERROR FACTURA: ", e)
                     purchase.save()
-                    #Transaction().connection.commit()
                     #cls.importado(id_compra)
+                    Transaction().connection.commit()
 
 
     @classmethod
