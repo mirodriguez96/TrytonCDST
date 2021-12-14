@@ -20,7 +20,7 @@ class Cron(metaclass=PoolMeta):
     def __setup__(cls):
         super().__setup__()
         cls.method.selection.append(
-            ('purchase.purchase|import_data_purchase', "Update purchases"),
+            ('purchase.purchase|import_data_purchase', "Update purchase"),
             )
 
 
@@ -46,7 +46,8 @@ class Purchase(metaclass=PoolMeta):
             Party = pool.get('party.party')
             Address = pool.get('party.address')
             coluns_doc = cls.get_columns_db_tecno('Documentos')
-            #columns_tipodoc = cls.get_columns_db_tecno('TblTipoDoctos')
+            columns_tipodoc = cls.get_columns_db_tecno('TblTipoDoctos')
+            shipment = pool.get('stock.shipment.in')
 
             #Procedemos a realizar una compra
             for compra in compras_tecno:
@@ -114,11 +115,21 @@ class Purchase(metaclass=PoolMeta):
                     #purchase.save()
                     purchase.quote([purchase])
                     purchase.confirm([purchase])
-                    print(purchase.state)
+                    #print(purchase.state)
                     #Se requiere procesar de forma 'manual' la compra para que genere la factura
-                    #purchase.process([purchase])
+                    purchase.process([purchase])
                     #print(len(purchase.shipments), len(purchase.shipment_returns), len(purchase.invoices))
-                    """
+                    if len(purchase.shipments) == 1:
+                        try:
+                            shipment_in, = purchase.shipments
+                            shipment_in.number = tipo_doc+'-'+str(numero_doc)
+                            shipment_in.reference = tipo_doc+'-'+str(numero_doc)
+                            shipment_in.effective_date = fecha_date
+                            shipment_in.receive([shipment_in])
+                            shipment_in.done([shipment_in])
+                        except Exception as e:
+                            print(e)
+                            raise UserError("ERROR ENVIO: ", e)
                     try:
                         invoice, = purchase.invoices
                         invoice.number = tipo_doc+'-'+str(numero_doc)
@@ -138,12 +149,12 @@ class Purchase(metaclass=PoolMeta):
                             invoice.post_batch([invoice])
                             invoice.post([invoice])
                         invoice.save()
-                        purchase.save()
-                        #Transaction().connection.commit()
-                        cls.importado(id_compra)
                     except Exception as e:
                         print(e)
-                    """
+                        raise UserError("ERROR FACTURA: ", e)
+                    purchase.save()
+                    #Transaction().connection.commit()
+                    #cls.importado(id_compra)
 
 
     @classmethod
