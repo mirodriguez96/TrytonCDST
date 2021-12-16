@@ -47,7 +47,6 @@ class Purchase(metaclass=PoolMeta):
             Address = pool.get('party.address')
             coluns_doc = cls.get_columns_db_tecno('Documentos')
             columns_tipodoc = cls.get_columns_db_tecno('TblTipoDoctos')
-            shipment = pool.get('stock.shipment.in')
 
             #Procedemos a realizar una compra
             for compra in compras_tecno:
@@ -102,8 +101,14 @@ class Purchase(metaclass=PoolMeta):
                         #template, = Template.search([('id', '=', producto.template)])
                         line = PurchaseLine()
                         line.product = producto
-                        line.quantity = abs(round(lin[col_line.index('Cantidad_Facturada')], 2))
-                        purchase.reference = tipo_doc+'-'+str(numero_doc)
+                        #Se verifica si es una devolución
+                        if sw == 4:
+                            line.quantity = (abs(round(lin[col_line.index('Cantidad_Facturada')]), 2))*-1
+                            #Se indica a que documento hace referencia la devolucion
+                            purchase.reference = compra[coluns_doc.index('Tipo_Docto_Base')].strip()+'-'+str(compra[coluns_doc.index('Numero_Docto_Base')])
+                        else:
+                            line.quantity = abs(round(lin[col_line.index('Cantidad_Facturada')], 2))
+                            purchase.reference = tipo_doc+'-'+str(numero_doc)
                         line.purchase = purchase
                         line.type = 'line'
                         line.unit = producto.template.default_uom
@@ -115,7 +120,7 @@ class Purchase(metaclass=PoolMeta):
                     #purchase.save()
                     purchase.quote([purchase])
                     purchase.confirm([purchase])
-                    #print(purchase.state)
+                    print(purchase.state)
                     #Se requiere procesar de forma 'manual' la compra para que genere la factura
                     purchase.process([purchase])
                     #print(len(purchase.shipments), len(purchase.shipment_returns), len(purchase.invoices))
@@ -237,7 +242,7 @@ class Purchase(metaclass=PoolMeta):
             Config = Pool().get('conector.configuration')
             conexion = Config.conexion()
             with conexion.cursor() as cursor:
-                consult = "FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND sw = 3 AND exportado != 'T'"
+                consult = "FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 3 or sw = 4) AND exportado != 'T'"
                 #cant_importar = cursor.execute("SELECT COUNT(*) "+consult)
                 #total_importar = int(cant_importar.fetchall()[0][0])
                 #cant = int(total_importar/1000)+1
@@ -251,7 +256,7 @@ class Purchase(metaclass=PoolMeta):
                 #    query = cursor.execute("SELECT * "+consult+" ORDER BY sw OFFSET "+str(inicio)+" ROWS FETCH NEXT 1000 ROWS ONLY")
                 #    data = list(query.fetchall())
                 #    cls.add_purchase(data)
-                query = cursor.execute("SELECT TOP(100) * "+consult)
+                query = cursor.execute("SELECT * "+consult)
                 data = list(query.fetchall())
                 cls.add_purchase(data)
                 #cls.create_or_update() #Se crea o actualiza la fecha de importación

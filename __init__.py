@@ -12,6 +12,7 @@ from . import electronic_payroll_wizard
 from . import company
 from . import payment_term
 import purchase
+import location
 
 def register():
     Pool.register(
@@ -25,15 +26,16 @@ def register():
         product.ProductCategory,
         product.Cron,
         sale.Sale,
-        sale.SaleLine,
-        sale.Location,
         sale.Cron,
+        location.Location,
+        location.Cron,
         configuration.Configuration,
         voucher.Cron,
         voucher.Voucher,
         pay_mode.Cron,
         pay_mode.VoucherPayMode,
         payment_term.PaymentTerm,
+        payment_term.Cron,
         purchase.Cron,
         purchase.Purchase,
         module='conector', type_='model')

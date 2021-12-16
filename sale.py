@@ -2,15 +2,13 @@ import datetime
 from trytond.model import fields
 from trytond.pool import Pool, PoolMeta
 from trytond.exceptions import UserError
-from trytond.transaction import Transaction
+#from trytond.transaction import Transaction
 from decimal import Decimal
 
 
 __all__ = [
     'Sale',
-    'SaleLine',
     'Cron',
-    "Location"
     ]
 
 
@@ -22,7 +20,7 @@ class Cron(metaclass=PoolMeta):
     def __setup__(cls):
         super().__setup__()
         cls.method.selection.append(
-            ('sale.sale|import_data_sale', "Update sales"),
+            ('sale.sale|import_data_sale', "Importar ventas"),
             )
 
 
@@ -49,8 +47,6 @@ class Sale(metaclass=PoolMeta):
             Address = pool.get('party.address')
             coluns_doc = cls.get_columns_db_tecno('Documentos')
             columns_tipodoc = cls.get_columns_db_tecno('TblTipoDoctos')
-            cls.import_warehouse()
-            cls.import_payment_term()
             
             col_param = cls.get_columns_db_tecno('TblParametro')
             venta_pos = cls.get_data_parametros('8')
@@ -123,10 +119,10 @@ class Sale(metaclass=PoolMeta):
                             raise UserError("El siguiente producto no es vendible: ", producto)
                         #template, = Template.search([('id', '=', producto.template)])
                         line = SaleLine()
-                        seq = lin[col_line.index('seq')]
-                        id_bodega = lin[col_line.index('IdBodega')]
-                        id_t = str(sw)+'-'+tipo_doc+'-'+str(seq)+'-'+str(numero_doc)+'-'+str(id_bodega)
-                        line.id_tecno = id_t
+                        #seq = lin[col_line.index('seq')]
+                        #id_bodega = lin[col_line.index('IdBodega')]
+                        #id_t = str(sw)+'-'+tipo_doc+'-'+str(seq)+'-'+str(numero_doc)+'-'+str(id_bodega)
+                        #line.id_tecno = id_t
                         line.product = producto
                         #Se verifica si es una devolución
                         if sw == 2:
@@ -156,6 +152,19 @@ class Sale(metaclass=PoolMeta):
                     #Se requiere procesar de forma 'manual' la venta para que genere la factura
                     sale.process([sale])
                     #print(len(sale.shipments), len(sale.shipment_returns), len(sale.invoices))
+                    if len(sale.shipments) == 1:
+                        try:
+                            shipment_out, = sale.shipments
+                            shipment_out.number = tipo_doc+'-'+str(numero_doc)
+                            shipment_out.reference = tipo_doc+'-'+str(numero_doc)
+                            shipment_out.effective_date = fecha_date
+                            shipment_out.wait([shipment_out])
+                            shipment_out.pick([shipment_out])
+                            shipment_out.pack([shipment_out])
+                            shipment_out.done([shipment_out])
+                        except Exception as e:
+                            print(e)
+                            raise UserError("ERROR ENVIO: ", e)
                     try:
                         invoice, = sale.invoices
                         invoice.number = tipo_doc+'-'+str(numero_doc)
@@ -177,105 +186,11 @@ class Sale(metaclass=PoolMeta):
                         invoice.save()
                         sale.save()
                         #Transaction().connection.commit()
-                        cls.importado(id_venta)
+                        #cls.importado(id_venta)
                     except Exception as e:
                         print(e)
+                        raise UserError('ERROR: ', str(e))
                     """"""
-
-
-    @classmethod
-    def import_warehouse(cls):
-        location = Pool().get('stock.location')
-        bodegas = cls.get_data_table('TblBodega')
-        columns = cls.get_columns_db_tecno('TblBodega')
-
-        for bodega in bodegas:
-            id_tecno = bodega[columns.index('IdBodega')]
-            nombre = bodega[columns.index('Bodega')].strip()
-
-            existe = location.search([('id_tecno', '=', id_tecno)])
-
-            if existe:
-                existe[0].name = nombre
-                existe[0].save()
-            else:
-                #zona de entrada
-                ze = location()
-                ze.id_tecno = 'ze-'+str(id_tecno)
-                ze.name = 'ZE '+nombre
-                ze.type = 'storage'
-                ze.save()
-
-                #zona de salida
-                zs = location()
-                zs.id_tecno = 'zs-'+str(id_tecno)
-                zs.name = 'ZS '+nombre
-                zs.type = 'storage'
-                zs.save()
-                
-                #zona de almacenamiento
-                za = location()
-                za.id_tecno = 'za-'+str(id_tecno)
-                za.name = 'ZA '+nombre
-                za.type = 'storage'
-                za.save()
-
-                #zona de producción
-                prod = location()
-                prod.id_tecno = 'prod-'+str(id_tecno)
-                prod.name = 'PROD '+nombre
-                prod.type = 'production'
-                prod.save()
-
-                almacen = location()
-                almacen.id_tecno = id_tecno
-                almacen.name = nombre
-                almacen.type = 'warehouse'
-                almacen.input_location = ze
-                almacen.output_location = zs
-                almacen.storage_location = za
-                almacen.production_location = prod
-                
-                almacen.save()
-
-
-    @classmethod
-    def import_payment_term(cls):
-        payment_term = Pool().get('account.invoice.payment_term')
-        condiciones_pago = cls.get_data_table('TblCondiciones_pago')
-        columns = cls.get_columns_db_tecno('TblCondiciones_pago')
-
-        for condiciones in condiciones_pago:
-            id_tecno = condiciones[columns.index('IdCondiciones_pago')]
-            nombre = condiciones[columns.index('Condiciones_pago')].strip()
-            dias = int(condiciones[columns.index('dias_vcto')])
-
-            existe = payment_term.search([('id_tecno', '=', id_tecno)])
-
-            if existe:
-                existe[0].name = nombre
-                #existe[0].lines.relativedeltas.days = dias
-                line, = existe[0].lines
-                delta, = line.relativedeltas
-                delta.days = dias
-                existe[0].save()
-            else:
-                payment_term_line = Pool().get('account.invoice.payment_term.line')
-                payment_term_line_delta = Pool().get('account.invoice.payment_term.line.delta')
-                #Se crea un nuevo plazo de pago
-                plazo_pago = payment_term()
-                plazo_pago.id_tecno = id_tecno
-                plazo_pago.name = nombre
-                #delta es quien se le indica los días del plazo de pago
-                delta = payment_term_line_delta()
-                delta.days = dias
-                #line es quien se le indica el tipo del plazo de pago
-                line = payment_term_line()
-                line.type = 'remainder'
-                line.relativedeltas = [delta]
-                plazo_pago.lines = [line]
-                plazo_pago.save()
-                
 
     @classmethod
     def get_data_table(cls, table):
@@ -371,7 +286,7 @@ class Sale(metaclass=PoolMeta):
                 #    query = cursor.execute("SELECT * "+consult+" ORDER BY sw OFFSET "+str(inicio)+" ROWS FETCH NEXT 1000 ROWS ONLY")
                 #    data = list(query.fetchall())
                 #    cls.add_sale(data)
-                query = cursor.execute("SELECT TOP(1000) * "+consult)
+                query = cursor.execute("SELECT TOP(100) * "+consult)
                 data = list(query.fetchall())
                 cls.add_sale(data)
                 #cls.create_or_update() #Se crea o actualiza la fecha de importación
@@ -380,8 +295,7 @@ class Sale(metaclass=PoolMeta):
                 #raise UserError("Documentos faltantes ", list(faltantes.fetchall()))
         except Exception as e:
             print(e)
-            #raise UserError('ERROR QUERY get_data_where_tecno: ', str(e))
-            #print("ERROR QUERY get_data_where_tecno: ", e)
+            raise UserError('ERROR: ', str(e))
         #return data
 
     @classmethod
@@ -458,20 +372,4 @@ class Sale(metaclass=PoolMeta):
             return False
         else:
             return True
-
-
-#Heredamos del modelo sale.line para agregar el campo id_tecno
-class SaleLine(metaclass=PoolMeta):
-    'SaleLine'
-    __name__ = 'sale.line'
-    id_tecno = fields.Char('Id Tabla Sqlserver', required=False)
-
-
-#Heredamos del modelo stock.location para agregar el campo id_tecno que nos servira de relación con db sqlserver
-class Location(metaclass=PoolMeta):
-    "Location"
-    __name__ = 'stock.location'
-
-    id_tecno = fields.Char('Id Tabla Sqlserver', required=False)
-
 
