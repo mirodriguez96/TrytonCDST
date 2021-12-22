@@ -20,7 +20,7 @@ class Cron(metaclass=PoolMeta):
     def __setup__(cls):
         super().__setup__()
         cls.method.selection.append(
-            ('purchase.purchase|import_data_purchase', "Update purchase"),
+            ('purchase.purchase|import_data_purchase', "Importar compras"),
             )
 
 
@@ -102,12 +102,13 @@ class Purchase(metaclass=PoolMeta):
                         line = PurchaseLine()
                         line.product = producto
                         #Se verifica si es una devolución
+                        cantidad_facturada = abs(round(lin[col_line.index('Cantidad_Facturada')], 2))
                         if sw == 4:
-                            line.quantity = (abs(round(lin[col_line.index('Cantidad_Facturada')]), 2))*-1
+                            line.quantity = cantidad_facturada * -1
                             #Se indica a que documento hace referencia la devolucion
                             purchase.reference = compra[coluns_doc.index('Tipo_Docto_Base')].strip()+'-'+str(compra[coluns_doc.index('Numero_Docto_Base')])
                         else:
-                            line.quantity = abs(round(lin[col_line.index('Cantidad_Facturada')], 2))
+                            line.quantity = cantidad_facturada
                             purchase.reference = tipo_doc+'-'+str(numero_doc)
                         line.purchase = purchase
                         line.type = 'line'
@@ -134,7 +135,8 @@ class Purchase(metaclass=PoolMeta):
                             shipment_in.done([shipment_in])
                         except Exception as e:
                             print(e)
-                            raise UserError("ERROR ENVIO: ", e)
+                            continue
+                            #raise UserError("ERROR ENVIO: ", e)
                     try:
                         invoice, = purchase.invoices
                         invoice.number = tipo_doc+'-'+str(numero_doc)
@@ -156,7 +158,8 @@ class Purchase(metaclass=PoolMeta):
                         invoice.save()
                     except Exception as e:
                         print(e)
-                        raise UserError("ERROR FACTURA: ", e)
+                        continue
+                        #raise UserError("ERROR FACTURA: ", e)
                     purchase.save()
                     #cls.importado(id_compra)
                     #Transaction().connection.commit()
@@ -343,10 +346,3 @@ class Purchase(metaclass=PoolMeta):
             return False
         else:
             return True
-
-
-#Heredamos del modelo purchase.line para agregar el campo id_tecno
-#class PurchaseLine(metaclass=PoolMeta):
-#    'PurchaseLine'
-#    __name__ = 'purchase.line'
-#    id_tecno = fields.Char('Id Tabla Sqlserver', required=False)
