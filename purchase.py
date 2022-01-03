@@ -285,7 +285,7 @@ class Purchase(metaclass=PoolMeta):
                 query = cursor.execute("SELECT TOP(5) * "+consult)
                 data = list(query.fetchall())
                 cls.add_purchase(data)
-                #cls.create_or_update() #Se crea o actualiza la fecha de importación
+                cls.create_or_update() #Se crea o actualiza la fecha de importación
                 #faltantes = cursor.execute("SELECT * "+consult)
                 #print("FINALIZADO: ", list(faltantes.fetchall()))
                 #raise UserError("Documentos faltantes ", list(faltantes.fetchall()))
