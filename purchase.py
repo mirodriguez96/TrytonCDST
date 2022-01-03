@@ -315,7 +315,7 @@ class Purchase(metaclass=PoolMeta):
             else:
                 fecha = (ultima_actualizacion[0].create_date - datetime.timedelta(hours=5))
         else:
-            fecha = datetime.date(2021,1,1)
+            fecha = datetime.date(2022,1,1)
         fecha = fecha.strftime('%Y-%d-%m %H:%M:%S')
         data = cls.get_data_where_tecno(fecha)
         return data

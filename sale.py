@@ -229,6 +229,7 @@ class Sale(metaclass=PoolMeta):
                     raise UserError('ERROR FACTURA O COMPROBANTE: ', str(e))
         logging.warning('FINISH VENTAS')
 
+    #Función encargada de buscar recibos de caja pagados en TecnoCarnes y pagarlos en Tryton
     @classmethod
     def set_payment(cls, invoice, sale):
         pool = Pool()
@@ -248,7 +249,7 @@ class Sale(metaclass=PoolMeta):
         recibos = cls.get_recibos(tipo, nro)
         
         #Si hay recibos para pagar
-        if recibos:
+        if recibos and invoice.invoice_type == 'P':
             voucher, = Invoice.create_voucher([invoice])
             recibo = recibos[0] #
 
@@ -494,7 +495,7 @@ class Sale(metaclass=PoolMeta):
             else:
                 fecha = (ultima_actualizacion[0].create_date - datetime.timedelta(hours=5))
         else:
-            fecha = datetime.date(2021,1,1)
+            fecha = datetime.date(2022,1,1)
         fecha = fecha.strftime('%Y-%d-%m %H:%M:%S')
         data = cls.get_data_where_tecno(fecha)
         return data
