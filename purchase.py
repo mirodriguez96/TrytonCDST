@@ -68,7 +68,7 @@ class Purchase(metaclass=PoolMeta):
                     try:
                         party, = Party.search([('id_number', '=', compra[coluns_doc.index('nit_Cedula')])])
                     except:
-                        raise UserError("No se econtro el tercero con id: ", compra[coluns_doc.index('nit_Cedula')])
+                        raise UserError("No se econtro el tercero con id: "+str(id_compra), compra[coluns_doc.index('nit_Cedula')])
                     purchase.party = party
                     purchase.invoice_party = party
                     #Se busca una dirección del tercero para agregar en la factura y envio
@@ -80,7 +80,7 @@ class Purchase(metaclass=PoolMeta):
                         bodega, = location.search([('id_tecno', '=', compra[coluns_doc.index('bodega')])])
                     except Exception as e:
                         print(e)
-                        raise UserError("No se econtro la bodega: ", compra[coluns_doc.index('bodega')])
+                        raise UserError("No se econtro la bodega: "+str(id_compra), compra[coluns_doc.index('bodega')])
                     purchase.warehouse = bodega
                     #Se le asigna el plazo de pago correspondiente
                     try:
@@ -88,7 +88,7 @@ class Purchase(metaclass=PoolMeta):
                         plazo_pago, = payment_term.search([('id_tecno', '=', condicion)])
                     except Exception as e:
                         print(e)
-                        raise UserError("No se econtro el plazo de pago: ", condicion)
+                        raise UserError("No se econtro el plazo de pago: "+str(id_compra), condicion)
                     purchase.payment_term = plazo_pago
                     #Ahora traemos las lineas de producto para la compra a procesar
                     documentos_linea = cls.get_line_where(str(sw), str(numero_doc), str(tipo_doc))
@@ -103,7 +103,7 @@ class Purchase(metaclass=PoolMeta):
                         line = PurchaseLine()
                         line.product = producto
                         #Se verifica si es una devolución
-                        cantidad_facturada = abs(round(lin[col_line.index('Cantidad_Facturada')], 2))
+                        cantidad_facturada = abs(round(lin[col_line.index('Cantidad_Facturada')], 3))
                         if sw == 4:
                             line.quantity = cantidad_facturada * -1
                             #Se indica a que documento hace referencia la devolucion
@@ -124,13 +124,20 @@ class Purchase(metaclass=PoolMeta):
                     purchase.confirm([purchase])
                     #Se requiere procesar de forma 'manual' la compra para que genere la factura
                     purchase.process([purchase])
-                    print(len(purchase.shipments), len(purchase.invoices))
+                    #Se hace uso del asistente para crear el envio del proveedor
+                    purchase.generate_shipment([purchase])
                     try:
-                        #if not purchase.invoices:
-                        #    invoice = purchase.create_invoice()
-                        #    print(invoice)
-                        #else:
-                        #    pass
+                        shipment_in, = purchase.shipments
+                        shipment_in.number = tipo_doc+'-'+str(numero_doc)
+                        shipment_in.reference = tipo_doc+'-'+str(numero_doc)
+                        shipment_in.planned_date = fecha_date
+                        shipment_in.effective_date = fecha_date
+                        shipment_in.receive([shipment_in])
+                        shipment_in.done([shipment_in])
+                    except Exception as e:
+                        print(e)
+                        raise UserError("ERROR ENVIO: "+str(shipment_in.number), e)                     
+                    try:
                         invoice, = purchase.invoices
                         invoice.number = tipo_doc+'-'+str(numero_doc)
                         invoice.reference = tipo_doc+'-'+str(numero_doc)
@@ -152,37 +159,7 @@ class Purchase(metaclass=PoolMeta):
                     except Exception as e:
                         print(e)
                         #continue
-                        raise UserError("ERROR FACTURA: ", e)
-                    if len(purchase.shipments) == 1:
-                        try:
-                            shipment_in, = purchase.shipments
-                            shipment_in.number = tipo_doc+'-'+str(numero_doc)
-                            shipment_in.reference = tipo_doc+'-'+str(numero_doc)
-                            shipment_in.effective_date = fecha_date
-                            shipment_in.receive([shipment_in])
-                            shipment_in.done([shipment_in])
-                        except Exception as e:
-                            print(e)
-                            raise UserError("ERROR ENVIO: ", e)
-                    else:
-                        Shipment = pool.get('stock.shipment.in')
-                        #MoveIn = pool.get('stock.move')
-                        #location = pool.get('stock.location')
-                        print('CREANDO ENVIO...')
-                        shipment = Shipment()
-                        shipment.number = tipo_doc+'-'+str(numero_doc)
-                        shipment.reference = tipo_doc+'-'+str(numero_doc)
-                        shipment.supplier = party
-                        shipment.warehouse = bodega
-                        shipment.effective_date = fecha_date
-                        #location, = location.search([('type', '=', 'supplier')])
-                        moves = purchase.create_move('in')
-                        shipment.moves = moves
-                        shipment.save()
-                        
-                        Shipment.receive([shipment])
-                        Shipment.done([shipment])
-                        print('ENVIO PROCESADO...')
+                        raise UserError("ERROR FACTURA: "+str(invoice.number), e)
                     purchase.save()
                     cls.importado(id_compra)
                     Transaction().connection.commit()
@@ -282,7 +259,7 @@ class Purchase(metaclass=PoolMeta):
                 #    query = cursor.execute("SELECT * "+consult+" ORDER BY sw OFFSET "+str(inicio)+" ROWS FETCH NEXT 1000 ROWS ONLY")
                 #    data = list(query.fetchall())
                 #    cls.add_purchase(data)
-                query = cursor.execute("SELECT TOP(5) * "+consult)
+                query = cursor.execute("SELECT TOP(100) * "+consult)
                 data = list(query.fetchall())
                 cls.add_purchase(data)
                 cls.create_or_update() #Se crea o actualiza la fecha de importación
