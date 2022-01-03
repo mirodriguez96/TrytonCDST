@@ -5,6 +5,7 @@ import conector
 import party
 import product
 import sale
+import sale_device
 import configuration
 import voucher
 import pay_mode
@@ -27,6 +28,9 @@ def register():
         product.Cron,
         sale.Sale,
         sale.Cron,
+        sale_device.SaleDevice,
+        sale_device.Journal,
+        sale_device.Cron,
         location.Location,
         location.Cron,
         configuration.Configuration,

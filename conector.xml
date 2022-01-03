@@ -46,7 +46,7 @@
         <menuitem parent="menu_importa" sequence="2" action="act_tercero" id="menu_actercero"/>
 
         <!-- ################## -->
-        <!-- #  Configuración # -->
+        <!-- #  Configuracion # -->
         <!-- ################## -->
         <record model="ir.ui.view" id="config_view_form">
             <field name="model">conector.configuration</field>

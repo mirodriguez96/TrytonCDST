@@ -1,15 +1,15 @@
 from trytond.model import ModelView, ModelSQL, fields
 from trytond.pool import Pool, PoolMeta
-from trytond.exceptions import UserError
-from trytond.transaction import Transaction
+#from trytond.exceptions import UserError
+#from trytond.transaction import Transaction
 from decimal import Decimal
+import logging
 
 import datetime
 
 __all__ = [
     'Voucher',
     'Cron',
-    #'VoucherPayMode',
     ]
 
 
@@ -21,7 +21,7 @@ class Cron(metaclass=PoolMeta):
     def __setup__(cls):
         super().__setup__()
         cls.method.selection.append(
-            ('account.voucher|import_voucher', "Update vouchers"),
+            ('account.voucher|import_voucher', "Importar comprobantes"),
             )
 
 
@@ -42,14 +42,14 @@ class Voucher(ModelSQL, ModelView):
             columns_rec = cls.get_columns_db('Documentos_Cruce')
             columns_tip = cls.get_columns_db('Documentos_Che')
             pool = Pool()
-            Account = pool.get('account.account')
+            #Account = pool.get('account.account')
             Invoice = pool.get('account.invoice')
             Voucher = pool.get('account.voucher')
             Line = pool.get('account.voucher.line')
             MoveLine = pool.get('account.move.line')
             Party = pool.get('party.party')
             PayMode = pool.get('account.voucher.paymode')
-            Tax = pool.get('account.tax')
+            #Tax = pool.get('account.tax')
             for doc in documentos_db:
                 sw = str(doc[columns_doc.index('sw')])
                 tipo = doc[columns_doc.index('tipo')].strip()
@@ -68,7 +68,10 @@ class Voucher(ModelSQL, ModelView):
                         paym, = PayMode.search([('id_tecno', '=', idt)])
                         voucher.payment_mode = paym
                         voucher.on_change_payment_mode()
+                        #SE LE INDICA SI EL COMPROBANTE ES DE TIPO INGRESO O EGRESO
                         voucher.voucher_type = 'receipt'
+                        if sw == 6:
+                            voucher.voucher_type = 'payment'
                         fecha = str(doc[columns_doc.index('fecha_hora')]).split()[0].split('-')
                         fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
                         voucher.date = fecha_date
@@ -76,11 +79,12 @@ class Voucher(ModelSQL, ModelView):
                         if nota:
                             voucher.description = nota
                         voucher.reference = tipo+'-'+nro
+                        
                         for rec in recibos:
                             ref = str(rec[columns_rec.index('tipo_aplica')])+'-'+str(rec[columns_rec.index('numero_aplica')])
                             move_line = MoveLine.search([('reference', '=', ref), ('party', '=', tercero.id)])
                             if move_line:
-                                print(ref)
+                                #print(ref)
                                 line = Line()
                                 line.voucher = voucher
                                 line.amount_original = move_line[0].debit
@@ -89,6 +93,7 @@ class Voucher(ModelSQL, ModelView):
                                 line.on_change_move_line()
                                 line.amount = Decimal(rec[columns_rec.index('valor')])
                                 line.save()
+                                """
                                 #Descuentos
                                 if rec[columns_rec.index('descuento')] > 0:
                                     account, = Account.search([('code', '=', '530535')])
@@ -161,13 +166,18 @@ class Voucher(ModelSQL, ModelView):
                                     line.amount = Decimal(rec[columns_rec.index('retencion')])
                                     line.reference = ref
                                     line.save()
+                                """
                                 #Se procede a comparar los totales
                                 voucher.on_change_lines()
-                                invoice, = Invoice.search([('reference', '=', ref)])
-                                if Decimal(invoice.untaxed_amount) == Decimal(voucher.amount_to_pay):
+                                invoice = Invoice.search([('reference', '=', ref)])
+                                if invoice:
                                     Voucher.process([voucher])
+                                    if Decimal(invoice[0].untaxed_amount) == Decimal(voucher.amount_to_pay):
+                                        Voucher.post([voucher])
                             else:
-                                print('OJO NO ENCONTRO LINEA: ', ref)
+                                #print('OJO NO ENCONTRO LINEA: ', ref)
+                                logging.warning('ALERTA: '+str(ref))
+                        
                         voucher.save()
 
 
@@ -217,7 +227,7 @@ class Voucher(ModelSQL, ModelView):
             Config = Pool().get('conector.configuration')
             conexion = Config.conexion()
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT * FROM dbo."+table+" WHERE sw = 5 AND fecha_hora >= CAST('"+date+"' AS datetime)")
+                query = cursor.execute("SELECT TOP(10) * FROM dbo."+table+" WHERE (sw = 5 OR sw = 6) AND fecha_hora >= CAST('"+date+"' AS datetime)")
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY get_data: ", e)
@@ -256,7 +266,7 @@ class Voucher(ModelSQL, ModelView):
     def last_update(cls):
         Actualizacion = Pool().get('conector.actualizacion')
         #Se consulta la ultima actualización realizada para los terceros
-        ultima_actualizacion = Actualizacion.search([('name', '=','RECIBOS')])
+        ultima_actualizacion = Actualizacion.search([('name', '=','COMPROBANTES')])
         if ultima_actualizacion:
             #Se calcula la fecha restando la diferencia de horas que tiene el servidor con respecto al clienete
             if ultima_actualizacion[0].write_date:
@@ -273,14 +283,14 @@ class Voucher(ModelSQL, ModelView):
     @classmethod
     def create_or_update(cls):
         Actualizacion = Pool().get('conector.actualizacion')
-        actualizacion = Actualizacion.search([('name', '=','RECIBOS')])
+        actualizacion = Actualizacion.search([('name', '=','COMPROBANTES')])
         if actualizacion:
             #Se busca un registro con la actualización
-            actualizacion, = Actualizacion.search([('name', '=','RECIBOS')])
-            actualizacion.name = 'RECIBOS'
+            actualizacion, = Actualizacion.search([('name', '=','COMPROBANTES')])
+            actualizacion.name = 'COMPROBANTES'
             actualizacion.save()
         else:
             #Se crea un registro con la actualización
             actualizar = Actualizacion()
-            actualizar.name = 'RECIBOS'
+            actualizar.name = 'COMPROBANTES'
             actualizar.save()

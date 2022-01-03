@@ -55,7 +55,7 @@ class Product(ModelSQL, ModelView):
                 categoria.save()
                 cls.set_account(modelo, categoria)
 
-
+        #Se procede a importar productos
         if productos_tecno:
             #Creación de los productos con su respectiva categoria e información
             Producto = Pool().get('product.product')
@@ -96,15 +96,15 @@ class Product(ModelSQL, ModelView):
                         existe.template.name = nombre_producto
                         existe.template.type = tipo_producto
                         existe.template.default_uom = udm_producto
+                        existe.template.purchase_uom = udm_producto
                         existe.template.salable = vendible
                         if vendible:
                             existe.template.sale_uom = udm_producto
                         existe.template.list_price = valor_unitario
                         existe.template.account_category = categoria_contable.id
+                        existe.template.sale_price_w_tax = 0
                         existe.template.save()
                 else:
-                    prod = Producto()
-                    prod.id_tecno = id_producto
                     temp = Template_Product()
                     temp.code = id_producto
                     temp.name = nombre_producto
@@ -117,9 +117,13 @@ class Product(ModelSQL, ModelView):
                         temp.sale_uom = udm_producto
                     temp.list_price = valor_unitario
                     temp.account_category = categoria_contable.id
-                    prod.template = temp
+                    temp.sale_price_w_tax = 0
+                    prod = {
+                        'id_tecno': id_producto,
+                        'template': temp,
+                    }
                     to_producto.append(prod)
-            Producto.save(to_producto)
+            Producto.create(to_producto)
 
 
     #Función encargada de consultar si existe una categoria dada de la bd TecnoCarnes

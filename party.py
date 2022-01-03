@@ -124,7 +124,7 @@ class Party(ModelSQL, ModelView):
                     cls.create_contact_type(tercero, mail, 'email')
                     cls.create_contact_type(tercero, telefono, 'phone')
                     tercero.save()
-            #Party.save(to_create)
+            #Party.create(to_create)
         #Actualización de direcciones
         if direcciones_db:
             column_dir = cls.get_columns_db_tecno('Terceros_Dir')

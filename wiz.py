@@ -6,7 +6,6 @@ from trytond.pool import Pool, PoolMeta
 from trytond.transaction import Transaction
 #from trytond.pyson import PYSONEncoder
 from trytond.exceptions import UserError
-from conexion import conexion
 
 
 __all__ = [

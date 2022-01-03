@@ -81,7 +81,7 @@ setup(name=name,
         ],
     package_data={
         'trytond.modules.%s' % MODULE: (info.get('xml', [])
-            + ['tryton.cfg', 'view/*.xml', 'locale/*.po', '*.fodt',
+            + ['tryton.cfg', 'icons/*.svg', 'view/*.xml', 'locale/*.po', '*.fodt',
                 '*.fods']),
         },
     classifiers=[

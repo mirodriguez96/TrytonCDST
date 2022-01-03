@@ -29,7 +29,7 @@ class Cron(metaclass=PoolMeta):
     def __setup__(cls):
         super().__setup__()
         cls.method.selection.append(
-            ('account.voucher.paymode|update_paymode', "Update PayMode Vouchers"),
+            ('account.voucher.paymode|update_paymode', "Importar formas de pago"),
             )
 
 
@@ -44,24 +44,29 @@ class VoucherPayMode(ModelSQL, ModelView):
     #Funcion encargada de crear o actualizar las formas de pago de TecnoCarnes
     @classmethod
     def update_paymode(cls):
+        print('-----RUN FORMAS DE PAGO-----')
         columns_fp = cls.get_columns_db('TblFormaPago')
         forma_pago = cls.get_formapago()
         cls.create_or_update()
         PayMode = Pool().get('account.voucher.paymode')
         Journal = Pool().get('account.journal')
-        Account = Pool().get('account.account')
+        
         for fp in forma_pago:
             idt = str(fp[columns_fp.index('IdFormaPago')])
             paym = PayMode.search([('id_tecno', '=', idt)])
+            nombre = fp[columns_fp.index('FormaPago')].strip()
+            cuenta = fp[columns_fp.index('Cuenta')]
             if paym:
                 for pm in paym:
-                    pm.name = fp[columns_fp.index('FormaPago')].strip()
+                    pm.name = nombre
+                    cls.add_account(pm, cuenta)
                     PayMode.save(paym)
             else:
+                #Diario por defecto del plan contable
                 journal, = Journal.search([('code', '=', 'REV')])
                 paym = PayMode()
                 paym.id_tecno = idt
-                paym.name = fp[columns_fp.index('FormaPago')].strip()
+                paym.name = nombre
                 paym.payment_type = 'cash'
                 paym.kind = 'both'
                 paym.journal = journal
@@ -71,13 +76,20 @@ class VoucherPayMode(ModelSQL, ModelView):
                 paym.sequence_payment = sequence_payment[0]
                 paym.sequence_multipayment = sequence_multipayment[0]
                 paym.sequence_receipt = sequence_receipt[0]
-                #Se busca la cuenta de caja general para asignarle al paymode
-                account, = Account.search([('code', '=', '110505')])
-                paym.account = account
+                cls.add_account(paym, cuenta)
                 #Codigo clasificacion tipo de pago ('10' => 'Efectivo')
                 paym.payment_means_code = 10
                 paym.save()
+        print('-----FINISH FORMAS DE PAGO-----')
 
+
+    #Se busca la cuenta del modo de pago y se asigna en caso de existir
+    @classmethod
+    def add_account(cls, paymode, cuenta):
+        Account = Pool().get('account.account')
+        account = Account.search([('code', '=', str(cuenta))])
+        if account:
+            paymode.account = account[0]
 
      #Función encargada de consultar las columnas pertenecientes a 'x' tabla de la bd de TecnoCarnes
     @classmethod

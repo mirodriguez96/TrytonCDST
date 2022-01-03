@@ -1,13 +1,17 @@
 import datetime
+from typing import Sequence
 from trytond.model import fields
 from trytond.pool import Pool, PoolMeta
 from trytond.exceptions import UserError
-#from trytond.transaction import Transaction
+from trytond.transaction import Transaction
 from decimal import Decimal
+import logging
 
 
 __all__ = [
     'Sale',
+    'SaleDevice',
+    'Journal'
     'Cron',
     ]
 
@@ -32,8 +36,11 @@ class Sale(metaclass=PoolMeta):
 
     @classmethod
     def import_data_sale(cls):
-        print("--------------RUN VENTAS--------------")
+        logging.warning('RUN VENTAS')
         cls.last_update()
+        #cls.import_sale_shop()
+        #cls.import_sale_device()
+        #cls.import_statement_sale()
 
     @classmethod
     def add_sale(cls, ventas_tecno):
@@ -41,12 +48,16 @@ class Sale(metaclass=PoolMeta):
             pool = Pool()
             Sale = pool.get('sale.sale')
             SaleLine = pool.get('sale.line')
+            SaleDevice = pool.get('sale.device')
             location = pool.get('stock.location')
             payment_term = pool.get('account.invoice.payment_term')
             Party = pool.get('party.party')
             Address = pool.get('party.address')
             coluns_doc = cls.get_columns_db_tecno('Documentos')
             columns_tipodoc = cls.get_columns_db_tecno('TblTipoDoctos')
+            #PaymentMode = pool.get('account.voucher.paymode')
+            Invoice = pool.get('account.invoice')
+            Shop = pool.get('sale.shop')
             
             col_param = cls.get_columns_db_tecno('TblParametro')
             venta_pos = cls.get_data_parametros('8')
@@ -55,6 +66,8 @@ class Sale(metaclass=PoolMeta):
             venta_pos = venta_pos[0][col_param.index('Valor')].strip().split(',')
             venta_electronica = venta_electronica[0][col_param.index('Valor')].strip().split(',')
 
+            to_create = []
+            #sales_to_pay = []
             #Procedemos a realizar una venta
             for venta in ventas_tecno:
                 sw = venta[coluns_doc.index('sw')]
@@ -63,42 +76,25 @@ class Sale(metaclass=PoolMeta):
                 id_venta = str(sw)+'-'+tipo_doc+'-'+str(numero_doc)
                 existe = cls.buscar_venta(id_venta)
                 if not existe:
-                    sale = Sale()
-                    sale.number = tipo_doc+'-'+str(numero_doc)
-                    #print(tipo_doc+'-'+str(numero_doc))
-                    sale.id_tecno = id_venta
-                    sale.description = venta[coluns_doc.index('notas')].replace('\n', ' ').replace('\r', '')
-                    #Defino por defecto el tipo de venta por computador
-                    sale.invoice_type = 'C'
-                    #Se revisa si la venta es clasificada como electronica o pos y se cambia el tipo
-                    if tipo_doc in venta_electronica:
-                        sale.invoice_type = '1'
-                    elif tipo_doc in venta_pos:
-                        sale.invoice_type = 'P'
                     #Se trae la fecha de la venta y se adapta al formato correcto para Tryton
                     fecha = str(venta[coluns_doc.index('Fecha_Orden_Venta')]).split()[0].split('-')
                     fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
-                    sale.sale_date = fecha_date
-                    #sale.shipment_method = 'order'
                     try:
                         party, = Party.search([('id_number', '=', venta[coluns_doc.index('nit_Cedula')])])
                     except:
-                        raise UserError("No se econtro el tercero con id: ", venta[coluns_doc.index('nit_Cedula')])
-                    sale.party = party
-                    sale.invoice_party = party
-                    sale.shipment_party = party
-                    #Se busca una dirección del tercero para agregar en la factura y envio
-                    address = Address.search([('party', '=', party.id)], limit=1)
-                    if address:
-                        sale.invoice_address = address[0].id
-                        sale.shipment_address = address[0].id
+                        logging.warning("No se econtro el tercero con id: "+venta[coluns_doc.index('nit_Cedula')])
+                        continue
                     #Se indica a que bodega pertenece
                     try:
-                        bodega, = location.search([('id_tecno', '=', venta[coluns_doc.index('bodega')])])
+                        id_tecno_bodega = venta[coluns_doc.index('bodega')]
+                        bodega, = location.search([('id_tecno', '=', id_tecno_bodega)])
+                        if not bodega:
+                            logging.ERROR('LA BODEGA: '+str(id_tecno_bodega)+' NO EXISTE')
+                            continue
+                        shop, = Shop.search([('warehouse', '=', bodega)])
                     except Exception as e:
                         print(e)
                         raise UserError("No se econtro la bodega: ", venta[coluns_doc.index('bodega')])
-                    sale.warehouse = bodega
                     #Se le asigna el plazo de pago correspondiente
                     try:
                         condicion = venta[coluns_doc.index('condicion')]
@@ -106,91 +102,247 @@ class Sale(metaclass=PoolMeta):
                     except Exception as e:
                         print(e)
                         raise UserError("No se econtro el plazo de pago: ", condicion)
-                    sale.payment_term = plazo_pago
+
+                    sale_data = {
+                        'number': tipo_doc+'-'+str(numero_doc),
+                        'id_tecno': id_venta,
+                        'description': venta[coluns_doc.index('notas')].replace('\n', ' ').replace('\r', ''),
+                        'invoice_type': 'C',
+                        'sale_date': fecha_date,
+                        'party': party,
+                        'invoice_party': party,
+                        'shipment_party': party,
+                        'warehouse': bodega,
+                        'shop': shop,
+                        'payment_term': plazo_pago
+                    }
+                    #Se revisa si la venta es clasificada como electronica o pos y se cambia el tipo
+                    if tipo_doc in venta_electronica:
+                        sale_data['invoice_type'] = '1'
+                    elif tipo_doc in venta_pos:
+                        sale_data['invoice_type'] = 'P'
+                        sale_data['pos_create_date'] = fecha_date
+                        sale_data['self_pick_up'] = True
+                        #Busco la terminal y se la asigno
+                        sale_device, = SaleDevice.search([('id_tecno', '=', venta[coluns_doc.index('pc')])])
+                        sale_data['sale_device'] = sale_device
+                    #Se busca una dirección del tercero para agregar en la factura y envio
+                    address = Address.search([('party', '=', party.id)], limit=1)
+                    if address:
+                        sale_data['invoice_address'] = address[0].id
+                        sale_data['shipment_address'] = address[0].id
+                    #SE CREA LA VENTA
+                    sale, = Sale.create([sale_data])
                     #Ahora traemos las lineas de producto para la venta a procesar
                     documentos_linea = cls.get_line_where(str(sw), str(numero_doc), str(tipo_doc))
                     col_line = cls.get_columns_db_tecno('Documentos_Lin')
                     #create_line = []
                     for lin in documentos_linea:
+                        linea = SaleLine()
                         id_producto = str(lin[col_line.index('IdProducto')])
-                        #print(id_producto)
                         producto = cls.buscar_producto(id_producto)
                         if not producto.template.salable:
-                            raise UserError("El siguiente producto no es vendible: ", producto)
-                        #template, = Template.search([('id', '=', producto.template)])
-                        line = SaleLine()
-                        #seq = lin[col_line.index('seq')]
-                        #id_bodega = lin[col_line.index('IdBodega')]
-                        #id_t = str(sw)+'-'+tipo_doc+'-'+str(seq)+'-'+str(numero_doc)+'-'+str(id_bodega)
-                        #line.id_tecno = id_t
-                        line.product = producto
+                            logging.warning("El siguiente producto no es vendible: "+str(producto.code, producto.name))
+                            #raise UserError("El siguiente producto no es vendible: ", producto)
+                            continue
+                        linea.sale = sale
+                        linea.product = producto
+                        linea.type = 'line'
+                        linea.unit = producto.template.default_uom
                         #Se verifica si es una devolución
+                        cant = float(lin[col_line.index('Cantidad_Facturada')])
+                        cantidad_facturada = abs(round(cant, 3))
+                        #print(cant, cantidad_facturada)
                         if sw == 2:
-                            line.quantity = (abs(round(lin[col_line.index('Cantidad_Facturada')]), 2))*-1
+                            linea.quantity = cantidad_facturada * -1
                             #Se indica a que documento hace referencia la devolucion
                             sale.reference = venta[coluns_doc.index('Tipo_Docto_Base')].strip()+'-'+str(venta[coluns_doc.index('Numero_Docto_Base')])
                         else:
-                            line.quantity = abs(round(lin[col_line.index('Cantidad_Facturada')], 2))
+                            linea.quantity = cantidad_facturada
                             sale.reference = tipo_doc+'-'+str(numero_doc)
-                        line.sale = sale
-                        line.type = 'line'
-                        line.unit = producto.template.default_uom
-                        #print(id_producto, line.unit)
-                        line.on_change_product() #Comprueba los cambios y trae los impuestos del producto
-                        line.unit_price = lin[col_line.index('Valor_Unitario')]
+                        linea.on_change_product() #Comprueba los cambios y trae los impuestos del producto
+                        linea.unit_price = lin[col_line.index('Valor_Unitario')]
                         #Verificamos si hay descuento para la linea de producto y se agrega su respectivo descuento
                         if lin[col_line.index('Porcentaje_Descuento_1')] > 0:
-                            porcentaje = lin[col_line.index('Porcentaje_Descuento_1')]/100
-                            line.base_price = lin[col_line.index('Valor_Unitario')]
-                            line.discount_rate = Decimal(str(porcentaje))
-                            line.on_change_discount_rate()
-                        line.save()
-                    #Procesamos la venta para generar la factura y procedemos a rellenar los campos de la factura
-                    sale.quote([sale])
-                    sale.confirm([sale])
-                    #print(sale.state)
-                    #Se requiere procesar de forma 'manual' la venta para que genere la factura
-                    sale.process([sale])
-                    #print(len(sale.shipments), len(sale.shipment_returns), len(sale.invoices))
-                    if len(sale.shipments) == 1:
-                        try:
-                            shipment_out, = sale.shipments
-                            shipment_out.number = tipo_doc+'-'+str(numero_doc)
-                            shipment_out.reference = tipo_doc+'-'+str(numero_doc)
-                            shipment_out.effective_date = fecha_date
-                            shipment_out.wait([shipment_out])
-                            shipment_out.pick([shipment_out])
-                            shipment_out.pack([shipment_out])
-                            shipment_out.done([shipment_out])
-                        except Exception as e:
-                            print(e)
-                            raise UserError("ERROR ENVIO: ", e)
+                            porcentaje = round(Decimal(lin[col_line.index('Porcentaje_Descuento_1')]/100), 3)
+                            #line.base_price = lin[col_line.index('Valor_Unitario')]
+                            linea.discount = porcentaje
+                            #line.on_change_discount_rate()
+                        linea.save()
+                        #create_line.append(linea)
+                    #sale_data['lines'] = [('create', create_line)]
+                    to_create.append(sale)
+            print('Ventas a crear: ', len(to_create))
+            #_sale almacena los registros creados
+            #_sale = Sale.create(to_create)
+            Sale.quote(to_create)
+            Sale.confirm(to_create)#Revvisar
+            Sale.process(to_create)
+            #Procesamos la venta para generar la factura y procedemos a rellenar los campos de la factura
+            for sale in to_create:
+                if len(sale.shipments) == 1:
                     try:
-                        invoice, = sale.invoices
-                        invoice.number = tipo_doc+'-'+str(numero_doc)
-                        invoice.reference = tipo_doc+'-'+str(numero_doc)
-                        invoice.invoice_date = fecha_date
-                        #Se agrega en la descripcion el nombre del tipo de documento de la tabla en sqlserver
-                        desc = cls.get_tipo_dcto(tipo_doc)
-                        if desc:
-                            invoice.description = desc[0][columns_tipodoc.index('TipoDoctos')].replace('\n', ' ').replace('\r', '')
-                        invoice.validate_invoice([invoice])
-                        #Verificamos que el total de la tabla en sqlserver coincidan o tengan una diferencia menor a 4 decimales, para contabilizar la factura
-                        total_amount = invoice.get_amount([invoice], 'total_amount')
-                        total = abs(total_amount['total_amount'][invoice.id])
-                        total_tecno = Decimal(venta[coluns_doc.index('valor_total')])
-                        diferencia_total = abs(total - total_tecno)
-                        if diferencia_total < 0.4:
-                            invoice.post_batch([invoice])
-                            invoice.post([invoice])
-                        invoice.save()
-                        sale.save()
-                        #Transaction().connection.commit()
-                        #cls.importado(id_venta)
+                        shipment_out = sale.shipments[0]
+                        shipment_out.number = sale.number
+                        shipment_out.reference = sale.reference
+                        shipment_out.effective_date = fecha_date
+                        shipment_out.wait([shipment_out])
+                        shipment_out.pick([shipment_out])#Revvisar
+                        shipment_out.pack([shipment_out])#Revvisar
+                        shipment_out.done([shipment_out])
                     except Exception as e:
-                        print(e)
-                        raise UserError('ERROR: ', str(e))
-                    """"""
+                        #logging.ERROR(str(e))
+                        raise UserError("ERROR ENVIO: ", e)
+                try:
+                    invoice = sale.invoice
+                    invoice.accounting_date = sale.invoice_date
+                    invoice.number = sale.number
+                    invoice.reference = sale.reference
+                    invoice.invoice_date = sale.sale_date
+                    tipo_numero = sale.number.split('-')
+                    #Se agrega en la descripcion el nombre del tipo de documento de la tabla en sqlserver
+                    desc = cls.get_tipo_dcto(tipo_numero[0])
+                    if desc:
+                        invoice.description = desc[0][columns_tipodoc.index('TipoDoctos')].replace('\n', ' ').replace('\r', '')
+                    invoice.save()
+                    invoice.validate_invoice([invoice])
+                    #Verificamos que el total de la tabla en sqlserver coincidan o tengan una diferencia menor a 4 decimales, para contabilizar la factura
+                    total_amount = invoice.get_amount([invoice], 'total_amount')
+                    total = abs(total_amount['total_amount'][invoice.id])
+                    total_tecno = 0
+                    for venta in ventas_tecno:
+                        tipo_numero_tecno = venta[coluns_doc.index('tipo')].strip()+'-'+str(venta[coluns_doc.index('Numero_documento')])
+                        if tipo_numero_tecno == sale.number:
+                            total_tecno = Decimal(venta[coluns_doc.index('valor_total')])
+                    diferencia_total = abs(total - total_tecno)
+                    if diferencia_total < 0.4:
+                        Invoice.post_batch([invoice])
+                        Invoice.post([invoice])
+                    #Invoice.post_batch([invoice])
+                    #Invoice.post([invoice])
+                    #vouchers = Invoice.create_voucher([invoice])
+                    cls.set_payment(invoice, sale)
+                    cls.importado(sale.id_tecno)
+                    Transaction().connection.commit()
+                except Exception as e:
+                    #print('ERROR FACTURA')
+                    raise UserError('ERROR FACTURA O COMPROBANTE: ', str(e))
+        logging.warning('FINISH VENTAS')
+
+    @classmethod
+    def set_payment(cls, invoice, sale):
+        pool = Pool()
+        #Statement = pool.get('account.statement')
+        #StatementLine = pool.get('account.statement.line')
+        Invoice = pool.get('account.invoice')
+        Voucher = pool.get('account.voucher')
+        PaymentMode = pool.get('account.voucher.paymode')
+        #StatementJournal = pool.get('account.statement.journal')
+        columns_tip = cls.get_columns_db_tecno('Documentos_Che')
+        #columns_rec = cls.get_columns_db_tecno('Documentos_Cruce')
+        
+        tipo_numero = invoice.number.split('-')
+        #print('INICIO VOUCHER '+invoice.number)
+        tipo = tipo_numero[0]
+        nro = tipo_numero[1]
+        recibos = cls.get_recibos(tipo, nro)
+        
+        #Si hay recibos para pagar
+        if recibos:
+            voucher, = Invoice.create_voucher([invoice])
+            recibo = recibos[0] #
+
+            #Se trae la fecha de la venta y se adapta al formato correcto para Tryton
+            fecha = str(recibo[columns_tip.index('fecha')]).split()[0].split('-')
+            fecha = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
+
+            idt = recibo[columns_tip.index('forma_pago')]
+
+            payment_mode, = PaymentMode.search([('id_tecno', '=', idt)])
+
+            """
+            journal, = StatementJournal.search([('id_tecno', '=', str(idt))])
+
+            payment_amount = abs(sale.total_amount - sale.paid_amount)
+            statements = Statement.search([('date', '=', fecha),('journal', '=', journal)])
+            if not statements:
+                statements = {
+                    'name': sale.sale_device.name+' - '+journal.name,
+                    'date': fecha,
+                    'turn': 0,
+                    'sale_device': sale.sale_device.id,
+                    'journal': journal.id,
+                    'start_balance': 0,
+                    'end_balance': 0,
+                    'state': 'draft'
+                }
+
+                statements = Statement.create([statements])
+            if not sale.party.account_receivable:  
+                raise UserError('sale_pos.msg_party_without_account_receivable', s=sale.party.name)
+            account = sale.party.account_receivable.id
+            
+            if payment_amount:
+                amount = payment_amount
+                if sale.total_amount < 0:
+                    amount = amount * -1
+                payment = StatementLine(
+                    statement=statements[0].id,
+                    date=fecha,
+                    amount=amount,
+                    party=sale.party.id,
+                    account=account,
+                    description='VENTA POS',
+                    sale=sale.id,
+                    # number=self.start.voucher,
+                    # voucher=self.start.voucher,
+                )
+                payment.save()
+                payment.create_move()
+            """
+
+            valor_pagado = recibo[columns_tip.index('valor')]
+            
+            #for voucher in vouchers:
+            voucher.date = fecha
+            voucher.payment_mode = payment_mode
+            voucher.reference = invoice.number
+            voucher.description = 'VENTA POS'
+            voucher.save()
+            Voucher.process([voucher])
+            if Decimal(valor_pagado) == Decimal(voucher.amount_to_pay):
+                Voucher.post([voucher])
+        else:
+            print('NO HAY RECIBO')
+        
+
+    #Metodo encargado de obtener la forma en que se pago el comprobante (recibos)
+    @classmethod
+    def get_tipo_pago(cls, tipo, nro):
+        data = []
+        try:
+            Config = Pool().get('conector.configuration')
+            conexion = Config.conexion()
+            with conexion.cursor() as cursor:
+                query = cursor.execute("SELECT * FROM dbo.Documentos_Che WHERE sw = 5 AND tipo = "+tipo+" AND numero ="+nro)
+                data = list(query.fetchall())
+        except Exception as e:
+            print("ERROR QUERY get_recibos: ", e)
+        return data
+    
+    #Metodo encargado de obtener los recibos pagados de un documento dado
+    @classmethod
+    def get_recibos(cls, tipo, nro):
+        data = []
+        try:
+            Config = Pool().get('conector.configuration')
+            conexion = Config.conexion()
+            with conexion.cursor() as cursor:
+                query = cursor.execute("SELECT * FROM dbo.Documentos_Che WHERE sw = 1 AND tipo = "+tipo+" AND numero ="+nro)
+                data = list(query.fetchall())
+        except Exception as e:
+            print("ERROR QUERY get_recibos: ", e)
+        return data
 
     @classmethod
     def get_data_table(cls, table):
@@ -268,34 +420,35 @@ class Sale(metaclass=PoolMeta):
     @classmethod
     def get_data_where_tecno(cls, date): #REVISAR PARA OPTIMIZAR
         data = []
-        try:
+        #try:
+        if True:
             Config = Pool().get('conector.configuration')
             conexion = Config.conexion()
             with conexion.cursor() as cursor:
                 consult = "FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado != 'T'"
                 #cant_importar = cursor.execute("SELECT COUNT(*) "+consult)
                 #total_importar = int(cant_importar.fetchall()[0][0])
-                #cant = int(total_importar/1000)+1
+                #cant = int(total_importar/100)+1
                 #for n in range(cant):
                 #    cant_importados = cursor.execute("SELECT COUNT(*) FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado = 'T'")
                 #    total_importados = int(cant_importados.fetchall()[0][0])
                 #    inicio = 0
-                #    if ((n+1)*1000 - total_importados) == 0:
+                #    if ((n+1)*100 - total_importados) == 0:
                 #        pass
                 #    #(sw = 1  ventas) (sw = 2 devoluciones)
-                #    query = cursor.execute("SELECT * "+consult+" ORDER BY sw OFFSET "+str(inicio)+" ROWS FETCH NEXT 1000 ROWS ONLY")
+                #    query = cursor.execute("SELECT * "+consult+" ORDER BY sw OFFSET "+str(inicio)+" ROWS FETCH NEXT 100 ROWS ONLY")
                 #    data = list(query.fetchall())
                 #    cls.add_sale(data)
                 query = cursor.execute("SELECT TOP(100) * "+consult)
                 data = list(query.fetchall())
                 cls.add_sale(data)
-                #cls.create_or_update() #Se crea o actualiza la fecha de importación
+                cls.create_or_update() #Se crea o actualiza la fecha de importación
                 #faltantes = cursor.execute("SELECT * "+consult)
                 #print("FINALIZADO: ", list(faltantes.fetchall()))
                 #raise UserError("Documentos faltantes ", list(faltantes.fetchall()))
-        except Exception as e:
-            print(e)
-            raise UserError('ERROR: ', str(e))
+        #except Exception as e:
+        #    print(e)
+        #    raise UserError('ERROR: ', str(e))
         #return data
 
     @classmethod
@@ -372,4 +525,3 @@ class Sale(metaclass=PoolMeta):
             return False
         else:
             return True
-
