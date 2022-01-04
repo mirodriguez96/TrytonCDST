@@ -172,6 +172,8 @@ class Sale(metaclass=PoolMeta):
                         #create_line.append(linea)
                     #sale_data['lines'] = [('create', create_line)]
                     to_create.append(sale)
+                else:
+                    cls.importado(id_venta)
             print('Ventas a crear: ', len(to_create))
             #_sale almacena los registros creados
             #_sale = Sale.create(to_create)
