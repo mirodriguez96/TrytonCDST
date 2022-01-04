@@ -179,6 +179,7 @@ class Sale(metaclass=PoolMeta):
             Sale.process(to_create)
             #Procesamos la venta para generar la factura y procedemos a rellenar los campos de la factura
             for sale in to_create:
+                print('INICIO VENTA: '+str(sale.id_tecno))
                 if len(sale.shipments) == 1:
                     try:
                         shipment_out = sale.shipments[0]
@@ -239,7 +240,7 @@ class Sale(metaclass=PoolMeta):
         #columns_rec = cls.get_columns_db_tecno('Documentos_Cruce')
         
         tipo_numero = invoice.number.split('-')
-        #print('INICIO VOUCHER '+invoice.number)
+        print('INICIO VOUCHER '+invoice.number)
         tipo = tipo_numero[0]
         nro = tipo_numero[1]
         recibos = cls.get_recibos(tipo, nro)
