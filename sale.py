@@ -440,10 +440,10 @@ class Sale(metaclass=PoolMeta):
                 #    query = cursor.execute("SELECT * "+consult+" ORDER BY sw OFFSET "+str(inicio)+" ROWS FETCH NEXT 100 ROWS ONLY")
                 #    data = list(query.fetchall())
                 #    cls.add_sale(data)
-                query = cursor.execute("SELECT * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado != 'T'")
+                query = cursor.execute("SELECT TOP(200) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado != 'T'")
                 data = list(query.fetchall())
                 print(len(data))
-                return []
+                return data
                 #cls.add_sale(data)
                 #faltantes = cursor.execute("SELECT * "+consult)
                 #print("FINALIZADO: ", list(faltantes.fetchall()))
