@@ -61,14 +61,17 @@ class Voucher(ModelSQL, ModelView):
                     tipo = str(data[0][columns_rec.index('tipo')])
                     nro = str(data[0][columns_rec.index('numero')])
                     recibos = cls.get_recibos("sw="+sw+" AND tipo_aplica="+tipo+" AND numero_aplica="+nro)
-                    if len(recibos) > 2:
+                    print(recibos)
+                    to_pay = []
+                    if len(recibos) >= 2:
                         for factura in recibos:
                             tipo_numero = str(factura[columns_rec.index('tipo_aplica')])+'-'+str(factura[columns_rec.index('numero_aplica')])
-                            invoice = Invoice.search([('number', '=', tipo_numero)])
-                            if invoice:
-                                print(invoice.lines_to_pay)
-                    else:
-                        print(invoice.lines_to_pay)
+                            invoice2 = Invoice.search([('number', '=', tipo_numero)])
+                            if invoice2:
+                                to_pay.append(invoice2[0].lines_to_pay[0])
+                    elif len(recibos) == 1:
+                        to_pay.append(invoice.lines_to_pay[0])
+                    print(to_pay)
 
 
         """

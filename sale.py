@@ -108,9 +108,9 @@ class Sale(metaclass=PoolMeta):
                         'description': venta[coluns_doc.index('notas')].replace('\n', ' ').replace('\r', ''),
                         'invoice_type': 'C',
                         'sale_date': fecha_date,
-                        'party': party,
-                        'invoice_party': party,
-                        'shipment_party': party,
+                        'party': party.id,
+                        'invoice_party': party.id,
+                        'shipment_party': party.id,
                         'warehouse': bodega,
                         'shop': shop,
                         'payment_term': plazo_pago
@@ -159,7 +159,8 @@ class Sale(metaclass=PoolMeta):
                         else:
                             linea.quantity = cantidad_facturada
                             sale.reference = tipo_doc+'-'+str(numero_doc)
-                        linea.on_change_product() #Comprueba los cambios y trae los impuestos del producto
+                        #Comprueba los cambios y trae los impuestos del producto
+                        linea.on_change_product()
                         linea.unit_price = lin[col_line.index('Valor_Unitario')]
                         #Verificamos si hay descuento para la linea de producto y se agrega su respectivo descuento
                         if lin[col_line.index('Porcentaje_Descuento_1')] > 0:
@@ -175,7 +176,7 @@ class Sale(metaclass=PoolMeta):
             #_sale almacena los registros creados
             #_sale = Sale.create(to_create)
             Sale.quote(to_create)
-            Sale.confirm(to_create)#Revvisar
+            Sale.confirm(to_create)#Revisar
             Sale.process(to_create)
             #Procesamos la venta para generar la factura y procedemos a rellenar los campos de la factura
             for sale in to_create:
