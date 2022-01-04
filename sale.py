@@ -37,10 +37,9 @@ class Sale(metaclass=PoolMeta):
     @classmethod
     def import_data_sale(cls):
         logging.warning('RUN VENTAS')
-        cls.last_update()
-        #cls.import_sale_shop()
-        #cls.import_sale_device()
-        #cls.import_statement_sale()
+        data = cls.last_update()
+        cls.add_sale(data)
+        cls.create_or_update() #Se crea o actualiza la fecha de importación
 
     @classmethod
     def add_sale(cls, ventas_tecno):
@@ -218,9 +217,6 @@ class Sale(metaclass=PoolMeta):
                     if diferencia_total < 0.4:
                         Invoice.post_batch([invoice])
                         Invoice.post([invoice])
-                    #Invoice.post_batch([invoice])
-                    #Invoice.post([invoice])
-                    #vouchers = Invoice.create_voucher([invoice])
                     cls.set_payment(invoice, sale)
                     cls.importado(sale.id_tecno)
                     Transaction().connection.commit()
@@ -426,7 +422,7 @@ class Sale(metaclass=PoolMeta):
             Config = Pool().get('conector.configuration')
             conexion = Config.conexion()
             with conexion.cursor() as cursor:
-                consult = "FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado != 'T'"
+                #consult = "FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado != 'T'"
                 #cant_importar = cursor.execute("SELECT COUNT(*) "+consult)
                 #total_importar = int(cant_importar.fetchall()[0][0])
                 #cant = int(total_importar/100)+1
@@ -440,10 +436,10 @@ class Sale(metaclass=PoolMeta):
                 #    query = cursor.execute("SELECT * "+consult+" ORDER BY sw OFFSET "+str(inicio)+" ROWS FETCH NEXT 100 ROWS ONLY")
                 #    data = list(query.fetchall())
                 #    cls.add_sale(data)
-                query = cursor.execute("SELECT TOP(100) * "+consult)
+                query = cursor.execute("SELECT TOP(100) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado != 'T'")
                 data = list(query.fetchall())
-                cls.add_sale(data)
-                cls.create_or_update() #Se crea o actualiza la fecha de importación
+                return data
+                #cls.add_sale(data)
                 #faltantes = cursor.execute("SELECT * "+consult)
                 #print("FINALIZADO: ", list(faltantes.fetchall()))
                 #raise UserError("Documentos faltantes ", list(faltantes.fetchall()))

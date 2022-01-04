@@ -34,10 +34,45 @@ class Voucher(ModelSQL, ModelView):
     @classmethod
     def import_voucher(cls):
         print("--------------RUN VOUCHER--------------")
-        documentos_db = cls.last_update()
-        cls.create_or_update()
-        if documentos_db:
-            #cls.update_paymode()
+        #documents = cls.last_update()
+        #cls.create_or_update()
+
+        pool = Pool()
+        Invoice = pool.get('account.invoice')
+        Voucher = pool.get('account.voucher')
+        Line = pool.get('account.voucher.line')
+        MoveLine = pool.get('account.move.line')
+        Party = pool.get('party.party')
+        PayMode = pool.get('account.voucher.paymode')
+        columns_rec = cls.get_columns_db('Documentos_Cruce')
+
+        invoices = Invoice.search([('state', '!=', 'paid')])
+
+        if invoices:
+            for invoice in invoices:
+                if not invoice.number:
+                    continue
+                tipo_numero = invoice.number.split('-')
+                if len(tipo_numero) != 2:
+                    continue
+                data = cls.get_recibos("(sw = 5 or sw = 6) AND tipo_aplica="+tipo_numero[0]+" AND numero_aplica="+tipo_numero[1])
+                if data:
+                    sw = str(data[0][columns_rec.index('sw')])
+                    tipo = str(data[0][columns_rec.index('tipo')])
+                    nro = str(data[0][columns_rec.index('numero')])
+                    recibos = cls.get_recibos("sw="+sw+" AND tipo_aplica="+tipo+" AND numero_aplica="+nro)
+                    if len(recibos) > 2:
+                        for factura in recibos:
+                            tipo_numero = str(factura[columns_rec.index('tipo_aplica')])+'-'+str(factura[columns_rec.index('numero_aplica')])
+                            invoice = Invoice.search([('number', '=', tipo_numero)])
+                            if invoice:
+                                print(invoice.lines_to_pay)
+                    else:
+                        print(invoice.lines_to_pay)
+
+
+        """
+        if documents:
             columns_doc = cls.get_columns_db('Documentos')
             columns_rec = cls.get_columns_db('Documentos_Cruce')
             columns_tip = cls.get_columns_db('Documentos_Che')
@@ -49,8 +84,7 @@ class Voucher(ModelSQL, ModelView):
             MoveLine = pool.get('account.move.line')
             Party = pool.get('party.party')
             PayMode = pool.get('account.voucher.paymode')
-            #Tax = pool.get('account.tax')
-            for doc in documentos_db:
+            for doc in documents:
                 sw = str(doc[columns_doc.index('sw')])
                 tipo = doc[columns_doc.index('tipo')].strip()
                 nro = str(doc[columns_doc.index('Numero_documento')])
@@ -105,7 +139,7 @@ class Voucher(ModelSQL, ModelView):
                                 logging.warning('ALERTA: '+str(ref))
                         
                         voucher.save()
-
+        """
 
     #Metodo encargado de consultar y verificar si existe un voucher con la id de la BD
     @classmethod
@@ -161,13 +195,13 @@ class Voucher(ModelSQL, ModelView):
 
     #Metodo encargado de obtener los recibos pagados de un documento dado
     @classmethod
-    def get_recibos(cls, tipo, nro):
+    def get_recibos(cls, consult):
         data = []
         try:
             Config = Pool().get('conector.configuration')
             conexion = Config.conexion()
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT * FROM dbo.Documentos_Cruce WHERE sw = 5 AND tipo = "+tipo+" AND numero ="+nro)
+                query = cursor.execute("SELECT * FROM dbo.Documentos_Cruce WHERE "+consult)
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY get_recibos: ", e)
