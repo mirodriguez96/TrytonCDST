@@ -102,8 +102,13 @@ class Purchase(metaclass=PoolMeta):
                         #template, = Template.search([('id', '=', producto.template)])
                         line = PurchaseLine()
                         line.product = producto
+                        line.purchase = purchase
+                        line.type = 'line'
+                        line.unit = producto.template.default_uom
                         #Se verifica si es una devolución
                         cantidad_facturada = abs(round(lin[col_line.index('Cantidad_Facturada')], 3))
+                        if line.unit == 1:
+                            cantidad_facturada = int(cantidad_facturada)
                         if sw == 4:
                             line.quantity = cantidad_facturada * -1
                             #Se indica a que documento hace referencia la devolucion
@@ -111,9 +116,6 @@ class Purchase(metaclass=PoolMeta):
                         else:
                             line.quantity = cantidad_facturada
                             purchase.reference = tipo_doc+'-'+str(numero_doc)
-                        line.purchase = purchase
-                        line.type = 'line'
-                        line.unit = producto.template.default_uom
                         #print(id_producto, line.unit)
                         line.on_change_product() #Comprueba los cambios y trae los impuestos del producto
                         line.unit_price = lin[col_line.index('Valor_Unitario')]
