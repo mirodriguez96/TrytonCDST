@@ -107,7 +107,7 @@ class Purchase(metaclass=PoolMeta):
                         line.unit = producto.template.default_uom
                         #Se verifica si es una devolución
                         cantidad_facturada = abs(round(lin[col_line.index('Cantidad_Facturada')], 3))
-                        if line.unit == 1:
+                        if line.unit.id == 1:
                             cantidad_facturada = int(cantidad_facturada)
                         if sw == 4:
                             line.quantity = cantidad_facturada * -1
