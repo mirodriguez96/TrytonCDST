@@ -128,17 +128,18 @@ class Purchase(metaclass=PoolMeta):
                     purchase.process([purchase])
                     #Se hace uso del asistente para crear el envio del proveedor
                     purchase.generate_shipment([purchase])
-                    try:
-                        shipment_in, = purchase.shipments
-                        shipment_in.number = tipo_doc+'-'+str(numero_doc)
-                        shipment_in.reference = tipo_doc+'-'+str(numero_doc)
-                        shipment_in.planned_date = fecha_date
-                        shipment_in.effective_date = fecha_date
-                        shipment_in.receive([shipment_in])
-                        shipment_in.done([shipment_in])
-                    except Exception as e:
-                        print(e)
-                        raise UserError("ERROR ENVIO: "+str(shipment_in.number), e)                     
+                    if purchase.shipments:
+                        try:
+                            shipment_in, = purchase.shipments
+                            shipment_in.number = tipo_doc+'-'+str(numero_doc)
+                            shipment_in.reference = tipo_doc+'-'+str(numero_doc)
+                            shipment_in.planned_date = fecha_date
+                            shipment_in.effective_date = fecha_date
+                            shipment_in.receive([shipment_in])
+                            shipment_in.done([shipment_in])
+                        except Exception as e:
+                            print(e)
+                            raise UserError("ERROR ENVIO: "+str(shipment_in.number), e)                     
                     try:
                         invoice, = purchase.invoices
                         invoice.number = tipo_doc+'-'+str(numero_doc)
