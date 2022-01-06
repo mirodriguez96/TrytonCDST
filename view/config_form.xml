@@ -7,6 +7,8 @@
     <label name="user"/>
     <field name="user"/>
     <label name="password"/>
-    <field name="password"/>
+    <field name="password" widget="password"/>
+    <label name="date"/>
+    <field name="date"/>
     <button string="Test" name="test_conexion" colspan="2"/>
 </form>

@@ -1,7 +1,5 @@
 <?xml version="1.0"?>
 <tree>
-    <field name="server"/>
     <field name="db"/>
-    <field name="user"/>
-    <field name="password"/>
+    <field name="date"/>
 </tree>

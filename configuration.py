@@ -1,7 +1,7 @@
 from trytond.model import ModelSQL, ModelView, fields
 from trytond.pool import Pool
 from trytond.exceptions import UserError
-#from trytond.bus import notify
+from trytond.pyson import Eval
 
 try:
     import pyodbc
@@ -22,6 +22,8 @@ class Configuration(ModelSQL, ModelView):
     db = fields.Char('Database', required=True, help="Enter the name of the database without leaving spaces")
     user = fields.Char('User', required=True, help="Enter the user of the database without leaving spaces")
     password = fields.Char('Password', required=True, help="Enter the password of the database without leaving spaces")
+    date = fields.Date('Date', required=True, help="Enter the import start date")
+
 
     @classmethod
     def __setup__(cls):

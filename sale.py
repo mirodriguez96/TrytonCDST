@@ -10,8 +10,6 @@ import logging
 
 __all__ = [
     'Sale',
-    'SaleDevice',
-    'Journal'
     'Cron',
     ]
 
@@ -220,7 +218,7 @@ class Sale(metaclass=PoolMeta):
                         if tipo_numero_tecno == sale.number:
                             total_tecno = Decimal(venta[coluns_doc.index('valor_total')])
                     diferencia_total = abs(total - total_tecno)
-                    if diferencia_total < 0.4:
+                    if diferencia_total <= 0.5:
                         Invoice.post_batch([invoice])
                         Invoice.post([invoice])
                     cls.set_payment(invoice, sale)
@@ -311,7 +309,8 @@ class Sale(metaclass=PoolMeta):
             voucher.description = 'VENTA POS'
             voucher.save()
             Voucher.process([voucher])
-            if Decimal(valor_pagado) == Decimal(voucher.amount_to_pay):
+            diferencia_total = abs(valor_pagado - voucher.amount_to_pay)
+            if diferencia_total <= 0.5:
                 Voucher.post([voucher])
         else:
             print('NO HAY RECIBO')
@@ -421,37 +420,13 @@ class Sale(metaclass=PoolMeta):
     @classmethod
     def get_data_where_tecno(cls, date): #REVISAR PARA OPTIMIZAR
         data = []
-        #try:
-        if True:
-            Config = Pool().get('conector.configuration')
-            conexion = Config.conexion()
-            with conexion.cursor() as cursor:
-                #consult = "FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado != 'T'"
-                #cant_importar = cursor.execute("SELECT COUNT(*) "+consult)
-                #total_importar = int(cant_importar.fetchall()[0][0])
-                #cant = int(total_importar/100)+1
-                #for n in range(cant):
-                #    cant_importados = cursor.execute("SELECT COUNT(*) FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado = 'T'")
-                #    total_importados = int(cant_importados.fetchall()[0][0])
-                #    inicio = 0
-                #    if ((n+1)*100 - total_importados) == 0:
-                #        pass
-                #    #(sw = 1  ventas) (sw = 2 devoluciones)
-                #    query = cursor.execute("SELECT * "+consult+" ORDER BY sw OFFSET "+str(inicio)+" ROWS FETCH NEXT 100 ROWS ONLY")
-                #    data = list(query.fetchall())
-                #    cls.add_sale(data)
-                query = cursor.execute("SELECT TOP(200) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado != 'T'")
-                data = list(query.fetchall())
-                print(len(data))
-                return data
-                #cls.add_sale(data)
-                #faltantes = cursor.execute("SELECT * "+consult)
-                #print("FINALIZADO: ", list(faltantes.fetchall()))
-                #raise UserError("Documentos faltantes ", list(faltantes.fetchall()))
-        #except Exception as e:
-        #    print(e)
-        #    raise UserError('ERROR: ', str(e))
-        #return data
+        Config = Pool().get('conector.configuration')
+        conexion = Config.conexion()
+        with conexion.cursor() as cursor:
+            query = cursor.execute("SELECT TOP(100) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado != 'T'")
+            data = list(query.fetchall())
+            print(len(data))
+            return data
 
     @classmethod
     def importado(cls, id):
@@ -496,7 +471,10 @@ class Sale(metaclass=PoolMeta):
             else:
                 fecha = (ultima_actualizacion[0].create_date - datetime.timedelta(hours=5))
         else:
-            fecha = datetime.date(2022,1,1)
+            Config = Pool().get('conector.configuration')
+            config, = Config.search([], order=[('id', 'DESC')], limit=1)
+            fecha = config.date
+            #fecha = datetime.date(1,1,1)
         fecha = fecha.strftime('%Y-%d-%m %H:%M:%S')
         data = cls.get_data_where_tecno(fecha)
         return data

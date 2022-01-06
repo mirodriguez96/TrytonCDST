@@ -212,7 +212,10 @@ class Voucher(ModelSQL, ModelView):
             else:
                 fecha = (ultima_actualizacion[0].create_date - datetime.timedelta(hours=5))
         else:
-            fecha = datetime.date(2021,1,1)
+            Config = Pool().get('conector.configuration')
+            config, = Config.search([], order=[('id', 'DESC')], limit=1)
+            fecha = config.date
+            #fecha = datetime.date(1,1,1)
         fecha = fecha.strftime('%Y-%d-%m %H:%M:%S')
         data = cls.get_data('Documentos', fecha)
         return data

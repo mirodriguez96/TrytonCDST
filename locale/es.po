@@ -18,6 +18,10 @@ msgctxt "field:conector.configuration,password:"
 msgid "Password"
 msgstr "Contraseña"
 
+msgctxt "field:conector.configuration,date:"
+msgid "Date"
+msgstr "Fecha de importaciones"
+
 msgctxt "field:conector.actualizacion,name:"
 msgid "Update"
 msgstr "Actualización"
