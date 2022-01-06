@@ -33,22 +33,23 @@ class Voucher(ModelSQL, ModelView):
 
     @classmethod
     def import_voucher(cls):
-        print("--------------RUN VOUCHER--------------")
+        logging.warning('RUN VOUCHER !')
         #documents = cls.last_update()
-        #cls.create_or_update()
+        cls.create_or_update()
 
         pool = Pool()
         Invoice = pool.get('account.invoice')
         Voucher = pool.get('account.voucher')
         Line = pool.get('account.voucher.line')
-        MoveLine = pool.get('account.move.line')
-        Party = pool.get('party.party')
         PayMode = pool.get('account.voucher.paymode')
         columns_rec = cls.get_columns_db('Documentos_Cruce')
+        columns_tip = cls.get_columns_db('Documentos_Che')
 
         invoices = Invoice.search([('state', '!=', 'paid')])
 
         if invoices:
+            to_create = {}
+            
             for invoice in invoices:
                 if not invoice.number:
                     continue
@@ -60,89 +61,63 @@ class Voucher(ModelSQL, ModelView):
                     sw = str(data[0][columns_rec.index('sw')])
                     tipo = str(data[0][columns_rec.index('tipo')])
                     nro = str(data[0][columns_rec.index('numero')])
-                    recibos = cls.get_recibos("sw="+sw+" AND tipo_aplica="+tipo+" AND numero_aplica="+nro)
-                    print(recibos)
-                    to_pay = []
-                    if len(recibos) >= 2:
-                        for factura in recibos:
-                            tipo_numero = str(factura[columns_rec.index('tipo_aplica')])+'-'+str(factura[columns_rec.index('numero_aplica')])
-                            invoice2 = Invoice.search([('number', '=', tipo_numero)])
-                            if invoice2:
-                                to_pay.append(invoice2[0].lines_to_pay[0])
-                    elif len(recibos) == 1:
-                        to_pay.append(invoice.lines_to_pay[0])
-                    print(to_pay)
+                    id_recibo = sw+'-'+tipo+'-'+nro
+                    if id_recibo not in to_create.keys():
+                        to_create[id_recibo] = []
+                    to_create[id_recibo].append(invoice)
+            """
+            numbers = ['101-759084', '101-759085', '101-759086', '101-759087', '101-759088']
+            to_create = {
+                '5-107-19089': []
+            }
+            for num in numbers:
+                invoice, = Invoice.search([('number', '=', num)])
+                to_create['5-107-19089'].append(invoice)
+            """
+            for rec in to_create:
+                #Se procede a crear el comprobante de pago
+                comprobante = Voucher()
+                comprobante.id_tecno = rec
+                comprobante.party = to_create[rec][0].party
+                #Se traen las lineas a pagar
+                to_line = []
+                for factura in to_create[rec]:
+                    val = factura.lines_to_pay
+                    if val:
+                        to_line.append(val[0])
+                tipo_numero = rec.split('-')
+                tipo_pago, = cls.get_tipo_pago(tipo_numero[0], tipo_numero[1], tipo_numero[2])
+                idt = tipo_pago[columns_tip.index('forma_pago')]
+                paym, = PayMode.search([('id_tecno', '=', idt)])
+                comprobante.payment_mode = paym
+                comprobante.on_change_payment_mode()
+                #SE LE INDICA SI EL COMPROBANTE ES DE TIPO INGRESO O EGRESO
+                comprobante.voucher_type = 'receipt'
+                if tipo_numero[0] == '6':
+                    comprobante.voucher_type = 'payment'
+                fecha = str(tipo_pago[columns_tip.index('fecha')]).split()[0].split('-')
+                fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
+                comprobante.date = fecha_date
+                comprobante.reference = tipo_numero[1]+'-'+tipo_numero[2]
+                comprobante.description = 'IMPORTACION TECNO'
 
+                for move_line in to_line:
+                    line = Line()
+                    line.voucher = comprobante
+                    #line.amount_original = move_line.debit
+                    line.reference = move_line.reference
+                    line.move_line = move_line
+                    line.on_change_move_line()
+                    #line.amount = Decimal(rec[columns_rec.index('valor')])
+                    line.save()
+                    #Se procede a comparar los totales
+                    comprobante.on_change_lines()
+                Voucher.process([comprobante])
+                if Decimal(tipo_pago[columns_tip.index('valor')]) == Decimal(comprobante.amount_to_pay):
+                    Voucher.post([comprobante])
+                comprobante.save()
+        logging.warning('FINISH VOUCHER !')
 
-        """
-        if documents:
-            columns_doc = cls.get_columns_db('Documentos')
-            columns_rec = cls.get_columns_db('Documentos_Cruce')
-            columns_tip = cls.get_columns_db('Documentos_Che')
-            pool = Pool()
-            #Account = pool.get('account.account')
-            Invoice = pool.get('account.invoice')
-            Voucher = pool.get('account.voucher')
-            Line = pool.get('account.voucher.line')
-            MoveLine = pool.get('account.move.line')
-            Party = pool.get('party.party')
-            PayMode = pool.get('account.voucher.paymode')
-            for doc in documents:
-                sw = str(doc[columns_doc.index('sw')])
-                tipo = doc[columns_doc.index('tipo')].strip()
-                nro = str(doc[columns_doc.index('Numero_documento')])
-                existe = cls.find_voucher(sw+'-'+tipo+'-'+nro)
-                if not existe:
-                    nit_cedula = doc[columns_doc.index('nit_Cedula')].strip()
-                    tercero, = Party.search([('id_number', '=', nit_cedula)])
-                    recibos = cls.get_recibos(tipo, nro)
-                    if recibos:
-                        voucher = Voucher()
-                        voucher.id_tecno = sw+'-'+tipo+'-'+nro
-                        voucher.party = tercero
-                        tipo_pago, = cls.get_tipo_pago(tipo, nro)
-                        idt = tipo_pago[columns_tip.index('forma_pago')]
-                        paym, = PayMode.search([('id_tecno', '=', idt)])
-                        voucher.payment_mode = paym
-                        voucher.on_change_payment_mode()
-                        #SE LE INDICA SI EL COMPROBANTE ES DE TIPO INGRESO O EGRESO
-                        voucher.voucher_type = 'receipt'
-                        if sw == 6:
-                            voucher.voucher_type = 'payment'
-                        fecha = str(doc[columns_doc.index('fecha_hora')]).split()[0].split('-')
-                        fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
-                        voucher.date = fecha_date
-                        nota = doc[columns_doc.index('notas')].replace('\n', ' ').replace('\r', '')
-                        if nota:
-                            voucher.description = nota
-                        voucher.reference = tipo+'-'+nro
-                        
-                        for rec in recibos:
-                            ref = str(rec[columns_rec.index('tipo_aplica')])+'-'+str(rec[columns_rec.index('numero_aplica')])
-                            move_line = MoveLine.search([('reference', '=', ref), ('party', '=', tercero.id)])
-                            if move_line:
-                                #print(ref)
-                                line = Line()
-                                line.voucher = voucher
-                                line.amount_original = move_line[0].debit
-                                line.reference = ref
-                                line.move_line = move_line[0]
-                                line.on_change_move_line()
-                                line.amount = Decimal(rec[columns_rec.index('valor')])
-                                line.save()
-                                #Se procede a comparar los totales
-                                voucher.on_change_lines()
-                                invoice = Invoice.search([('reference', '=', ref)])
-                                if invoice:
-                                    Voucher.process([voucher])
-                                    if Decimal(invoice[0].untaxed_amount) == Decimal(voucher.amount_to_pay):
-                                        Voucher.post([voucher])
-                            else:
-                                #print('OJO NO ENCONTRO LINEA: ', ref)
-                                logging.warning('ALERTA: '+str(ref))
-                        
-                        voucher.save()
-        """
 
     #Metodo encargado de consultar y verificar si existe un voucher con la id de la BD
     @classmethod
@@ -212,13 +187,13 @@ class Voucher(ModelSQL, ModelView):
 
     #Metodo encargado de obtener la forma en que se pago el comprobante (recibos)
     @classmethod
-    def get_tipo_pago(cls, tipo, nro):
+    def get_tipo_pago(cls, sw, tipo, nro):
         data = []
         try:
             Config = Pool().get('conector.configuration')
             conexion = Config.conexion()
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT * FROM dbo.Documentos_Che WHERE sw = 5 AND tipo = "+tipo+" AND numero ="+nro)
+                query = cursor.execute("SELECT * FROM dbo.Documentos_Che WHERE sw="+sw+" AND tipo="+tipo+" AND numero="+nro)
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY get_recibos: ", e)

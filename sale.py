@@ -151,6 +151,8 @@ class Sale(metaclass=PoolMeta):
                         #Se verifica si es una devolución
                         cant = float(lin[col_line.index('Cantidad_Facturada')])
                         cantidad_facturada = abs(round(cant, 3))
+                        if linea.unit.id == 1:
+                            cantidad_facturada = int(cantidad_facturada)
                         #print(cant, cantidad_facturada)
                         if sw == 2:
                             linea.quantity = cantidad_facturada * -1
@@ -262,8 +264,8 @@ class Sale(metaclass=PoolMeta):
             payment_mode, = PaymentMode.search([('id_tecno', '=', idt)])
 
             """
+            #REVISAR PROCESOS Y FALTA QUE APAREZCAN VENTAS EN ESTADO DE CUENTA
             journal, = StatementJournal.search([('id_tecno', '=', str(idt))])
-
             payment_amount = abs(sale.total_amount - sale.paid_amount)
             statements = Statement.search([('date', '=', fecha),('journal', '=', journal)])
             if not statements:
@@ -277,12 +279,10 @@ class Sale(metaclass=PoolMeta):
                     'end_balance': 0,
                     'state': 'draft'
                 }
-
                 statements = Statement.create([statements])
             if not sale.party.account_receivable:  
                 raise UserError('sale_pos.msg_party_without_account_receivable', s=sale.party.name)
             account = sale.party.account_receivable.id
-            
             if payment_amount:
                 amount = payment_amount
                 if sale.total_amount < 0:
