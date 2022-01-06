@@ -14,6 +14,7 @@ from . import company
 from . import payment_term
 import purchase
 import location
+import invoice
 
 def register():
     Pool.register(
@@ -42,6 +43,7 @@ def register():
         payment_term.Cron,
         purchase.Cron,
         purchase.Purchase,
+        invoice.Invoice,
         module='conector', type_='model')
 
     Pool.register(
