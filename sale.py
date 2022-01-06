@@ -223,7 +223,7 @@ class Sale(metaclass=PoolMeta):
                         Invoice.post([invoice])
                     cls.set_payment(invoice, sale)
                     cls.importado(sale.id_tecno)
-                    Transaction().connection.commit()
+                    #Transaction().connection.commit()
                 except Exception as e:
                     #print('ERROR FACTURA')
                     raise UserError('ERROR FACTURA O COMPROBANTE: ', str(e))
@@ -309,7 +309,8 @@ class Sale(metaclass=PoolMeta):
             voucher.description = 'VENTA POS'
             voucher.save()
             Voucher.process([voucher])
-            diferencia_total = abs(valor_pagado - voucher.amount_to_pay)
+            diferencia_total = abs(Decimal(valor_pagado) - Decimal(voucher.amount_to_pay))
+            print(diferencia_total)
             if diferencia_total <= 0.5:
                 Voucher.post([voucher])
         else:
@@ -423,7 +424,7 @@ class Sale(metaclass=PoolMeta):
         Config = Pool().get('conector.configuration')
         conexion = Config.conexion()
         with conexion.cursor() as cursor:
-            query = cursor.execute("SELECT TOP(100) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado != 'T'")
+            query = cursor.execute("SELECT TOP(10) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado != 'T'")
             data = list(query.fetchall())
             print(len(data))
             return data
@@ -461,20 +462,20 @@ class Sale(metaclass=PoolMeta):
     #Función encargada de traer los datos de la bd con una fecha dada.
     @classmethod
     def last_update(cls):
-        Actualizacion = Pool().get('conector.actualizacion')
+        #Actualizacion = Pool().get('conector.actualizacion')
         #Se consulta la ultima actualización realizada para los terceros
-        ultima_actualizacion = Actualizacion.search([('name', '=','VENTAS')])
-        if ultima_actualizacion:
-            #Se calcula la fecha restando la diferencia de horas que tiene el servidor con respecto al clienete
-            if ultima_actualizacion[0].write_date:
-                fecha = (ultima_actualizacion[0].write_date - datetime.timedelta(hours=5))
-            else:
-                fecha = (ultima_actualizacion[0].create_date - datetime.timedelta(hours=5))
-        else:
-            Config = Pool().get('conector.configuration')
-            config, = Config.search([], order=[('id', 'DESC')], limit=1)
-            fecha = config.date
-            #fecha = datetime.date(1,1,1)
+        #ultima_actualizacion = Actualizacion.search([('name', '=','VENTAS')])
+        #if ultima_actualizacion:
+        #    #Se calcula la fecha restando la diferencia de horas que tiene el servidor con respecto al clienete
+        #    if ultima_actualizacion[0].write_date:
+        #        fecha = (ultima_actualizacion[0].write_date - datetime.timedelta(hours=5))
+        #    else:
+        #        fecha = (ultima_actualizacion[0].create_date - datetime.timedelta(hours=5))
+        #else:
+        #    fecha = datetime.date(1,1,1)
+        Config = Pool().get('conector.configuration')
+        config, = Config.search([], order=[('id', 'DESC')], limit=1)
+        fecha = config.date
         fecha = fecha.strftime('%Y-%d-%m %H:%M:%S')
         data = cls.get_data_where_tecno(fecha)
         return data
