@@ -113,7 +113,8 @@ class Voucher(ModelSQL, ModelView):
                     #Se procede a comparar los totales
                     comprobante.on_change_lines()
                 Voucher.process([comprobante])
-                if Decimal(tipo_pago[columns_tip.index('valor')]) == Decimal(comprobante.amount_to_pay):
+                diferencia_total = Decimal(tipo_pago[columns_tip.index('valor')]) - Decimal(comprobante.amount_to_pay)
+                if diferencia_total <= 0.5:
                     Voucher.post([comprobante])
                 comprobante.save()
         logging.warning('FINISH VOUCHER !')

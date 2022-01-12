@@ -20,7 +20,7 @@ msgstr "Contraseña"
 
 msgctxt "field:conector.configuration,date:"
 msgid "Date"
-msgstr "Fecha de importaciones"
+msgstr "Fecha a importar"
 
 msgctxt "field:conector.actualizacion,name:"
 msgid "Update"

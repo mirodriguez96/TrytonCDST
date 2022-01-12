@@ -12,13 +12,13 @@
         <!-- ################### -->
         <!-- # Actualizaciones # -->
         <!-- ################### -->
-        <!--
+        <!---->
         <record model="ir.ui.view" id="actercero_view_form">
             <field name="model">conector.actualizacion</field>
             <field name="type">form</field>
             <field name="name">actercero_form</field>
         </record>
-        -->
+        
         <record model="ir.ui.view" id="actercero_view_list">
             <field name="model">conector.actualizacion</field>
             <field name="type">tree</field>
@@ -36,13 +36,13 @@
             <field name="view" ref="actercero_view_list"/>
             <field name="act_window" ref="act_tercero"/>
         </record>
-        <!--
+        <!---->
         <record model="ir.action.act_window.view" id="act_tercero_view_form">
             <field name="sequence" eval="20"/>
             <field name="view" ref="actercero_view_form"/>
             <field name="act_window" ref="act_tercero"/>
         </record>
-        -->
+        
         <menuitem parent="menu_importa" sequence="2" action="act_tercero" id="menu_actercero"/>
 
         <!-- ################## -->

@@ -5,4 +5,5 @@
     <field name="name"/>
     <field name="write_date" widget="date"/>
     <field name="write_date" widget="time"/>
+    <field name="logs"/>
 </tree>

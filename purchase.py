@@ -4,6 +4,7 @@ from trytond.pool import Pool, PoolMeta
 from trytond.exceptions import UserError
 from trytond.transaction import Transaction
 from decimal import Decimal
+import logging
 
 
 __all__ = [
@@ -37,6 +38,7 @@ class Purchase(metaclass=PoolMeta):
 
     @classmethod
     def add_purchase(cls, compras_tecno):
+        logs = 'Logs...'
         if compras_tecno:
             pool = Pool()
             Purchase = pool.get('purchase.purchase')
@@ -47,8 +49,8 @@ class Purchase(metaclass=PoolMeta):
             Address = pool.get('party.address')
             coluns_doc = cls.get_columns_db_tecno('Documentos')
             columns_tipodoc = cls.get_columns_db_tecno('TblTipoDoctos')
-
-            #Procedemos a realizar una compra
+            
+            #Procedemos a realizar la compra
             for compra in compras_tecno:
                 sw = compra[coluns_doc.index('sw')]
                 numero_doc = compra[coluns_doc.index('Numero_documento')]
@@ -65,10 +67,12 @@ class Purchase(metaclass=PoolMeta):
                     fecha = str(compra[coluns_doc.index('fecha_hora')]).split()[0].split('-')
                     fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
                     purchase.purchase_date = fecha_date
-                    try:
-                        party, = Party.search([('id_number', '=', compra[coluns_doc.index('nit_Cedula')])])
-                    except:
-                        raise UserError("No se econtro el tercero con id: "+str(id_compra), compra[coluns_doc.index('nit_Cedula')])
+                    party = Party.search([('id_number', '=', compra[coluns_doc.index('nit_Cedula')])])
+                    if not party:
+                        logging.warning("No se econtro el tercero con id: "+compra[coluns_doc.index('nit_Cedula')], id_compra)
+                        logs = logs+"\n"+"Error compra: "+id_compra+" - No se econtro el tercero con id: "+compra[coluns_doc.index('nit_Cedula')]
+                        continue
+                    party = party[0]                        
                     purchase.party = party
                     purchase.invoice_party = party
                     #Se busca una dirección del tercero para agregar en la factura y envio
@@ -76,19 +80,20 @@ class Purchase(metaclass=PoolMeta):
                     if address:
                         purchase.invoice_address = address[0].id
                     #Se indica a que bodega pertenece
-                    try:
-                        bodega, = location.search([('id_tecno', '=', compra[coluns_doc.index('bodega')])])
-                    except Exception as e:
-                        print(e)
-                        raise UserError("No se econtro la bodega: "+str(id_compra), compra[coluns_doc.index('bodega')])
+                    bodega = location.search([('id_tecno', '=', compra[coluns_doc.index('bodega')])])
+                    if not bodega:
+                        logging.warning("No se econtro la bodega: "+compra[coluns_doc.index('bodega')], id_compra)
+                        logs = logs+"\n"+"Error compra: "+id_compra+" - NO EXISTE LA BODEGA: "+compra[coluns_doc.index('bodega')]
+                        continue
+                    bodega = bodega[0]
                     purchase.warehouse = bodega
                     #Se le asigna el plazo de pago correspondiente
-                    try:
-                        condicion = compra[coluns_doc.index('condicion')]
-                        plazo_pago, = payment_term.search([('id_tecno', '=', condicion)])
-                    except Exception as e:
-                        print(e)
-                        raise UserError("No se econtro el plazo de pago: "+str(id_compra), condicion)
+                    condicion = compra[coluns_doc.index('condicion')]
+                    plazo_pago = payment_term.search([('id_tecno', '=', condicion)])
+                    if not plazo_pago:
+                        logging.warning("No se econtro el plazo de pago: "+condicion, id_compra)
+                        logs = logs+"\n"+"Error compra: "+id_compra+" - No se econtro el plazo de pago: "+condicion
+                        continue
                     purchase.payment_term = plazo_pago
                     #Ahora traemos las lineas de producto para la compra a procesar
                     documentos_linea = cls.get_line_where(str(sw), str(numero_doc), str(tipo_doc))
@@ -155,19 +160,20 @@ class Purchase(metaclass=PoolMeta):
                         total = abs(total_amount['total_amount'][invoice.id])
                         total_tecno = Decimal(compra[coluns_doc.index('valor_total')])
                         diferencia_total = abs(total - total_tecno)
-                        if diferencia_total < 0.4:
+                        if diferencia_total <= 0.5:
                             invoice.post_batch([invoice])
                             invoice.post([invoice])
                         invoice.save()
                     except Exception as e:
                         print(e)
-                        #continue
                         raise UserError("ERROR FACTURA: "+str(invoice.number), e)
                     purchase.save()
                     cls.importado(id_compra)
-                    Transaction().connection.commit()
+                    #Transaction().connection.commit()
                 else:
-                    pass
+                    cls.importado(id_compra)
+        #Se crea o actualiza la fecha de importación junto a los logs
+        cls.create_or_update(logs)
 
 
     @classmethod
@@ -267,7 +273,6 @@ class Purchase(metaclass=PoolMeta):
                 query = cursor.execute("SELECT TOP(100) * "+consult)
                 data = list(query.fetchall())
                 cls.add_purchase(data)
-                cls.create_or_update() #Se crea o actualiza la fecha de importación
                 #faltantes = cursor.execute("SELECT * "+consult)
                 #print("FINALIZADO: ", list(faltantes.fetchall()))
                 #raise UserError("Documentos faltantes ", list(faltantes.fetchall()))
@@ -330,18 +335,20 @@ class Purchase(metaclass=PoolMeta):
 
     #Crea o actualiza un registro de la tabla actualización en caso de ser necesario
     @classmethod
-    def create_or_update(cls):
+    def create_or_update(cls, logs):
         Actualizacion = Pool().get('conector.actualizacion')
         actualizacion = Actualizacion.search([('name', '=','COMPRAS')])
         if actualizacion:
             #Se busca un registro con la actualización
             actualizacion, = Actualizacion.search([('name', '=','COMPRAS')])
             actualizacion.name = 'COMPRAS'
+            actualizacion.logs = logs
             actualizacion.save()
         else:
             #Se crea un registro con la actualización
             actualizar = Actualizacion()
             actualizar.name = 'COMPRAS'
+            actualizar.logs = logs
             actualizar.save()
 
     #Metodo encargado de buscar si exste una compra

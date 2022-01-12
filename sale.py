@@ -4,6 +4,7 @@ from trytond.model import fields
 from trytond.pool import Pool, PoolMeta
 from trytond.exceptions import UserError
 from trytond.transaction import Transaction
+#from trytond.tools import grouped_slice
 from decimal import Decimal
 import logging
 
@@ -37,10 +38,11 @@ class Sale(metaclass=PoolMeta):
         logging.warning('RUN VENTAS')
         data = cls.last_update()
         cls.add_sale(data)
-        cls.create_or_update() #Se crea o actualiza la fecha de importación
 
     @classmethod
     def add_sale(cls, ventas_tecno):
+        actualizacion = cls.create_or_update() #Se crea o actualiza la fecha de importación
+        logs = actualizacion.logs
         if ventas_tecno:
             pool = Pool()
             Sale = pool.get('sale.sale')
@@ -52,19 +54,15 @@ class Sale(metaclass=PoolMeta):
             Address = pool.get('party.address')
             coluns_doc = cls.get_columns_db_tecno('Documentos')
             columns_tipodoc = cls.get_columns_db_tecno('TblTipoDoctos')
-            #PaymentMode = pool.get('account.voucher.paymode')
             Invoice = pool.get('account.invoice')
             Shop = pool.get('sale.shop')
             
             col_param = cls.get_columns_db_tecno('TblParametro')
             venta_pos = cls.get_data_parametros('8')
             venta_electronica = cls.get_data_parametros('9')
-
             venta_pos = venta_pos[0][col_param.index('Valor')].strip().split(',')
             venta_electronica = venta_electronica[0][col_param.index('Valor')].strip().split(',')
-
             to_create = []
-            #sales_to_pay = []
             #Procedemos a realizar una venta
             for venta in ventas_tecno:
                 sw = venta[coluns_doc.index('sw')]
@@ -76,30 +74,51 @@ class Sale(metaclass=PoolMeta):
                     #Se trae la fecha de la venta y se adapta al formato correcto para Tryton
                     fecha = str(venta[coluns_doc.index('Fecha_Orden_Venta')]).split()[0].split('-')
                     fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
-                    try:
-                        party, = Party.search([('id_number', '=', venta[coluns_doc.index('nit_Cedula')])])
-                    except:
-                        logging.warning("No se econtro el tercero con id: "+venta[coluns_doc.index('nit_Cedula')])
+                    party = Party.search([('id_number', '=', venta[coluns_doc.index('nit_Cedula')])])
+                    if not party:
+                        logging.warning("Error venta: "+id_venta+" - No se econtro el tercero con id: "+venta[coluns_doc.index('nit_Cedula')])
+                        logs = logs+"\n"+"Error venta: "+id_venta+" - No se econtro el tercero con id: "+venta[coluns_doc.index('nit_Cedula')]
                         continue
+                    party = party[0]
                     #Se indica a que bodega pertenece
-                    try:
-                        id_tecno_bodega = venta[coluns_doc.index('bodega')]
-                        bodega, = location.search([('id_tecno', '=', id_tecno_bodega)])
-                        if not bodega:
-                            logging.ERROR('LA BODEGA: '+str(id_tecno_bodega)+' NO EXISTE')
-                            continue
-                        shop, = Shop.search([('warehouse', '=', bodega)])
-                    except Exception as e:
-                        print(e)
-                        raise UserError("No se econtro la bodega: ", venta[coluns_doc.index('bodega')])
+                    id_tecno_bodega = venta[coluns_doc.index('bodega')]
+                    bodega = location.search([('id_tecno', '=', id_tecno_bodega)])
+                    if not bodega:
+                        logging.warning('LA BODEGA: '+str(id_tecno_bodega)+' NO EXISTE')
+                        logs = logs+"\n"+"Error venta: "+id_venta+" - NO EXISTE LA BODEGA: "+str(id_tecno_bodega)
+                        continue
+                    bodega = bodega[0]
+                    shop = Shop.search([('warehouse', '=', bodega)])
+                    if not shop:
+                        logging.warning("No se econtro la bodega: ", venta[coluns_doc.index('bodega')])
+                        logs = logs+"\n"+"Error venta: "+id_venta+" - No se econtro la bodega: "+venta[coluns_doc.index('bodega')]
+                        continue
+                    shop = shop[0]
                     #Se le asigna el plazo de pago correspondiente
-                    try:
-                        condicion = venta[coluns_doc.index('condicion')]
-                        plazo_pago, = payment_term.search([('id_tecno', '=', condicion)])
-                    except Exception as e:
-                        print(e)
-                        raise UserError("No se econtro el plazo de pago: ", condicion)
-
+                    condicion = venta[coluns_doc.index('condicion')]
+                    plazo_pago = payment_term.search([('id_tecno', '=', condicion)])
+                    if not plazo_pago:
+                        logging.warning("No se econtro el plazo de pago: ", condicion)
+                        logs = logs+"\n"+"Error venta: "+id_venta+" - No se econtro el plazo de pago: "+condicion
+                        continue
+                    plazo_pago = plazo_pago[0]
+                    User = pool.get('res.user')
+                    with Transaction().set_user(1):
+                        context = User.get_preferences()
+                    with Transaction().set_context(context, shop=shop.id):
+                        sale = Sale()
+                    sale.number = tipo_doc+'-'+str(numero_doc)
+                    sale.id_tecno = id_venta
+                    sale.description = venta[coluns_doc.index('notas')].replace('\n', ' ').replace('\r', '')
+                    sale.invoice_type = 'C'
+                    sale.sale_date = fecha_date
+                    sale.party = party.id
+                    sale.invoice_party = party.id
+                    sale.shipment_party = party.id
+                    sale.warehouse = bodega
+                    sale.shop = shop
+                    sale.payment_term = plazo_pago
+                    """
                     sale_data = {
                         'number': tipo_doc+'-'+str(numero_doc),
                         'id_tecno': id_venta,
@@ -113,34 +132,45 @@ class Sale(metaclass=PoolMeta):
                         'shop': shop,
                         'payment_term': plazo_pago
                     }
+                    """
                     #Se revisa si la venta es clasificada como electronica o pos y se cambia el tipo
                     if tipo_doc in venta_electronica:
-                        sale_data['invoice_type'] = '1'
+                        #sale_data['invoice_type'] = '1'
+                        sale.invoice_type = '1'
                     elif tipo_doc in venta_pos:
-                        sale_data['invoice_type'] = 'P'
-                        sale_data['pos_create_date'] = fecha_date
-                        sale_data['self_pick_up'] = True
+                        #sale_data['invoice_type'] = 'P'
+                        #sale_data['pos_create_date'] = fecha_date
+                        #sale_data['self_pick_up'] = True
+                        sale.invoice_type = 'P'
+                        sale.pos_create_date = fecha_date
+                        sale.self_pick_up = True
                         #Busco la terminal y se la asigno
                         sale_device, = SaleDevice.search([('id_tecno', '=', venta[coluns_doc.index('pc')])])
-                        sale_data['sale_device'] = sale_device
+                        #sale_data['sale_device'] = sale_device
+                        sale.sale_device = sale_device
                     #Se busca una dirección del tercero para agregar en la factura y envio
                     address = Address.search([('party', '=', party.id)], limit=1)
                     if address:
-                        sale_data['invoice_address'] = address[0].id
-                        sale_data['shipment_address'] = address[0].id
+                        #sale_data['invoice_address'] = address[0].id
+                        #sale_data['shipment_address'] = address[0].id
+                        sale.invoice_address = address[0].id
+                        sale.shipment_address = address[0].id
+                    
                     #SE CREA LA VENTA
-                    sale, = Sale.create([sale_data])
+                    #sale, = Sale.create([sale_data])
+                    sale.save()
+                    
                     #Ahora traemos las lineas de producto para la venta a procesar
                     documentos_linea = cls.get_line_where(str(sw), str(numero_doc), str(tipo_doc))
                     col_line = cls.get_columns_db_tecno('Documentos_Lin')
-                    #create_line = []
+                    create_line = []
                     for lin in documentos_linea:
                         linea = SaleLine()
                         id_producto = str(lin[col_line.index('IdProducto')])
                         producto = cls.buscar_producto(id_producto)
                         if not producto.template.salable:
                             logging.warning("El siguiente producto no es vendible: "+str(producto.code, producto.name))
-                            #raise UserError("El siguiente producto no es vendible: ", producto)
+                            logs = logs+"\n"+"Error venta: "+id_venta+" - El siguiente producto no es vendible: "+str(producto.code, producto.name)
                             continue
                         linea.sale = sale
                         linea.product = producto
@@ -171,15 +201,21 @@ class Sale(metaclass=PoolMeta):
                         linea.save()
                         #create_line.append(linea)
                     #sale_data['lines'] = [('create', create_line)]
-                    to_create.append(sale)
                 else:
+                    #pass
                     cls.importado(id_venta)
-            print('Ventas a crear: ', len(to_create))
+                to_create.append(sale)
+            #print('Ventas a crear: ', len(to_create))
+            #Sale.save(to_create)
+            #SaleLine.save(create_line)
             #_sale almacena los registros creados
             #_sale = Sale.create(to_create)
-            Sale.quote(to_create)
-            Sale.confirm(to_create)#Revisar
-            Sale.process(to_create)
+            with Transaction().set_user(1):
+                context = User.get_preferences()
+            with Transaction().set_context(context):
+                Sale.quote(to_create)
+                Sale.confirm(to_create)#Revisar
+                Sale.process(to_create)
             #Procesamos la venta para generar la factura y procedemos a rellenar los campos de la factura
             for sale in to_create:
                 print('INICIO VENTA: '+str(sale.id_tecno))
@@ -194,8 +230,9 @@ class Sale(metaclass=PoolMeta):
                         shipment_out.pack([shipment_out])#Revvisar
                         shipment_out.done([shipment_out])
                     except Exception as e:
-                        #logging.ERROR(str(e))
-                        raise UserError("ERROR ENVIO: ", e)
+                        logging.warning(str(e))
+                        logs = logs+"\n"+"Error venta (envio): "+str(sale.id_tecno)+" - "+str(e)
+                        continue
                 try:
                     invoice = sale.invoice
                     invoice.accounting_date = sale.invoice_date
@@ -225,9 +262,12 @@ class Sale(metaclass=PoolMeta):
                     cls.importado(sale.id_tecno)
                     #Transaction().connection.commit()
                 except Exception as e:
-                    #print('ERROR FACTURA')
-                    raise UserError('ERROR FACTURA O COMPROBANTE: ', str(e))
+                    print('ERROR FACTURA: ', str(e))
+                    logs = logs+"\n"+"Error venta (comprobante o factura): "+str(sale.id_tecno)+" - "+str(e)
+        actualizacion.logs = logs
+        actualizacion.save()
         logging.warning('FINISH VENTAS')
+
 
     #Función encargada de buscar recibos de caja pagados en TecnoCarnes y pagarlos en Tryton
     @classmethod
@@ -258,7 +298,6 @@ class Sale(metaclass=PoolMeta):
             fecha = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
 
             idt = recibo[columns_tip.index('forma_pago')]
-
             payment_mode, = PaymentMode.search([('id_tecno', '=', idt)])
 
             """
@@ -301,7 +340,6 @@ class Sale(metaclass=PoolMeta):
             """
 
             valor_pagado = recibo[columns_tip.index('valor')]
-            
             #for voucher in vouchers:
             voucher.date = fecha
             voucher.payment_mode = payment_mode
@@ -310,7 +348,7 @@ class Sale(metaclass=PoolMeta):
             voucher.save()
             Voucher.process([voucher])
             diferencia_total = abs(Decimal(valor_pagado) - Decimal(voucher.amount_to_pay))
-            print(diferencia_total)
+            #print(diferencia_total)
             if diferencia_total <= 0.5:
                 Voucher.post([voucher])
         else:
@@ -395,7 +433,7 @@ class Sale(metaclass=PoolMeta):
             Config = Pool().get('conector.configuration')
             conexion = Config.conexion()
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT * FROM dbo.Documentos_Lin WHERE sw = "+sw+" AND Numero_Documento = "+nro+" AND tipo = "+tipo)
+                query = cursor.execute("SELECT * FROM dbo.Documentos_Lin WHERE sw = "+sw+" AND Numero_Documento = "+nro+" AND tipo = "+tipo+" order by seq")
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY Documentos_Lin: ", e)
@@ -489,20 +527,21 @@ class Sale(metaclass=PoolMeta):
             #Se busca un registro con la actualización
             actualizacion, = Actualizacion.search([('name', '=','VENTAS')])
             actualizacion.name = 'VENTAS'
+            #actualizacion.logs = logs
             actualizacion.save()
         else:
             #Se crea un registro con la actualización
-            actualizar = Actualizacion()
-            actualizar.name = 'VENTAS'
-            actualizar.save()
+            actualizacion = Actualizacion()
+            actualizacion.name = 'VENTAS'
+            #actualizacion.logs = logs
+            actualizacion.save()
+        return actualizacion
 
     #Metodo encargado de buscar si exste una venta
     @classmethod
     def buscar_venta(cls, id):
         Sale = Pool().get('sale.sale')
-        try:
-            sale, = Sale.search([('id_tecno', '=', id)])
-        except ValueError:
+        sale = Sale.search([('id_tecno', '=', id)])
+        if not sale:
             return False
-        else:
-            return True
+        return sale[0]
