@@ -48,7 +48,6 @@ class Product(ModelSQL, ModelView):
             
             existe = cls.buscar_categoria(id_tecno)
             if not existe:
-                print('Crear categoria: ', nombre)
                 categoria = Category()
                 categoria.id_tecno = id_tecno
                 categoria.name = nombre
@@ -107,7 +106,6 @@ class Product(ModelSQL, ModelView):
                         existe.template.sale_price_w_tax = 0
                         existe.template.save()
                 else:
-                    print('Crear: ', id_producto)
                     prod = Producto()
                     temp = Template_Product()
                     temp.code = id_producto
