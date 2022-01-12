@@ -61,6 +61,7 @@ class Product(ModelSQL, ModelView):
             Producto = Pool().get('product.product')
             Template_Product = Pool().get('product.template')
             to_producto = []
+            to_template = []
             for producto in productos_tecno:
                 id_producto = str(producto[col_pro.index('IdProducto')])
                 existe = cls.buscar_producto(id_producto)
@@ -105,6 +106,7 @@ class Product(ModelSQL, ModelView):
                         existe.template.sale_price_w_tax = 0
                         existe.template.save()
                 else:
+                    prod = Producto()
                     temp = Template_Product()
                     temp.code = id_producto
                     temp.name = nombre_producto
@@ -118,12 +120,12 @@ class Product(ModelSQL, ModelView):
                     temp.list_price = valor_unitario
                     temp.account_category = categoria_contable.id
                     temp.sale_price_w_tax = 0
-                    prod = {
-                        'id_tecno': id_producto,
-                        'template': temp,
-                    }
+                    prod.id_tecno = id_producto
+                    prod.template = temp
+                    to_template.append(temp)
                     to_producto.append(prod)
-            Producto.create(to_producto)
+            Template_Product.save(to_template)
+            Producto.save(to_producto)
 
 
     #Función encargada de consultar si existe una categoria dada de la bd TecnoCarnes
