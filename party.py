@@ -115,6 +115,7 @@ class Party(ModelSQL, ModelView):
                     #Equivalencia regimen de impuestos
                     tercero.regime_tax = TipoContribuyente
                     tercero.lang = es
+                    tercero.save()
                     #Creamos las direcciones pertenecientes al tercero
                     direcciones_tecno = cls.get_address_db_tecno(nit_cedula)
                     if direcciones_tecno:
@@ -123,7 +124,6 @@ class Party(ModelSQL, ModelView):
                     #Metodos de contactos
                     cls.create_contact_type(tercero, mail, 'email')
                     cls.create_contact_type(tercero, telefono, 'phone')
-                    tercero.save()
             #Party.create(to_create)
         #Actualización de direcciones
         if direcciones_db:
