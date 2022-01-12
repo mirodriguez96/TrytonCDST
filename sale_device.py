@@ -135,6 +135,7 @@ class SaleDevice(metaclass=PoolMeta):
     def import_sale_device(cls):
         pool = Pool()
         SaleD = pool.get('sale.device')
+        Location = pool.get('stock.location')
         #obtengo la tienda actual
         Shop = pool.get('sale.shop')
         columns = cls.get_columns_db_tecno('TblEquipo')
@@ -146,7 +147,8 @@ class SaleDevice(metaclass=PoolMeta):
             id_equipo = device[columns.index('IdEquipo')]
             nombre = device[columns.index('Equipo')]
             ubicacion = device[columns.index('Ubicacion')]
-            shop, = Shop.search([('warehouse', '=', ubicacion)])
+            location, = Location.search([('id_tecno', '=', ubicacion)])
+            shop, = Shop.search([('warehouse', '=', location)])
             #En caso de ser un nombre vacio se continua con el siguiente
             if len(nombre) == 0 or nombre == ' ':
                 continue
