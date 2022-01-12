@@ -73,8 +73,8 @@ class Product(ModelSQL, ModelView):
                     categoria.id_tecno = id_categoria
                     categoria.name = str(id_categoria)+' - sin modelo'
                     categoria.accounting = True
-                    categoria_contable = categoria
                     categoria.save()
+                    categoria_contable = categoria
                 nombre_producto = producto[col_pro.index('Producto')].strip()
                 tipo_producto = cls.tipo_producto(producto[col_pro.index('maneja_inventario')])
                 udm_producto = cls.udm_producto(producto[col_pro.index('unidad_Inventario')])
@@ -190,12 +190,11 @@ class Product(ModelSQL, ModelView):
     @classmethod
     def buscar_producto(cls, id_producto):
         Product = Pool().get('product.product')
-        try:
-            producto, = Product.search([('id_tecno', '=', id_producto)])
-        except ValueError:
-            return False
+        producto = Product.search([('id_tecno', '=', id_producto)])
+        if producto:
+            return producto[0]
         else:
-            return producto
+            return False
 
     #Función encargada de retornar que tipo de producto será un al realizar la equivalencia con el manejo de inventario de la bd de TecnoCarnes
     @classmethod
