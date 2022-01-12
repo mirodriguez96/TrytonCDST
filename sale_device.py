@@ -214,6 +214,37 @@ class SaleDevice(metaclass=PoolMeta):
             actualizar.save()
 
 
+    @classmethod
+    def get_data_table(cls, table):
+        data = []
+        try:
+            Config = Pool().get('conector.configuration')
+            conexion = Config.conexion()
+            with conexion.cursor() as cursor:
+                query = cursor.execute("SELECT * FROM dbo."+table+"")
+                data = list(query.fetchall())
+        except Exception as e:
+            print("ERROR QUERY get_data_table: ", e)
+            raise UserError('ERROR QUERY get_data_table: ', str(e))
+        return data
+
+    
+    #Función encargada de consultar las columnas pertenecientes a 'x' tabla de la bd
+    @classmethod
+    def get_columns_db_tecno(cls, table):
+        columns = []
+        try:
+            Config = Pool().get('conector.configuration')
+            conexion = Config.conexion()
+            with conexion.cursor() as cursor:
+                query = cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = '"+table+"' ORDER BY ORDINAL_POSITION")
+                for q in query.fetchall():
+                    columns.append(q[0])
+        except Exception as e:
+            print("ERROR QUERY "+table+": ", e)
+        return columns
+
+
 #Heredar para agregar el campo id_tecno
 class Journal(metaclass=PoolMeta):
     'StatementJournal'
