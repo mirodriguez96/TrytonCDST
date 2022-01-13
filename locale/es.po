@@ -33,3 +33,7 @@ msgstr "Enviar al proveedor tecnologico"
 msgctxt "model:ir.action,name:act_config"
 msgid "Configuration"
 msgstr "Configuración"
+
+msgctxt "field:account.tax,consumo:"
+msgid "Tax consumption"
+msgstr "Impuesto al consumo"
