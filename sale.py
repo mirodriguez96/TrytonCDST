@@ -76,10 +76,11 @@ class Sale(metaclass=PoolMeta):
                     #Se trae la fecha de la venta y se adapta al formato correcto para Tryton
                     fecha = str(venta[coluns_doc.index('Fecha_Orden_Venta')]).split()[0].split('-')
                     fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
-                    party = Party.search([('id_number', '=', venta[coluns_doc.index('nit_Cedula')])])
+                    nit_cedula = venta[coluns_doc.index('nit_Cedula')]
+                    party = Party.search([('id_number', '=', nit_cedula)])
                     if not party:
-                        logging.warning("Error venta: "+id_venta+" - No se econtro el tercero con id: "+venta[coluns_doc.index('nit_Cedula')])
-                        logs = logs+"\n"+"Error venta: "+id_venta+" - No se econtro el tercero con id: "+venta[coluns_doc.index('nit_Cedula')]
+                        logging.warning("Error venta: "+id_venta+" - No se econtro el tercero con id: "+str(nit_cedula))
+                        logs = logs+"\n"+"Error venta: "+id_venta+" - No se econtro el tercero con id: "+str(nit_cedula)
                         continue
                     party = party[0]
                     #Se indica a que bodega pertenece
