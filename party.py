@@ -412,10 +412,10 @@ class Party(ModelSQL, ModelView):
             else:
                 fecha = (ultima_actualizacion[0].create_date - datetime.timedelta(hours=5, minutes=5))
         else:
-            Config = Pool().get('conector.configuration')
-            config, = Config.search([], order=[('id', 'DESC')], limit=1)
-            fecha = config.date
-            #fecha = datetime.date(1,1,1)
+            #Config = Pool().get('conector.configuration')
+            #config, = Config.search([], order=[('id', 'DESC')], limit=1)
+            #fecha = config.date
+            fecha = datetime.date(1,1,1)
         fecha = fecha.strftime('%Y-%d-%m %H:%M:%S')
         data = cls.get_data_where_tecno('TblTerceros', fecha)
         return data
