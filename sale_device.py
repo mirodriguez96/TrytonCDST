@@ -31,14 +31,16 @@ class SaleDevice(metaclass=PoolMeta):
 
     @classmethod
     def import_data_pos(cls):
-        #Se requiere haber creado el diario con código VM
+        #Se requiere previamente haber creado el diario para ventas POS con código VM
         #Posterior a la importación. revisar las configuraciones
         cls.create_or_update()
         cls.import_sale_shop()
         cls.import_sale_device()
         cls.import_statement_sale()
         Transaction().connection.commit()
-        raise UserError("RECORDATORIO: ", "Revisa las configuraciones de las tiendas, terminales de venta y libros diarios (formas de pago) de las terminales...")
+        msg1 = f'Recordatorio: Revisar las configuraciones de Tiendas, Terminales de venta y Libros diarios (formas de pago) de las terminales...'
+        logging.warning(msg1)
+        #raise UserError("RECORDATORIO: ", "Revisa las configuraciones de las tiendas, terminales de venta y libros diarios (formas de pago) de las terminales...")
 
     @classmethod
     def import_sale_shop(cls):

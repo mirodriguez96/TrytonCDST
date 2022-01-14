@@ -384,7 +384,7 @@ class Sale(metaclass=PoolMeta):
             print("ERROR QUERY get_recibos: ", e)
         return data
     
-    #Metodo encargado de obtener los recibos pagados de un documento dado
+    #Metodo encargado de obtener el recibo pagado a una venta cuando es POS
     @classmethod
     def get_recibos(cls, tipo, nro):
         data = []
@@ -392,6 +392,7 @@ class Sale(metaclass=PoolMeta):
             Config = Pool().get('conector.configuration')
             conexion = Config.conexion()
             with conexion.cursor() as cursor:
+                #Se realiza una consulta con sw = 1 para el caso de las ventas POS que son aquellas con condicion 1 (efectivo)
                 query = cursor.execute("SELECT * FROM dbo.Documentos_Che WHERE sw = 1 AND tipo = "+tipo+" AND numero ="+nro)
                 data = list(query.fetchall())
         except Exception as e:
