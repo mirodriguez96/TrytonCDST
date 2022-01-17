@@ -31,6 +31,7 @@ class Voucher(ModelSQL, ModelView):
     __name__ = 'account.voucher'
     id_tecno = fields.Char('Id Tabla Sqlserver', required=False)
 
+    """
     @classmethod
     def import_voucher(cls):
         logging.warning('RUN VOUCHER !')
@@ -66,15 +67,15 @@ class Voucher(ModelSQL, ModelView):
                     if id_recibo not in to_create.keys():
                         to_create[id_recibo] = []
                     to_create[id_recibo].append([invoice, valor])
-            """
-            numbers = ['101-759084', '101-759085', '101-759086', '101-759087', '101-759088']
-            to_create = {
-                '5-107-19089': []
-            }
-            for num in numbers:
-                invoice, = Invoice.search([('number', '=', num)])
-                to_create['5-107-19089'].append(invoice)
-            """
+            
+            #numbers = ['101-759084', '101-759085', '101-759086', '101-759087', '101-759088']
+            #to_create = {
+            #    '5-107-19089': []
+            #}
+            #for num in numbers:
+            #    invoice, = Invoice.search([('number', '=', num)])
+            #    to_create['5-107-19089'].append(invoice)
+            
             for rec in to_create:
                 print(rec)
                 #Se traen las lineas a pagar
@@ -122,6 +123,73 @@ class Voucher(ModelSQL, ModelView):
                     #    Voucher.post([comprobante]) 
                     comprobante.save()
         logging.warning('FINISH VOUCHER !')
+    """
+
+    @classmethod
+    def import_voucher(cls):
+        print("--------------RUN VOUCHER--------------")
+        documentos_db = cls.last_update()
+        cls.create_or_update()
+        if documentos_db:
+            columns_doc = cls.get_columns_db('Documentos')
+            columns_rec = cls.get_columns_db('Documentos_Cruce')
+            columns_tip = cls.get_columns_db('Documentos_Che')
+            pool = Pool()
+            #Account = pool.get('account.account')
+            Invoice = pool.get('account.invoice')
+            Voucher = pool.get('account.voucher')
+            Line = pool.get('account.voucher.line')
+            MoveLine = pool.get('account.move.line')
+            Party = pool.get('party.party')
+            PayMode = pool.get('account.voucher.paymode')
+            #Tax = pool.get('account.tax')
+            for doc in documentos_db:
+                sw = str(doc[columns_doc.index('sw')])
+                tipo = doc[columns_doc.index('tipo')].strip()
+                nro = str(doc[columns_doc.index('Numero_documento')])
+                existe = cls.find_voucher(sw+'-'+tipo+'-'+nro)
+                if not existe:
+                    nit_cedula = doc[columns_doc.index('nit_Cedula')].strip()
+                    tercero, = Party.search([('id_number', '=', nit_cedula)])
+                    recibos = cls.get_recibos(tipo, nro)
+                    if recibos:
+                        voucher = Voucher()
+                        voucher.id_tecno = sw+'-'+tipo+'-'+nro
+                        voucher.party = tercero
+                        tipo_pago, = cls.get_tipo_pago(tipo, nro)
+                        idt = tipo_pago[columns_tip.index('forma_pago')]
+                        paym, = PayMode.search([('id_tecno', '=', idt)])
+                        voucher.payment_mode = paym
+                        voucher.on_change_payment_mode()
+                        voucher.voucher_type = 'receipt'
+                        fecha = str(doc[columns_doc.index('fecha_hora')]).split()[0].split('-')
+                        fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
+                        voucher.date = fecha_date
+                        nota = doc[columns_doc.index('notas')].replace('\n', ' ').replace('\r', '')
+                        if nota:
+                            voucher.description = nota
+                        voucher.reference = tipo+'-'+nro
+                        for rec in recibos:
+                            ref = str(rec[columns_rec.index('tipo_aplica')])+'-'+str(rec[columns_rec.index('numero_aplica')])
+                            move_line = MoveLine.search([('reference', '=', ref), ('party', '=', tercero.id)])
+                            if move_line:
+                                print(ref)
+                                line = Line()
+                                line.voucher = voucher
+                                line.amount_original = move_line[0].debit
+                                line.reference = ref
+                                line.move_line = move_line[0]
+                                line.on_change_move_line()
+                                line.amount = Decimal(rec[columns_rec.index('valor')])
+                                line.save()
+                                #Se procede a comparar los totales
+                                voucher.on_change_lines()
+                                invoice, = Invoice.search([('reference', '=', ref)])
+                                if Decimal(invoice.untaxed_amount) == Decimal(voucher.amount_to_pay):
+                                    Voucher.process([voucher])
+                            else:
+                                print('OJO NO ENCONTRO LINEA: ', ref)
+                        voucher.save()
 
 
     #Metodo encargado de consultar y verificar si existe un voucher con la id de la BD

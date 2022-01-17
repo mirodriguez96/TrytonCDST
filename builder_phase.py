@@ -366,7 +366,7 @@ class ElectronicPayroll(object):
 
             if concept == 'Basico':
                 factor = 1.0
-                if line.uom.name == 'Hora':
+                if line.uom.name and line.uom.name == 'Hora':
                     factor = 8.0
                 worked_days = line.quantity / Decimal(factor)
                 basico = {
