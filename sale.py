@@ -314,6 +314,18 @@ class Sale(metaclass=PoolMeta):
 
             idt = recibo[columns_tip.index('forma_pago')]
             payment_mode, = PaymentMode.search([('id_tecno', '=', idt)])
+            valor_pagado = recibo[columns_tip.index('valor')]
+            #for voucher in vouchers:
+            voucher.date = fecha
+            voucher.payment_mode = payment_mode
+            voucher.reference = invoice.number
+            voucher.description = 'VENTA POS'
+            voucher.save()
+            Voucher.process([voucher])
+            diferencia_total = abs(Decimal(valor_pagado) - Decimal(voucher.amount_to_pay))
+            #print(diferencia_total)
+            if diferencia_total <= 0.5:
+                Voucher.post([voucher])
 
             """
             #REVISAR PROCESOS Y FALTA QUE APAREZCAN VENTAS EN ESTADO DE CUENTA
@@ -353,19 +365,6 @@ class Sale(metaclass=PoolMeta):
                 payment.save()
                 payment.create_move()
             """
-
-            valor_pagado = recibo[columns_tip.index('valor')]
-            #for voucher in vouchers:
-            voucher.date = fecha
-            voucher.payment_mode = payment_mode
-            voucher.reference = invoice.number
-            voucher.description = 'VENTA POS'
-            voucher.save()
-            Voucher.process([voucher])
-            diferencia_total = abs(Decimal(valor_pagado) - Decimal(voucher.amount_to_pay))
-            #print(diferencia_total)
-            if diferencia_total <= 0.5:
-                Voucher.post([voucher])
         else:
             print('NO HAY RECIBO')
         

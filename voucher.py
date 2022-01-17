@@ -61,10 +61,11 @@ class Voucher(ModelSQL, ModelView):
                     sw = str(data[0][columns_rec.index('sw')])
                     tipo = str(data[0][columns_rec.index('tipo')])
                     nro = str(data[0][columns_rec.index('numero')])
+                    valor = data[0][columns_rec.index('valor')]
                     id_recibo = sw+'-'+tipo+'-'+nro
                     if id_recibo not in to_create.keys():
                         to_create[id_recibo] = []
-                    to_create[id_recibo].append(invoice)
+                    to_create[id_recibo].append([invoice, valor])
             """
             numbers = ['101-759084', '101-759085', '101-759086', '101-759087', '101-759088']
             to_create = {
@@ -79,9 +80,9 @@ class Voucher(ModelSQL, ModelView):
                 #Se traen las lineas a pagar
                 to_line = []
                 for factura in to_create[rec]:
-                    val = factura.lines_to_pay
+                    val = factura[0].lines_to_pay
                     if val:
-                        to_line.append(val[0])
+                        to_line.append([val[0], factura[1]])
                 tipo_numero = rec.split('-')
                 tipo_pago = cls.get_tipo_pago(tipo_numero[0], tipo_numero[1], tipo_numero[2])
                 for pago in tipo_pago:
@@ -102,23 +103,23 @@ class Voucher(ModelSQL, ModelView):
                     comprobante.date = fecha_date
                     comprobante.reference = tipo_numero[1]+'-'+tipo_numero[2]
                     comprobante.description = 'IMPORTACION TECNO'
-                    valor_tecno = Decimal(pago[columns_tip.index('valor')])
+                    #valor_tecno = Decimal(pago[columns_tip.index('valor')])
                     for move_line in to_line:
                         line = Line()
                         line.voucher = comprobante
                         #line.amount = move_line.debit
-                        line.reference = move_line.reference
-                        line.move_line = move_line
+                        line.reference = move_line[0].reference
+                        line.move_line = move_line[0]
                         line.on_change_move_line()
-                        line.amount = valor_tecno
+                        line.amount = move_line[1]
                         line.save()
                         #Se procede a comparar los totales
                         comprobante.on_change_lines()
                     Voucher.process([comprobante])
+                    Voucher.post([comprobante])
                     #diferencia_total = valor_tecno - Decimal(comprobante.amount_to_pay)
                     #if diferencia_total <= 0.5:
-                    #    Voucher.post([comprobante])
-                    Voucher.post([comprobante])
+                    #    Voucher.post([comprobante]) 
                     comprobante.save()
         logging.warning('FINISH VOUCHER !')
 
