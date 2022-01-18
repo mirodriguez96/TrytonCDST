@@ -195,8 +195,8 @@ class Voucher(ModelSQL, ModelView):
                             if to_lines:
                                 multingreso.lines = to_lines
                                 multingreso.save()
-                            MultiRevenue.process(multingreso)
-                            MultiRevenue.generate_vouchers(multingreso)
+                            MultiRevenue.process([multingreso])
+                            MultiRevenue.generate_vouchers([multingreso])
                         elif len(tipo_pago) == 1:
                             forma_pago = tipo_pago[0][columns_tip.index('forma_pago')]
                             paymode, = PayMode.search([('id_tecno', '=', forma_pago)])
