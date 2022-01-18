@@ -195,7 +195,7 @@ class Voucher(ModelSQL, ModelView):
                             if to_lines:
                                 multingreso.lines = to_lines
                                 multingreso.save()
-                            if multingreso.total_transaction <= multingreso.total_lines_to_pay:
+                            if multingreso.total_transaction and multingreso.total_lines_to_pay and multingreso.total_transaction <= multingreso.total_lines_to_pay:
                                 MultiRevenue.process([multingreso])
                                 MultiRevenue.generate_vouchers([multingreso])
                         elif len(tipo_pago) == 1:
