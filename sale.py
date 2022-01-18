@@ -212,12 +212,135 @@ class Sale(metaclass=PoolMeta):
                             porcentaje = round(Decimal(lin[col_line.index('Porcentaje_Descuento_1')]/100), 3)
                             #line.base_price = lin[col_line.index('Valor_Unitario')]
                             linea.discount = porcentaje
-                            #line.on_change_discount_rate()
-                        linea.save()
-                        #create_line.append(linea)
+                            #line.on_chFormatopend(linea)
                     #sale_data['lines'] = [('create', create_line)]
                 else:
-                    #pass
+                    """
+                    #Se trae la fecha de la venta y se adapta al formato correcto para Tryton
+                    fecha = str(venta[coluns_doc.index('Fecha_Orden_Venta')]).split()[0].split('-')
+                    fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
+                    nit_cedula = venta[coluns_doc.index('nit_Cedula')]
+                    party = Party.search([('id_number', '=', nit_cedula)])
+                    if not party:
+                        logging.warning("Error venta: "+id_venta+" - No se econtro el tercero con id: "+str(nit_cedula))
+                        logs = logs+"\n"+"Error venta: "+id_venta+" - No se econtro el tercero con id: "+str(nit_cedula)
+                        continue
+                    party = party[0]
+                    #Se indica a que bodega pertenece
+                    id_tecno_bodega = venta[coluns_doc.index('bodega')]
+                    bodega = location.search([('id_tecno', '=', id_tecno_bodega)])
+                    if not bodega:
+                        logging.warning('LA BODEGA: '+str(id_tecno_bodega)+' NO EXISTE')
+                        logs = logs+"\n"+"Error venta: "+id_venta+" - NO EXISTE LA BODEGA: "+str(id_tecno_bodega)
+                        continue
+                    bodega = bodega[0]
+                    shop = Shop.search([('warehouse', '=', bodega)])
+                    if not shop:
+                        logging.warning("No se econtro la bodega: ", venta[coluns_doc.index('bodega')])
+                        logs = logs+"\n"+"Error venta: "+id_venta+" - No se econtro la bodega: "+venta[coluns_doc.index('bodega')]
+                        continue
+                    shop = shop[0]
+                    #Se le asigna el plazo de pago correspondiente
+                    condicion = venta[coluns_doc.index('condicion')]
+                    plazo_pago = payment_term.search([('id_tecno', '=', condicion)])
+                    if not plazo_pago:
+                        logging.warning("No se econtro el plazo de pago: ", condicion)
+                        logs = logs+"\n"+"Error venta: "+id_venta+" - No se econtro el plazo de pago: "+condicion
+                        continue
+                    plazo_pago = plazo_pago[0]
+                    User = pool.get('res.user')
+                    with Transaction().set_user(1):
+                        context = User.get_preferences()
+                    with Transaction().set_context(context, shop=shop.id):
+                        existe = existe
+                    existe.number = tipo_doc+'-'+str(numero_doc)
+                    existe.description = venta[coluns_doc.index('notas')].replace('\n', ' ').replace('\r', '')
+                    existe.invoice_type = 'C'
+                    existe.sale_date = fecha_date
+                    existe.party = party.id
+                    existe.invoice_party = party.id
+                    existe.shipment_party = party.id
+                    existe.warehouse = bodega
+                    existe.shop = shop
+                    existe.payment_term = plazo_pago
+                    #Se revisa si la venta es clasificada como electronica o pos y se cambia el tipo
+                    if tipo_doc in venta_electronica:
+                        #sale_data['invoice_type'] = '1'
+                        existe.invoice_type = '1'
+                    elif tipo_doc in venta_pos:
+                        #sale_data['invoice_type'] = 'P'
+                        #sale_data['pos_create_date'] = fecha_date
+                        #sale_data['self_pick_up'] = True
+                        existe.invoice_type = 'P'
+                        existe.pos_create_date = fecha_date
+                        existe.self_pick_up = True
+                        #Busco la terminal y se la asigno
+                        sale_device, = SaleDevice.search([('id_tecno', '=', venta[coluns_doc.index('pc')])])
+                        #sale_data['sale_device'] = sale_device
+                        existe.sale_device = sale_device
+                    #Se busca una dirección del tercero para agregar en la factura y envio
+                    address = Address.search([('party', '=', party.id)], limit=1)
+                    if address:
+                        #sale_data['invoice_address'] = address[0].id
+                        #sale_data['shipment_address'] = address[0].id
+                        existe.invoice_address = address[0].id
+                        existe.shipment_address = address[0].id
+                    
+                    #SE GUARDA LA VENTA
+                    existe.save()
+                    existe.lines = []
+                    #Ahora traemos las lineas de producto para la venta a procesar
+                    documentos_linea = cls.get_line_where(str(sw), str(numero_doc), str(tipo_doc))
+                    col_line = cls.get_columns_db_tecno('Documentos_Lin')
+                    create_line = []
+                    for lin in documentos_linea:
+                        linea = SaleLine()
+                        id_producto = str(lin[col_line.index('IdProducto')])
+                        producto = cls.buscar_producto(id_producto)
+                        if not producto.template.salable:
+                            logging.warning("El siguiente producto no es vendible: "+str(producto.code))
+                            logs = logs+"\n"+"Error venta: "+id_venta+" - El siguiente producto no es vendible: "+str(producto.code)
+                            continue
+                        linea.sale = existe
+                        linea.product = producto
+                        linea.type = 'line'
+                        linea.unit = producto.template.default_uom
+                        #Se verifica si es una devolución
+                        cant = float(lin[col_line.index('Cantidad_Facturada')])
+                        cantidad_facturada = abs(round(cant, 3))
+                        if linea.unit.id == 1:
+                            cantidad_facturada = int(cantidad_facturada)
+                        #print(cant, cantidad_facturada)
+                        if sw == 2:
+                            linea.quantity = cantidad_facturada * -1
+                            #Se indica a que documento hace referencia la devolucion
+                            existe.reference = venta[coluns_doc.index('Tipo_Docto_Base')].strip()+'-'+str(venta[coluns_doc.index('Numero_Docto_Base')])
+                        else:
+                            linea.quantity = cantidad_facturada
+                            existe.reference = tipo_doc+'-'+str(numero_doc)
+                        #Comprueba los cambios y trae los impuestos del producto
+                        linea.on_change_product()
+                        #Se verifica si el impuesto al consumo es del mismo valor
+                        impuesto_consumo = float(lin[col_line.index('Impuesto_Consumo')])
+                        if impuesto_consumo > 0:
+                            linea.taxes = []
+                            tax = Tax.search([('consumo', '=', True), ('type', '=', 'fixed'), ('amount', '=', impuesto_consumo)])
+                            if tax:
+                                linetax = LineTax()
+                                linetax.line = linea
+                                linetax.tax = tax[0]
+                                linetax.save()
+                            else:
+                                raise UserError('ERROR IMPUESTO', 'No se encontró el impuesto al consumo: '+id_venta)
+                        linea.unit_price = lin[col_line.index('Valor_Unitario')]
+                        #Verificamos si hay descuento para la linea de producto y se agrega su respectivo descuento
+                        if lin[col_line.index('Porcentaje_Descuento_1')] > 0:
+                            porcentaje = round(Decimal(lin[col_line.index('Porcentaje_Descuento_1')]/100), 3)
+                            #line.base_price = lin[col_line.index('Valor_Unitario')]
+                            linea.discount = porcentaje
+                            #line.on_chFormatopend(linea)
+                    existe.save()
+                    """
                     cls.importado(id_venta)
                 to_create.append(sale)
             #print('Ventas a crear: ', len(to_create))
