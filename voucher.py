@@ -218,9 +218,9 @@ class Voucher(ModelSQL, ModelView):
                                 if move_line:
                                     line = Line()
                                     line.voucher = voucher
-                                    #line.amount_original = move_line[0].debit
+                                    line.amount_original = move_line.debit
                                     line.reference = ref
-                                    line.move_line = move_line[0]
+                                    line.move_line = move_line
                                     line.on_change_move_line()
                                     line.amount = Decimal(rec[columns_rec.index('valor')])
                                     line.save()
