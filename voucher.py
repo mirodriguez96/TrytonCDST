@@ -152,7 +152,8 @@ class Voucher(ModelSQL, ModelView):
                 sw = str(doc[columns_doc.index('sw')])
                 tipo = doc[columns_doc.index('tipo')].strip()
                 nro = str(doc[columns_doc.index('Numero_documento')])
-                print(sw+'-'+tipo+'-'+nro)
+                id_tecno = sw+'-'+tipo+'-'+nro
+                print(id_tecno)
                 existe = cls.find_voucher(sw+'-'+tipo+'-'+nro)
                 if not existe:
                     nit_cedula = doc[columns_doc.index('nit_Cedula')].strip()
@@ -232,9 +233,10 @@ class Voucher(ModelSQL, ModelView):
                                 else:
                                     logging.warning('NO SE ENCONTRO LA LINEA: '+ref)
                             voucher.save()
+                cls.importado(id_tecno)
         logging.warning("FINISH VOUCHER")
 
-
+    #Se obtiene las lineas de la factura
     @classmethod
     def get_move_line(cls, reference, party):
         MoveLine = Pool().get('account.move.line')
@@ -244,6 +246,18 @@ class Voucher(ModelSQL, ModelView):
             return moveline[0]
         else:
             return None
+
+    @classmethod
+    def importado(cls, id):
+        lista = id.split('-')
+        try:
+            Config = Pool().get('conector.configuration')
+            conexion = Config.conexion()
+            with conexion.cursor() as cursor:
+                cursor.execute("UPDATE dbo.Documentos SET exportado = 'T' WHERE sw ="+lista[0]+" and tipo = "+lista[1]+" and Numero_documento = "+lista[2])
+        except Exception as e:
+            print(e)
+            raise logging.error('Error al actualizar como importado: ', e)
 
     #Metodo encargado de consultar y verificar si existe un voucher con la id de la BD
     @classmethod
@@ -291,7 +305,7 @@ class Voucher(ModelSQL, ModelView):
             Config = Pool().get('conector.configuration')
             conexion = Config.conexion()
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT TOP(10) * FROM dbo."+table+" WHERE (sw = 5 OR sw = 6) AND fecha_hora > '2022-01-01' and AND fecha_hora <= '2022-04-01'") #CAST('"+date+"' AS datetime)")
+                query = cursor.execute("SELECT TOP(10) * FROM dbo."+table+" WHERE (sw = 5 OR sw = 6) AND fecha_hora >= '2022-01-01' and AND fecha_hora < '2022-04-01' AND exportado != 'T' ") #CAST('"+date+"' AS datetime)")
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY get_data: ", e)
