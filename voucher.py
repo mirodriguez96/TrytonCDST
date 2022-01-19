@@ -185,7 +185,7 @@ class Voucher(ModelSQL, ModelView):
                             to_lines = []
                             for rec in recibos:
                                 ref = str(rec[columns_rec.index('tipo_aplica')])+'-'+str(rec[columns_rec.index('numero_aplica')])
-                                move = cls.get_move_line(ref, tercero)
+                                move = cls.get_moveline(ref, tercero)
                                 if move:
                                     #valor pagado x la factura
                                     valor = Decimal(rec[columns_rec.index('valor')])
@@ -216,7 +216,7 @@ class Voucher(ModelSQL, ModelView):
                             voucher.reference = tipo+'-'+nro
                             for rec in recibos:
                                 ref = str(rec[columns_rec.index('tipo_aplica')])+'-'+str(rec[columns_rec.index('numero_aplica')])
-                                move_line = cls.get_move_line(ref, tercero)
+                                move_line = cls.get_moveline(ref, tercero)
                                 if move_line:
                                     line = Line()
                                     line.voucher = voucher
@@ -243,7 +243,7 @@ class Voucher(ModelSQL, ModelView):
 
     #Se obtiene las lineas de la factura
     @classmethod
-    def get_move_line(cls, reference, party):
+    def get_moveline(cls, reference, party):
         MoveLine = Pool().get('account.move.line')
         #ref = str(rec[columns_rec.index('tipo_aplica')])+'-'+str(rec[columns_rec.index('numero_aplica')])
         moveline = MoveLine.search([('reference', '=', reference), ('party', '=', party)])
