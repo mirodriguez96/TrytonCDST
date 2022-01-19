@@ -34,7 +34,8 @@ class Purchase(metaclass=PoolMeta):
     @classmethod
     def import_data_purchase(cls):
         print("--------------RUN COMPRAS--------------")
-        cls.last_update()
+        data = cls.last_update()
+        cls.add_purchase(data)
 
     @classmethod
     def add_purchase(cls, compras_tecno):
@@ -253,35 +254,14 @@ class Purchase(metaclass=PoolMeta):
     @classmethod
     def get_data_where_tecno(cls, date): #REVISAR PARA OPTIMIZAR
         data = []
-        try:
-            Config = Pool().get('conector.configuration')
-            conexion = Config.conexion()
-            with conexion.cursor() as cursor:
-                consult = "FROM dbo.Documentos WHERE (sw = 3 or sw = 4) AND fecha_hora >= '2022-01-01' AND exportado != 'T'"
-                #cant_importar = cursor.execute("SELECT COUNT(*) "+consult)
-                #total_importar = int(cant_importar.fetchall()[0][0])
-                #cant = int(total_importar/1000)+1
-                #for n in range(cant):
-                #    cant_importados = cursor.execute("SELECT COUNT(*) FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado = 'T'")
-                #    total_importados = int(cant_importados.fetchall()[0][0])
-                #    inicio = 0
-                #    if ((n+1)*1000 - total_importados) == 0:
-                #        pass
-                #    #(sw = 1  compras) (sw = 2 devoluciones)
-                #    query = cursor.execute("SELECT * "+consult+" ORDER BY sw OFFSET "+str(inicio)+" ROWS FETCH NEXT 1000 ROWS ONLY")
-                #    data = list(query.fetchall())
-                #    cls.add_purchase(data)
-                query = cursor.execute("SELECT TOP(10) * "+consult)
-                data = list(query.fetchall())
-                cls.add_purchase(data)
-                #faltantes = cursor.execute("SELECT * "+consult)
-                #print("FINALIZADO: ", list(faltantes.fetchall()))
-                #raise UserError("Documentos faltantes ", list(faltantes.fetchall()))
-        except Exception as e:
-            print(e)
-            raise UserError('ERROR ', str(e))
-            #print("ERROR QUERY get_data_where_tecno: ", e)
-        #return data
+        Config = Pool().get('conector.configuration')
+        conexion = Config.conexion()
+        with conexion.cursor() as cursor:
+            consult = "FROM dbo.Documentos WHERE (sw = 3 or sw = 4) AND fecha_hora >= '2022-01-01' AND exportado != 'T'"
+            query = cursor.execute("SELECT TOP(10) * "+consult)
+            data = list(query.fetchall())
+        print(len(data))
+        return data
 
     @classmethod
     def importado(cls, id):
