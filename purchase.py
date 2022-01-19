@@ -145,8 +145,7 @@ class Purchase(metaclass=PoolMeta):
                             shipment_in.done([shipment_in])
                         except Exception as e:
                             print(e)
-                            raise UserError("ERROR ENVIO: "+str(shipment_in.number), e)
-                    
+                            raise UserError("ERROR ENVIO: "+str(shipment_in.number), str(e))
                     if purchase.invoices:
                         try:
                             invoice, = purchase.invoices

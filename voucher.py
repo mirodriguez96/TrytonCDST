@@ -33,6 +33,7 @@ class Voucher(ModelSQL, ModelView):
     id_tecno = fields.Char('Id Tabla Sqlserver', required=False)
 
     """
+    #Se importa los comprobantes de las facturas existentes en Tryton
     @classmethod
     def import_voucher(cls):
         logging.warning('RUN VOUCHER !')
@@ -68,15 +69,7 @@ class Voucher(ModelSQL, ModelView):
                     if id_recibo not in to_create.keys():
                         to_create[id_recibo] = []
                     to_create[id_recibo].append([invoice, valor])
-            
-            #numbers = ['101-759084', '101-759085', '101-759086', '101-759087', '101-759088']
-            #to_create = {
-            #    '5-107-19089': []
-            #}
-            #for num in numbers:
-            #    invoice, = Invoice.search([('number', '=', num)])
-            #    to_create['5-107-19089'].append(invoice)
-            
+
             for rec in to_create:
                 print(rec)
                 #Se traen las lineas a pagar
@@ -136,14 +129,11 @@ class Voucher(ModelSQL, ModelView):
             columns_rec = cls.get_columns_db('Documentos_Cruce')
             columns_tip = cls.get_columns_db('Documentos_Che')
             pool = Pool()
-            #Account = pool.get('account.account')
             Invoice = pool.get('account.invoice')
             Voucher = pool.get('account.voucher')
             Line = pool.get('account.voucher.line')
-            #MoveLine = pool.get('account.move.line')
             Party = pool.get('party.party')
             PayMode = pool.get('account.voucher.paymode')
-            #Tax = pool.get('account.tax')
             MultiRevenue = pool.get('account.multirevenue')
             Transaction = pool.get('account.multirevenue.transaction')
             for doc in documentos_db:
@@ -264,6 +254,7 @@ class Voucher(ModelSQL, ModelView):
         else:
             return None
 
+    #Se marca como importado
     @classmethod
     def importado(cls, id):
         lista = id.split('-')
@@ -301,19 +292,6 @@ class Voucher(ModelSQL, ModelView):
             print("ERROR QUERY "+table+": ", e)
         return columns
 
-    @classmethod
-    def get_formapago(cls):
-        data = []
-        try:
-            Config = Pool().get('conector.configuration')
-            conexion = Config.conexion()
-            with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT * FROM dbo.TblFormaPago")
-                data = list(query.fetchall())
-        except Exception as e:
-            print("ERROR QUERY get_formapago: ", e)
-        return data
-
     #Esta función se encarga de traer todos los datos de una tabla dada de acuerdo al rango de fecha dada de la bd TecnoCarnes
     @classmethod
     def get_data(cls, table, date):
@@ -322,7 +300,7 @@ class Voucher(ModelSQL, ModelView):
             Config = Pool().get('conector.configuration')
             conexion = Config.conexion()
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT TOP(10) * FROM dbo."+table+" WHERE (sw = 5 OR sw = 6) AND CAST('"+date+"' AS datetime) AND exportado != 'T' ") #")
+                query = cursor.execute("SELECT TOP(100) * FROM dbo."+table+" WHERE (sw = 5 OR sw = 6) AND CAST('"+date+"' AS datetime) AND exportado != 'T' ")
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY get_data: ", e)
@@ -359,20 +337,20 @@ class Voucher(ModelSQL, ModelView):
     #Función encargada de traer los datos de la bd TecnoCarnes con una fecha dada.
     @classmethod
     def last_update(cls):
-        Actualizacion = Pool().get('conector.actualizacion')
+        #Actualizacion = Pool().get('conector.actualizacion')
         #Se consulta la ultima actualización realizada para los terceros
-        ultima_actualizacion = Actualizacion.search([('name', '=','COMPROBANTES')])
-        if ultima_actualizacion:
-            #Se calcula la fecha restando la diferencia de horas que tiene el servidor con respecto al clienete
-            if ultima_actualizacion[0].write_date:
-                fecha = (ultima_actualizacion[0].write_date - datetime.timedelta(hours=5))
-            else:
-                fecha = (ultima_actualizacion[0].create_date - datetime.timedelta(hours=5))
-        else:
-            Config = Pool().get('conector.configuration')
-            config, = Config.search([], order=[('id', 'DESC')], limit=1)
-            fecha = config.date
-            #fecha = datetime.date(1,1,1)
+        #ultima_actualizacion = Actualizacion.search([('name', '=','COMPROBANTES')])
+        #if ultima_actualizacion:
+        #    #Se calcula la fecha restando la diferencia de horas que tiene el servidor con respecto al clienete
+        #    if ultima_actualizacion[0].write_date:
+        #        fecha = (ultima_actualizacion[0].write_date - datetime.timedelta(hours=5))
+        #    else:
+        #        fecha = (ultima_actualizacion[0].create_date - datetime.timedelta(hours=5))
+        #else:
+        #    fecha = datetime.date(1,1,1)
+        Config = Pool().get('conector.configuration')
+        config, = Config.search([], order=[('id', 'DESC')], limit=1)
+        fecha = config.date
         fecha = fecha.strftime('%Y-%d-%m %H:%M:%S')
         data = cls.get_data('Documentos', fecha)
         return data
