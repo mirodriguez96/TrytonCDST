@@ -33,7 +33,7 @@ class Purchase(metaclass=PoolMeta):
 
     @classmethod
     def import_data_purchase(cls):
-        print("--------------RUN COMPRAS--------------")
+        logging.warning('RUN COMPRAS')
         data = cls.last_update()
         cls.add_purchase(data)
 
@@ -176,6 +176,7 @@ class Purchase(metaclass=PoolMeta):
                     cls.importado(id_compra)
         #Se crea o actualiza la fecha de importación junto a los logs
         cls.create_or_update(logs)
+        logging.warning('FINISH COMPRAS')
 
 
     @classmethod
@@ -296,20 +297,21 @@ class Purchase(metaclass=PoolMeta):
     #Función encargada de traer los datos de la bd con una fecha dada.
     @classmethod
     def last_update(cls):
-        Actualizacion = Pool().get('conector.actualizacion')
+        #Actualizacion = Pool().get('conector.actualizacion')
         #Se consulta la ultima actualización realizada para los terceros
-        ultima_actualizacion = Actualizacion.search([('name', '=','COMPRAS')])
-        if ultima_actualizacion:
-            #Se calcula la fecha restando la diferencia de horas que tiene el servidor con respecto al clienete
-            if ultima_actualizacion[0].write_date:
-                fecha = (ultima_actualizacion[0].write_date - datetime.timedelta(hours=5))
-            else:
-                fecha = (ultima_actualizacion[0].create_date - datetime.timedelta(hours=5))
-        else:
-            Config = Pool().get('conector.configuration')
-            config, = Config.search([], order=[('id', 'DESC')], limit=1)
-            fecha = config.date
-            #fecha = datetime.date(1,1,1)
+        #ultima_actualizacion = Actualizacion.search([('name', '=','COMPRAS')])
+        #if ultima_actualizacion:
+        #    #Se calcula la fecha restando la diferencia de horas que tiene el servidor con respecto al clienete
+        #    if ultima_actualizacion[0].write_date:
+        #        fecha = (ultima_actualizacion[0].write_date - datetime.timedelta(hours=5))
+        #    else:
+        #        fecha = (ultima_actualizacion[0].create_date - datetime.timedelta(hours=5))
+        #else:
+        #    #fecha = datetime.date(1,1,1)
+        #    pass
+        Config = Pool().get('conector.configuration')
+        config, = Config.search([], order=[('id', 'DESC')], limit=1)
+        fecha = config.date
         fecha = fecha.strftime('%Y-%d-%m %H:%M:%S')
         data = cls.get_data_where_tecno(fecha)
         return data
