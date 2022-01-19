@@ -455,6 +455,7 @@ class Sale(metaclass=PoolMeta):
             journal, = StatementJournal.search([('id_tecno', '=', str(idt))])
             payment_amount = abs(sale.total_amount - sale.paid_amount)
             statements = Statement.search([('date', '=', fecha),('journal', '=', journal)])
+            #Se procede a crear el estado de cuenta
             if not statements:
                 statements = {
                     'name': sale.sale_device.name+' - '+journal.name,

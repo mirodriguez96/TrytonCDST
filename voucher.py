@@ -229,11 +229,15 @@ class Voucher(ModelSQL, ModelView):
                                     #Se procede a comparar los totales
                                     voucher.on_change_lines()
                                     invoice, = Invoice.search([('reference', '=', ref)])
-                                    if Decimal(invoice.untaxed_amount) == Decimal(voucher.amount_to_pay):
+                                    diferencia = Decimal(invoice.untaxed_amount) - Decimal(voucher.amount_to_pay)
+                                    if diferencia <= 0.5:
                                         Voucher.process([voucher])
+                                        Voucher.post([voucher])
                                 else:
                                     logging.warning('NO SE ENCONTRO LA LINEA: '+ref)
                             voucher.save()
+                        else:
+                            continue
                 cls.importado(id_tecno)
         logging.warning("FINISH VOUCHER")
 
