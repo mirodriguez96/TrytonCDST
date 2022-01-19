@@ -145,29 +145,31 @@ class Purchase(metaclass=PoolMeta):
                             shipment_in.done([shipment_in])
                         except Exception as e:
                             print(e)
-                            raise UserError("ERROR ENVIO: "+str(shipment_in.number), e)                     
-                    try:
-                        invoice, = purchase.invoices
-                        invoice.number = tipo_doc+'-'+str(numero_doc)
-                        invoice.reference = tipo_doc+'-'+str(numero_doc)
-                        invoice.invoice_date = fecha_date
-                        #Se agrega en la descripcion el nombre del tipo de documento de la tabla en sqlserver
-                        desc = cls.get_tipo_dcto(tipo_doc)
-                        if desc:
-                            invoice.description = desc[0][columns_tipodoc.index('TipoDoctos')].replace('\n', ' ').replace('\r', '')
-                        invoice.validate_invoice([invoice])
-                        #Verificamos que el total de la tabla en sqlserver coincidan o tengan una diferencia menor a 4 decimales, para contabilizar la factura
-                        total_amount = invoice.get_amount([invoice], 'total_amount')
-                        total = abs(total_amount['total_amount'][invoice.id])
-                        total_tecno = Decimal(compra[coluns_doc.index('valor_total')])
-                        diferencia_total = abs(total - total_tecno)
-                        if diferencia_total <= 0.5:
-                            invoice.post_batch([invoice])
-                            invoice.post([invoice])
-                        invoice.save()
-                    except Exception as e:
-                        print(e)
-                        raise UserError("ERROR FACTURA: "+str(invoice.number), e)
+                            raise UserError("ERROR ENVIO: "+str(shipment_in.number), e)
+                    
+                    if purchase.invoices:
+                        try:
+                            invoice, = purchase.invoices
+                            invoice.number = tipo_doc+'-'+str(numero_doc)
+                            invoice.reference = tipo_doc+'-'+str(numero_doc)
+                            invoice.invoice_date = fecha_date
+                            #Se agrega en la descripcion el nombre del tipo de documento de la tabla en sqlserver
+                            desc = cls.get_tipo_dcto(tipo_doc)
+                            if desc:
+                                invoice.description = desc[0][columns_tipodoc.index('TipoDoctos')].replace('\n', ' ').replace('\r', '')
+                            invoice.validate_invoice([invoice])
+                            #Verificamos que el total de la tabla en sqlserver coincidan o tengan una diferencia menor a 4 decimales, para contabilizar la factura
+                            total_amount = invoice.get_amount([invoice], 'total_amount')
+                            total = abs(total_amount['total_amount'][invoice.id])
+                            total_tecno = Decimal(compra[coluns_doc.index('valor_total')])
+                            diferencia_total = abs(total - total_tecno)
+                            if diferencia_total <= 0.5:
+                                invoice.post_batch([invoice])
+                                invoice.post([invoice])
+                            invoice.save()
+                        except Exception as e:
+                            print(e)
+                            raise UserError("ERROR FACTURA: "+str(invoice.number), str(e))
                     finalizado = purchase.save()
                     if finalizado:
                         cls.importado(id_compra)
