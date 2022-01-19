@@ -95,7 +95,7 @@ class Purchase(metaclass=PoolMeta):
                         logging.warning("No se econtro el plazo de pago: "+condicion, id_compra)
                         logs = logs+"\n"+"Error compra: "+id_compra+" - No se econtro el plazo de pago: "+condicion
                         continue
-                    purchase.payment_term = plazo_pago
+                    purchase.payment_term = plazo_pago[0]
                     #Ahora traemos las lineas de producto para la compra a procesar
                     documentos_linea = cls.get_line_where(str(sw), str(numero_doc), str(tipo_doc))
                     col_line = cls.get_columns_db_tecno('Documentos_Lin')
