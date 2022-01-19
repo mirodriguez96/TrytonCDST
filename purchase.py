@@ -167,8 +167,9 @@ class Purchase(metaclass=PoolMeta):
                     except Exception as e:
                         print(e)
                         raise UserError("ERROR FACTURA: "+str(invoice.number), e)
-                    purchase.save()
-                    cls.importado(id_compra)
+                    finalizado = purchase.save()
+                    if finalizado:
+                        cls.importado(id_compra)
                     #Transaction().connection.commit()
                 else:
                     cls.importado(id_compra)
@@ -256,7 +257,7 @@ class Purchase(metaclass=PoolMeta):
             Config = Pool().get('conector.configuration')
             conexion = Config.conexion()
             with conexion.cursor() as cursor:
-                consult = "FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 3 or sw = 4) AND exportado != 'T'"
+                consult = "FROM dbo.Documentos WHERE (sw = 3 or sw = 4) AND fecha_hora >= '2022-01-01' AND exportado != 'T'"
                 #cant_importar = cursor.execute("SELECT COUNT(*) "+consult)
                 #total_importar = int(cant_importar.fetchall()[0][0])
                 #cant = int(total_importar/1000)+1
@@ -270,7 +271,7 @@ class Purchase(metaclass=PoolMeta):
                 #    query = cursor.execute("SELECT * "+consult+" ORDER BY sw OFFSET "+str(inicio)+" ROWS FETCH NEXT 1000 ROWS ONLY")
                 #    data = list(query.fetchall())
                 #    cls.add_purchase(data)
-                query = cursor.execute("SELECT TOP(100) * "+consult)
+                query = cursor.execute("SELECT TOP(10) * "+consult)
                 data = list(query.fetchall())
                 cls.add_purchase(data)
                 #faltantes = cursor.execute("SELECT * "+consult)

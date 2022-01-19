@@ -393,7 +393,7 @@ class Sale(metaclass=PoolMeta):
                         if tipo_numero_tecno == sale.number:
                             total_tecno = Decimal(venta[coluns_doc.index('valor_total')])
                     diferencia_total = abs(total - total_tecno)
-                    if diferencia_total <= 0.5:
+                    if diferencia_total <= 1.0:
                         Invoice.post_batch([invoice])
                         Invoice.post([invoice])
                     cls.set_payment(invoice, sale)
@@ -447,7 +447,7 @@ class Sale(metaclass=PoolMeta):
             Voucher.process([voucher])
             diferencia_total = abs(Decimal(valor_pagado) - Decimal(voucher.amount_to_pay))
             #print(diferencia_total)
-            if diferencia_total <= 0.5:
+            if diferencia_total <= 1.0:
                 Voucher.post([voucher])
 
             """

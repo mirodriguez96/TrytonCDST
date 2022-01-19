@@ -162,6 +162,15 @@ class Voucher(ModelSQL, ModelView):
                     #Se obtiene los recibos y las facturas a las que hace referencia el ingreso o egreso
                     recibos = cls.get_recibos(consult)
                     if recibos:
+                        facturas_a_pagar = False
+                        #Se comprueba si el comprobante tiene facturas en el sistema Tryton
+                        for recibo in recibos:
+                            ref = str(recibo[columns_rec.index('tipo_aplica')])+'-'+str(recibo[columns_rec.index('numero_aplica')])
+                            moveline = cls.get_moveline(ref, tercero)
+                            if moveline:
+                                facturas_a_pagar = True
+                        if not facturas_a_pagar:
+                            continue
                         #Se obtiene la forma de pago, según la tabla Documentos_Che de TecnoCarnes
                         tipo_pago = cls.get_tipo_pago(sw, tipo, nro)
                         if len(tipo_pago) > 1 and sw == '5':
@@ -224,17 +233,21 @@ class Voucher(ModelSQL, ModelView):
                                     line.reference = ref
                                     line.move_line = move_line
                                     line.on_change_move_line()
-                                    line.amount = Decimal(rec[columns_rec.index('valor')])
+                                    valor = Decimal(rec[columns_rec.index('valor')])
+                                    if valor > line.amount_original:
+                                        valor = line.amount_original
+                                    line.amount = valor
                                     line.save()
                                     #Se procede a comparar los totales
                                     voucher.on_change_lines()
                                     invoice, = Invoice.search([('reference', '=', ref)])
                                     diferencia = Decimal(invoice.untaxed_amount) - Decimal(voucher.amount_to_pay)
-                                    if diferencia <= 0.5:
+                                    if diferencia <= 1.0:
                                         Voucher.process([voucher])
                                         Voucher.post([voucher])
                                 else:
                                     logging.warning('NO SE ENCONTRO LA LINEA: '+ref)
+                                    continue
                             voucher.save()
                         else:
                             continue
@@ -245,7 +258,6 @@ class Voucher(ModelSQL, ModelView):
     @classmethod
     def get_moveline(cls, reference, party):
         MoveLine = Pool().get('account.move.line')
-        #ref = str(rec[columns_rec.index('tipo_aplica')])+'-'+str(rec[columns_rec.index('numero_aplica')])
         moveline = MoveLine.search([('reference', '=', reference), ('party', '=', party)])
         if moveline:
             return moveline[0]
@@ -310,7 +322,7 @@ class Voucher(ModelSQL, ModelView):
             Config = Pool().get('conector.configuration')
             conexion = Config.conexion()
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT TOP(10) * FROM dbo."+table+" WHERE (sw = 5 OR sw = 6) AND fecha_hora >= '2022-01-01' AND fecha_hora < '2022-04-01' AND exportado != 'T' ") #CAST('"+date+"' AS datetime)")
+                query = cursor.execute("SELECT TOP(10) * FROM dbo."+table+" WHERE (sw = 5 OR sw = 6) AND CAST('"+date+"' AS datetime) AND exportado != 'T' ") #")
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY get_data: ", e)
