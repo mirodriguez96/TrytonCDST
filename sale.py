@@ -356,7 +356,7 @@ class Sale(metaclass=PoolMeta):
                 Sale.process(to_create)
             #Procesamos la venta para generar la factura y procedemos a rellenar los campos de la factura
             for sale in to_create:
-                print('INICIO VENTA: '+str(sale.id_tecno))
+                #print('INICIO VENTA: '+str(sale.id_tecno))
                 if sale.shipments:
                     try:
                         shipment_out, = sale.shipments
