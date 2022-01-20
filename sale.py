@@ -74,6 +74,7 @@ class Sale(metaclass=PoolMeta):
                 tipo_doc = venta[coluns_doc.index('tipo')].strip()
                 id_venta = str(sw)+'-'+tipo_doc+'-'+str(numero_doc)
                 existe = cls.buscar_venta(id_venta)
+                sale = None
                 if not existe:
                     #Se trae la fecha de la venta y se adapta al formato correcto para Tryton
                     fecha = str(venta[coluns_doc.index('Fecha_Orden_Venta')]).split()[0].split('-')
@@ -343,8 +344,9 @@ class Sale(metaclass=PoolMeta):
                             #line.on_chFormatopend(linea)
                     existe.save()
                     """
-                    cls.importado(id_venta)
-                to_create.append(sale)
+                cls.importado(id_venta)
+                if sale:
+                    to_create.append(sale)
             #print('Ventas a crear: ', len(to_create))
             #Sale.save(to_create)
             #SaleLine.save(create_line)
