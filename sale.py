@@ -357,12 +357,12 @@ class Sale(metaclass=PoolMeta):
             #Procesamos la venta para generar la factura y procedemos a rellenar los campos de la factura
             for sale in to_create:
                 print('INICIO VENTA: '+str(sale.id_tecno))
-                if len(sale.shipments) == 1:
+                if sale.shipments:
                     try:
-                        shipment_out = sale.shipments[0]
+                        shipment_out, = sale.shipments
                         shipment_out.number = sale.number
                         shipment_out.reference = sale.reference
-                        shipment_out.effective_date = fecha_date
+                        shipment_out.effective_date = sale.sale_date
                         shipment_out.wait([shipment_out])
                         shipment_out.pick([shipment_out])#Revvisar
                         shipment_out.pack([shipment_out])#Revvisar
@@ -370,38 +370,49 @@ class Sale(metaclass=PoolMeta):
                     except Exception as e:
                         logging.warning(str(e))
                         logs = logs+"\n"+"Error venta (envio): "+str(sale.id_tecno)+" - "+str(e)
-                        continue
-                try:
-                    invoice = sale.invoice
-                    invoice.accounting_date = sale.invoice_date
-                    invoice.number = sale.number
-                    invoice.reference = sale.reference
-                    invoice.invoice_date = sale.sale_date
-                    tipo_numero = sale.number.split('-')
-                    #Se agrega en la descripcion el nombre del tipo de documento de la tabla en sqlserver
-                    desc = cls.get_tipo_dcto(tipo_numero[0])
-                    if desc:
-                        invoice.description = desc[0][columns_tipodoc.index('TipoDoctos')].replace('\n', ' ').replace('\r', '')
-                    invoice.save()
-                    invoice.validate_invoice([invoice])
-                    #Verificamos que el total de la tabla en sqlserver coincidan o tengan una diferencia menor a 4 decimales, para contabilizar la factura
-                    total_amount = invoice.get_amount([invoice], 'total_amount')
-                    total = abs(total_amount['total_amount'][invoice.id])
-                    total_tecno = 0
-                    for venta in ventas_tecno:
-                        tipo_numero_tecno = venta[coluns_doc.index('tipo')].strip()+'-'+str(venta[coluns_doc.index('Numero_documento')])
-                        if tipo_numero_tecno == sale.number:
-                            total_tecno = Decimal(venta[coluns_doc.index('valor_total')])
-                    diferencia_total = abs(total - total_tecno)
-                    if diferencia_total <= 1.0:
-                        Invoice.post_batch([invoice])
-                        Invoice.post([invoice])
-                    cls.set_payment(invoice, sale)
-                    cls.importado(sale.id_tecno)
-                    #Transaction().connection.commit()
-                except Exception as e:
-                    print('ERROR FACTURA: ', str(e))
-                    logs = logs+"\n"+"Error venta (comprobante o factura): "+str(sale.id_tecno)+" - "+str(e)
+                else:
+                    msg1 = f'No se creo envio en la venta: {sale.id_tecno}'
+                    logs += '\n' + msg1
+                if sale.invoices:
+                    try:
+                        invoice, = sale.invoices
+                        invoice.accounting_date = sale.sale_date
+                        invoice.number = sale.number
+                        invoice.reference = sale.reference
+                        invoice.invoice_date = sale.sale_date
+                        tipo_numero = sale.number.split('-')
+                        #Se agrega en la descripcion el nombre del tipo de documento de la tabla en sqlserver
+                        desc = cls.get_tipo_dcto(tipo_numero[0])
+                        if desc:
+                            invoice.description = desc[0][columns_tipodoc.index('TipoDoctos')].replace('\n', ' ').replace('\r', '')
+                        invoice.save()
+                        invoice.validate_invoice([invoice])
+                        #Verificamos que el total de la tabla en sqlserver coincidan o tengan una diferencia menor a 4 decimales, para contabilizar la factura
+                        total_amount = invoice.get_amount([invoice], 'total_amount')
+                        total = abs(total_amount['total_amount'][invoice.id])
+                        total_tecno = 0
+                        for venta in ventas_tecno:
+                            tipo_numero_tecno = venta[coluns_doc.index('tipo')].strip()+'-'+str(venta[coluns_doc.index('Numero_documento')])
+                            if tipo_numero_tecno == sale.number:
+                                total_tecno = Decimal(venta[coluns_doc.index('valor_total')])
+                        diferencia_total = abs(total - total_tecno)
+                        if diferencia_total <= 1.0:
+                            Invoice.post_batch([invoice])
+                            Invoice.post([invoice])
+                        cls.set_payment(invoice, sale)
+                        cls.importado(sale.id_tecno)
+                        #Transaction().connection.commit()
+                    except Exception as e:
+                        #print('ERROR FACTURA: ', str(e))
+                        msg1 = f'Error venta: {sale.id_tecno}'
+                        msg2 = f'Error: {e}'
+                        full_msg = ' - '.join([msg1, msg2])
+                        logging.warning(msg2)
+                        logs += '\n' + full_msg
+                        #logs = logs+"\n"+"Error venta (comprobante o factura): "+str(sale.id_tecno)+" - "+str(e)
+                else:
+                    msg1 = f'No se creo factura en la venta: {sale.id_tecno}'
+                    logs += '\n' + msg1
         actualizacion.logs = logs
         actualizacion.save()
         logging.warning('FINISH VENTAS')

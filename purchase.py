@@ -68,10 +68,16 @@ class Purchase(metaclass=PoolMeta):
                     fecha = str(compra[coluns_doc.index('fecha_hora')]).split()[0].split('-')
                     fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
                     purchase.purchase_date = fecha_date
-                    party = Party.search([('id_number', '=', compra[coluns_doc.index('nit_Cedula')])])
+                    party_id_number = compra[coluns_doc.index('nit_Cedula')]
+                    party = Party.search([('id_number', '=', party_id_number)])
                     if not party:
-                        logging.warning("No se econtro el tercero con id: "+compra[coluns_doc.index('nit_Cedula')], id_compra)
-                        logs = logs+"\n"+"Error compra: "+id_compra+" - No se econtro el tercero con id: "+compra[coluns_doc.index('nit_Cedula')]
+                        msg1 = f'Error compra: {id_compra}'
+                        msg2 = f'No se encontró el cliente con id: {party_id_number}'
+                        full_msg = ' - '.join([msg1, msg2])
+                        logging.warning(full_msg)
+                        logs += '\n' + full_msg
+                        #logging.warning("No se econtro el tercero con id: "+compra[coluns_doc.index('nit_Cedula')], id_compra)
+                        #logs = logs+"\n"+"Error compra: "+id_compra+" - No se econtro el tercero con id: "+compra[coluns_doc.index('nit_Cedula')]
                         continue
                     party = party[0]                        
                     purchase.party = party
@@ -146,6 +152,9 @@ class Purchase(metaclass=PoolMeta):
                         except Exception as e:
                             print(e)
                             raise UserError("ERROR ENVIO: "+str(shipment_in.number), str(e))
+                    else:
+                        msg1 = f'No se creo envio en la compra: {purchase.id_tecno}'
+                        logs += '\n' + msg1
                     if purchase.invoices:
                         try:
                             invoice, = purchase.invoices
@@ -169,6 +178,9 @@ class Purchase(metaclass=PoolMeta):
                         except Exception as e:
                             print(e)
                             raise UserError("ERROR FACTURA: "+str(invoice.number), str(e))
+                    else:
+                        msg1 = f'No se creo factura en la compra: {purchase.id_tecno}'
+                        logs += '\n' + msg1
                     finalizado = purchase.save()
                     if finalizado:
                         cls.importado(id_compra)
