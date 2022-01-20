@@ -124,7 +124,7 @@ class Voucher(ModelSQL, ModelView):
     def import_voucher(cls):
         logging.warning("RUN VOUCHER")
         documentos_db = cls.last_update()
-        actualizacion = cls.create_or_update()
+        actualizacion = cls.create_or_update() #Se crea o actualiza la fecha de importación
         logs = actualizacion.logs
         if not logs:
             logs = 'logs...'
