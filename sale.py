@@ -43,6 +43,8 @@ class Sale(metaclass=PoolMeta):
     def add_sale(cls, ventas_tecno):
         actualizacion = cls.create_or_update() #Se crea o actualiza la fecha de importación
         logs = actualizacion.logs
+        if not logs:
+            logs = 'logs...'
         if ventas_tecno:
             pool = Pool()
             Sale = pool.get('sale.sale')
