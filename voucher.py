@@ -376,6 +376,7 @@ class Voucher(ModelSQL, ModelView):
             actualizacion.save()
         else:
             #Se crea un registro con la actualización
-            actualizar = Actualizacion()
-            actualizar.name = 'COMPROBANTES'
-            actualizar.save()
+            actualizacion = Actualizacion()
+            actualizacion.name = 'COMPROBANTES'
+            actualizacion.save()
+        return actualizacion
