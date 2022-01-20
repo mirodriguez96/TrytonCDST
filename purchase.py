@@ -342,10 +342,10 @@ class Purchase(metaclass=PoolMeta):
             actualizacion.save()
         else:
             #Se crea un registro con la actualización
-            actualizar = Actualizacion()
-            actualizar.name = 'COMPRAS'
-            actualizar.logs = logs
-            actualizar.save()
+            actualizacion = Actualizacion()
+            actualizacion.name = 'COMPRAS'
+            actualizacion.logs = logs
+            actualizacion.save()
 
     #Metodo encargado de buscar si exste una compra
     @classmethod

@@ -119,11 +119,15 @@ class Voucher(ModelSQL, ModelView):
         logging.warning('FINISH VOUCHER !')
     """
 
+    #Funcion encargada de crear los comprobantes ingresos y egresos
     @classmethod
     def import_voucher(cls):
         logging.warning("RUN VOUCHER")
         documentos_db = cls.last_update()
-        cls.create_or_update()
+        actualizacion = cls.create_or_update()
+        logs = actualizacion.logs
+        if not logs:
+            logs = 'logs...'
         if documentos_db:
             columns_doc = cls.get_columns_db('Documentos')
             columns_rec = cls.get_columns_db('Documentos_Cruce')
@@ -201,7 +205,7 @@ class Voucher(ModelSQL, ModelView):
                             forma_pago = tipo_pago[0][columns_tip.index('forma_pago')]
                             paymode, = PayMode.search([('id_tecno', '=', forma_pago)])
                             voucher = Voucher()
-                            voucher.id_tecno = sw+'-'+tipo+'-'+nro
+                            voucher.id_tecno = id_tecno
                             voucher.party = tercero
                             voucher.payment_mode = paymode
                             voucher.on_change_payment_mode()
@@ -241,8 +245,13 @@ class Voucher(ModelSQL, ModelView):
                             voucher.save()
                         else:
                             continue
+                    else:
+                        pass
                 cls.importado(id_tecno)
+        actualizacion.logs = logs
+        actualizacion.save()
         logging.warning("FINISH VOUCHER")
+
 
     #Se obtiene las lineas de la factura
     @classmethod
@@ -300,7 +309,7 @@ class Voucher(ModelSQL, ModelView):
             Config = Pool().get('conector.configuration')
             conexion = Config.conexion()
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT TOP(100) * FROM dbo."+table+" WHERE (sw = 5 OR sw = 6) AND CAST('"+date+"' AS datetime) AND exportado != 'T' ")
+                query = cursor.execute("SELECT TOP(100) * FROM dbo."+table+" WHERE (sw = 5 OR sw = 6) AND fecha_hora >= CAST('"+date+"' AS datetime) AND exportado != 'T' ")
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY get_data: ", e)
