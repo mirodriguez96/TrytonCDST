@@ -122,9 +122,10 @@ class Voucher(ModelSQL, ModelView):
     #Funcion encargada de crear los comprobantes ingresos y egresos
     @classmethod
     def import_voucher(cls):
-        logging.warning("RUN VOUCHER")
+        logging.warning("RUN COMPROBANTES")
         documentos_db = cls.last_update()
-        actualizacion = cls.create_or_update() #Se crea o actualiza la fecha de importación
+        #Se crea o actualiza la fecha de importación
+        actualizacion = cls.create_or_update()
         logs = actualizacion.logs
         if not logs:
             logs = 'logs...'
@@ -250,7 +251,7 @@ class Voucher(ModelSQL, ModelView):
                 cls.importado(id_tecno)
         actualizacion.logs = logs
         actualizacion.save()
-        logging.warning("FINISH VOUCHER")
+        logging.warning("FINISH COMPROBANTES")
 
 
     #Se obtiene las lineas de la factura
@@ -373,6 +374,7 @@ class Voucher(ModelSQL, ModelView):
             #Se busca un registro con la actualización
             actualizacion, = Actualizacion.search([('name', '=','COMPROBANTES')])
             actualizacion.name = 'COMPROBANTES'
+            actualizacion.logs = 'logs...'
             actualizacion.save()
         else:
             #Se crea un registro con la actualización
