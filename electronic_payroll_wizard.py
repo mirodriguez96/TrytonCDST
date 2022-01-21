@@ -1,6 +1,5 @@
 from trytond.wizard import Wizard, StateTransition
 from trytond.transaction import Transaction
-from trytond.exceptions import UserError
 from trytond.pool import Pool
 from it_supplier_noova import ElectronicPayrollCdst
 

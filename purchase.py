@@ -39,7 +39,10 @@ class Purchase(metaclass=PoolMeta):
 
     @classmethod
     def add_purchase(cls, compras_tecno):
-        logs = 'Logs...'
+        actualizacion = cls.create_or_update()
+        logs = actualizacion.logs
+        if not logs:
+            logs = 'logs...'
         if compras_tecno:
             pool = Pool()
             Purchase = pool.get('purchase.purchase')
@@ -171,7 +174,7 @@ class Purchase(metaclass=PoolMeta):
                             total = abs(total_amount['total_amount'][invoice.id])
                             total_tecno = Decimal(compra[coluns_doc.index('valor_total')])
                             diferencia_total = abs(total - total_tecno)
-                            if diferencia_total <= 0.5:
+                            if diferencia_total <= 1.0:
                                 invoice.post_batch([invoice])
                                 invoice.post([invoice])
                             invoice.save()
@@ -188,7 +191,8 @@ class Purchase(metaclass=PoolMeta):
                 else:
                     cls.importado(id_compra)
         #Se crea o actualiza la fecha de importación junto a los logs
-        cls.create_or_update(logs)
+        actualizacion.logs = logs
+        actualizacion.save()
         logging.warning('FINISH COMPRAS')
 
 
@@ -331,21 +335,21 @@ class Purchase(metaclass=PoolMeta):
 
     #Crea o actualiza un registro de la tabla actualización en caso de ser necesario
     @classmethod
-    def create_or_update(cls, logs):
+    def create_or_update(cls):
         Actualizacion = Pool().get('conector.actualizacion')
         actualizacion = Actualizacion.search([('name', '=','COMPRAS')])
         if actualizacion:
             #Se busca un registro con la actualización
             actualizacion, = Actualizacion.search([('name', '=','COMPRAS')])
             actualizacion.name = 'COMPRAS'
-            actualizacion.logs = logs
+            actualizacion.logs = 'logs...'
             actualizacion.save()
         else:
             #Se crea un registro con la actualización
             actualizacion = Actualizacion()
             actualizacion.name = 'COMPRAS'
-            actualizacion.logs = logs
             actualizacion.save()
+        return actualizacion
 
     #Metodo encargado de buscar si exste una compra
     @classmethod

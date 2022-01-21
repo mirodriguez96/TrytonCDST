@@ -50,5 +50,6 @@ def register():
 
     Pool.register(
         electronic_payroll_wizard.PayrollElectronicCdst,
+        invoice.UpdateInvoiceTecno,
         module='conector', type_='wizard')
 

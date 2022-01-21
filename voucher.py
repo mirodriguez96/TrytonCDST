@@ -134,7 +134,6 @@ class Voucher(ModelSQL, ModelView):
             columns_rec = cls.get_columns_db('Documentos_Cruce')
             columns_tip = cls.get_columns_db('Documentos_Che')
             pool = Pool()
-            Invoice = pool.get('account.invoice')
             Voucher = pool.get('account.voucher')
             Line = pool.get('account.voucher.line')
             Party = pool.get('party.party')
@@ -207,6 +206,7 @@ class Voucher(ModelSQL, ModelView):
                             paymode, = PayMode.search([('id_tecno', '=', forma_pago)])
                             voucher = Voucher()
                             voucher.id_tecno = id_tecno
+                            voucher.number = tipo+'-'+nro
                             voucher.party = tercero
                             voucher.payment_mode = paymode
                             voucher.on_change_payment_mode()
@@ -235,14 +235,14 @@ class Voucher(ModelSQL, ModelView):
                                     line.save()
                                     #Se procede a comparar los totales
                                     voucher.on_change_lines()
-                                    invoice, = Invoice.search([('reference', '=', ref)])
-                                    diferencia = Decimal(invoice.untaxed_amount) - Decimal(voucher.amount_to_pay)
-                                    if diferencia <= 1.0:
-                                        Voucher.process([voucher])
-                                        Voucher.post([voucher])
                                 else:
-                                    logging.warning('NO SE ENCONTRO LA LINEA: '+ref)
-                                    continue
+                                    msg1 = f'No existe la factura: {ref}'
+                                    logging.warning(msg1)
+                                    logs += '\n' + msg1
+                            #Se verifica que el comprobante tenga lineas para ser contabilizado
+                            if voucher.lines:
+                                Voucher.process([voucher])
+                                Voucher.post([voucher])
                             voucher.save()
                         else:
                             continue

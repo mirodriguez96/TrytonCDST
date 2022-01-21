@@ -2,14 +2,26 @@
 <tryton>
     
     <data>
+
+        <record model="ir.action.wizard" id="act_update_invoice_tecno">
+            <field name="name">Update Invoice Tecno</field>
+            <field name="wiz_name">account.invoice.update_invoice_tecno</field>
+        </record>
+        <record model="ir.action.keyword" id="act_update_invoice_tecno_keyword">
+            <field name="keyword">form_action</field>
+            <field name="model">account.invoice,-1</field>
+            <field name="action" ref="act_update_invoice_tecno"/>
+        </record>
         
         <!-- ###################### -->
         <!-- # Create Exemplaries # -->
         <!-- ###################### -->
-        
+        <!--
         <record model="ir.action.wizard" id="act_actualizar_ventas">
             <field name="name">Actualizar Ventas</field>
+            -->
             <!--El __name__ del asistente al que está vinculada esta acción.-->
+            <!--
             <field name="wiz_name">conector.terceros.actualizar_ventas</field>
         </record>
         <record model="ir.action.keyword" id="act_actualizar_ventas_keyword">
@@ -17,7 +29,7 @@
             <field name="model">conector.terceros,-1</field>
             <field name="action" ref="act_actualizar_ventas"/>
         </record>
-        <!---->
+        -->
         <!-- ################################# -->
         <!-- # Create Exemplaries Parameters # -->
         <!-- ################################# -->
@@ -28,6 +40,7 @@
             <field name="name">cargar_ventas_form</field>
         </record>
         -->
+
     </data>
 
 </tryton>
