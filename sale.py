@@ -65,8 +65,10 @@ class Sale(metaclass=PoolMeta):
             col_param = cls.get_columns_db_tecno('TblParametro')
             venta_pos = cls.get_data_parametros('8')
             venta_electronica = cls.get_data_parametros('9')
-            venta_pos = venta_pos[0][col_param.index('Valor')].strip().split(',')
-            venta_electronica = venta_electronica[0][col_param.index('Valor')].strip().split(',')
+            if venta_pos:
+                venta_pos = venta_pos[0][col_param.index('Valor')].strip().split(',')
+            if venta_electronica:
+                venta_electronica = venta_electronica[0][col_param.index('Valor')].strip().split(',')
             to_create = []
             #Procedemos a realizar una venta
             for venta in ventas_tecno:
