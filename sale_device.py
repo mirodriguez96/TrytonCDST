@@ -142,15 +142,18 @@ class SaleDevice(metaclass=PoolMeta):
         Shop = pool.get('sale.shop')
         columns = cls.get_columns_db_tecno('TblEquipo')
         equipos = cls.get_data_table('TblEquipo')
-        #shop, = Shop.search([], order=[('id', 'DESC')], limit=1)
+        
         existe = False
         to_create = []
         for device in equipos:
             id_equipo = device[columns.index('IdEquipo')]
             nombre = device[columns.index('Equipo')]
             ubicacion = device[columns.index('Ubicacion')]
-            location, = Location.search([('id_tecno', '=', ubicacion)])
-            shop, = Shop.search([('warehouse', '=', location)])
+            location = Location.search([('id_tecno', '=', ubicacion)])
+            if location:
+                shop, = Shop.search([('warehouse', '=', location[0])])
+            else:
+                shop, = Shop.search([], order=[('id', 'DESC')], limit=1)
             #En caso de ser un nombre vacio se continua con el siguiente
             if len(nombre) == 0 or nombre == ' ':
                 continue
