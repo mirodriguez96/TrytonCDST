@@ -280,7 +280,9 @@ class Voucher(ModelSQL, ModelView):
     #Metodo encargado de consultar y verificar si existe un voucher con la id de la BD
     @classmethod
     def find_voucher(cls, idt):
-        Voucher = Pool().get('account.voucher')
+        pool = Pool()
+        Voucher = pool.get('account.voucher')
+        MultiRevenue = pool.get('account.multirevenue')
         voucher = Voucher.search([('id_tecno', '=', idt)])
         if voucher:
             return voucher[0]
@@ -382,3 +384,5 @@ class Voucher(ModelSQL, ModelView):
             actualizacion.name = 'COMPROBANTES'
             actualizacion.save()
         return actualizacion
+
+

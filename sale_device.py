@@ -151,7 +151,11 @@ class SaleDevice(metaclass=PoolMeta):
             ubicacion = device[columns.index('Ubicacion')]
             location = Location.search([('id_tecno', '=', ubicacion)])
             if location:
-                shop, = Shop.search([('warehouse', '=', location[0])])
+                shop = Shop.search([('warehouse', '=', location[0])])
+                if shop:
+                    shop = shop[0]
+                else:
+                    shop, = Shop.search([], order=[('id', 'DESC')], limit=1)
             else:
                 shop, = Shop.search([], order=[('id', 'DESC')], limit=1)
             #En caso de ser un nombre vacio se continua con el siguiente
