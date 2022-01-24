@@ -11,6 +11,7 @@ import datetime
 __all__ = [
     'Voucher',
     'Cron',
+    'MultiRevenue',
     ]
 
 
@@ -171,6 +172,7 @@ class Voucher(ModelSQL, ModelView):
                             multingreso = MultiRevenue()
                             multingreso.party = tercero
                             multingreso.date = fecha_date
+                            multingreso.id_tecno = id_tecno
                             multingreso.save()
                             cont = 0
                             for pago in tipo_pago:
@@ -287,7 +289,11 @@ class Voucher(ModelSQL, ModelView):
         if voucher:
             return voucher[0]
         else:
-            return False
+            multirevenue = MultiRevenue.search([('id_tecno', '=', idt)])
+            if multirevenue:
+                return multirevenue[0]
+            else:
+                return False
 
     #Función encargada de consultar las columnas pertenecientes a 'x' tabla de la bd de TecnoCarnes
     @classmethod
@@ -386,3 +392,8 @@ class Voucher(ModelSQL, ModelView):
         return actualizacion
 
 
+
+class MultiRevenue(metaclass=PoolMeta):
+    'MultiRevenue'
+    __name__ = 'account.multirevenue'
+    id_tecno = fields.Char('Id Tabla Sqlserver', required=False)
