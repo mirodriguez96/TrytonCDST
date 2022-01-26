@@ -56,14 +56,14 @@ class UpdateInvoiceTecno(Wizard):
             if invoice.state != 'posted' and invoice.state != 'paid' and invoice.number:
                 if '-' in invoice.number:
                     if invoice.type == 'out':
-                        print('Factura de cliente: ', rec_party)
+                        #print('Factura de cliente: ', rec_party)
                         sale = Sale.search([('number', '=', invoice.number)])
                         if sale:
                             to_delete_sales.append(sale[0])
                         #else:
                         #    raise UserError("No existe la venta para la factura: ", rec_party)
                     elif invoice.type == 'in':
-                        print('Factura de proveedor: ', rec_party)
+                        #print('Factura de proveedor: ', rec_party)
                         purchase = Purchase.search([('number', '=', invoice.number)])
                         if purchase:
                             to_delete_purchases.append(purchase[0])

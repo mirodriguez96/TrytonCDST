@@ -40,4 +40,4 @@ msgstr "Impuesto al consumo"
 
 msgctxt "model:ir.action,name:act_update_invoice_tecno"
 msgid "Update Invoice Tecno"
-msgstr "Eliminar Factura TecnoCarnes"
+msgstr "Marcar Re-importación TecnoCarnes"

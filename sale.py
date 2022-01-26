@@ -239,70 +239,65 @@ class Sale(metaclass=PoolMeta):
             for sale in to_create:
                 #print('INICIO VENTA: '+str(sale.id_tecno))
                 if sale.shipments:
-                    try:
-                        shipment_out, = sale.shipments
-                        shipment_out.number = sale.number
-                        shipment_out.reference = sale.reference
-                        shipment_out.effective_date = sale.sale_date
-                        shipment_out.wait([shipment_out])
-                        shipment_out.pick([shipment_out])#Revvisar
-                        shipment_out.pack([shipment_out])#Revvisar
-                        shipment_out.done([shipment_out])
-                    except Exception as e:
-                        logging.error(str(e))
-                        logs = logs+"\n"+"Error venta (envio): "+str(sale.id_tecno)+" - "+str(e)
+                    shipment_out, = sale.shipments
+                    shipment_out.number = sale.number
+                    shipment_out.reference = sale.reference
+                    shipment_out.effective_date = sale.sale_date
+                    shipment_out.wait([shipment_out])
+                    shipment_out.pick([shipment_out])#Revvisar
+                    shipment_out.pack([shipment_out])#Revvisar
+                    shipment_out.done([shipment_out])
+                    #logging.error(str(e))
+                    #logs = logs+"\n"+"Error venta (envio): "+str(sale.id_tecno)+" - "+str(e)
                 else:
-                    msg1 = f'No se creo envio en la venta: {sale.id_tecno}'
+                    msg1 = f'Venta sin envio: {sale.id_tecno}'
                     logging.warning(msg1)
                     #logs += '\n' + msg1
                 if sale.invoices:
-                    try:
-                        invoice, = sale.invoices
-                        invoice.accounting_date = sale.sale_date
-                        invoice.number = sale.number
-                        invoice.reference = sale.reference
-                        invoice.invoice_date = sale.sale_date
-                        tipo_numero = sale.number.split('-')
-                        #Se agrega en la descripcion el nombre del tipo de documento de la tabla en sqlserver
-                        desc = cls.get_tipo_dcto(tipo_numero[0])
-                        if desc:
-                            invoice.description = desc[0][columns_tipodoc.index('TipoDoctos')].replace('\n', ' ').replace('\r', '')
-                        invoice.save()
-                        invoice.validate_invoice([invoice])
-                        #Verificamos que el total de la tabla en sqlserver coincidan o tengan una diferencia menor a 4 decimales, para contabilizar la factura
-                        untaxed_amount = invoice.get_amount([invoice], 'untaxed_amount')
-                        total_tryton = abs(untaxed_amount['untaxed_amount'][invoice.id])
-                        #Se almacena el total de la venta traida de TecnoCarnes
-                        total_tecno = 0
-                        for venta in ventas_tecno:
-                            tipo_numero_tecno = venta[coluns_doc.index('tipo')].strip()+'-'+str(venta[coluns_doc.index('Numero_documento')])
-                            if tipo_numero_tecno == sale.number:
-                                valor_total = Decimal(venta.valor_total)
-                                valor_impuesto = Decimal(venta.Valor_impuesto)
-                                total_tecno = valor_total - valor_impuesto
-                        diferencia_total = abs(total_tryton - total_tecno)
-                        if diferencia_total <= 1.0:
-                            Invoice.post_batch([invoice])
-                            Invoice.post([invoice])
-                        else:
-                            msg1 = f'Error factura: {sale.id_tecno}'
-                            msg2 = f'No se contabilizo por que la diferencia es mayor al rango permitido'
-                            full_msg = ' - '.join([msg1, msg2])
-                            logging.error(msg2)
-                            logs += '\n' + full_msg
-                        cls.set_payment(invoice, sale)
-                        cls.importado(sale.id_tecno)
-                        #Transaction().connection.commit()
-                    except Exception as e:
-                        #print('ERROR FACTURA: ', str(e))
-                        msg1 = f'Error venta: {sale.id_tecno}'
-                        msg2 = f'Error: {e}'
+                    #try:
+                    invoice, = sale.invoices
+                    invoice.accounting_date = sale.sale_date
+                    invoice.number = sale.number
+                    invoice.reference = sale.reference
+                    invoice.invoice_date = sale.sale_date
+                    tipo_numero = sale.number.split('-')
+                    #Se agrega en la descripcion el nombre del tipo de documento de la tabla en sqlserver
+                    desc = cls.get_tipo_dcto(tipo_numero[0])
+                    if desc:
+                        invoice.description = desc[0][columns_tipodoc.index('TipoDoctos')].replace('\n', ' ').replace('\r', '')
+                    invoice.save()
+                    invoice.validate_invoice([invoice])
+                    total_tryton = invoice.untaxed_amount
+                    #Se almacena el total de la venta traida de TecnoCarnes
+                    total_tecno = 0
+                    for venta in ventas_tecno:
+                        tipo_numero_tecno = venta[coluns_doc.index('tipo')].strip()+'-'+str(venta[coluns_doc.index('Numero_documento')])
+                        if tipo_numero_tecno == sale.number:
+                            valor_total = Decimal(venta.valor_total)
+                            valor_impuesto = Decimal(venta.Valor_impuesto)
+                            total_tecno = valor_total - valor_impuesto
+                    diferencia_total = abs(total_tryton - total_tecno)
+                    if diferencia_total <= 1.0:
+                        Invoice.post_batch([invoice])
+                        Invoice.post([invoice])
+                    else:
+                        msg1 = f'Error factura: {sale.id_tecno}'
+                        msg2 = f'No contabilizada diferencia total mayor al rango permitido'
                         full_msg = ' - '.join([msg1, msg2])
                         logging.error(msg2)
                         logs += '\n' + full_msg
-                        #logs = logs+"\n"+"Error venta (comprobante o factura): "+str(sale.id_tecno)+" - "+str(e)
+                    cls.set_payment(invoice, sale)
+                    cls.importado(sale.id_tecno)
+                        #Transaction().connection.commit()
+                    #except Exception as e:
+                    #    #print('ERROR FACTURA: ', str(e))
+                    #    msg1 = f'Error venta: {sale.id_tecno}'
+                    #    msg2 = f'Error: {e}'
+                    #    full_msg = ' - '.join([msg1, msg2])
+                    #    logging.error(msg2)
+                    #    logs += '\n' + full_msg
                 else:
-                    msg1 = f'No se creo factura en la venta: {sale.id_tecno}'
+                    msg1 = f'Venta sin factura: {sale.id_tecno}'
                     logging.error(msg1)
                     logs += '\n' + msg1
         actualizacion.logs = logs
@@ -324,7 +319,7 @@ class Sale(metaclass=PoolMeta):
         #columns_rec = cls.get_columns_db_tecno('Documentos_Cruce')
         
         tipo_numero = invoice.number.split('-')
-        print('INICIO VOUCHER '+invoice.number)
+        #print('INICIO VOUCHER '+invoice.number)
         tipo = tipo_numero[0]
         nro = tipo_numero[1]
         recibos = cls.get_recibos(tipo, nro)
@@ -393,7 +388,7 @@ class Sale(metaclass=PoolMeta):
                 payment.create_move()
             """
         else:
-            print('NO HAY RECIBO')
+            logging.warning('NO HAY RECIBO POS: '+invoice.number)
         
 
     #Metodo encargado de obtener la forma en que se pago el comprobante (recibos)
