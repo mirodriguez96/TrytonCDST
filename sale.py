@@ -155,7 +155,9 @@ class Sale(metaclass=PoolMeta):
                     retencion_ica = False
                     if venta.retencion_ica and venta.retencion_ica > 0:
                         retencion_ica = True
-
+                    retencion_rete = False
+                    if venta.retencion_causada and venta.retencion_causada > 0:
+                        retencion_rete = True
                     #Ahora traemos las lineas de producto para la venta a procesar
                     documentos_linea = cls.get_line_where(str(sw), str(numero_doc), str(tipo_doc))
                     col_line = cls.get_columns_db_tecno('Documentos_Lin')
@@ -184,9 +186,6 @@ class Sale(metaclass=PoolMeta):
                         #Comprueba los cambios y trae los impuestos del producto
                         linea.on_change_product()
                         #A continuación se verifica las retenciones e impuesto al consumo
-                        retencion_rete = False
-                        if lin[col_line.index('Porcentaje_ReteFuente')] > 0:
-                            retencion_rete = True
                         impuestos_linea = []
                         for impuestol in linea.taxes:
                             clase_impuesto = impuestol.classification_tax
@@ -196,7 +195,7 @@ class Sale(metaclass=PoolMeta):
                                 impuestos_linea.append(impuestol)
                             elif clase_impuesto == '07' and retencion_ica:
                                 impuestos_linea.append(impuestol)
-                            elif clase_impuesto != '05' and clase_impuesto != '06' and clase_impuesto != '07':
+                            elif clase_impuesto != '0impuestos_linea5' and clase_impuesto != '06' and clase_impuesto != '07':
                                 impuestos_linea.append(impuestol)
                         linea.taxes = impuestos_linea
                         #Se verifica si el impuesto al consumo es del mismo valor
