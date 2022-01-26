@@ -3,3 +3,4 @@ trytoncdst_conector.egg-info/
 test.py
 build/
 dist/
+.gitignore
