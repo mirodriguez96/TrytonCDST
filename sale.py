@@ -63,7 +63,7 @@ class Sale(metaclass=PoolMeta):
             Invoice = pool.get('account.invoice')
             Shop = pool.get('sale.shop')
             Tax = pool.get('account.tax')
-            LineTax = pool.get('sale.line-account.tax')
+            #LineTax = pool.get('sale.line-account.tax')
             User = pool.get('res.user')
             
             col_param = cls.get_columns_db_tecno('TblParametro')
@@ -222,7 +222,7 @@ class Sale(metaclass=PoolMeta):
                         linea.save()
                 else:
                     pass
-                cls.importado(id_venta)
+                #cls.importado(id_venta)
                 if sale:
                     to_create.append(sale)
             #Sale.save(to_create)
@@ -287,7 +287,6 @@ class Sale(metaclass=PoolMeta):
                         logging.error(msg2)
                         logs += '\n' + full_msg
                     cls.set_payment(invoice, sale)
-                    cls.importado(sale.id_tecno)
                         #Transaction().connection.commit()
                     #except Exception as e:
                     #    #print('ERROR FACTURA: ', str(e))
@@ -300,6 +299,8 @@ class Sale(metaclass=PoolMeta):
                     msg1 = f'Venta sin factura: {sale.id_tecno}'
                     logging.error(msg1)
                     logs += '\n' + msg1
+                #Marcar como importado
+                cls.importado(sale.id_tecno)
         actualizacion.logs = logs
         actualizacion.save()
         logging.warning('FINISH VENTAS')
