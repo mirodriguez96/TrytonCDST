@@ -52,7 +52,7 @@ class Configuration(ModelSQL, ModelView):
                 conexion = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER='+str(record.server)+';DATABASE='+str(record.db)+';UID='+str(record.user)+';PWD='+str(record.password))
                 return conexion
             except Exception as e:
-                print('Error sql server: ', e)
+                print(('Error sql server: ', e))
                 raise UserError('Error al conectarse a la base de datos (SQL Server): ', str(e))
         else:
             raise UserError('Error: ', 'Ingrese por favor los datos de configuracion de la base de datos')
@@ -77,9 +77,9 @@ class Configuration(ModelSQL, ModelView):
     def get_data(cls, query):
         data = []
         cnxn = cls.conexion2()
-        with cnxn.cursor() as cursor:
-            cursor.execute(query)
-            data = cursor.fetchall()
+        cursor = cnxn.cursor()
+        cursor.execute(query)
+        data = cursor.fetchall()
         cnxn.close()
         return data
 
@@ -88,6 +88,6 @@ class Configuration(ModelSQL, ModelView):
     @classmethod
     def set_data(cls, query):
         cnxn = cls.conexion2()
-        with cnxn.cursor() as cursor:
-            cursor.execute(query)
+        cursor = cnxn.cursor()
+        cursor.execute(query)
         cnxn.close()

@@ -44,36 +44,43 @@ class UpdateInvoiceTecno(Wizard):
         Invoice = pool.get('account.invoice')
         Sale = pool.get('sale.sale')
         Purchase = pool.get('purchase.purchase')
+        Conexion = pool.get('conector.configuration')
+        #SaleForceDraft = pool.get('account_col.force_draft', type='wizard')
+        User = pool.get('res.user')
 
         ids = Transaction().context['active_ids']
 
-        to_delete_sales = []
-        to_delete_purchases = []
+        #sale_to_delete = []
+        #purchase_to_delete = []
         for invoice in Invoice.browse(ids):
             rec_name = invoice.rec_name
             party_name = invoice.party.name
             rec_party = rec_name+' de '+party_name
             if invoice.state != 'posted' and invoice.state != 'paid' and invoice.number:
                 if '-' in invoice.number:
+                    #with Transaction().set_user(1):
+                    #    context = User.get_preferences()
+                    #with Transaction().set_context(context):
+                    #    sdraft = SaleForceDraft(session_id=1)
                     if invoice.type == 'out':
-                        print('Factura de cliente: ', rec_party)
+                        print('Factura de cliente')
                         sale = Sale.search([('number', '=', invoice.number)])
                         if sale:
-                            to_delete_sales.append(sale[0])
-                        #else:
-                        #    raise UserError("No existe la venta para la factura: ", rec_party)
+                            sale, = sale
+                            id_tecno = sale.id_tecno
+                            lista = id_tecno.split('-')
+                            consult = "UPDATE dbo.Documentos SET exportado = 'N' WHERE sw ="+lista[0]+" and tipo = "+lista[1]+" and Numero_documento = "+lista[2]
+                            Conexion.set_data(consult)
+                            #sale.SaleForceDraft()
+                            #Sale.delete([sale])
+                            #print(sale)
+                        else:
+                            raise UserError("No existe la venta para la factura: ", rec_party)
                     elif invoice.type == 'in':
-                        print('Factura de proveedor: ', rec_party)
+                        print('Factura de proveedor')
+                        #id_tecno = '3-'+invoice.number
                         purchase = Purchase.search([('number', '=', invoice.number)])
-                        if purchase:
-                            to_delete_purchases.append(purchase[0])
-                        #else:
-                        #    raise UserError("No existe la compra para la factura: ", rec_party)
+                        print(purchase)
             else:
-                raise UserError("Revisa el estado y número de la factura (tipo-numero): ", rec_party)
-        Sale.delete_imported_sales(to_delete_sales)
-        Purchase.delete_imported_purchases(to_delete_purchases)
+                raise UserError("Revisar el estado y número de la factura: ", rec_party)
         return 'end'
-
-    def end(self):
-        return 'reload'

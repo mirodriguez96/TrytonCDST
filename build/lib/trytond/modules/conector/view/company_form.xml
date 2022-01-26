@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<data>
+    <xpath expr="/form/notebook/page[@id='reports']" position="after">
+        <page string="Supplier it" id="supplier_it">
+            <label name="url_supplier_test"/>
+            <field name="url_supplier_test"/>
+            <label name="url_supplier"/>
+            <field name="url_supplier"/>
+            <label name="auth_supplier"/>
+            <field name="auth_supplier"/>
+            <label name="host_supplier"/>
+            <field name="host_supplier"/>
+            <label name="supplier_code"/>
+            <field name="supplier_code"/>
+        </page>
+    </xpath>
+</data>

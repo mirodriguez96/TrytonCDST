@@ -1,19 +1,21 @@
 from trytond.pool import Pool
-import conector
-import party
-import product
-import sale
-import sale_device
-import configuration
-import voucher
-import pay_mode
+
+#import wiz
+from . import conector
+from . import party
+from . import product
+from . import sale
+from . import sale_device
+from . import configuration
+from . import voucher
+from . import pay_mode
 from . import electronic_payroll_wizard
 from . import company
 from . import payment_term
-import purchase
-import location
-import invoice
-import tax
+from . import purchase
+from . import location
+from . import invoice
+from . import tax
 
 def register():
     Pool.register(

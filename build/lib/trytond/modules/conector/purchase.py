@@ -5,7 +5,6 @@ from trytond.exceptions import UserError
 from trytond.transaction import Transaction
 from decimal import Decimal
 import logging
-from sql import Table
 
 
 __all__ = [
@@ -207,7 +206,7 @@ class Purchase(metaclass=PoolMeta):
                 query = cursor.execute("SELECT * FROM dbo."+table+"")
                 data = list(query.fetchall())
         except Exception as e:
-            print("ERROR QUERY get_data_table: ", e)
+            print(("ERROR QUERY get_data_table: ", e))
             raise UserError('ERROR QUERY get_data_table: ', str(e))
         return data
 
@@ -221,7 +220,7 @@ class Purchase(metaclass=PoolMeta):
                 query = cursor.execute("SELECT * FROM dbo.TblParametro WHERE IdParametro = "+id+"")
                 data = list(query.fetchall())
         except Exception as e:
-            print("ERROR QUERY get_data_parametros: ", e)
+            print(("ERROR QUERY get_data_parametros: ", e))
             raise UserError('ERROR QUERY get_data_parametros: ', str(e))
         return data
 
@@ -236,7 +235,7 @@ class Purchase(metaclass=PoolMeta):
                 query = cursor.execute("SELECT * FROM dbo.TblTipoDoctos WHERE idTipoDoctos = '"+id+"'")
                 data = list(query.fetchall())
         except Exception as e:
-            print("ERROR QUERY TblTipoDoctos: ", e)
+            print(("ERROR QUERY TblTipoDoctos: ", e))
         return data
 
     #Esta función se encarga de traer todos los datos de una tabla dada de la bd
@@ -250,7 +249,7 @@ class Purchase(metaclass=PoolMeta):
                 query = cursor.execute("SELECT * FROM dbo.Documentos_Lin WHERE sw = "+sw+" AND Numero_Documento = "+nro+" AND tipo = "+tipo)
                 data = list(query.fetchall())
         except Exception as e:
-            print("ERROR QUERY Documentos_Lin: ", e)
+            print(("ERROR QUERY Documentos_Lin: ", e))
         return data
 
     #Función encargada de consultar las columnas pertenecientes a 'x' tabla de la bd
@@ -265,24 +264,34 @@ class Purchase(metaclass=PoolMeta):
                 for q in query.fetchall():
                     columns.append(q[0])
         except Exception as e:
-            print("ERROR QUERY "+table+": ", e)
+            print(("ERROR QUERY "+table+": ", e))
         return columns
+
 
     #Esta función se encarga de traer todos los datos de una tabla dada de acuerdo al rango de fecha dada de la bd
     @classmethod
-    def get_data_tecno(cls, date): #REVISAR PARA OPTIMIZAR
+    def get_data_where_tecno(cls, date): #REVISAR PARA OPTIMIZAR
+        data = []
         Config = Pool().get('conector.configuration')
-        consult = "SELECT TOP(10) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 3 OR sw = 4) AND exportado != 'T'"
-        result = Config.get_data(consult)
-        return result
+        conexion = Config.conexion()
+        with conexion.cursor() as cursor:
+            consult = "FROM dbo.Documentos WHERE (sw = 3 or sw = 4) AND fecha_hora >= '2022-01-01' AND exportado != 'T'"
+            query = cursor.execute("SELECT TOP(10) * "+consult)
+            data = list(query.fetchall())
+        print((len(data)))
+        return data
 
-    #Se marca como importado 'T' la compra en la DB de sql server
     @classmethod
     def importado(cls, id):
         lista = id.split('-')
-        Config = Pool().get('conector.configuration')
-        consult = "UPDATE dbo.Documentos SET exportado = 'T' WHERE sw ="+lista[0]+" and tipo = "+lista[1]+" and Numero_documento = "+lista[2]
-        Config.set_data(consult)
+        try:
+            Config = Pool().get('conector.configuration')
+            conexion = Config.conexion()
+            with conexion.cursor() as cursor:
+                cursor.execute("UPDATE dbo.Documentos SET exportado = 'T' WHERE sw ="+lista[0]+" and tipo = "+lista[1]+" and Numero_documento = "+lista[2])
+        except Exception as e:
+            print(e)
+            raise UserError('Error al actualizar como importado: ', e)
 
     #Función encargada de convertir una fecha dada, al formato y orden para consultas sql server
     @classmethod
@@ -297,7 +306,7 @@ class Purchase(metaclass=PoolMeta):
         try:
             producto, = Product.search([('id_tecno', '=', id_producto)])
         except ValueError:
-            print("Error, no existe el producto con la siguiente id: ", id_producto)
+            print(("Error, no existe el producto con la siguiente id: ", id_producto))
             raise UserError("Error, no existe el producto con la siguiente id: ", id_producto)
         else:
             return producto
@@ -321,7 +330,7 @@ class Purchase(metaclass=PoolMeta):
         config, = Config.search([], order=[('id', 'DESC')], limit=1)
         fecha = config.date
         fecha = fecha.strftime('%Y-%d-%m %H:%M:%S')
-        data = cls.get_data_tecno(fecha)
+        data = cls.get_data_where_tecno(fecha)
         return data
 
     #Crea o actualiza un registro de la tabla actualización en caso de ser necesario
@@ -351,71 +360,3 @@ class Purchase(metaclass=PoolMeta):
             return purchase[0]
         else:
             return False
-
-
-    @classmethod
-    def delete_imported_purchases(cls, purchases):
-        pool = Pool()
-        #Purchase = pool.get('purchase.purchase')
-        purchase_table = Table('purchase_purchase')
-        invoice_table = Table('account_invoice')
-        move_table = Table('account_move')
-        stock_move_table = Table('stock_move')
-        cursor = Transaction().connection.cursor()
-        Conexion = pool.get('conector.configuration')
-        for purchase in purchases:
-            for invoice in purchase.invoices:
-                if invoice.state == 'paid':
-                    cls.unreconcile_move(invoice.move)
-                if invoice.move:
-                    cursor.execute(*move_table.update(
-                        columns=[move_table.state],
-                        values=['draft'],
-                        where=move_table.id == invoice.move.id)
-                    )
-                    cursor.execute(*move_table.delete(
-                        where=move_table.id == invoice.move.id)
-                    )
-                cursor.execute(*invoice_table.update(
-                    columns=[invoice_table.state, invoice_table.number],
-                    values=['validate', None],
-                    where=invoice_table.id == invoice.id)
-                )
-                cursor.execute(*invoice_table.delete(
-                    where=invoice_table.id == invoice.id)
-                )
-
-            if purchase.id:
-                cursor.execute(*purchase_table.update(
-                    columns=[purchase_table.state, purchase_table.shipment_state, purchase_table.invoice_state],
-                    values=['draft', 'none', 'none'],
-                    where=purchase_table.id == purchase.id)
-                )
-            # The stock moves must be delete
-            stock_moves = [m.id for line in purchase.lines for m in line.moves]
-            if stock_moves:
-                cursor.execute(*stock_move_table.update(
-                    columns=[stock_move_table.state],
-                    values=['draft'],
-                    where=stock_move_table.id.in_(stock_moves)
-                ))
-
-                cursor.execute(*stock_move_table.delete(
-                    where=stock_move_table.id.in_(stock_moves))
-                )
-
-            if purchase.id and purchase.id_tecno:
-                lista = purchase.id_tecno.split('-')
-                consult = "UPDATE dbo.Documentos SET exportado = 'N' WHERE sw ="+lista[0]+" and tipo = "+lista[1]+" and Numero_documento = "+lista[2]
-                Conexion.set_data(consult)
-                cursor.execute(*purchase_table.delete(
-                    where=purchase_table.id == purchase.id)
-                )
-
-
-    @classmethod
-    def unreconcile_move(self, move):
-        Reconciliation = Pool().get('account.move.reconciliation')
-        reconciliations = [l.reconciliation for l in move.lines if l.reconciliation]
-        if reconciliations:
-            Reconciliation.delete(reconciliations)

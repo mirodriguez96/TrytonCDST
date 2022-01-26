@@ -3,10 +3,10 @@ from trytond.model import fields
 from trytond.pool import Pool, PoolMeta
 from trytond.exceptions import UserError
 from trytond.transaction import Transaction
+#from trytond.tools import grouped_slice
 from decimal import Decimal
 import logging
-from sql import Table
-from trytond.i18n import gettext
+from . import configuration
 
 
 __all__ = [
@@ -148,14 +148,7 @@ class Sale(metaclass=PoolMeta):
                     
                     #SE CREA LA VENTA
                     sale.save()
-
-                    retencion_iva = False
-                    if venta.retencion_iva and venta.retencion_iva > 0:
-                        retencion_iva = True
-                    retencion_ica = False
-                    if venta.retencion_ica and venta.retencion_ica > 0:
-                        retencion_ica = True
-
+                    
                     #Ahora traemos las lineas de producto para la venta a procesar
                     documentos_linea = cls.get_line_where(str(sw), str(numero_doc), str(tipo_doc))
                     col_line = cls.get_columns_db_tecno('Documentos_Lin')
@@ -183,33 +176,16 @@ class Sale(metaclass=PoolMeta):
                             sale.reference = tipo_doc+'-'+str(numero_doc)
                         #Comprueba los cambios y trae los impuestos del producto
                         linea.on_change_product()
-                        #A continuación se verifica las retenciones e impuesto al consumo
-                        retencion_rete = False
-                        if lin[col_line.index('Porcentaje_ReteFuente')] > 0:
-                            retencion_rete = True
-                        impuestos_linea = []
-                        for impuestol in linea.taxes:
-                            clase_impuesto = impuestol.classification_tax
-                            if clase_impuesto == '05' and retencion_iva:
-                                impuestos_linea.append(impuestol)
-                            elif clase_impuesto == '06' and retencion_rete:
-                                impuestos_linea.append(impuestol)
-                            elif clase_impuesto == '07' and retencion_ica:
-                                impuestos_linea.append(impuestol)
-                            elif clase_impuesto != '05' and clase_impuesto != '06' and clase_impuesto != '07':
-                                impuestos_linea.append(impuestol)
-                        linea.taxes = impuestos_linea
                         #Se verifica si el impuesto al consumo es del mismo valor
-                        impuesto_consumo = lin[col_line.index('Impuesto_Consumo')]
+                        impuesto_consumo = float(lin[col_line.index('Impuesto_Consumo')])
                         if impuesto_consumo > 0:
-                            #linea.taxes = []
+                            linea.taxes = []
                             tax = Tax.search([('consumo', '=', True), ('type', '=', 'fixed'), ('amount', '=', impuesto_consumo)])
                             if tax:
-                                linea.taxes.append(tax)
-                                #linetax = LineTax()
-                                #linetax.line = linea
-                                #linetax.tax = tax[0]
-                                #linetax.save()
+                                linetax = LineTax()
+                                linetax.line = linea
+                                linetax.tax = tax[0]
+                                linetax.save()
                             else:
                                 raise UserError('ERROR IMPUESTO', 'No se encontró el impuesto al consumo: '+id_venta)
                         linea.unit_price = lin[col_line.index('Valor_Unitario')]
@@ -273,14 +249,13 @@ class Sale(metaclass=PoolMeta):
                         #Verificamos que el total de la tabla en sqlserver coincidan o tengan una diferencia menor a 4 decimales, para contabilizar la factura
                         untaxed_amount = invoice.get_amount([invoice], 'untaxed_amount')
                         total_tryton = abs(untaxed_amount['untaxed_amount'][invoice.id])
-                        #Se almacena el total de la venta traida de TecnoCarnes
+                        #Se almacena el total de la venta traido de TecnoCarnes
                         total_tecno = 0
                         for venta in ventas_tecno:
                             tipo_numero_tecno = venta[coluns_doc.index('tipo')].strip()+'-'+str(venta[coluns_doc.index('Numero_documento')])
                             if tipo_numero_tecno == sale.number:
                                 valor_total = Decimal(venta.valor_total)
                                 valor_impuesto = Decimal(venta.Valor_impuesto)
-                                total_tecno = valor_total - valor_impuesto
                         diferencia_total = abs(total_tryton - total_tecno)
                         if diferencia_total <= 1.0:
                             Invoice.post_batch([invoice])
@@ -325,7 +300,7 @@ class Sale(metaclass=PoolMeta):
         #columns_rec = cls.get_columns_db_tecno('Documentos_Cruce')
         
         tipo_numero = invoice.number.split('-')
-        print('INICIO VOUCHER '+invoice.number)
+        print(('INICIO VOUCHER '+invoice.number))
         tipo = tipo_numero[0]
         nro = tipo_numero[1]
         recibos = cls.get_recibos(tipo, nro)
@@ -417,7 +392,7 @@ class Sale(metaclass=PoolMeta):
                 query = cursor.execute("SELECT * FROM dbo.Documentos_Che WHERE sw = 1 AND tipo = "+tipo+" AND numero ="+nro)
                 data = list(query.fetchall())
         except Exception as e:
-            print("ERROR QUERY get_recibos: ", e)
+            print(("ERROR QUERY get_recibos: ", e))
         return data
 
     @classmethod
@@ -430,7 +405,7 @@ class Sale(metaclass=PoolMeta):
                 query = cursor.execute("SELECT * FROM dbo."+table+"")
                 data = list(query.fetchall())
         except Exception as e:
-            print("ERROR QUERY get_data_table: ", e)
+            print(("ERROR QUERY get_data_table: ", e))
             raise UserError('ERROR QUERY get_data_table: ', str(e))
         return data
 
@@ -444,7 +419,7 @@ class Sale(metaclass=PoolMeta):
                 query = cursor.execute("SELECT * FROM dbo.TblParametro WHERE IdParametro = "+id+"")
                 data = list(query.fetchall())
         except Exception as e:
-            print("ERROR QUERY get_data_parametros: ", e)
+            print(("ERROR QUERY get_data_parametros: ", e))
             raise UserError('ERROR QUERY get_data_parametros: ', str(e))
         return data
 
@@ -459,7 +434,7 @@ class Sale(metaclass=PoolMeta):
                 query = cursor.execute("SELECT * FROM dbo.TblTipoDoctos WHERE idTipoDoctos = '"+id+"'")
                 data = list(query.fetchall())
         except Exception as e:
-            print("ERROR QUERY TblTipoDoctos: ", e)
+            print(("ERROR QUERY TblTipoDoctos: ", e))
         return data
 
     #Esta función se encarga de traer todos los datos de una tabla dada de la bd
@@ -473,7 +448,7 @@ class Sale(metaclass=PoolMeta):
                 query = cursor.execute("SELECT * FROM dbo.Documentos_Lin WHERE sw = "+sw+" AND Numero_Documento = "+nro+" AND tipo = "+tipo+" order by seq")
                 data = list(query.fetchall())
         except Exception as e:
-            print("ERROR QUERY Documentos_Lin: ", e)
+            print(("ERROR QUERY Documentos_Lin: ", e))
         return data
 
     #Función encargada de consultar las columnas pertenecientes a 'x' tabla de la bd
@@ -488,17 +463,22 @@ class Sale(metaclass=PoolMeta):
                 for q in query.fetchall():
                     columns.append(q[0])
         except Exception as e:
-            print("ERROR QUERY "+table+": ", e)
+            print(("ERROR QUERY "+table+": ", e))
         return columns
 
 
     #Esta función se encarga de traer todos los datos de una tabla dada de acuerdo al rango de fecha dada de la bd
     @classmethod
-    def get_data_where_tecno(cls, date):
+    def get_data_where_tecno(cls, date): #REVISAR PARA OPTIMIZAR
+        #data = []
+        #Config = Pool().get('conector.configuration')
+        #conexion = Config.conexion()
+        #with conexion.cursor() as cursor:
+        #    query = cursor.execute("SELECT TOP(10) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado != 'T'")
+        #    data = list(query.fetchall())
+        #    print(len(data))
+        #    return data
         Config = Pool().get('conector.configuration')
-        #tests
-        #test = "SELECT * FROM dbo.Documentos WHERE tipo = 201 and Numero_Documento = 15777" #Marcar 'S' al finalizar pruebas
-        #result = Config.get_data(test)
         consult = "SELECT TOP(10) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado != 'T'"
         result = Config.get_data(consult)
         return result
@@ -584,75 +564,3 @@ class Sale(metaclass=PoolMeta):
         if not sale:
             return False
         return sale[0]
-
-
-    @classmethod
-    def delete_imported_sales(cls, sales):
-        sale_table = Table('sale_sale')
-        invoice_table = Table('account_invoice')
-        move_table = Table('account_move')
-        stock_move_table = Table('stock_move')
-        cursor = Transaction().connection.cursor()
-        #Sale = Pool().get('sale.sale')
-        Conexion = Pool().get('conector.configuration')
-        for sale in sales:            
-            for invoice in sale.invoices:
-                if (hasattr(invoice, 'cufe') and invoice.cufe) or \
-                    hasattr(invoice, 'electronic_state') and \
-                    invoice.electronic_state == 'submitted':
-                        raise UserError(
-                            gettext('account_col.msg_with_electronic_invoice'))
-                if invoice.state == 'paid':
-                    cls.unreconcile_move(invoice.move)
-                if invoice.move:
-                    cursor.execute(*move_table.update(
-                        columns=[move_table.state],
-                        values=['draft'],
-                        where=move_table.id == invoice.move.id)
-                    )
-                    cursor.execute(*move_table.delete(
-                        where=move_table.id == invoice.move.id)
-                    )
-                cursor.execute(*invoice_table.update(
-                    columns=[invoice_table.state, invoice_table.number],
-                    values=['validate', None],
-                    where=invoice_table.id == invoice.id)
-                )
-                cursor.execute(*invoice_table.delete(
-                    where=invoice_table.id == invoice.id)
-                )
-
-            if sale.id:
-                cursor.execute(*sale_table.update(
-                    columns=[sale_table.state, sale_table.shipment_state, sale_table.invoice_state],
-                    values=['draft', 'none', 'none'],
-                    where=sale_table.id == sale.id)
-                )
-            # The stock moves must be delete
-            stock_moves = [m.id for line in sale.lines for m in line.moves]
-            if stock_moves:
-                cursor.execute(*stock_move_table.update(
-                    columns=[stock_move_table.state],
-                    values=['draft'],
-                    where=stock_move_table.id.in_(stock_moves)
-                ))
-
-                cursor.execute(*stock_move_table.delete(
-                    where=stock_move_table.id.in_(stock_moves))
-                )
-            
-            if sale.id and sale.id_tecno:
-                lista = sale.id_tecno.split('-')
-                consult = "UPDATE dbo.Documentos SET exportado = 'N' WHERE sw ="+lista[0]+" and tipo = "+lista[1]+" and Numero_documento = "+lista[2]
-                Conexion.set_data(consult)
-                cursor.execute(*sale_table.delete(
-                    where=sale_table.id == sale.id)
-                )
-
-
-    @classmethod
-    def unreconcile_move(self, move):
-        Reconciliation = Pool().get('account.move.reconciliation')
-        reconciliations = [l.reconciliation for l in move.lines if l.reconciliation]
-        if reconciliations:
-            Reconciliation.delete(reconciliations)
