@@ -272,7 +272,7 @@ class Purchase(metaclass=PoolMeta):
     @classmethod
     def get_data_tecno(cls, date):
         Config = Pool().get('conector.configuration')
-        consult = "SELECT TOP(10) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 3 OR sw = 4) AND exportado != 'T'"
+        consult = "SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 3 OR sw = 4) AND exportado != 'T'"
         result = Config.get_data(consult)
         return result
 
