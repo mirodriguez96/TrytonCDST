@@ -594,11 +594,6 @@ class Sale(metaclass=PoolMeta):
         Conexion = Pool().get('conector.configuration')
         for sale in sales:            
             for invoice in sale.invoices:
-                if (hasattr(invoice, 'cufe') and invoice.cufe) or \
-                    hasattr(invoice, 'electronic_state') and \
-                    invoice.electronic_state == 'submitted':
-                        raise UserError(
-                            gettext('account_col.msg_with_electronic_invoice'))
                 if invoice.state == 'paid':
                     cls.unreconcile_move(invoice.move)
                 if invoice.move:
