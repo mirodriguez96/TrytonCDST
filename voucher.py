@@ -125,15 +125,18 @@ class Voucher(ModelSQL, ModelView):
     def import_voucher(cls):
         logging.warning("RUN COMPROBANTES")
         documentos_db = cls.last_update()
+
         #Se crea o actualiza la fecha de importación
         actualizacion = cls.create_or_update()
         logs = actualizacion.logs
         if not logs:
             logs = 'logs...'
+        
         if documentos_db:
             columns_doc = cls.get_columns_db('Documentos')
             columns_rec = cls.get_columns_db('Documentos_Cruce')
             columns_tip = cls.get_columns_db('Documentos_Che')
+
             pool = Pool()
             Voucher = pool.get('account.voucher')
             Line = pool.get('account.voucher.line')
@@ -141,16 +144,18 @@ class Voucher(ModelSQL, ModelView):
             PayMode = pool.get('account.voucher.paymode')
             MultiRevenue = pool.get('account.multirevenue')
             Transaction = pool.get('account.multirevenue.transaction')
+
             for doc in documentos_db:
-                fecha = str(doc[columns_doc.index('fecha_hora')]).split()[0].split('-')
+                fecha = str(doc.fecha_hora).split()[0].split('-')
                 fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
-                sw = str(doc[columns_doc.index('sw')])
-                tipo = doc[columns_doc.index('tipo')].strip()
-                nro = str(doc[columns_doc.index('Numero_documento')])
+                sw = str(doc.sw)
+                tipo = doc.tipo.strip()
+                nro = str(doc.Numero_documento)
                 id_tecno = sw+'-'+tipo+'-'+nro
-                print(id_tecno)
+                #print(id_tecno)
                 existe = cls.find_voucher(sw+'-'+tipo+'-'+nro)
                 if not existe:
+                    print(id_tecno)
                     nit_cedula = doc[columns_doc.index('nit_Cedula')].strip()
                     tercero, = Party.search([('id_number', '=', nit_cedula)])
                     consult = "sw="+sw+" and tipo="+tipo+" and numero="+nro
@@ -169,6 +174,7 @@ class Voucher(ModelSQL, ModelView):
                         #Se obtiene la forma de pago, según la tabla Documentos_Che de TecnoCarnes
                         tipo_pago = cls.get_tipo_pago(sw, tipo, nro)
                         if len(tipo_pago) > 1 and sw == '5':
+                            print('MULTI INGRESO')
                             multingreso = MultiRevenue()
                             multingreso.party = tercero
                             multingreso.date = fecha_date
@@ -312,16 +318,18 @@ class Voucher(ModelSQL, ModelView):
 
     #Esta función se encarga de traer todos los datos de una tabla dada de acuerdo al rango de fecha dada de la bd TecnoCarnes
     @classmethod
-    def get_data(cls, table, date):
-        data = []
-        try:
-            Config = Pool().get('conector.configuration')
-            conexion = Config.conexion()
-            with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT TOP(100) * FROM dbo."+table+" WHERE (sw = 5 OR sw = 6) AND fecha_hora >= CAST('"+date+"' AS datetime) AND exportado != 'T' ")
-                data = list(query.fetchall())
-        except Exception as e:
-            print("ERROR QUERY get_data: ", e)
+    def get_data_tecno(cls, table, date):
+        Config = Pool().get('conector.configuration')
+        consult = "SELECT TOP(100) * FROM dbo."+table+" WHERE (sw = 5 OR sw = 6) AND fecha_hora >= CAST('"+date+"' AS datetime) AND exportado != 'T' "
+        data = Config.get_data(consult)
+        #data = []
+        #try:
+        #    conexion = Config.conexion()
+        #    with conexion.cursor() as cursor:
+        #        query = cursor.execute("SELECT TOP(100) * FROM dbo."+table+" WHERE (sw = 5 OR sw = 6) AND fecha_hora >= CAST('"+date+"' AS datetime) AND exportado != 'T' ")
+        #        data = list(query.fetchall())
+        #except Exception as e:
+        #    print("ERROR QUERY get_data: ", e)
         return data
 
     #Metodo encargado de obtener los recibos pagados de un documento dado
@@ -370,7 +378,7 @@ class Voucher(ModelSQL, ModelView):
         config, = Config.search([], order=[('id', 'DESC')], limit=1)
         fecha = config.date
         fecha = fecha.strftime('%Y-%d-%m %H:%M:%S')
-        data = cls.get_data('Documentos', fecha)
+        data = cls.get_data_tecno('Documentos', fecha)
         return data
 
     #Crea o actualiza un registro de la tabla actualización en caso de ser necesario

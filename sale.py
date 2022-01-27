@@ -40,6 +40,7 @@ class Sale(metaclass=PoolMeta):
     def import_data_sale(cls):
         logging.warning('RUN VENTAS')
         data = cls.last_update()
+        print('Cantidad de ventas: ', len(data))
         cls.add_sale(data)
 
     @classmethod
@@ -83,6 +84,7 @@ class Sale(metaclass=PoolMeta):
                 existe = cls.buscar_venta(id_venta)
                 sale = None
                 if not existe:
+                    print(id_venta)
                     #Se trae la fecha de la venta y se adapta al formato correcto para Tryton
                     fecha = str(venta[coluns_doc.index('Fecha_Orden_Venta')]).split()[0].split('-')
                     fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
@@ -486,10 +488,9 @@ class Sale(metaclass=PoolMeta):
             print("ERROR QUERY "+table+": ", e)
         return columns
 
-
     #Esta función se encarga de traer todos los datos de una tabla dada de acuerdo al rango de fecha dada de la bd
     @classmethod
-    def get_data_where_tecno(cls, date):
+    def get_data_tecno(cls, date):
         Config = Pool().get('conector.configuration')
         #tests
         #test = "SELECT * FROM dbo.Documentos WHERE tipo = 201 and Numero_Documento = 15777" #Marcar 'S' al finalizar pruebas
@@ -549,7 +550,7 @@ class Sale(metaclass=PoolMeta):
         config, = Config.search([], order=[('id', 'DESC')], limit=1)
         fecha = config.date
         fecha = fecha.strftime('%Y-%d-%m %H:%M:%S')
-        data = cls.get_data_where_tecno(fecha)
+        data = cls.get_data_tecno(fecha)
         return data
 
     #Crea o actualiza un registro de la tabla actualización en caso de ser necesario
@@ -576,9 +577,10 @@ class Sale(metaclass=PoolMeta):
     def buscar_venta(cls, id):
         Sale = Pool().get('sale.sale')
         sale = Sale.search([('id_tecno', '=', id)])
-        if not sale:
+        if sale:
+            return sale[0]
+        else:
             return False
-        return sale[0]
 
 
     @classmethod

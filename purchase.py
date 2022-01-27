@@ -270,7 +270,7 @@ class Purchase(metaclass=PoolMeta):
 
     #Esta función se encarga de traer todos los datos de una tabla dada de acuerdo al rango de fecha dada de la bd
     @classmethod
-    def get_data_tecno(cls, date): #REVISAR PARA OPTIMIZAR
+    def get_data_tecno(cls, date):
         Config = Pool().get('conector.configuration')
         consult = "SELECT TOP(10) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 3 OR sw = 4) AND exportado != 'T'"
         result = Config.get_data(consult)
