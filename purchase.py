@@ -183,12 +183,8 @@ class Purchase(metaclass=PoolMeta):
                     else:
                         msg1 = f'No se creo factura en la compra: {purchase.id_tecno}'
                         logs += '\n' + msg1
-                    finalizado = purchase.save()
-                    if finalizado:
-                        cls.importado(id_compra)
-                    #Transaction().connection.commit()
-                else:
-                    cls.importado(id_compra)
+                    purchase.save()
+                cls.importado(id_compra)
         #Se crea o actualiza la fecha de importación junto a los logs
         actualizacion.logs = logs
         actualizacion.save()
@@ -269,7 +265,7 @@ class Purchase(metaclass=PoolMeta):
     @classmethod
     def get_data_tecno(cls, date):
         Config = Pool().get('conector.configuration')
-        consult = "SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 3 OR sw = 4) AND exportado != 'T'"
+        consult = "SELECT TOP(100) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 3 OR sw = 4) AND exportado != 'T'"
         result = Config.get_data(consult)
         return result
 

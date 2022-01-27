@@ -314,7 +314,7 @@ class Sale(metaclass=PoolMeta):
                     logging.error(msg1)
                     logs += '\n' + msg1
                 # Marcar como importado
-                #cls.importado(sale.id_tecno)
+                cls.importado(sale.id_tecno)
         actualizacion.logs = logs
         actualizacion.save()
         logging.warning('FINISH VENTAS')
@@ -504,8 +504,8 @@ class Sale(metaclass=PoolMeta):
     @classmethod
     def get_data_tecno(cls, date):
         Config = Pool().get('conector.configuration')
-        consult = "SELECT * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2)" #TEST
-        #consult = "SELECT TOP(30) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado != 'T'"
+        #consult = "SELECT * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2)" #TEST
+        consult = "SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado != 'T'"
         result = Config.get_data(consult)
         return result
 
