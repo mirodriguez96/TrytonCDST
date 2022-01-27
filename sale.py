@@ -281,7 +281,7 @@ class Sale(metaclass=PoolMeta):
                         invoice.description = desc[0][columns_tipodoc.index('TipoDoctos')].replace('\n', ' ').replace('\r', '')
                     invoice.save()
                     invoice.validate_invoice([invoice])
-                    total_tryton = invoice.untaxed_amount
+                    total_tryton = abs(invoice.untaxed_amount)
                     #Se almacena el total de la venta traida de TecnoCarnes
                     total_tecno = 0
                     for venta in ventas_tecno:
