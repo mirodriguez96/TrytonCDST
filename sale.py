@@ -40,7 +40,6 @@ class Sale(metaclass=PoolMeta):
     def import_data_sale(cls):
         logging.warning('RUN VENTAS')
         data = cls.last_update()
-        print('Cantidad de ventas: ', len(data))
         cls.add_sale(data)
 
     @classmethod
@@ -50,6 +49,7 @@ class Sale(metaclass=PoolMeta):
         logs = actualizacion.logs
         if not logs:
             logs = 'logs...'
+        now = datetime.datetime.now()
         if ventas_tecno:
             pool = Pool()
             Sale = pool.get('sale.sale')
@@ -84,41 +84,54 @@ class Sale(metaclass=PoolMeta):
                 existe = cls.buscar_venta(id_venta)
                 sale = None
                 if not existe:
+                    #print(id_venta)
                     #Se trae la fecha de la venta y se adapta al formato correcto para Tryton
                     fecha = str(venta[coluns_doc.index('Fecha_Orden_Venta')]).split()[0].split('-')
                     fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
                     nit_cedula = venta[coluns_doc.index('nit_Cedula')]
                     party = Party.search([('id_number', '=', nit_cedula)])
                     if not party:
-                        logging.error("Error venta: "+id_venta+" - No se econtro el tercero con id: "+str(nit_cedula))
-                        logs = logs+"\n"+"Error venta: "+id_venta+" - No se econtro el tercero con id: "+str(nit_cedula)
+                        msg1 = f'{now}'
+                        msg2 = f' No se encontro el tercero {nit_cedula} de la venta {id_venta}'
+                        full_msg = ' - '.join([msg1, msg2])
+                        logging.error(msg2)
+                        logs += "\n"+full_msg
                         continue
                     party = party[0]
                     #Se indica a que bodega pertenece
                     id_tecno_bodega = venta[coluns_doc.index('bodega')]
                     bodega = location.search([('id_tecno', '=', id_tecno_bodega)])
                     if not bodega:
-                        logging.error('LA BODEGA: '+str(id_tecno_bodega)+' NO EXISTE')
-                        logs = logs+"\n"+"Error venta: "+id_venta+" - NO EXISTE LA BODEGA: "+str(id_tecno_bodega)
+                        msg1 = f'{now}'
+                        msg2 = f' Bodega {id_tecno_bodega} no existe de la venta {id_venta}'
+                        full_msg = ' - '.join([msg1, msg2])
+                        logging.error(msg2)
+                        logs += "\n"+full_msg
                         continue
                     bodega = bodega[0]
                     shop = Shop.search([('warehouse', '=', bodega)])
                     if not shop:
-                        logging.error("No se econtro la bodega: ", venta[coluns_doc.index('bodega')])
-                        logs = logs+"\n"+"Error venta: "+id_venta+" - No se econtro la bodega: "+venta[coluns_doc.index('bodega')]
+                        msg1 = f'{now}'
+                        msg2 = f' Bodega (shop) {id_tecno_bodega} no existe de la venta {id_venta}'
+                        full_msg = ' - '.join([msg1, msg2])
+                        logging.error(msg2)
+                        logs += "\n"+full_msg
                         continue
                     shop = shop[0]
                     #Se le asigna el plazo de pago correspondiente
                     condicion = venta[coluns_doc.index('condicion')]
                     plazo_pago = payment_term.search([('id_tecno', '=', condicion)])
                     if not plazo_pago:
-                        logging.error("No se econtro el plazo de pago: ", condicion)
-                        logs = logs+"\n"+"Error venta: "+id_venta+" - No se econtro el plazo de pago: "+condicion
+                        msg1 = f'{now}'
+                        msg2 = f'Plazo de pago {condicion} no existe de la venta {id_venta}'
+                        full_msg = ' - '.join([msg1, msg2])
+                        logging.error(msg2)
+                        logs += "\n"+full_msg
                         continue
                     plazo_pago = plazo_pago[0]
                     with Transaction().set_user(1):
                         context = User.get_preferences()
-                    with Transaction().set_context(context, shop=shop.id):
+                    with Transaction().set_context(context, shop=shop.id, _skip_warnings=True):
                         sale = Sale()
                     sale.number = tipo_doc+'-'+str(numero_doc)
                     sale.id_tecno = id_venta
@@ -148,8 +161,8 @@ class Sale(metaclass=PoolMeta):
                         sale.shipment_address = address[0].id
                     
                     #SE CREA LA VENTA
+                    #with Transaction().set_context(_skip_warnings=True):
                     sale.save()
-
                     retencion_iva = False
                     if venta.retencion_iva and venta.retencion_iva > 0:
                         retencion_iva = True
@@ -232,7 +245,7 @@ class Sale(metaclass=PoolMeta):
             #_sale = Sale.create(to_create)
             with Transaction().set_user(1):
                 context = User.get_preferences()
-            with Transaction().set_context(context):
+            with Transaction().set_context(context, _skip_warnings=True):
                 Sale.quote(to_create)
                 Sale.confirm(to_create)#Revisar
                 Sale.process(to_create)
@@ -274,15 +287,15 @@ class Sale(metaclass=PoolMeta):
                     for venta in ventas_tecno:
                         tipo_numero_tecno = venta[coluns_doc.index('tipo')].strip()+'-'+str(venta[coluns_doc.index('Numero_documento')])
                         if tipo_numero_tecno == sale.number:
-                            valor_total = Decimal(venta.valor_total)
-                            valor_impuesto = Decimal(venta.Valor_impuesto)
+                            valor_total = Decimal(abs(venta.valor_total))
+                            valor_impuesto = Decimal(abs(venta.Valor_impuesto))
                             total_tecno = valor_total - valor_impuesto
                     diferencia_total = abs(total_tryton - total_tecno)
                     if diferencia_total <= 1.0:
                         Invoice.post_batch([invoice])
                         Invoice.post([invoice])
                     else:
-                        msg1 = f'Error factura: {sale.id_tecno}'
+                        msg1 = f'{now} - Factura: {sale.id_tecno}'
                         msg2 = f'No contabilizada diferencia total mayor al rango permitido'
                         full_msg = ' - '.join([msg1, msg2])
                         logging.error(msg2)
@@ -297,11 +310,11 @@ class Sale(metaclass=PoolMeta):
                     #    logging.error(msg2)
                     #    logs += '\n' + full_msg
                 else:
-                    msg1 = f'Venta sin factura: {sale.id_tecno}'
+                    msg1 = f'{now} Venta sin factura: {sale.id_tecno}'
                     logging.error(msg1)
                     logs += '\n' + msg1
-                #Marcar como importado
-                cls.importado(sale.id_tecno)
+                # Marcar como importado
+                #cls.importado(sale.id_tecno)
         actualizacion.logs = logs
         actualizacion.save()
         logging.warning('FINISH VENTAS')
@@ -491,13 +504,10 @@ class Sale(metaclass=PoolMeta):
     @classmethod
     def get_data_tecno(cls, date):
         Config = Pool().get('conector.configuration')
-        #tests
-        #test = "SELECT * FROM dbo.Documentos WHERE tipo = 201 and Numero_Documento = 15777" #Marcar 'S' al finalizar pruebas
-        #result = Config.get_data(test)
-        consult = "SELECT TOP(30) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado != 'T'"
+        consult = "SELECT * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2)" #TEST
+        #consult = "SELECT TOP(30) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado != 'T'"
         result = Config.get_data(consult)
         return result
-
 
     @classmethod
     def importado(cls, id):

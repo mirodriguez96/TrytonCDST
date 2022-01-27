@@ -133,9 +133,9 @@ class Voucher(ModelSQL, ModelView):
             logs = 'logs...'
         
         if documentos_db:
-            columns_doc = cls.get_columns_db('Documentos')
-            columns_rec = cls.get_columns_db('Documentos_Cruce')
-            columns_tip = cls.get_columns_db('Documentos_Che')
+            #columns_doc = cls.get_columns_db('Documentos')
+            #columns_rec = cls.get_columns_db('Documentos_Cruce')
+            #columns_tip = cls.get_columns_db('Documentos_Che')
 
             pool = Pool()
             Voucher = pool.get('account.voucher')
@@ -155,8 +155,8 @@ class Voucher(ModelSQL, ModelView):
                 #print(id_tecno)
                 existe = cls.find_voucher(sw+'-'+tipo+'-'+nro)
                 if not existe:
-                    print(id_tecno)
-                    nit_cedula = doc[columns_doc.index('nit_Cedula')].strip()
+                    #print(id_tecno)
+                    nit_cedula = doc.nit_Cedula.strip()
                     tercero, = Party.search([('id_number', '=', nit_cedula)])
                     consult = "sw="+sw+" and tipo="+tipo+" and numero="+nro
                     #Se obtiene los recibos y las facturas a las que hace referencia el ingreso o egreso
@@ -165,9 +165,9 @@ class Voucher(ModelSQL, ModelView):
                         facturas_a_pagar = False
                         #Se comprueba si el comprobante tiene facturas en el sistema Tryton
                         for recibo in recibos:
-                            ref = str(recibo[columns_rec.index('tipo_aplica')])+'-'+str(recibo[columns_rec.index('numero_aplica')])
-                            moveline = cls.get_moveline(ref, tercero)
-                            if moveline:
+                            ref = recibo.tipo_aplica+'-'+str(recibo.numero_aplica)
+                            move_line = cls.get_moveline(ref, tercero)
+                            if move_line:
                                 facturas_a_pagar = True
                         if not facturas_a_pagar:
                             continue
@@ -182,9 +182,9 @@ class Voucher(ModelSQL, ModelView):
                             multingreso.save()
                             cont = 0
                             for pago in tipo_pago:
-                                forma_pago = tipo_pago[cont][columns_tip.index('forma_pago')]
+                                forma_pago = tipo_pago[cont].forma_pago
                                 paymode, = PayMode.search([('id_tecno', '=', forma_pago)])
-                                valor = pago[columns_tip.index('valor')]
+                                valor = pago.valor
                                 transaction = Transaction()
                                 transaction.multirevenue = multingreso
                                 transaction.description = 'IMPORTACION TECNO'
@@ -195,12 +195,12 @@ class Voucher(ModelSQL, ModelView):
                                 cont += 1
                             to_lines = []
                             for rec in recibos:
-                                ref = str(rec[columns_rec.index('tipo_aplica')])+'-'+str(rec[columns_rec.index('numero_aplica')])
-                                move = cls.get_moveline(ref, tercero)
-                                if move:
+                                ref = rec.tipo_aplica+'-'+str(rec.numero_aplica)
+                                move_line = cls.get_moveline(ref, tercero)
+                                if move_line:
                                     #valor pagado x la factura
-                                    valor = Decimal(rec[columns_rec.index('valor')])
-                                    line = multingreso.create_new_line(move, valor, Decimal(valor), multingreso.transactions)
+                                    valor = Decimal(rec.valor)
+                                    line = multingreso.create_new_line(move_line, valor, Decimal(valor), multingreso.transactions)
                                     if line:
                                         to_lines.append(line)
                             if to_lines:
@@ -210,7 +210,7 @@ class Voucher(ModelSQL, ModelView):
                                 MultiRevenue.process([multingreso])
                                 MultiRevenue.generate_vouchers([multingreso])
                         elif len(tipo_pago) == 1:
-                            forma_pago = tipo_pago[0][columns_tip.index('forma_pago')]
+                            forma_pago = tipo_pago[0].forma_pago
                             paymode, = PayMode.search([('id_tecno', '=', forma_pago)])
                             voucher = Voucher()
                             voucher.id_tecno = id_tecno
@@ -222,12 +222,12 @@ class Voucher(ModelSQL, ModelView):
                             if sw == '6':
                                 voucher.voucher_type = 'payment'
                             voucher.date = fecha_date
-                            nota = doc[columns_doc.index('notas')].replace('\n', ' ').replace('\r', '')
+                            nota = (doc.notas).replace('\n', ' ').replace('\r', '')
                             if nota:
                                 voucher.description = nota
                             voucher.reference = tipo+'-'+nro
                             for rec in recibos:
-                                ref = str(rec[columns_rec.index('tipo_aplica')])+'-'+str(rec[columns_rec.index('numero_aplica')])
+                                ref = rec.tipo_aplica+'-'+str(rec.numero_aplica)
                                 move_line = cls.get_moveline(ref, tercero)
                                 if move_line:
                                     line = Line()
@@ -236,7 +236,7 @@ class Voucher(ModelSQL, ModelView):
                                     line.reference = ref
                                     line.move_line = move_line
                                     line.on_change_move_line()
-                                    valor = Decimal(rec[columns_rec.index('valor')])
+                                    valor = Decimal(rec.valor)
                                     if valor > line.amount_original:
                                         valor = line.amount_original
                                     line.amount = valor
@@ -255,7 +255,7 @@ class Voucher(ModelSQL, ModelView):
                         else:
                             continue
                     else:
-                        pass
+                        continue
                 cls.importado(id_tecno)
         actualizacion.logs = logs
         actualizacion.save()
@@ -270,20 +270,15 @@ class Voucher(ModelSQL, ModelView):
         if moveline:
             return moveline[0]
         else:
-            return None
+            return False
 
     #Se marca como importado
     @classmethod
     def importado(cls, id):
+        Config = Pool().get('conector.configuration')
         lista = id.split('-')
-        try:
-            Config = Pool().get('conector.configuration')
-            conexion = Config.conexion()
-            with conexion.cursor() as cursor:
-                cursor.execute("UPDATE dbo.Documentos SET exportado = 'T' WHERE sw ="+lista[0]+" and tipo = "+lista[1]+" and Numero_documento = "+lista[2])
-        except Exception as e:
-            print(e)
-            raise logging.error('Error al actualizar como importado: ', e)
+        consult = "UPDATE dbo.Documentos SET exportado = 'T' WHERE sw ="+lista[0]+" and tipo = "+lista[1]+" and Numero_documento = "+lista[2]
+        Config.set_data(consult)
 
     #Metodo encargado de consultar y verificar si existe un voucher con la id de la BD
     @classmethod
@@ -318,67 +313,37 @@ class Voucher(ModelSQL, ModelView):
 
     #Esta función se encarga de traer todos los datos de una tabla dada de acuerdo al rango de fecha dada de la bd TecnoCarnes
     @classmethod
-    def get_data_tecno(cls, table, date):
+    def get_data_tecno(cls, date):
         Config = Pool().get('conector.configuration')
-        consult = "SELECT TOP(100) * FROM dbo."+table+" WHERE (sw = 5 OR sw = 6) AND fecha_hora >= CAST('"+date+"' AS datetime) AND exportado != 'T' "
+        #consult = "SELECT TOP(500) * FROM dbo.Documentos WHERE (sw = 5 OR sw = 6) AND fecha_hora >= CAST('"+date+"' AS datetime) AND exportado != 'T' " #TEST
+        consult = "SELECT TOP(500) * FROM dbo.Documentos WHERE (sw = 5 OR sw = 6) AND fecha_hora >= CAST('"+date+"' AS datetime) AND exportado != 'T'"
         data = Config.get_data(consult)
-        #data = []
-        #try:
-        #    conexion = Config.conexion()
-        #    with conexion.cursor() as cursor:
-        #        query = cursor.execute("SELECT TOP(100) * FROM dbo."+table+" WHERE (sw = 5 OR sw = 6) AND fecha_hora >= CAST('"+date+"' AS datetime) AND exportado != 'T' ")
-        #        data = list(query.fetchall())
-        #except Exception as e:
-        #    print("ERROR QUERY get_data: ", e)
         return data
 
     #Metodo encargado de obtener los recibos pagados de un documento dado
     @classmethod
     def get_recibos(cls, consult):
-        data = []
-        try:
-            Config = Pool().get('conector.configuration')
-            conexion = Config.conexion()
-            with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT * FROM dbo.Documentos_Cruce WHERE "+consult)
-                data = list(query.fetchall())
-        except Exception as e:
-            print("ERROR QUERY get_recibos: ", e)
+        Config = Pool().get('conector.configuration')
+        query = "SELECT * FROM dbo.Documentos_Cruce WHERE "+consult
+        data = Config.get_data(query)
         return data
 
     #Metodo encargado de obtener la forma en que se pago el comprobante (recibos)
     @classmethod
     def get_tipo_pago(cls, sw, tipo, nro):
-        data = []
-        try:
-            Config = Pool().get('conector.configuration')
-            conexion = Config.conexion()
-            with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT * FROM dbo.Documentos_Che WHERE sw="+sw+" AND tipo="+tipo+" AND numero="+nro)
-                data = list(query.fetchall())
-        except Exception as e:
-            print("ERROR QUERY get_recibos: ", e)
+        Config = Pool().get('conector.configuration')
+        consult = "SELECT * FROM dbo.Documentos_Che WHERE sw="+sw+" AND tipo="+tipo+" AND numero="+nro
+        data = Config.get_data(consult)
         return data
 
     #Función encargada de traer los datos de la bd TecnoCarnes con una fecha dada.
     @classmethod
     def last_update(cls):
-        #Actualizacion = Pool().get('conector.actualizacion')
-        #Se consulta la ultima actualización realizada para los terceros
-        #ultima_actualizacion = Actualizacion.search([('name', '=','COMPROBANTES')])
-        #if ultima_actualizacion:
-        #    #Se calcula la fecha restando la diferencia de horas que tiene el servidor con respecto al clienete
-        #    if ultima_actualizacion[0].write_date:
-        #        fecha = (ultima_actualizacion[0].write_date - datetime.timedelta(hours=5))
-        #    else:
-        #        fecha = (ultima_actualizacion[0].create_date - datetime.timedelta(hours=5))
-        #else:
-        #    fecha = datetime.date(1,1,1)
         Config = Pool().get('conector.configuration')
         config, = Config.search([], order=[('id', 'DESC')], limit=1)
         fecha = config.date
         fecha = fecha.strftime('%Y-%d-%m %H:%M:%S')
-        data = cls.get_data_tecno('Documentos', fecha)
+        data = cls.get_data_tecno(fecha)
         return data
 
     #Crea o actualiza un registro de la tabla actualización en caso de ser necesario

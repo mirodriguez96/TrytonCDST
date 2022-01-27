@@ -80,8 +80,6 @@ class Purchase(metaclass=PoolMeta):
                         full_msg = ' - '.join([msg1, msg2])
                         logging.warning(full_msg)
                         logs += '\n' + full_msg
-                        #logging.warning("No se econtro el tercero con id: "+compra[coluns_doc.index('nit_Cedula')], id_compra)
-                        #logs = logs+"\n"+"Error compra: "+id_compra+" - No se econtro el tercero con id: "+compra[coluns_doc.index('nit_Cedula')]
                         continue
                     party = party[0]                        
                     purchase.party = party
@@ -195,7 +193,6 @@ class Purchase(metaclass=PoolMeta):
         actualizacion.logs = logs
         actualizacion.save()
         logging.warning('FINISH COMPRAS')
-
 
     @classmethod
     def get_data_table(cls, table):
