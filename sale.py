@@ -235,8 +235,7 @@ class Sale(metaclass=PoolMeta):
                         #Se guarda la linea para la venta
                         linea.save()
                 else:
-                    pass
-                #cls.importado(id_venta)
+                    cls.importado(id_venta)
                 if sale:
                     to_create.append(sale)
             #Sale.save(to_create)
