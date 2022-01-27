@@ -84,7 +84,6 @@ class Sale(metaclass=PoolMeta):
                 existe = cls.buscar_venta(id_venta)
                 sale = None
                 if not existe:
-                    print(id_venta)
                     #Se trae la fecha de la venta y se adapta al formato correcto para Tryton
                     fecha = str(venta[coluns_doc.index('Fecha_Orden_Venta')]).split()[0].split('-')
                     fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
@@ -495,7 +494,7 @@ class Sale(metaclass=PoolMeta):
         #tests
         #test = "SELECT * FROM dbo.Documentos WHERE tipo = 201 and Numero_Documento = 15777" #Marcar 'S' al finalizar pruebas
         #result = Config.get_data(test)
-        consult = "SELECT TOP(10) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado != 'T'"
+        consult = "SELECT TOP(30) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado != 'T'"
         result = Config.get_data(consult)
         return result
 
