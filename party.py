@@ -356,17 +356,17 @@ class Party(ModelSQL, ModelView):
 
     #Esta función se encarga de traer todos los datos de una tabla dada de acuerdo al rango de fecha dada de la bd TecnoCarnes
     @classmethod
-    def get_data_where_tecno(cls, table, date):
+    def get_data_tecno(cls, date):
         data = []
         try:
             Config = Pool().get('conector.configuration')
             conexion = Config.conexion()
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT * FROM dbo."+table+" WHERE fecha_creacion >= CAST('"+date+"' AS datetime) OR Ultimo_Cambio_Registro >= CAST('"+date+"' AS datetime)")
+                query = cursor.execute("SELECT * FROM dbo.TblTerceros WHERE fecha_creacion >= CAST('"+date+"' AS datetime) OR Ultimo_Cambio_Registro >= CAST('"+date+"' AS datetime)")
                 data = list(query.fetchall())
         except Exception as e:
-            print("ERROR QUERY get_data_where_tecno: ", e)
-            raise UserError(f"ERROR QUERY {table}: {e}")
+            print("ERROR QUERY get_data_tecno: ", e)
+            raise UserError(f"ERROR QUERY get_data_tecno: {e}")
         return data
 
     #Función encargada de consultar las direcciones pertenecientes a un tercero en la bd TecnoCarnes
@@ -412,12 +412,9 @@ class Party(ModelSQL, ModelView):
             else:
                 fecha = (ultima_actualizacion[0].create_date - datetime.timedelta(hours=5, minutes=5))
         else:
-            #Config = Pool().get('conector.configuration')
-            #config, = Config.search([], order=[('id', 'DESC')], limit=1)
-            #fecha = config.date
             fecha = datetime.date(1,1,1)
         fecha = fecha.strftime('%Y-%d-%m %H:%M:%S')
-        data = cls.get_data_where_tecno('TblTerceros', fecha)
+        data = cls.get_data_tecno(fecha)
         return data
 
     @classmethod

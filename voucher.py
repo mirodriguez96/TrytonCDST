@@ -1,7 +1,7 @@
 from audioop import mul
 from trytond.model import ModelView, ModelSQL, fields
 from trytond.pool import Pool, PoolMeta
-#from trytond.exceptions import UserError
+from trytond.exceptions import UserError
 #from trytond.transaction import Transaction
 from decimal import Decimal
 import logging
@@ -128,14 +128,8 @@ class Voucher(ModelSQL, ModelView):
 
         #Se crea o actualiza la fecha de importación
         actualizacion = cls.create_or_update()
-        logs = actualizacion.logs
-        if not logs:
-            logs = 'logs...'
-        
+        logs = []
         if documentos_db:
-            #columns_doc = cls.get_columns_db('Documentos')
-            #columns_rec = cls.get_columns_db('Documentos_Cruce')
-            #columns_tip = cls.get_columns_db('Documentos_Che')
 
             pool = Pool()
             Voucher = pool.get('account.voucher')
@@ -203,6 +197,10 @@ class Voucher(ModelSQL, ModelView):
                                     line = multingreso.create_new_line(move_line, valor, Decimal(valor), multingreso.transactions)
                                     if line:
                                         to_lines.append(line)
+                                else:
+                                    msg1 = f'No existe la factura: {ref}'
+                                    logging.warning(msg1)
+                                    logs.append(msg1)
                             if to_lines:
                                 multingreso.lines = to_lines
                                 multingreso.save()
@@ -246,29 +244,50 @@ class Voucher(ModelSQL, ModelView):
                                 else:
                                     msg1 = f'No existe la factura: {ref}'
                                     logging.warning(msg1)
-                                    logs += '\n' + msg1
+                                    logs.append(msg1)
                             #Se verifica que el comprobante tenga lineas para ser contabilizado
                             if voucher.lines:
                                 Voucher.process([voucher])
                                 Voucher.post([voucher])
                             voucher.save()
                         else:
+                            msg1 = f"Revisar el tipo de pago de {id_tecno}"
+                            logging.warning(msg1)
+                            logs.append(msg1)
                             continue
                     else:
+                        msg1 = f"No hay recibos para {id_tecno}"
+                        logging.warning(msg1)
+                        logs.append(msg1)
                         continue
-                cls.importado(id_tecno)
-        actualizacion.logs = logs
-        actualizacion.save()
+                #cls.importado(id_tecno)
+        actualizacion.add_logs(actualizacion, logs)
         logging.warning("FINISH COMPROBANTES")
 
 
-    #Se obtiene las lineas de la factura
+    #Se obtiene las lineas de la factura que se desea pagar
     @classmethod
     def get_moveline(cls, reference, party):
-        MoveLine = Pool().get('account.move.line')
+        pool = Pool()
+        Invoice = pool.get('account.invoice')
+        MoveLine = pool.get('account.move.line')
+        #A continuacion se consulta las lineas a pagar de la factura (reference)
+        linea = False
+        invoice = Invoice.search([('number', '=', reference)])
+        if invoice:
+            invoice, = invoice
+            lines_to_pay = Invoice.get_lines_to_pay([invoice], 'None')
+            if lines_to_pay:
+                #Se selecciona la primera linea. Pero si hay más?
+                linea = lines_to_pay[invoice.id][0]
+        if linea:
+            moveline, = MoveLine.search([('id', '=', linea)])
+            return moveline
+        #Si no encuentra lineas a pagar...
         moveline = MoveLine.search([('reference', '=', reference), ('party', '=', party)])
         if moveline:
-            return moveline[0]
+            moveline, = moveline
+            return moveline
         else:
             return False
 
@@ -296,27 +315,12 @@ class Voucher(ModelSQL, ModelView):
             else:
                 return False
 
-    #Función encargada de consultar las columnas pertenecientes a 'x' tabla de la bd de TecnoCarnes
-    @classmethod
-    def get_columns_db(cls, table):
-        columns = []
-        try:
-            Config = Pool().get('conector.configuration')
-            conexion = Config.conexion()
-            with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = '"+table+"' ORDER BY ORDINAL_POSITION")
-                for q in query.fetchall():
-                    columns.append(q[0])
-        except Exception as e:
-            print("ERROR QUERY "+table+": ", e)
-        return columns
-
     #Esta función se encarga de traer todos los datos de una tabla dada de acuerdo al rango de fecha dada de la bd TecnoCarnes
     @classmethod
     def get_data_tecno(cls, date):
         Config = Pool().get('conector.configuration')
-        #consult = "SELECT TOP(500) * FROM dbo.Documentos WHERE (sw = 5 OR sw = 6) AND fecha_hora >= CAST('"+date+"' AS datetime) AND exportado != 'T' " #TEST
-        consult = "SELECT TOP(500) * FROM dbo.Documentos WHERE (sw = 5 OR sw = 6) AND fecha_hora >= CAST('"+date+"' AS datetime) AND exportado != 'T'"
+        consult = "SELECT TOP(5) * FROM dbo.Documentos WHERE (sw = 5 OR sw = 6) AND fecha_hora >= CAST('"+date+"' AS datetime) AND exportado != 'T'" #TEST
+        #consult = "SELECT TOP(500) * FROM dbo.Documentos WHERE (sw = 5 OR sw = 6) AND fecha_hora >= CAST('"+date+"' AS datetime) AND exportado != 'T'"
         data = Config.get_data(consult)
         return data
 

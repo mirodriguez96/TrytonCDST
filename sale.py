@@ -6,7 +6,6 @@ from trytond.transaction import Transaction
 from decimal import Decimal
 import logging
 from sql import Table
-from trytond.i18n import gettext
 
 
 __all__ = [
@@ -161,8 +160,8 @@ class Sale(metaclass=PoolMeta):
                         sale.shipment_address = address[0].id
                     
                     #SE CREA LA VENTA
-                    #with Transaction().set_context(_skip_warnings=True):
                     sale.save()
+
                     retencion_iva = False
                     if venta.retencion_iva and venta.retencion_iva > 0:
                         retencion_iva = True
@@ -172,6 +171,7 @@ class Sale(metaclass=PoolMeta):
                     retencion_rete = False
                     if venta.retencion_causada and venta.retencion_causada > 0:
                         retencion_rete = True
+                    
                     #Ahora traemos las lineas de producto para la venta a procesar
                     documentos_linea = cls.get_line_where(str(sw), str(numero_doc), str(tipo_doc))
                     col_line = cls.get_columns_db_tecno('Documentos_Lin')

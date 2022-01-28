@@ -52,6 +52,7 @@ class Purchase(metaclass=PoolMeta):
             payment_term = pool.get('account.invoice.payment_term')
             Party = pool.get('party.party')
             Address = pool.get('party.address')
+            Tax = pool.get('account.tax')
             coluns_doc = cls.get_columns_db_tecno('Documentos')
             columns_tipodoc = cls.get_columns_db_tecno('TblTipoDoctos')
             
@@ -104,6 +105,17 @@ class Purchase(metaclass=PoolMeta):
                         logs = logs+"\n"+"Error compra: "+id_compra+" - No se econtro el plazo de pago: "+condicion
                         continue
                     purchase.payment_term = plazo_pago[0]
+
+                    retencion_iva = False
+                    if compra.retencion_iva and compra.retencion_iva > 0:
+                        retencion_iva = True
+                    retencion_ica = False
+                    if compra.retencion_ica and compra.retencion_ica > 0:
+                        retencion_ica = True
+                    retencion_rete = False
+                    if compra.retencion_causada and compra.retencion_causada > 0:
+                        retencion_rete = True
+
                     #Ahora traemos las lineas de producto para la compra a procesar
                     documentos_linea = cls.get_line_where(str(sw), str(numero_doc), str(tipo_doc))
                     col_line = cls.get_columns_db_tecno('Documentos_Lin')
@@ -130,8 +142,30 @@ class Purchase(metaclass=PoolMeta):
                         else:
                             line.quantity = cantidad_facturada
                             purchase.reference = tipo_doc+'-'+str(numero_doc)
-                        #print(id_producto, line.unit)
-                        line.on_change_product() #Comprueba los cambios y trae los impuestos del producto
+                        #Comprueba los cambios y trae los impuestos del producto
+                        line.on_change_product()
+                        #A continuación se verifica las retenciones e impuesto al consumo
+                        impuestos_linea = []
+                        for impuestol in line.taxes:
+                            clase_impuesto = impuestol.classification_tax
+                            if clase_impuesto == '05' and retencion_iva:
+                                impuestos_linea.append(impuestol)
+                            elif clase_impuesto == '06' and retencion_rete:
+                                impuestos_linea.append(impuestol)
+                            elif clase_impuesto == '07' and retencion_ica:
+                                impuestos_linea.append(impuestol)
+                            elif clase_impuesto != '0impuestos_linea5' and clase_impuesto != '06' and clase_impuesto != '07':
+                                impuestos_linea.append(impuestol)
+                        line.taxes = impuestos_linea
+                        #Se verifica si el impuesto al consumo es del mismo valor
+                        impuesto_consumo = lin[col_line.index('Impuesto_Consumo')]
+                        if impuesto_consumo > 0:
+                            #linea.taxes = []
+                            tax = Tax.search([('consumo', '=', True), ('type', '=', 'fixed'), ('amount', '=', impuesto_consumo)])
+                            if tax:
+                                line.taxes.append(tax)
+                            else:
+                                raise UserError('ERROR IMPUESTO', 'No se encontró el impuesto al consumo: '+id_compra)
                         line.unit_price = lin[col_line.index('Valor_Unitario')]
                         line.save()
                     #Procesamos la compra para generar la factura y procedemos a rellenar los campos de la factura
