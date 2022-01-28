@@ -341,63 +341,35 @@ class Party(ModelSQL, ModelView):
 
     #Esta función se encarga de traer todos los datos de una tabla dada de la bd TecnoCarnes
     @classmethod
-    def get_data_dir_tecno(cls, table, date):
-        data = []
-        try:
-            Config = Pool().get('conector.configuration')
-            conexion = Config.conexion()
-            with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT * FROM dbo."+table+" WHERE Ultimo_Cambio_Registro >= CAST('"+date+"' AS datetime)")
-                data = list(query.fetchall())
-        except Exception as e:
-            print("ERROR QUERY get_data_dir_tecno: ", e)
-            raise UserError(f"ERROR QUERY {table}: {e}")
+    def get_data_dir_tecno(cls, date):
+        Config = Pool().get('conector.configuration')
+        consult = "SET DATEFORMAT ymd SELECT * FROM dbo.Terceros_Dir WHERE Ultimo_Cambio_Registro >= CAST('"+date+"' AS datetime)"
+        data = Config.get_data(consult)
         return data
 
     #Esta función se encarga de traer todos los datos de una tabla dada de acuerdo al rango de fecha dada de la bd TecnoCarnes
     @classmethod
     def get_data_tecno(cls, date):
-        data = []
-        try:
-            Config = Pool().get('conector.configuration')
-            conexion = Config.conexion()
-            with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT * FROM dbo.TblTerceros WHERE fecha_creacion >= CAST('"+date+"' AS datetime) OR Ultimo_Cambio_Registro >= CAST('"+date+"' AS datetime)")
-                data = list(query.fetchall())
-        except Exception as e:
-            print("ERROR QUERY get_data_tecno: ", e)
-            raise UserError(f"ERROR QUERY get_data_tecno: {e}")
+        Config = Pool().get('conector.configuration')
+        consult = "SET DATEFORMAT ymd SELECT * FROM dbo.TblTerceros WHERE fecha_creacion >= CAST('"+date+"' AS datetime) OR Ultimo_Cambio_Registro >= CAST('"+date+"' AS datetime)"
+        data = Config.get_data(consult)
         return data
 
     #Función encargada de consultar las direcciones pertenecientes a un tercero en la bd TecnoCarnes
     @classmethod
     def get_address_db_tecno(cls, id):
-        address = []
-        try:
-            Config = Pool().get('conector.configuration')
-            conexion = Config.conexion()
-            with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT * FROM dbo.Terceros_Dir WHERE nit = '"+id+"'")
-                address = list(query.fetchall())
-        except Exception as e:
-            print("ERROR QUERY (get_address_db_tecno): ", e)
-            raise UserError(f"Error Query Terceros_Dir: {e}")
-        return address
+        Config = Pool().get('conector.configuration')
+        consult = "SELECT * FROM dbo.Terceros_Dir WHERE nit = '"+id+"'"
+        data = Config.get_data(consult)
+        return data
 
     #Función encargada de consultar los metodos de contactos pertenecientes a un tercero en la bd TecnoCarnes
     @classmethod
     def get_contacts_db_tecno(cls, id):
-        contacts = []
-        try:
-            Config = Pool().get('conector.configuration')
-            conexion = Config.conexion()
-            with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT * FROM dbo.Terceros_Contactos WHERE Nit_Cedula = '"+id+"'")
-                contacts = list(query.fetchall())
-        except Exception as e:
-            print("ERROR QUERY (get_contacts_db_tecno): ", e)
-            raise UserError(f"Error Query Terceros_Contactos: {e}")
-        return contacts
+        Config = Pool().get('conector.configuration')
+        consult = "SELECT * FROM dbo.Terceros_Contactos WHERE Nit_Cedula = '"+id+"'"
+        data = Config.get_data(consult)
+        return data
 
     #Función encargada de traer los datos de la bd TecnoCarnes con una fecha dada.
     @classmethod
@@ -413,7 +385,7 @@ class Party(ModelSQL, ModelView):
                 fecha = (ultima_actualizacion[0].create_date - datetime.timedelta(hours=5, minutes=5))
         else:
             fecha = datetime.date(1,1,1)
-        fecha = fecha.strftime('%Y-%d-%m %H:%M:%S')
+        fecha = fecha.strftime('%Y-%m-%d %H:%M:%S')
         data = cls.get_data_tecno(fecha)
         return data
 
@@ -422,6 +394,7 @@ class Party(ModelSQL, ModelView):
         Actualizacion = Pool().get('conector.actualizacion')
         #Se consulta la ultima actualización realizada para los terceros
         ultima_actualizacion = Actualizacion.search([('name', '=','TERCEROS')])
+        #fecha = datetime.date(1,1,1)
         if ultima_actualizacion:
             #Se calcula la fecha restando la diferencia de horas que tiene el servidor con respecto al clienete
             if ultima_actualizacion[0].write_date:
@@ -430,8 +403,8 @@ class Party(ModelSQL, ModelView):
                 fecha = (ultima_actualizacion[0].create_date - datetime.timedelta(hours=5, minutes=5))
         else:
             return None
-        fecha = fecha.strftime('%Y-%d-%m %H:%M:%S')
-        data = cls.get_data_dir_tecno('Terceros_Dir', fecha)
+        fecha = fecha.strftime('%Y-%m-%d %H:%M:%S')
+        data = cls.get_data_dir_tecno(fecha)
         return data
 
     #Crea o actualiza un registro de la tabla actualización en caso de ser necesario

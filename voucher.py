@@ -260,7 +260,7 @@ class Voucher(ModelSQL, ModelView):
                         logging.warning(msg1)
                         logs.append(msg1)
                         continue
-                #cls.importado(id_tecno)
+                cls.importado(id_tecno)
         actualizacion.add_logs(actualizacion, logs)
         logging.warning("FINISH COMPROBANTES")
 
@@ -319,8 +319,8 @@ class Voucher(ModelSQL, ModelView):
     @classmethod
     def get_data_tecno(cls, date):
         Config = Pool().get('conector.configuration')
-        consult = "SELECT TOP(5) * FROM dbo.Documentos WHERE (sw = 5 OR sw = 6) AND fecha_hora >= CAST('"+date+"' AS datetime) AND exportado != 'T'" #TEST
-        #consult = "SELECT TOP(500) * FROM dbo.Documentos WHERE (sw = 5 OR sw = 6) AND fecha_hora >= CAST('"+date+"' AS datetime) AND exportado != 'T'"
+        #consult = "SELECT TOP(5) * FROM dbo.Documentos WHERE (sw = 5 OR sw = 6) AND fecha_hora >= CAST('"+date+"' AS datetime) AND exportado != 'T'" #TEST
+        consult = "SET DATEFORMAT ymd SELECT TOP(500) * FROM dbo.Documentos WHERE (sw = 5 OR sw = 6) AND fecha_hora >= CAST('"+date+"' AS datetime) AND exportado != 'T'"
         data = Config.get_data(consult)
         return data
 
@@ -346,7 +346,7 @@ class Voucher(ModelSQL, ModelView):
         Config = Pool().get('conector.configuration')
         config, = Config.search([], order=[('id', 'DESC')], limit=1)
         fecha = config.date
-        fecha = fecha.strftime('%Y-%d-%m %H:%M:%S')
+        fecha = fecha.strftime('%Y-%m-%d %H:%M:%S')
         data = cls.get_data_tecno(fecha)
         return data
 

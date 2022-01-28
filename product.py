@@ -275,7 +275,7 @@ class Product(ModelSQL, ModelView):
             Config = Pool().get('conector.configuration')
             conexion = Config.conexion()
             with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT * FROM dbo."+table+" WHERE fecha_creacion >= CAST('"+date+"' AS datetime) OR Ultimo_Cambio_Registro >= CAST('"+date+"' AS datetime)")
+                query = cursor.execute("SET DATEFORMAT ymd SELECT * FROM dbo."+table+" WHERE fecha_creacion >= CAST('"+date+"' AS datetime) OR Ultimo_Cambio_Registro >= CAST('"+date+"' AS datetime)")
                 data = list(query.fetchall())
         except Exception as e:
             print("ERROR QUERY get_data_where_tecno: ", e)
@@ -295,7 +295,7 @@ class Product(ModelSQL, ModelView):
                 fecha = (ultima_actualizacion[0].create_date - datetime.timedelta(hours=5))
         else:
             fecha = datetime.date(1,1,1)
-        fecha = fecha.strftime('%Y-%d-%m %H:%M:%S')
+        fecha = fecha.strftime('%Y-%m-%d %H:%M:%S')
         data = cls.get_data_where_tecno('TblProducto', fecha)
         return data
 

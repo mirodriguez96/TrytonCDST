@@ -299,7 +299,7 @@ class Purchase(metaclass=PoolMeta):
     @classmethod
     def get_data_tecno(cls, date):
         Config = Pool().get('conector.configuration')
-        consult = "SELECT TOP(100) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 3 OR sw = 4) AND exportado != 'T'"
+        consult = "SET DATEFORMAT ymd SELECT TOP(100) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 3 OR sw = 4) AND exportado != 'T'"
         result = Config.get_data(consult)
         return result
 
@@ -312,10 +312,10 @@ class Purchase(metaclass=PoolMeta):
         Config.set_data(consult)
 
     #Función encargada de convertir una fecha dada, al formato y orden para consultas sql server
-    @classmethod
-    def convert_date(cls, fecha):
-        result = fecha.strftime('%Y-%d-%m %H:%M:%S')
-        return result
+    #@classmethod
+    #def convert_date(cls, fecha):
+    #    result = fecha.strftime('%Y-%m-%d %H:%M:%S')
+    #    return result
 
     #Función encargada de consultar si existe un producto dado de la bd
     @classmethod
@@ -332,22 +332,10 @@ class Purchase(metaclass=PoolMeta):
     #Función encargada de traer los datos de la bd con una fecha dada.
     @classmethod
     def last_update(cls):
-        #Actualizacion = Pool().get('conector.actualizacion')
-        #Se consulta la ultima actualización realizada para los terceros
-        #ultima_actualizacion = Actualizacion.search([('name', '=','COMPRAS')])
-        #if ultima_actualizacion:
-        #    #Se calcula la fecha restando la diferencia de horas que tiene el servidor con respecto al clienete
-        #    if ultima_actualizacion[0].write_date:
-        #        fecha = (ultima_actualizacion[0].write_date - datetime.timedelta(hours=5))
-        #    else:
-        #        fecha = (ultima_actualizacion[0].create_date - datetime.timedelta(hours=5))
-        #else:
-        #    #fecha = datetime.date(1,1,1)
-        #    pass
         Config = Pool().get('conector.configuration')
         config, = Config.search([], order=[('id', 'DESC')], limit=1)
         fecha = config.date
-        fecha = fecha.strftime('%Y-%d-%m %H:%M:%S')
+        fecha = fecha.strftime('%Y-%m-%d %H:%M:%S')
         data = cls.get_data_tecno(fecha)
         return data
 

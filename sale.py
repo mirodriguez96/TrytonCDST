@@ -504,7 +504,7 @@ class Sale(metaclass=PoolMeta):
     def get_data_tecno(cls, date):
         Config = Pool().get('conector.configuration')
         #consult = "SELECT * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2)" #TEST
-        consult = "SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado != 'T'"
+        consult = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado != 'T'"
         result = Config.get_data(consult)
         return result
 
@@ -521,10 +521,10 @@ class Sale(metaclass=PoolMeta):
             raise UserError('Error al actualizar como importado: ', e)
 
     #Función encargada de convertir una fecha dada, al formato y orden para consultas sql server
-    @classmethod
-    def convert_date(cls, fecha):
-        result = fecha.strftime('%Y-%d-%m %H:%M:%S')
-        return result
+    #@classmethod
+    #def convert_date(cls, fecha):
+    #    result = fecha.strftime('%Y-%m-%d %H:%M:%S')
+    #    return result
 
     #Función encargada de consultar si existe un producto dado de la bd
     @classmethod
@@ -557,7 +557,7 @@ class Sale(metaclass=PoolMeta):
         Config = Pool().get('conector.configuration')
         config, = Config.search([], order=[('id', 'DESC')], limit=1)
         fecha = config.date
-        fecha = fecha.strftime('%Y-%d-%m %H:%M:%S')
+        fecha = fecha.strftime('%Y-%m-%d %H:%M:%S')
         data = cls.get_data_tecno(fecha)
         return data
 
