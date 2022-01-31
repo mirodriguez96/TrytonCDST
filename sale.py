@@ -209,7 +209,7 @@ class Sale(metaclass=PoolMeta):
                                 impuestos_linea.append(impuestol)
                             elif clase_impuesto == '07' and retencion_ica:
                                 impuestos_linea.append(impuestol)
-                            elif clase_impuesto != '0impuestos_linea5' and clase_impuesto != '06' and clase_impuesto != '07':
+                            elif clase_impuesto != '05' and clase_impuesto != '06' and clase_impuesto != '07':
                                 impuestos_linea.append(impuestol)
                         linea.taxes = impuestos_linea
                         #Se verifica si el impuesto al consumo es del mismo valor
@@ -218,7 +218,9 @@ class Sale(metaclass=PoolMeta):
                             #linea.taxes = []
                             tax = Tax.search([('consumo', '=', True), ('type', '=', 'fixed'), ('amount', '=', impuesto_consumo)])
                             if tax:
-                                linea.taxes.append(tax)
+                                impuestos_linea = linea.taxes
+                                impuestos_linea.append(tax)
+                                linea.taxes = impuestos_linea
                                 #linetax = LineTax()
                                 #linetax.line = linea
                                 #linetax.tax = tax[0]
