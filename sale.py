@@ -220,16 +220,15 @@ class Sale(metaclass=PoolMeta):
                             elif clase_impuesto != '05' and clase_impuesto != '06' and clase_impuesto != '07' and not impuestol.consumo:
                                 impuestos_linea.append(impuestol)
                         linea.taxes = impuestos_linea
-                        
-                        if impuesto_consumo > 0:
-                            #linea.taxes = []
-                            tax = Tax.search([('consumo', '=', True), ('type', '=', 'fixed'), ('amount', '=', impuesto_consumo)])
-                            if tax:
-                                if linea.taxes:
-                                    impuestos_linea = linea.taxes
-                                    impuestos_linea.append(tax)
-                                    linea.taxes = impuestos_linea
-                                raise UserError('ERROR IMPUESTO', 'No se encontró el impuesto al consumo: '+id_venta)
+                        #if impuesto_consumo > 0:
+                        #    #linea.taxes = []
+                        #    tax = Tax.search([('consumo', '=', True), ('type', '=', 'fixed'), ('amount', '=', impuesto_consumo)])
+                        #    if tax:
+                        #        if linea.taxes:
+                        #            impuestos_linea = linea.taxes
+                        #            impuestos_linea.append(tax)
+                        #            linea.taxes = impuestos_linea
+                        #        raise UserError('ERROR IMPUESTO', 'No se encontró el impuesto al consumo: '+id_venta)
                         linea.unit_price = lin[col_line.index('Valor_Unitario')]
                         #Verificamos si hay descuento para la linea de producto y se agrega su respectivo descuento
                         if lin[col_line.index('Porcentaje_Descuento_1')] > 0:
