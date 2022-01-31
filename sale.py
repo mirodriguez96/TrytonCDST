@@ -218,9 +218,13 @@ class Sale(metaclass=PoolMeta):
                             #linea.taxes = []
                             tax = Tax.search([('consumo', '=', True), ('type', '=', 'fixed'), ('amount', '=', impuesto_consumo)])
                             if tax:
-                                impuestos_linea = linea.taxes
-                                impuestos_linea.append(tax)
-                                linea.taxes = impuestos_linea
+                                if linea.taxes:
+                                    impuestos_linea = linea.taxes
+                                    impuestos_linea.append(tax)
+                                    linea.taxes = impuestos_linea
+                                else:
+                                    impuestos_linea = [tax]
+                                    linea.taxes = impuestos_linea
                                 #linetax = LineTax()
                                 #linetax.line = linea
                                 #linetax.tax = tax[0]
