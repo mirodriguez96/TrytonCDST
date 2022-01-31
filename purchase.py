@@ -144,6 +144,8 @@ class Purchase(metaclass=PoolMeta):
                             purchase.reference = tipo_doc+'-'+str(numero_doc)
                         #Comprueba los cambios y trae los impuestos del producto
                         line.on_change_product()
+                        #Se verifica si el impuesto al consumo fue aplicado
+                        impuesto_consumo = lin[col_line.index('Impuesto_Consumo')]
                         #A continuación se verifica las retenciones e impuesto al consumo
                         impuestos_linea = []
                         for impuestol in line.taxes:
@@ -154,18 +156,18 @@ class Purchase(metaclass=PoolMeta):
                                 impuestos_linea.append(impuestol)
                             elif clase_impuesto == '07' and retencion_ica:
                                 impuestos_linea.append(impuestol)
-                            elif clase_impuesto != '05' and clase_impuesto != '06' and clase_impuesto != '07':
+                            elif impuestol.consumo and impuesto_consumo > 0:
+                                #Se busca el impuesto al consumo con el mismo valor para aplicarlo
+                                tax = Tax.search([('consumo', '=', True), ('type', '=', 'fixed'), ('amount', '=', impuesto_consumo)])
+                                if tax:
+                                    tax, = tax
+                                    impuestos_linea.append(tax)
+                                else:
+                                    raise UserError('ERROR IMPUESTO', 'No se encontró el impuesto al consumo: '+id_compra)
+                            elif clase_impuesto != '05' and clase_impuesto != '06' and clase_impuesto != '07' and not impuestol.consumo:
                                 impuestos_linea.append(impuestol)
                         line.taxes = impuestos_linea
-                        #Se verifica si el impuesto al consumo es del mismo valor
-                        impuesto_consumo = lin[col_line.index('Impuesto_Consumo')]
-                        if impuesto_consumo > 0:
-                            #linea.taxes = []
-                            tax = Tax.search([('consumo', '=', True), ('type', '=', 'fixed'), ('amount', '=', impuesto_consumo)])
-                            if tax:
-                                line.taxes.append(tax)
-                            else:
-                                raise UserError('ERROR IMPUESTO', 'No se encontró el impuesto al consumo: '+id_compra)
+                        
                         line.unit_price = lin[col_line.index('Valor_Unitario')]
                         line.save()
                     #Procesamos la compra para generar la factura y procedemos a rellenar los campos de la factura

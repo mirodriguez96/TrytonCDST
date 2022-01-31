@@ -199,7 +199,7 @@ class Sale(metaclass=PoolMeta):
                             sale.reference = tipo_doc+'-'+str(numero_doc)
                         #Comprueba los cambios y trae los impuestos del producto
                         linea.on_change_product()
-                        #Se verifica si el impuesto al consumo es del mismo valor
+                        #Se verifica si el impuesto al consumo fue aplicado
                         impuesto_consumo = lin[col_line.index('Impuesto_Consumo')]
                         #A continuación se verifica las retenciones e impuesto al consumo
                         impuestos_linea = []
@@ -212,6 +212,7 @@ class Sale(metaclass=PoolMeta):
                             elif clase_impuesto == '07' and retencion_ica:
                                 impuestos_linea.append(impuestol)
                             elif impuestol.consumo and impuesto_consumo > 0:
+                                #Se busca el impuesto al consumo con el mismo valor para aplicarlo
                                 tax = Tax.search([('consumo', '=', True), ('type', '=', 'fixed'), ('amount', '=', impuesto_consumo)])
                                 if tax:
                                     tax, = tax
@@ -221,15 +222,6 @@ class Sale(metaclass=PoolMeta):
                             elif clase_impuesto != '05' and clase_impuesto != '06' and clase_impuesto != '07' and not impuestol.consumo:
                                 impuestos_linea.append(impuestol)
                         linea.taxes = impuestos_linea
-                        #if impuesto_consumo > 0:
-                        #    #linea.taxes = []
-                        #    tax = Tax.search([('consumo', '=', True), ('type', '=', 'fixed'), ('amount', '=', impuesto_consumo)])
-                        #    if tax:
-                        #        if linea.taxes:
-                        #            impuestos_linea = linea.taxes
-                        #            impuestos_linea.append(tax)
-                        #            linea.taxes = impuestos_linea
-                        #        raise UserError('ERROR IMPUESTO', 'No se encontró el impuesto al consumo: '+id_venta)
                         linea.unit_price = lin[col_line.index('Valor_Unitario')]
                         #Verificamos si hay descuento para la linea de producto y se agrega su respectivo descuento
                         if lin[col_line.index('Porcentaje_Descuento_1')] > 0:
