@@ -214,6 +214,7 @@ class Sale(metaclass=PoolMeta):
                             elif impuestol.consumo and impuesto_consumo > 0:
                                 tax = Tax.search([('consumo', '=', True), ('type', '=', 'fixed'), ('amount', '=', impuesto_consumo)])
                                 if tax:
+                                    tax, = tax
                                     impuestos_linea.append(tax)
                                 else:
                                     raise UserError('ERROR IMPUESTO', 'No se encontró el impuesto al consumo: '+id_venta)
