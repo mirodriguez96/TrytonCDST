@@ -168,7 +168,7 @@ class Voucher(ModelSQL, ModelView):
                         #Se obtiene la forma de pago, según la tabla Documentos_Che de TecnoCarnes
                         tipo_pago = cls.get_tipo_pago(sw, tipo, nro)
                         if len(tipo_pago) > 1 and sw == '5':
-                            print('MULTI INGRESO')
+                            #print('MULTI INGRESO')
                             multingreso = MultiRevenue()
                             multingreso.party = tercero
                             multingreso.date = fecha_date
@@ -204,9 +204,12 @@ class Voucher(ModelSQL, ModelView):
                             if to_lines:
                                 multingreso.lines = to_lines
                                 multingreso.save()
-                            if multingreso.total_transaction and multingreso.total_lines_to_pay and multingreso.total_transaction <= multingreso.total_lines_to_pay:
-                                MultiRevenue.process([multingreso])
-                                MultiRevenue.generate_vouchers([multingreso])
+                            if multingreso.total_transaction and multingreso.total_lines_to_pay:
+                                if multingreso.total_transaction <= multingreso.total_lines_to_pay:
+                                    MultiRevenue.process([multingreso])
+                                    MultiRevenue.generate_vouchers([multingreso])
+                                else:
+                                    pass
                         elif len(tipo_pago) == 1:
                             forma_pago = tipo_pago[0].forma_pago
                             paymode, = PayMode.search([('id_tecno', '=', forma_pago)])
@@ -307,11 +310,11 @@ class Voucher(ModelSQL, ModelView):
         MultiRevenue = pool.get('account.multirevenue')
         voucher = Voucher.search([('id_tecno', '=', idt)])
         if voucher:
-            return voucher[0]
+            return True
         else:
             multirevenue = MultiRevenue.search([('id_tecno', '=', idt)])
             if multirevenue:
-                return multirevenue[0]
+                return True
             else:
                 return False
 
