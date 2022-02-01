@@ -291,21 +291,14 @@ class Sale(metaclass=PoolMeta):
                         logs.append(full_msg)
                         invoice.comment = 'No contabilizada diferencia total mayor al rango permitido'
                         invoice.save()
-                    cls.set_payment(invoice, sale)
-                        #Transaction().connection.commit()
-                    #except Exception as e:
-                    #    #print('ERROR FACTURA: ', str(e))
-                    #    msg1 = f'Error venta: {sale.id_tecno}'
-                    #    msg2 = f'Error: {e}'
-                    #    full_msg = ' - '.join([msg1, msg2])
-                    #    logging.error(msg2)
-                    #    logs += '\n' + full_msg
+                    if invoice.invoice_type == 'P':
+                        cls.set_payment(invoice, sale)
                 else:
                     msg1 = f'Venta sin factura: {sale.id_tecno}'
                     logging.error(msg1)
                     logs.append(msg1)
-                # Marcar como importado
-                cls.importado(sale.id_tecno)
+                #Marcar como importado
+                #cls.importado(sale.id_tecno)
         actualizacion.add_logs(actualizacion, logs)
         logging.warning('FINISH VENTAS')
 
@@ -313,6 +306,24 @@ class Sale(metaclass=PoolMeta):
     #Función encargada de buscar recibos de caja pagados en TecnoCarnes y pagarlos en Tryton
     @classmethod
     def set_payment(cls, invoice, sale):
+        data_statement = {
+            'device': sale.sale_device,
+            'total_money': 0,
+            'date': sale.sale_date
+        }
+
+        result = cls.vm_open_statement(data_statement)
+        print(result)
+        if result['result']:
+            print('ESTADO DE CUENTA CREADO', sale.sale_date)
+
+            data_payment = {
+                'sale_id': sale.id,
+                'journal_id': 1,
+                'cash_received': 0,
+            }
+
+        """
         pool = Pool()
         #Statement = pool.get('account.statement')
         #StatementLine = pool.get('account.statement.line')
@@ -330,7 +341,7 @@ class Sale(metaclass=PoolMeta):
         recibos = cls.get_recibos(tipo, nro)
         
         #Si hay recibos para pagar
-        if recibos and invoice.invoice_type == 'P':
+        if recibos:
             voucher, = Invoice.create_voucher([invoice])
             recibo = recibos[0] #
 
@@ -353,7 +364,7 @@ class Sale(metaclass=PoolMeta):
             if diferencia_total <= 1.0:
                 Voucher.post([voucher])
 
-            """
+            
             #REVISAR PROCESOS Y FALTA QUE APAREZCAN VENTAS EN ESTADO DE CUENTA
             journal, = StatementJournal.search([('id_tecno', '=', str(idt))])
             payment_amount = abs(sale.total_amount - sale.paid_amount)
@@ -391,9 +402,10 @@ class Sale(metaclass=PoolMeta):
                 )
                 payment.save()
                 payment.create_move()
-            """
+            
         else:
             logging.warning('NO HAY RECIBO POS: '+invoice.number)
+        """
         
     @classmethod
     def vm_open_statement(cls, args):
@@ -409,20 +421,23 @@ class Sale(metaclass=PoolMeta):
         statements = Statement.search([
                 ('journal', 'in', journals),
                 ('sale_device', '=', device.id),
-            ], order=[('date', 'ASC')])
+                ('date', '=', date)
+            ])
         journals_of_draft_statements = [s.journal for s in statements
                                         if s.state == 'draft']
+        
         vlist = []
         for journal in device.journals:
-            statements_today = Statement.search([
+            statements_date = Statement.search([
                 ('journal', '=', journal.id),
                 ('date', '=', date),
                 ('sale_device', '=', device.id),
             ])
-            turn = len(statements_today) + 1
+            turn = len(statements_date) + 1
             if journal not in journals_of_draft_statements:
                 values = {
                     'name': '%s - %s' % (device.rec_name, journal.rec_name),
+                    'date': date,
                     'journal': journal.id,
                     'company': device.shop.company.id,
                     'start_balance': journal.default_start_balance or Decimal('0.0'),
@@ -534,8 +549,8 @@ class Sale(metaclass=PoolMeta):
     @classmethod
     def get_data_tecno(cls, date):
         Config = Pool().get('conector.configuration')
-        #consult = "SELECT * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2)" #TEST
-        consult = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado != 'T'"
+        #consult = "SELECT TOP (10) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2)" #TEST
+        consult = "SET DATEFORMAT ymd SELECT TOP(10) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado != 'T'"
         result = Config.get_data(consult)
         return result
 

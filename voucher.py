@@ -156,6 +156,7 @@ class Voucher(ModelSQL, ModelView):
                     #Se obtiene las facturas a las que hace referencia el ingreso o egreso
                     facturas = cls.get_dcto_cruce(consult)
                     if facturas:
+                        #print(id_tecno)
                         lineas_a_pagar = False
                         #Se comprueba si el comprobante tiene facturas en el sistema Tryton
                         for factura in facturas:
@@ -175,6 +176,7 @@ class Voucher(ModelSQL, ModelView):
                             multingreso.date = fecha_date
                             multingreso.id_tecno = id_tecno
                             multingreso.save()
+                            #Se ingresa las formas de pago
                             for pago in tipo_pago:
                                 forma_pago = pago.forma_pago
                                 paymode, = PayMode.search([('id_tecno', '=', forma_pago)])
@@ -187,6 +189,7 @@ class Voucher(ModelSQL, ModelView):
                                 transaction.payment_mode = paymode
                                 transaction.save()
                             to_lines = []
+                            #Se ingresa las lineas a pagar
                             for rec in facturas:
                                 ref = rec.tipo_aplica+'-'+str(rec.numero_aplica)
                                 move_line = cls.get_moveline(ref, tercero)
@@ -210,6 +213,7 @@ class Voucher(ModelSQL, ModelView):
                                 else:
                                     pass
                         elif len(tipo_pago) == 1:
+                            #print('VOUCHER')
                             forma_pago = tipo_pago[0].forma_pago
                             paymode, = PayMode.search([('id_tecno', '=', forma_pago)])
                             voucher = Voucher()
@@ -226,20 +230,30 @@ class Voucher(ModelSQL, ModelView):
                             if nota:
                                 voucher.description = nota
                             voucher.reference = tipo+'-'+nro
+                            voucher.save()
                             for rec in facturas:
                                 ref = rec.tipo_aplica+'-'+str(rec.numero_aplica)
                                 move_line = cls.get_moveline(ref, tercero)
+                                #print(move_line)
                                 if move_line:
                                     line = Line()
                                     line.voucher = voucher
-                                    line.amount_original = move_line.debit
+                                    valor_original = Decimal(0)
+                                    if sw == '5':
+                                        valor_original = Decimal(move_line.debit)
+                                        #print(move_line.debit)
+                                    elif sw == '6':
+                                        valor_original = Decimal(move_line.credit)
+                                        #print(move_line.credit)
+                                    line.amount_original = valor_original
                                     line.reference = ref
                                     line.move_line = move_line
                                     line.on_change_move_line()
                                     valor = Decimal(rec.valor)
-                                    if valor > line.amount_original:
-                                        valor = line.amount_original
-                                    line.amount = valor
+                                    
+                                    if valor > valor_original:
+                                        valor = valor_original
+                                    line.amount = Decimal(valor)
                                     line.save()
                                     #Se procede a comparar los totales
                                     voucher.on_change_lines()
@@ -276,8 +290,11 @@ class Voucher(ModelSQL, ModelView):
         #A continuacion se consulta las lineas a pagar de la factura (reference)
         linea = False
         invoice = Invoice.search([('number', '=', reference)])
+        
         if invoice:
             invoice, = invoice
+            if invoice.state != 'posted':
+                return False
             lines_to_pay = Invoice.get_lines_to_pay([invoice], 'None')
             if lines_to_pay:
                 #Se selecciona la primera linea. Pero si hay más?
