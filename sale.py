@@ -284,12 +284,12 @@ class Sale(metaclass=PoolMeta):
                         tipo_numero_tecno = venta[coluns_doc.index('tipo')].strip()+'-'+str(venta[coluns_doc.index('Numero_documento')])
                         if tipo_numero_tecno == sale.number:
                             valor_total = Decimal(abs(venta.valor_total))
-                            valor_impuesto = Decimal(abs(venta.Valor_impuesto))
+                            valor_impuesto = Decimal(abs(venta.Valor_impuesto) + abs(venta.Impuesto_Consumo))
                             if valor_impuesto > 0:
                                 total_tecno = valor_total - valor_impuesto
                             else:
                                 total_tecno = valor_total
-                    diferencia_total = (total_tryton - total_tecno)
+                    diferencia_total = abs(total_tryton - total_tecno)
                     if diferencia_total <= 1.0:
                         Invoice.post_batch([invoice])
                         Invoice.post([invoice])
@@ -299,6 +299,8 @@ class Sale(metaclass=PoolMeta):
                         full_msg = ' - '.join([msg1, msg2])
                         logging.error(msg2)
                         logs += '\n' + full_msg
+                        invoice.comment = 'No contabilizada diferencia total mayor al rango permitido'
+                        invoice.save()
                     cls.set_payment(invoice, sale)
                         #Transaction().connection.commit()
                     #except Exception as e:
