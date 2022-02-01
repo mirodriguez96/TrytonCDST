@@ -262,7 +262,7 @@ class Voucher(ModelSQL, ModelView):
                         logging.warning(msg1)
                         logs.append(msg1)
                         continue
-                #cls.importado(id_tecno)
+                cls.importado(id_tecno)
         actualizacion.add_logs(actualizacion, logs)
         logging.warning("FINISH COMPROBANTES")
 
