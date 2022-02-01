@@ -285,8 +285,11 @@ class Sale(metaclass=PoolMeta):
                         if tipo_numero_tecno == sale.number:
                             valor_total = Decimal(abs(venta.valor_total))
                             valor_impuesto = Decimal(abs(venta.Valor_impuesto))
-                            total_tecno = valor_total - valor_impuesto
-                    diferencia_total = abs(total_tryton - total_tecno)
+                            if valor_impuesto > 0:
+                                total_tecno = valor_total - valor_impuesto
+                            else:
+                                total_tecno = valor_total
+                    diferencia_total = (total_tryton - total_tecno)
                     if diferencia_total <= 1.0:
                         Invoice.post_batch([invoice])
                         Invoice.post([invoice])
@@ -401,6 +404,46 @@ class Sale(metaclass=PoolMeta):
         else:
             logging.warning('NO HAY RECIBO POS: '+invoice.number)
         
+    @classmethod
+    def vm_open_statement(cls, args):
+        if not args.get('device'):
+            return {'result': False}
+        pool = Pool()
+        Statement = pool.get('account.statement')
+        Device = pool.get('sale.device')
+        device = Device(args['device'])
+        money = args['total_money']
+        date = args['date']
+        journals = [j.id for j in device.journals]
+        statements = Statement.search([
+                ('journal', 'in', journals),
+                ('sale_device', '=', device.id),
+            ], order=[('date', 'ASC')])
+        journals_of_draft_statements = [s.journal for s in statements
+                                        if s.state == 'draft']
+        vlist = []
+        for journal in device.journals:
+            statements_today = Statement.search([
+                ('journal', '=', journal.id),
+                ('date', '=', date),
+                ('sale_device', '=', device.id),
+            ])
+            turn = len(statements_today) + 1
+            if journal not in journals_of_draft_statements:
+                values = {
+                    'name': '%s - %s' % (device.rec_name, journal.rec_name),
+                    'journal': journal.id,
+                    'company': device.shop.company.id,
+                    'start_balance': journal.default_start_balance or Decimal('0.0'),
+                    'end_balance': Decimal('0.0'),
+                    'turn': turn,
+                    'sale_device': device.id,
+                }
+                if journal.kind == 'cash' and money:
+                    values['start_balance'] = Decimal(money)
+                vlist.append(values)
+        Statement.create(vlist)
+        return {'result': True}
 
     #Metodo encargado de obtener la forma en que se pago el comprobante (recibos)
     @classmethod
