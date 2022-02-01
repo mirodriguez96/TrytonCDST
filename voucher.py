@@ -153,30 +153,30 @@ class Voucher(ModelSQL, ModelView):
                     nit_cedula = doc.nit_Cedula.strip()
                     tercero, = Party.search([('id_number', '=', nit_cedula)])
                     consult = "sw="+sw+" and tipo="+tipo+" and numero="+nro
-                    #Se obtiene los recibos y las facturas a las que hace referencia el ingreso o egreso
-                    recibos = cls.get_recibos(consult)
-                    if recibos:
-                        facturas_a_pagar = False
+                    #Se obtiene las facturas a las que hace referencia el ingreso o egreso
+                    facturas = cls.get_dcto_cruce(consult)
+                    if facturas:
+                        lineas_a_pagar = False
                         #Se comprueba si el comprobante tiene facturas en el sistema Tryton
-                        for recibo in recibos:
-                            ref = recibo.tipo_aplica+'-'+str(recibo.numero_aplica)
+                        for factura in facturas:
+                            ref = factura.tipo_aplica+'-'+str(factura.numero_aplica)
                             move_line = cls.get_moveline(ref, tercero)
                             if move_line:
-                                facturas_a_pagar = True
-                        if not facturas_a_pagar:
+                                lineas_a_pagar = True
+                        if not lineas_a_pagar:
                             continue
                         #Se obtiene la forma de pago, según la tabla Documentos_Che de TecnoCarnes
                         tipo_pago = cls.get_tipo_pago(sw, tipo, nro)
                         if len(tipo_pago) > 1 and sw == '5':
                             #print('MULTI INGRESO')
                             multingreso = MultiRevenue()
+                            multingreso.code = tipo+'-'+nro
                             multingreso.party = tercero
                             multingreso.date = fecha_date
                             multingreso.id_tecno = id_tecno
                             multingreso.save()
-                            cont = 0
                             for pago in tipo_pago:
-                                forma_pago = tipo_pago[cont].forma_pago
+                                forma_pago = pago.forma_pago
                                 paymode, = PayMode.search([('id_tecno', '=', forma_pago)])
                                 valor = pago.valor
                                 transaction = Transaction()
@@ -186,9 +186,8 @@ class Voucher(ModelSQL, ModelView):
                                 transaction.date = fecha_date
                                 transaction.payment_mode = paymode
                                 transaction.save()
-                                cont += 1
                             to_lines = []
-                            for rec in recibos:
+                            for rec in facturas:
                                 ref = rec.tipo_aplica+'-'+str(rec.numero_aplica)
                                 move_line = cls.get_moveline(ref, tercero)
                                 if move_line:
@@ -227,7 +226,7 @@ class Voucher(ModelSQL, ModelView):
                             if nota:
                                 voucher.description = nota
                             voucher.reference = tipo+'-'+nro
-                            for rec in recibos:
+                            for rec in facturas:
                                 ref = rec.tipo_aplica+'-'+str(rec.numero_aplica)
                                 move_line = cls.get_moveline(ref, tercero)
                                 if move_line:
@@ -263,7 +262,7 @@ class Voucher(ModelSQL, ModelView):
                         logging.warning(msg1)
                         logs.append(msg1)
                         continue
-                cls.importado(id_tecno)
+                #cls.importado(id_tecno)
         actualizacion.add_logs(actualizacion, logs)
         logging.warning("FINISH COMPROBANTES")
 
@@ -329,7 +328,7 @@ class Voucher(ModelSQL, ModelView):
 
     #Metodo encargado de obtener los recibos pagados de un documento dado
     @classmethod
-    def get_recibos(cls, consult):
+    def get_dcto_cruce(cls, consult):
         Config = Pool().get('conector.configuration')
         query = "SELECT * FROM dbo.Documentos_Cruce WHERE "+consult
         data = Config.get_data(query)
@@ -360,17 +359,14 @@ class Voucher(ModelSQL, ModelView):
         actualizacion = Actualizacion.search([('name', '=','COMPROBANTES')])
         if actualizacion:
             #Se busca un registro con la actualización
-            actualizacion, = Actualizacion.search([('name', '=','COMPROBANTES')])
-            actualizacion.name = 'COMPROBANTES'
-            actualizacion.logs = 'logs...'
-            actualizacion.save()
+            actualizacion, = actualizacion
         else:
             #Se crea un registro con la actualización
             actualizacion = Actualizacion()
             actualizacion.name = 'COMPROBANTES'
+            actualizacion.logs = 'logs...'
             actualizacion.save()
         return actualizacion
-
 
 
 class MultiRevenue(metaclass=PoolMeta):

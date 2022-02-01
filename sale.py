@@ -45,10 +45,8 @@ class Sale(metaclass=PoolMeta):
     def add_sale(cls, ventas_tecno):
         #Se crea o actualiza la fecha de importación
         actualizacion = cls.create_or_update()
-        logs = actualizacion.logs
-        if not logs:
-            logs = 'logs...'
-        now = datetime.datetime.now()
+        logs = []
+        #now = datetime.datetime.now()
         if ventas_tecno:
             pool = Pool()
             Sale = pool.get('sale.sale')
@@ -90,42 +88,34 @@ class Sale(metaclass=PoolMeta):
                     nit_cedula = venta[coluns_doc.index('nit_Cedula')]
                     party = Party.search([('id_number', '=', nit_cedula)])
                     if not party:
-                        msg1 = f'{now}'
                         msg2 = f' No se encontro el tercero {nit_cedula} de la venta {id_venta}'
-                        full_msg = ' - '.join([msg1, msg2])
                         logging.error(msg2)
-                        logs += "\n"+full_msg
+                        logs.append(msg2)
                         continue
                     party = party[0]
                     #Se indica a que bodega pertenece
                     id_tecno_bodega = venta[coluns_doc.index('bodega')]
                     bodega = location.search([('id_tecno', '=', id_tecno_bodega)])
                     if not bodega:
-                        msg1 = f'{now}'
                         msg2 = f' Bodega {id_tecno_bodega} no existe de la venta {id_venta}'
-                        full_msg = ' - '.join([msg1, msg2])
                         logging.error(msg2)
-                        logs += "\n"+full_msg
+                        logs.append(msg2)
                         continue
                     bodega = bodega[0]
                     shop = Shop.search([('warehouse', '=', bodega)])
                     if not shop:
-                        msg1 = f'{now}'
                         msg2 = f' Bodega (shop) {id_tecno_bodega} no existe de la venta {id_venta}'
-                        full_msg = ' - '.join([msg1, msg2])
                         logging.error(msg2)
-                        logs += "\n"+full_msg
+                        logs.append(msg2)
                         continue
                     shop = shop[0]
                     #Se le asigna el plazo de pago correspondiente
                     condicion = venta[coluns_doc.index('condicion')]
                     plazo_pago = payment_term.search([('id_tecno', '=', condicion)])
                     if not plazo_pago:
-                        msg1 = f'{now}'
                         msg2 = f'Plazo de pago {condicion} no existe de la venta {id_venta}'
-                        full_msg = ' - '.join([msg1, msg2])
                         logging.error(msg2)
-                        logs += "\n"+full_msg
+                        logs.append(msg2)
                         continue
                     plazo_pago = plazo_pago[0]
                     with Transaction().set_user(1):
@@ -294,11 +284,11 @@ class Sale(metaclass=PoolMeta):
                         Invoice.post_batch([invoice])
                         Invoice.post([invoice])
                     else:
-                        msg1 = f'{now} - Factura: {sale.id_tecno}'
+                        msg1 = f'Factura: {sale.id_tecno}'
                         msg2 = f'No contabilizada diferencia total mayor al rango permitido'
                         full_msg = ' - '.join([msg1, msg2])
                         logging.error(msg2)
-                        logs += '\n' + full_msg
+                        logs.append(full_msg)
                         invoice.comment = 'No contabilizada diferencia total mayor al rango permitido'
                         invoice.save()
                     cls.set_payment(invoice, sale)
@@ -311,13 +301,12 @@ class Sale(metaclass=PoolMeta):
                     #    logging.error(msg2)
                     #    logs += '\n' + full_msg
                 else:
-                    msg1 = f'{now} Venta sin factura: {sale.id_tecno}'
+                    msg1 = f'Venta sin factura: {sale.id_tecno}'
                     logging.error(msg1)
-                    logs += '\n' + msg1
+                    logs.append(msg1)
                 # Marcar como importado
                 cls.importado(sale.id_tecno)
-        actualizacion.logs = logs
-        actualizacion.save()
+        actualizacion.add_logs(actualizacion, logs)
         logging.warning('FINISH VENTAS')
 
 
@@ -610,15 +599,12 @@ class Sale(metaclass=PoolMeta):
         actualizacion = Actualizacion.search([('name', '=','VENTAS')])
         if actualizacion:
             #Se busca un registro con la actualización
-            actualizacion, = Actualizacion.search([('name', '=','VENTAS')])
-            actualizacion.name = 'VENTAS'
-            #actualizacion.logs = logs
-            actualizacion.save()
+            actualizacion, = actualizacion
         else:
             #Se crea un registro con la actualización
             actualizacion = Actualizacion()
             actualizacion.name = 'VENTAS'
-            #actualizacion.logs = logs
+            actualizacion.logs = 'logs...'
             actualizacion.save()
         return actualizacion
 
