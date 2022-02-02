@@ -239,16 +239,11 @@ class Voucher(ModelSQL, ModelView):
                                     line = Line()
                                     line.voucher = voucher
                                     valor_original = Decimal(0)
-                                    if sw == '5':
+                                    if Decimal(move_line.debit) > 0:
                                         valor_original = Decimal(move_line.debit)
-                                        #print(move_line.debit)
-                                    elif sw == '6':
+                                    elif Decimal(move_line.credit) > 0:
                                         valor_original = Decimal(move_line.credit)
-                                        #print(move_line.credit)
-                                    if valor_original == 0 and move_line.debit != 0:
-                                        valor_original = Decimal(move_line.debit)
-                                    elif valor_original == 0 and move_line.credit != 0:
-                                        valor_original = Decimal(move_line.credit)
+                                    print(valor_original)
                                     line.amount_original = valor_original
                                     line.reference = ref
                                     line.move_line = move_line
