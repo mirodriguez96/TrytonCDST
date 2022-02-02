@@ -298,7 +298,7 @@ class Sale(metaclass=PoolMeta):
                     logging.error(msg1)
                     logs.append(msg1)
                 #Marcar como importado
-                #cls.importado(sale.id_tecno)
+                cls.importado(sale.id_tecno)
         actualizacion.add_logs(actualizacion, logs)
         logging.warning('FINISH VENTAS')
 
@@ -306,6 +306,7 @@ class Sale(metaclass=PoolMeta):
     #Función encargada de buscar recibos de caja pagados en TecnoCarnes y pagarlos en Tryton
     @classmethod
     def set_payment(cls, invoice, sale):
+        """
         data_statement = {
             'device': sale.sale_device,
             'total_money': 0,
@@ -322,8 +323,8 @@ class Sale(metaclass=PoolMeta):
                 'journal_id': 1,
                 'cash_received': 0,
             }
-
         """
+        
         pool = Pool()
         #Statement = pool.get('account.statement')
         #StatementLine = pool.get('account.statement.line')
@@ -364,7 +365,7 @@ class Sale(metaclass=PoolMeta):
             if diferencia_total <= 1.0:
                 Voucher.post([voucher])
 
-            
+            """
             #REVISAR PROCESOS Y FALTA QUE APAREZCAN VENTAS EN ESTADO DE CUENTA
             journal, = StatementJournal.search([('id_tecno', '=', str(idt))])
             payment_amount = abs(sale.total_amount - sale.paid_amount)
@@ -402,10 +403,10 @@ class Sale(metaclass=PoolMeta):
                 )
                 payment.save()
                 payment.create_move()
-            
+            """
         else:
             logging.warning('NO HAY RECIBO POS: '+invoice.number)
-        """
+        
         
     @classmethod
     def vm_open_statement(cls, args):
@@ -550,7 +551,7 @@ class Sale(metaclass=PoolMeta):
     def get_data_tecno(cls, date):
         Config = Pool().get('conector.configuration')
         #consult = "SELECT TOP (10) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2)" #TEST
-        consult = "SET DATEFORMAT ymd SELECT TOP(10) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado != 'T'"
+        consult = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado != 'T'"
         result = Config.get_data(consult)
         return result
 
