@@ -169,7 +169,7 @@ class Voucher(ModelSQL, ModelView):
                         #Se obtiene la forma de pago, según la tabla Documentos_Che de TecnoCarnes
                         tipo_pago = cls.get_tipo_pago(sw, tipo, nro)
                         if len(tipo_pago) > 1 and sw == '5':
-                            #print('MULTI INGRESO')
+                            print('MULTI INGRESO:', id_tecno)
                             multingreso = MultiRevenue()
                             multingreso.code = tipo+'-'+nro
                             multingreso.party = tercero
@@ -213,7 +213,7 @@ class Voucher(ModelSQL, ModelView):
                                 else:
                                     pass
                         elif len(tipo_pago) == 1:
-                            #print('VOUCHER')
+                            print('VOUCHER:', id_tecno)
                             forma_pago = tipo_pago[0].forma_pago
                             paymode, = PayMode.search([('id_tecno', '=', forma_pago)])
                             voucher = Voucher()
