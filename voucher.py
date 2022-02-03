@@ -249,10 +249,15 @@ class Voucher(ModelSQL, ModelView):
                                     line.move_line = move_line
                                     line.on_change_move_line()
                                     valor = Decimal(rec.valor)
-                                    
-                                    if valor > valor_original:
-                                        valor = valor_original
-                                    line.amount = Decimal(valor)
+                                    descuento = Decimal(rec.descuento)
+                                    retencion = Decimal(rec.retencion)
+                                    ajuste = Decimal(rec.ajuste)
+                                    retencion_iva = Decimal(rec.retencion_iva)
+                                    retencion_ica = Decimal(rec.retencion_ica)
+                                    valores = valor + descuento + retencion + ajuste + retencion_iva + retencion_ica
+                                    if valores > valor_original:
+                                        valores = valor_original
+                                    line.amount = Decimal(valores)
                                     line.save()
                                     #Se procede a comparar los totales
                                     voucher.on_change_lines()
