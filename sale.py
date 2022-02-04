@@ -227,8 +227,6 @@ class Sale(metaclass=PoolMeta):
                     cls.importado(id_venta)
                 if sale and sale.invoice_type != 'P':
                     to_create.append(sale)
-            #Sale.save(to_create)
-            #SaleLine.save(create_line)
             #_sale almacena los registros creados
             #_sale = Sale.create(to_create)
             with Transaction().set_user(1):
@@ -300,7 +298,7 @@ class Sale(metaclass=PoolMeta):
                     logging.error(msg1)
                     logs.append(msg1)
                 #Marcar como importado
-                #cls.importado(sale.id_tecno)
+                cls.importado(sale.id_tecno)
         actualizacion.add_logs(actualizacion, logs)
         logging.warning('FINISH VENTAS')
 
@@ -402,7 +400,7 @@ class Sale(metaclass=PoolMeta):
             invoice = sale.invoices[0]
             cls.set_payment(invoice, sale)
         #Marcar como importado
-        #cls.importado(sale.id_tecno)
+        cls.importado(sale.id_tecno)
 
     #Metodo encargado de obtener la forma en que se pago el comprobante (recibos)
     @classmethod
@@ -496,7 +494,7 @@ class Sale(metaclass=PoolMeta):
     def get_data_tecno(cls, date):
         Config = Pool().get('conector.configuration')
         #consult = "SELECT TOP (10) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2)" #TEST
-        consult = "SET DATEFORMAT ymd SELECT TOP(10) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado != 'T'"
+        consult = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado != 'T'"
         result = Config.get_data(consult)
         return result
 
