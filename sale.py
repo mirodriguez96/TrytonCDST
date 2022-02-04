@@ -221,9 +221,11 @@ class Sale(metaclass=PoolMeta):
                             linea.on_change_discount_rate()
                         #Se guarda la linea para la venta
                         linea.save()
+                    if sale.invoice_type == 'P':
+                        cls.venta_mostrador(sale)
                 else:
                     cls.importado(id_venta)
-                if sale:
+                if sale and sale.invoice_type != 'P':
                     to_create.append(sale)
             #Sale.save(to_create)
             #SaleLine.save(create_line)
@@ -280,7 +282,7 @@ class Sale(metaclass=PoolMeta):
                             else:
                                 total_tecno = valor_total
                     diferencia_total = abs(total_tryton - total_tecno)
-                    if diferencia_total <= 1.0:
+                    if diferencia_total <= 1.0 and invoice.invoice_type != 'P':
                         Invoice.post_batch([invoice])
                         Invoice.post([invoice])
                     else:
@@ -291,14 +293,14 @@ class Sale(metaclass=PoolMeta):
                         logs.append(full_msg)
                         invoice.comment = 'No contabilizada diferencia total mayor al rango permitido'
                         invoice.save()
-                    if invoice.invoice_type == 'P':
-                        cls.set_payment(invoice, sale)
+                    #if invoice.invoice_type == 'P' and sale.payment_term.id_tecno == '0':
+                    #    cls.set_payment(invoice, sale)
                 else:
                     msg1 = f'Venta sin factura: {sale.id_tecno}'
                     logging.error(msg1)
                     logs.append(msg1)
                 #Marcar como importado
-                cls.importado(sale.id_tecno)
+                #cls.importado(sale.id_tecno)
         actualizacion.add_logs(actualizacion, logs)
         logging.warning('FINISH VENTAS')
 
@@ -306,107 +308,41 @@ class Sale(metaclass=PoolMeta):
     #Función encargada de buscar recibos de caja pagados en TecnoCarnes y pagarlos en Tryton
     @classmethod
     def set_payment(cls, invoice, sale):
-        """
+        
         data_statement = {
             'device': sale.sale_device,
             'total_money': 0,
             'date': sale.sale_date
         }
-
+        
         result = cls.vm_open_statement(data_statement)
         print(result)
         if result['result']:
-            print('ESTADO DE CUENTA CREADO', sale.sale_date)
+            pool = Pool()
+            Journal = pool.get('account.statement.journal')
+            print(invoice.reference)
+            tipo_numero = invoice.reference.split('-')
+            tipo = tipo_numero[0]
+            nro = tipo_numero[1]
+            pago = cls.get_payment_tecno(tipo, nro)
 
-            data_payment = {
-                'sale_id': sale.id,
-                'journal_id': 1,
-                'cash_received': 0,
-            }
-        """
-        
-        pool = Pool()
-        #Statement = pool.get('account.statement')
-        #StatementLine = pool.get('account.statement.line')
-        Invoice = pool.get('account.invoice')
-        Voucher = pool.get('account.voucher')
-        PaymentMode = pool.get('account.voucher.paymode')
-        #StatementJournal = pool.get('account.statement.journal')
-        columns_tip = cls.get_columns_db_tecno('Documentos_Che')
-        #columns_rec = cls.get_columns_db_tecno('Documentos_Cruce')
-        
-        tipo_numero = invoice.number.split('-')
-        #print('INICIO VOUCHER '+invoice.number)
-        tipo = tipo_numero[0]
-        nro = tipo_numero[1]
-        recibos = cls.get_recibos(tipo, nro)
-        
-        #Si hay recibos para pagar
-        if recibos:
-            voucher, = Invoice.create_voucher([invoice])
-            recibo = recibos[0] #
-
-            #Se trae la fecha de la venta y se adapta al formato correcto para Tryton
-            fecha = str(recibo[columns_tip.index('fecha')]).split()[0].split('-')
-            fecha = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
-
-            idt = recibo[columns_tip.index('forma_pago')]
-            payment_mode, = PaymentMode.search([('id_tecno', '=', idt)])
-            valor_pagado = recibo[columns_tip.index('valor')]
-            #for voucher in vouchers:
-            voucher.date = fecha
-            voucher.payment_mode = payment_mode
-            voucher.reference = invoice.number
-            voucher.description = 'VENTA POS'
-            voucher.save()
-            Voucher.process([voucher])
-            diferencia_total = abs(Decimal(valor_pagado) - Decimal(voucher.amount_to_pay))
-            #print(diferencia_total)
-            if diferencia_total <= 1.0:
-                Voucher.post([voucher])
-
-            """
-            #REVISAR PROCESOS Y FALTA QUE APAREZCAN VENTAS EN ESTADO DE CUENTA
-            journal, = StatementJournal.search([('id_tecno', '=', str(idt))])
-            payment_amount = abs(sale.total_amount - sale.paid_amount)
-            statements = Statement.search([('date', '=', fecha),('journal', '=', journal)])
-            #Se procede a crear el estado de cuenta
-            if not statements:
-                statements = {
-                    'name': sale.sale_device.name+' - '+journal.name,
-                    'date': fecha,
-                    'turn': 0,
-                    'sale_device': sale.sale_device.id,
-                    'journal': journal.id,
-                    'start_balance': 0,
-                    'end_balance': 0,
-                    'state': 'draft'
+            if pago:
+                pago, = pago
+                forma_pago = pago.forma_pago
+                journal, = Journal.search([('id_tecno', '=', forma_pago)])
+                valor_pagado = pago.valor
+                data_payment = {
+                    'sale_id': sale.id,
+                    'journal_id': journal.id,
+                    'cash_received': valor_pagado,
                 }
-                statements = Statement.create([statements])
-            if not sale.party.account_receivable:  
-                raise UserError('sale_pos.msg_party_without_account_receivable', s=sale.party.name)
-            account = sale.party.account_receivable.id
-            if payment_amount:
-                amount = payment_amount
-                if sale.total_amount < 0:
-                    amount = amount * -1
-                payment = StatementLine(
-                    statement=statements[0].id,
-                    date=fecha,
-                    amount=amount,
-                    party=sale.party.id,
-                    account=account,
-                    description='VENTA POS',
-                    sale=sale.id,
-                    # number=self.start.voucher,
-                    # voucher=self.start.voucher,
-                )
-                payment.save()
-                payment.create_move()
-            """
-        else:
-            logging.warning('NO HAY RECIBO POS: '+invoice.number)
-        
+                context = {}
+                if not sale.party.account_receivable:
+                    raise UserError('sale_pos.msg_party_without_account_receivable', sale.party.name)
+                faster_payment = sale.faster_add_payment(data_payment, context)
+                sale.workflow_to_end([sale])
+                print(faster_payment)
+
         
     @classmethod
     def vm_open_statement(cls, args):
@@ -452,6 +388,22 @@ class Sale(metaclass=PoolMeta):
         Statement.create(vlist)
         return {'result': True}
 
+
+    @classmethod
+    def venta_mostrador(cls, sale):
+        pool = Pool()
+        Sale = pool.get('sale.sale')
+
+        Sale.faster_process({'sale_id':sale.id}, {})
+        Sale.process_pos(sale)
+        
+
+        if sale.payment_term.id_tecno == '0':
+            invoice = sale.invoices[0]
+            cls.set_payment(invoice, sale)
+        #Marcar como importado
+        #cls.importado(sale.id_tecno)
+
     #Metodo encargado de obtener la forma en que se pago el comprobante (recibos)
     @classmethod
     def get_tipo_pago(cls, tipo, nro):
@@ -460,19 +412,12 @@ class Sale(metaclass=PoolMeta):
         result = Config.get_data(consult)
         return result
     
-    #Metodo encargado de obtener el recibo pagado a una venta cuando es POS
+    #Metodo encargado de obtener el pago de una venta cuando es POS
     @classmethod
-    def get_recibos(cls, tipo, nro):
-        data = []
-        try:
-            Config = Pool().get('conector.configuration')
-            conexion = Config.conexion()
-            with conexion.cursor() as cursor:
-                #Se realiza una consulta con sw = 1 para el caso de las ventas POS que son aquellas con condicion 1 (efectivo)
-                query = cursor.execute("SELECT * FROM dbo.Documentos_Che WHERE sw = 1 AND tipo = "+tipo+" AND numero ="+nro)
-                data = list(query.fetchall())
-        except Exception as e:
-            print("ERROR QUERY get_recibos: ", e)
+    def get_payment_tecno(cls, tipo, nro):
+        Config = Pool().get('conector.configuration')
+        consult = "SELECT * FROM dbo.Documentos_Che WHERE sw = 1 AND tipo = "+tipo+" AND numero ="+nro
+        data = Config.get_data(consult)
         return data
 
     @classmethod
@@ -551,7 +496,7 @@ class Sale(metaclass=PoolMeta):
     def get_data_tecno(cls, date):
         Config = Pool().get('conector.configuration')
         #consult = "SELECT TOP (10) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2)" #TEST
-        consult = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado != 'T'"
+        consult = "SET DATEFORMAT ymd SELECT TOP(10) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado != 'T'"
         result = Config.get_data(consult)
         return result
 

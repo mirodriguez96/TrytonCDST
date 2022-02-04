@@ -1,7 +1,7 @@
 from trytond.model import ModelSQL, ModelView, fields
 from trytond.pool import Pool, PoolMeta
 import datetime
-from decimal import Decimal
+import logging
 from trytond.exceptions import UserError
 
 
@@ -33,35 +33,24 @@ class Product(ModelSQL, ModelView):
     #teniendo en cuenta la ultima fecha de actualizacion y si existe o no.
     @classmethod
     def update_products(cls):
-        print("---------------RUN PRODUCTOS---------------")
+        logging.warning('RUN PRODUCTOS')
+
+        cls.update_accounting_categories()
+
         productos_tecno = cls.last_update()
         cls.create_or_update()
         col_pro = cls.get_columns_db_tecno('TblProducto')
-        modelos = cls.get_modelos_tecno()
-
-        #Creación o actualización de las categorias de los productos
         Category = Pool().get('product.category')
-        #to_category = []
-        for modelo in modelos:
-            id_tecno = modelo[0]
-            nombre = str(id_tecno)+' - '+modelo[1].strip()
-            
-            existe = cls.buscar_categoria(id_tecno)
-            if not existe:
-                categoria = Category()
-                categoria.id_tecno = id_tecno
-                categoria.name = nombre
-                categoria.accounting = True
-                categoria.save()
-                cls.set_account(modelo, categoria)
 
+        
         #Se procede a importar productos
         if productos_tecno:
             #Creación de los productos con su respectiva categoria e información
             Producto = Pool().get('product.product')
             Template_Product = Pool().get('product.template')
-            #to_producto = []
-            #to_template = []
+            to_category = []
+            to_product = []
+            to_template = []
             for producto in productos_tecno:
                 id_producto = str(producto[col_pro.index('IdProducto')])
                 existe = cls.buscar_producto(id_producto)
@@ -70,11 +59,17 @@ class Product(ModelSQL, ModelView):
                 if categoria_contable:
                     categoria_contable = categoria_contable[0]
                 else:
+                    #category = {
+                    #    'id_tecno': id_categoria,
+                    #    'name': str(id_categoria)+' - sin modelo',
+                    #    'accounting': True
+                    #}
                     categoria = Category()
                     categoria.id_tecno = id_categoria
                     categoria.name = str(id_categoria)+' - sin modelo'
                     categoria.accounting = True
                     categoria.save()
+                    #to_category.append(categoria)
                     categoria_contable = categoria
                 nombre_producto = producto[col_pro.index('Producto')].strip()
                 tipo_producto = cls.tipo_producto(producto[col_pro.index('maneja_inventario')])
@@ -122,13 +117,43 @@ class Product(ModelSQL, ModelView):
                     temp.sale_price_w_tax = 0
                     prod.id_tecno = id_producto
                     prod.template = temp
-                    temp.save()
-                    prod.save()
-                    #to_template.append(temp)
-                    #to_producto.append(prod)
-            #Template_Product.save(to_template)
-            #Producto.save(to_producto)
+                    #temp.save()
+                    #prod.save()
+                    to_template.append(temp)
+                    to_product.append(prod)
+            Category.save(to_category)
+            Template_Product.save(to_template)
+            Producto.save(to_product)
+            
+        logging.warning('FINISH PRODUCTOS')
 
+
+    @classmethod
+    def update_accounting_categories(cls):
+        modelos = cls.get_modelos_tecno()
+        #Creación o actualización de las categorias de los productos
+        Category = Pool().get('product.category')
+        to_category = []
+        for modelo in modelos:
+            id_tecno = modelo.IdModelos
+            nombre = str(id_tecno)+' - '+modelo.Modelos.strip()
+            
+            existe = cls.buscar_categoria(id_tecno)
+            if not existe:
+                categoria = {
+                    'id_tecno': id_tecno,
+                    'name': nombre,
+                    'accounting': True
+                }
+                #categoria = Category()
+                #categoria.id_tecno = id_tecno
+                #categoria.name = nombre
+                #categoria.accounting = True
+                #categoria.save()
+                categoria = cls.set_account(modelo, categoria)
+                to_category.append(categoria)
+                
+        Category.create(to_category)
 
     #Función encargada de consultar si existe una categoria dada de la bd TecnoCarnes
     @classmethod
@@ -145,49 +170,36 @@ class Product(ModelSQL, ModelView):
     @classmethod
     def set_account(cls, modelo, category):
         Account = Pool().get('account.account')
-        CategoryAccount = Pool().get('product.category.account')
-        #Gastos
-        l_expense = list(modelo[2])
-        expense = False
-        if int(l_expense[0]) >= 5:
-            expense = Account.search([('code', '=', modelo[2])])
-        #Ingresos
-        l_revenue = list(modelo[3])
-        revenue = False
-        if l_revenue[0] == '4':
-            revenue = Account.search([('code', '=', modelo[3])])
-        #Devolucion venta
-        l_return_sale = list(modelo[4])
-        return_sale = False
-        if int(l_return_sale[0]) >= 4:
-            return_sale = Account.search([('code', '=', modelo[4])])
 
-        CategoryAccount, = CategoryAccount.search([('category', '=', category.id)])
-        if expense:
-            #print('Gastos: ', modelo[2])
-            CategoryAccount.account_expense = expense[0]
-        if revenue:
-            #print('Ingresos: ', modelo[3])
-            CategoryAccount.account_revenue = revenue[0]
-        if return_sale:
-            #print('Devolucion: ', modelo[4])
-            category.account_return_sale = return_sale[0]
-            category.save()
-        CategoryAccount.save()
+        #Gastos
+        l_expense = list(modelo.cuenta1)
+        if int(l_expense[0]) >= 5:
+            expense = Account.search([('code', '=', modelo.cuenta1)])
+            if expense:
+                category['account_expense'] = expense[0]
+        
+        #Ingresos
+        l_revenue = list(modelo.cuenta3)
+        if l_revenue[0] == '4':
+            revenue = Account.search([('code', '=', modelo.cuenta3)])
+            if revenue:
+                category['account_revenue'] = revenue[0]
+        
+        #Devolucion venta
+        l_return_sale = list(modelo.cuenta4)
+        if int(l_return_sale[0]) >= 4:
+            return_sale = Account.search([('code', '=', modelo.cuenta4)])
+            if return_sale:
+                category['account_return_sale'] = return_sale[0]
+        
+        return category
 
     #Esta función se encarga de traer todos la vista modelos de la bd TecnoCarnes
     @classmethod
     def get_modelos_tecno(cls):
-        data = []
-        try:
-            Config = Pool().get('conector.configuration')
-            conexion = Config.conexion()
-            with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT IdModelos, Modelos, cuenta1, cuenta3, cuenta4 FROM dbo.vistamodelos")
-                data = list(query.fetchall())
-        except Exception as e:
-            print("ERROR QUERY get_modelos_tecno: ", e)
-            raise UserError("ERROR QUERY get_modelos_tecno: ", str(e))
+        Config = Pool().get('conector.configuration')
+        consult = "SELECT * FROM dbo.vistamodelos"
+        data = Config.get_data(consult)
         return data
 
     #Función encargada de consultar si existe un producto dado de la bd TecnoCarnes

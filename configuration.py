@@ -36,31 +36,14 @@ class Configuration(ModelSQL, ModelView):
     @classmethod
     @ModelView.button
     def test_conexion(cls, record):
-        cnxn = cls.conexion2()
+        cnxn = cls.conexion()
         cnxn.close()
         raise UserError('Conexión sqlserver: ', 'Exitosa !')
 
 
-    #Función encargada de enviar la conexión configurada con los datos del primer registro
+    #Función encargada de establecer conexión con respecto a la configuración
     @classmethod
     def conexion(cls):
-        Config = Pool().get('conector.configuration')
-        last_record = Config.search([], order=[('id', 'DESC')], limit=1)
-        if last_record:
-            record = last_record[0]
-            try:
-                conexion = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER='+str(record.server)+';DATABASE='+str(record.db)+';UID='+str(record.user)+';PWD='+str(record.password))
-                return conexion
-            except Exception as e:
-                print('Error sql server: ', e)
-                raise UserError('Error al conectarse a la base de datos (SQL Server): ', str(e))
-        else:
-            raise UserError('Error: ', 'Ingrese por favor los datos de configuracion de la base de datos')
-
-
-    #codigo optimo para la conexion a la base de datos
-    @classmethod
-    def conexion2(cls):
         Config = Pool().get('conector.configuration')
         last_record = Config.search([], order=[('id', 'DESC')], limit=1)
         if last_record:
@@ -76,7 +59,7 @@ class Configuration(ModelSQL, ModelView):
     @classmethod
     def get_data(cls, query):
         data = []
-        cnxn = cls.conexion2()
+        cnxn = cls.conexion()
         with cnxn.cursor() as cursor:
             cursor.execute(query)
             data = cursor.fetchall()
@@ -87,7 +70,7 @@ class Configuration(ModelSQL, ModelView):
     #
     @classmethod
     def set_data(cls, query):
-        cnxn = cls.conexion2()
+        cnxn = cls.conexion()
         with cnxn.cursor() as cursor:
             cursor.execute(query)
         cnxn.close()
