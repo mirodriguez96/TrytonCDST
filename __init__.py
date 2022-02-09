@@ -14,6 +14,7 @@ import purchase
 import location
 import invoice
 import tax
+import production
 
 def register():
     Pool.register(
@@ -45,6 +46,7 @@ def register():
         purchase.Purchase,
         invoice.Invoice,
         tax.Tax,
+        production.Production,
         module='conector', type_='model')
 
     Pool.register(

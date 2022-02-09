@@ -11,4 +11,8 @@
     <label name="date"/>
     <field name="date"/>
     <button string="Test" name="test_conexion" colspan="2"/>
+
+    <label name="file"/>
+    <field name="file"/>
+    <button string="File" name="importfile" colspan="2"/>
 </form>
