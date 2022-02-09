@@ -220,7 +220,7 @@ class Configuration(ModelSQL, ModelView):
                 prod['purchase_uom'] = uom.id
                 prod['products'] = [('create', [{
                         'cost_price': int(linea[14].strip()),
-                        'sale_price_uom': linea[2].strip(),
+                        #'sale_price_uom': linea[2].strip(),
                     }])]
                 products.append(prod)
         print(len(products))
