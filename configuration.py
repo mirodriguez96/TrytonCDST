@@ -178,7 +178,7 @@ class Configuration(ModelSQL, ModelView):
     @classmethod
     def import_csv_products(cls, lineas):
         pool = Pool()
-        Product = pool.get('product.product')
+        Product = pool.get('product.template')
         Category = pool.get('product.category')
         Uom = pool.get('product.uom')
         products = []
@@ -219,7 +219,9 @@ class Configuration(ModelSQL, ModelView):
                 prod['default_uom'] = uom.id
                 prod['sale_uom'] = uom.id
                 prod['purchase_uom'] = uom.id
-                prod['cost_price'] = int(linea[14].strip())
+                prod['products'] = [('create', [{
+                        'cost_price': int(linea[14].strip()),
+                    }])]
                 products.append(prod)
         print(len(products))
         Product.create(products)
