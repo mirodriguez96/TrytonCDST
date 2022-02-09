@@ -46,91 +46,6 @@ class Configuration(ModelSQL, ModelView):
         cnxn.close()
         raise UserError('Conexión sqlserver: ', 'Exitosa !')
 
-    @classmethod
-    @ModelView.button
-    def importfile(cls, records):
-        for config in records:
-            pool = Pool()
-            Party = pool.get('party.party')
-            City = pool.get('party.city_code')
-            Department = pool.get('party.department_code')
-            Country = pool.get('party.country_code')
-
-            if config.file:
-                file_decode = cls.encode_file(config.file, 'decode')
-                lineas = file_decode.split('\n')
-                parties = []
-                for linea in lineas:
-                    linea = linea.strip()
-                    if linea:
-                        linea = linea.split(';')
-                        if len(linea) != 15:
-                            raise UserError('Importación de archivo: ', 'Error de plantilla !')
-                        id_number = linea[1].strip()
-                        party = Party.search([('id_number', '=', id_number)])
-                        if party:
-                            continue
-                        to_save = {
-                            'type_document': linea[0].strip(),
-                            'id_number': id_number,
-                            'name': linea[2].strip().upper(),
-                            'regime_tax': linea[13].strip(),
-                            'type_person': linea[14].strip()
-                        }
-
-                        adress = {
-                            'party_name': linea[3].strip().upper(),
-                            'name': linea[4].strip(),
-                            'street': linea[5].strip()
-                        }
-
-                        country_code = linea[6].strip()
-                        country = Country.search([
-                            ('code', '=', country_code),
-                        ])
-                        department_code = linea[7].strip()
-                        department = Department.search([
-                            ('code',  '=', department_code),
-                        ])
-                        city_code = linea[8].strip()
-                        city = City.search([
-                            ('code', '=', city_code),
-                            ('department.code',  '=', department_code),
-                        ])
-
-                        if country:
-                            adress['country_code'] = country[0].id
-                        if department:
-                            adress['department_code'] = department[0].id
-                        if city:
-                            adress['city_code'] = city[0].id
-
-                        to_save['addresses'] = [('create', [adress])]
-
-                        contacts = []
-                        phone = linea[10].strip()
-                        if phone:
-                            phone = {
-                                'type': 'phone',
-                                'value': phone
-                            }
-                            contacts.append(phone)
-                        email = linea[12].strip()
-                        if email:
-                            email = {
-                                'type': 'email',
-                                'value': email
-                            }
-                            contacts.append(email)
-                        if contacts:
-                            to_save['contact_mechanisms'] = [('create', contacts)]
-
-                        parties.append(to_save)
-                print(len(parties))
-                Party.create(parties)
-            else:
-                raise UserError('Importación de archivo: ', 'Error: agregue un archivo para importar !')
-
     #Función encargada de establecer conexión con respecto a la configuración
     @classmethod
     def conexion(cls):
@@ -174,3 +89,145 @@ class Configuration(ModelSQL, ModelView):
             file64_decod = file.decode()
 
         return file64_decod
+
+    # Boton de importaciones
+    @classmethod
+    @ModelView.button
+    def importfile(cls, records):
+        for config in records:
+            if config.file:
+                file_decode = cls.encode_file(config.file, 'decode')
+                lineas = file_decode.split('\n')
+                #cls.import_csv_parties(lineas)
+                cls.import_csv_products(lineas)
+            else:
+                raise UserError('Importación de archivo: ', 'Error: agregue un archivo para importar !')
+
+    @classmethod
+    def import_csv_parties(cls, lineas):
+        pool = Pool()
+        Party = pool.get('party.party')
+        City = pool.get('party.city_code')
+        Department = pool.get('party.department_code')
+        Country = pool.get('party.country_code')
+        parties = []
+        for linea in lineas:
+            linea = linea.strip()
+            if linea:
+                linea = linea.split(';')
+                if len(linea) != 15:
+                    raise UserError('Importación de archivo: ', 'Error de plantilla !')
+                id_number = linea[1].strip()
+                party = Party.search([('id_number', '=', id_number)])
+                if party:
+                    continue
+                to_save = {
+                    'type_document': linea[0].strip(),
+                    'id_number': id_number,
+                    'name': linea[2].strip().upper(),
+                    'regime_tax': linea[13].strip(),
+                    'type_person': linea[14].strip()
+                }
+                adress = {
+                    'party_name': linea[3].strip().upper(),
+                    'name': linea[4].strip(),
+                    'street': linea[5].strip()
+                }
+                country_code = linea[6].strip()
+                country = Country.search([
+                    ('code', '=', country_code),
+                ])
+                department_code = linea[7].strip()
+                department = Department.search([
+                    ('code',  '=', department_code),
+                ])
+                city_code = linea[8].strip()
+                city = City.search([
+                    ('code', '=', city_code),
+                    ('department.code',  '=', department_code),
+                ])
+                if country:
+                    adress['country_code'] = country[0].id
+                if department:
+                    adress['department_code'] = department[0].id
+                if city:
+                    adress['city_code'] = city[0].id
+                to_save['addresses'] = [('create', [adress])]
+                contacts = []
+                phone = linea[10].strip()
+                if phone:
+                    phone = {
+                        'type': 'phone',
+                        'value': phone
+                    }
+                    contacts.append(phone)
+                email = linea[12].strip()
+                if email:
+                    email = {
+                        'type': 'email',
+                        'value': email
+                    }
+                    contacts.append(email)
+                if contacts:
+                    to_save['contact_mechanisms'] = [('create', contacts)]
+                parties.append(to_save)
+        print(len(parties))
+        Party.create(parties)
+
+
+    @classmethod
+    def import_csv_products(cls, lineas):
+        pool = Pool()
+        Product = pool.get('product.product')
+        Category = pool.get('product.category')
+        Uom = pool.get('product.uom')
+        products = []
+        not_products = []
+        for linea in lineas:
+            linea = linea.strip()
+            if linea:
+                linea = linea.split(';')
+                if len(linea) != 15:
+                    raise UserError('Importación de archivo: ', 'Error de plantilla !')
+                code = linea[0].strip()
+                product = Product.search([('code', '=', code)])
+                if product:
+                    not_products.append(code)
+                    continue
+                salable = cls.get_boolean(linea[6].strip())
+                purchasable = cls.get_boolean(linea[7].strip())
+                producible = cls.get_boolean(linea[8].strip())
+                consumable = cls.get_boolean(linea[9].strip())
+                depreciable = cls.get_boolean(linea[13].strip())
+                prod = {
+                    'code': code,
+                    'name': linea[1].strip(),
+                    'sale_price_uom': linea[2].strip(),
+                    'sale_price_w_tax': linea[3].strip(),
+                    'salable': salable,
+                    'purchasable': purchasable,
+                    'producible': producible,
+                    'consumable': consumable,
+                    'depreciable': depreciable,
+                    'type': linea[10].strip(),
+                }
+                account_category = linea[4].strip()
+                account_category, = Category.search([('name', '=', account_category)])
+                prod['account_category'] = account_category.id
+                uom = linea[5].strip()
+                uom, = Uom.search([('name', '=', uom)])
+                prod['default_uom'] = uom.id
+                prod['sale_uom'] = uom.id
+                prod['purchase_uom'] = uom.id
+                prod['cost_price'] = int(linea[14].strip())
+                products.append(prod)
+        print(len(products))
+        Product.create(products)
+        print(not_products)
+
+    @classmethod
+    def get_boolean(cls, val):
+        if int(val) == 0:
+            return False
+        if int(val) == 1:
+            return True
