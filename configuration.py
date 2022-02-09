@@ -200,9 +200,8 @@ class Configuration(ModelSQL, ModelView):
                 consumable = cls.get_boolean(linea[9].strip())
                 depreciable = cls.get_boolean(linea[13].strip())
                 prod = {
-                    'code': code,
+                    #'code': code,
                     'name': linea[1].strip(),
-                    'sale_price_uom': linea[2].strip(),
                     'sale_price_w_tax': linea[3].strip(),
                     'salable': salable,
                     'purchasable': purchasable,
@@ -221,6 +220,7 @@ class Configuration(ModelSQL, ModelView):
                 prod['purchase_uom'] = uom.id
                 prod['products'] = [('create', [{
                         'cost_price': int(linea[14].strip()),
+                        'sale_price_uom': linea[2].strip(),
                     }])]
                 products.append(prod)
         print(len(products))
