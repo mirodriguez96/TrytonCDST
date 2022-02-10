@@ -12,7 +12,13 @@
     <field name="date"/>
     <button string="Test" name="test_conexion" colspan="2"/>
 
-    <label name="file"/>
-    <field name="file"/>
-    <button string="File" name="importfile" colspan="2"/>
+    <notebook colspan="6">
+      <page string="Import" id="file_import">
+        <label name="type_file"/>
+        <field name="type_file"/>
+        <label name="file"/>
+        <field name="file"/>
+        <button string="File Import" name="importfile" colspan="4"/>
+      </page>
+  </notebook>
 </form>

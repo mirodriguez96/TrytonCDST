@@ -2,9 +2,8 @@ import pprint
 from trytond.model import ModelSQL, ModelView, fields
 from trytond.pool import Pool
 from trytond.exceptions import UserError
-import base64
+#import base64
 
-from party import Party
 
 try:
     import pyodbc
@@ -17,6 +16,11 @@ __all__ = [
     'Configuration',
     ]
 
+TYPES_FILE = [
+    ('parties', 'Parties'),
+    ('products', 'Products')
+]
+
 class Configuration(ModelSQL, ModelView):
     'Configuration'
     __name__ = 'conector.configuration'
@@ -27,6 +31,7 @@ class Configuration(ModelSQL, ModelView):
     password = fields.Char('Password', required=True, help="Enter the password of the database without leaving spaces")
     date = fields.Date('Date', required=True, help="Enter the import start date")
     file = fields.Binary('File', help="Enter the file to import with (;)")
+    type_file = fields.Selection(TYPES_FILE, 'Type file')
 
 
     @classmethod
@@ -98,10 +103,14 @@ class Configuration(ModelSQL, ModelView):
             if config.file:
                 file_decode = cls.encode_file(config.file, 'decode')
                 lineas = file_decode.split('\n')
-                #cls.import_csv_parties(lineas)
-                cls.import_csv_products(lineas)
+                if config.type_file == "parties":
+                    cls.import_csv_parties(lineas)
+                elif config.type_file == "products":
+                    cls.import_csv_products(lineas)
+                else:
+                    raise UserError('Importación de archivo: ', 'Seleccione el tipo de importación')
             else:
-                raise UserError('Importación de archivo: ', 'Error: agregue un archivo para importar !')
+                raise UserError('Importación de archivo: ', 'Agregue un archivo para importar')
 
     @classmethod
     def import_csv_parties(cls, lineas):
@@ -200,7 +209,7 @@ class Configuration(ModelSQL, ModelView):
                 consumable = cls.get_boolean(linea[9].strip())
                 depreciable = cls.get_boolean(linea[13].strip())
                 prod = {
-                    #'code': code,
+                    'code': code,
                     'name': linea[1].strip(),
                     'sale_price_w_tax': linea[3].strip(),
                     'salable': salable,

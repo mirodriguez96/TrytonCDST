@@ -47,6 +47,7 @@ def register():
         invoice.Invoice,
         tax.Tax,
         production.Production,
+        production.Cron,
         module='conector', type_='model')
 
     Pool.register(

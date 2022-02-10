@@ -18,7 +18,7 @@ class Cron(metaclass=PoolMeta):
     def __setup__(cls):
         super().__setup__()
         cls.method.selection.append(
-            ('sale.sale|import_data_production', "Importar producciones"),
+            ('production|import_data_production', "Importar producciones"),
             )
 
 
@@ -54,16 +54,24 @@ class Production(metaclass=PoolMeta):
                 'effective_date': fecha,
             }
             lines = cls.get_data_line(str(sw), tipo_doc, str(numero_doc))
-            entradas = {}
-            salidas = {}
+            entradas = []
+            salidas = []
             for line in lines:
                 cantidad = line.Cantidad_Facturada
                 id_tecno_bodega = line.IdBodega
                 bodega, = Location.search([('id_tecno', '=', id_tecno_bodega)])
                 producto, = Product.search([('id_tecno', '=', line.IdProducto)])
-                in_trans = {
-                    ''
+                transf = {
+                    'product': producto.id,
+                    'quantity': abs(cantidad),
                 }
+                if cantidad < 0:
+                    transf['to_location'] = bodega.storage_location.id
+                    entradas.append(transf)
+                elif cantidad > 0:
+                    pass
+                    salidas.append(transf)
+            to_create.append(production)
             print(production)
 
     #Esta función se encarga de traer todos los datos de una tabla dada de acuerdo al rango de fecha dada de la bd
