@@ -222,7 +222,10 @@ class Sale(metaclass=PoolMeta):
                         #Se guarda la linea para la venta
                         linea.save()
                     if sale.invoice_type == 'P':
-                        cls.venta_mostrador(sale)
+                        with Transaction().set_user(1):
+                            context = User.get_preferences()
+                        with Transaction().set_context(context, shop=shop.id, _skip_warnings=True):
+                            cls.venta_mostrador(sale)
                 else:
                     cls.importado(id_venta)
                 if sale and sale.invoice_type != 'P':
@@ -334,12 +337,11 @@ class Sale(metaclass=PoolMeta):
                     'journal_id': journal.id,
                     'cash_received': valor_pagado,
                 }
-                context = {}
                 if not sale.party.account_receivable:
                     raise UserError('sale_pos.msg_party_without_account_receivable', sale.party.name)
-                faster_payment = sale.faster_add_payment(data_payment, context)
+                sale.faster_add_payment(data_payment, {})
                 sale.workflow_to_end([sale])
-                print(faster_payment)
+                #print(faster_payment)
 
         
     @classmethod
@@ -532,18 +534,6 @@ class Sale(metaclass=PoolMeta):
     #Función encargada de traer los datos de la bd con una fecha dada.
     @classmethod
     def last_update(cls):
-        #Actualizacion = Pool().get('conector.actualizacion')
-        #Se consulta la ultima actualización realizada para los terceros
-        #ultima_actualizacion = Actualizacion.search([('name', '=','VENTAS')])
-        #if ultima_actualizacion:
-        #    #Se calcula la fecha restando la diferencia de horas que tiene el servidor con respecto al clienete
-        #    if ultima_actualizacion[0].write_date:
-        #        fecha = (ultima_actualizacion[0].write_date - datetime.timedelta(hours=5))
-        #    else:
-        #        fecha = (ultima_actualizacion[0].create_date - datetime.timedelta(hours=5))
-        #else:
-        #    fecha = datetime.date(1,1,1)
-        #    pass
         Config = Pool().get('conector.configuration')
         config, = Config.search([], order=[('id', 'DESC')], limit=1)
         fecha = config.date

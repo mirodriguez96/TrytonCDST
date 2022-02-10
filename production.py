@@ -1,6 +1,7 @@
 from trytond.model import fields
 from trytond.pool import Pool, PoolMeta
 from trytond.exceptions import UserError
+from decimal import Decimal
 import logging
 import datetime
 
@@ -35,8 +36,10 @@ class Production(metaclass=PoolMeta):
         data = cls.last_update()
 
         pool = Pool()
+        Production = pool.get('production')
         Location = pool.get('stock.location')
         Product = pool.get('product.product')
+        #Move = pool.get('stock.move')
 
         to_create = []
         for transformacion in data:
@@ -47,32 +50,63 @@ class Production(metaclass=PoolMeta):
             fecha = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
             id_tecno = str(sw)+'-'+tipo_doc+'-'+str(numero_doc)
             reference = tipo_doc+'-'+str(numero_doc)
+            id_bodega = transformacion.bodega
+            bodega, = Location.search([('id_tecno', '=', id_bodega)])
             production = {
                 'id_tecno': id_tecno,
                 'reference': reference,
                 'planned_date': fecha,
+                'planned_start_date': fecha,
                 'effective_date': fecha,
+                'warehouse': bodega.id,
+                'location': bodega.production_location.id,
             }
             lines = cls.get_data_line(str(sw), tipo_doc, str(numero_doc))
             entradas = []
             salidas = []
+            cont = 0
             for line in lines:
-                cantidad = line.Cantidad_Facturada
+                cantidad = float(line.Cantidad_Facturada)
+                #print(type(cantidad), cantidad)
                 id_tecno_bodega = line.IdBodega
                 bodega, = Location.search([('id_tecno', '=', id_tecno_bodega)])
                 producto, = Product.search([('id_tecno', '=', line.IdProducto)])
                 transf = {
                     'product': producto.id,
                     'quantity': abs(cantidad),
+                    'uom': producto.default_uom.id,
                 }
+                #Entrada (-1)
                 if cantidad < 0:
-                    transf['to_location'] = bodega.storage_location.id
+                    transf['from_location'] = bodega.storage_location.id
+                    transf['to_location'] = bodega.production_location.id
                     entradas.append(transf)
+                #Salida (1)
                 elif cantidad > 0:
-                    pass
+                    transf['from_location'] = bodega.production_location.id
+                    transf['to_location'] = bodega.storage_location.id
+                    transf['unit_price'] = Decimal(line.Valor_Unitario)
                     salidas.append(transf)
+                    if cont == 0:
+                        if not producto.producible:
+                            #print(producto.producible)
+                            #Product.write([producto.template], {'producible': True})
+                            raise UserError("Error en producción", "Producto no marcado como producible {producto.rec_name}")
+                        production['product'] = producto.id
+                    cont += 1
+            if entradas:
+                production['inputs'] = [('create', entradas)]
+            if salidas:
+                production['outputs'] = [('create', salidas)]
             to_create.append(production)
-            print(production)
+        #print(to_create)
+        producciones = Production.create(to_create)
+        print(producciones)
+        Production.wait(producciones)
+        Production.assign(producciones)
+        Production.run(producciones)
+        #Production.done(producciones)
+        logging.warning('FINISH PRODUCTION')
 
     #Esta función se encarga de traer todos los datos de una tabla dada de acuerdo al rango de fecha dada de la bd
     @classmethod
@@ -96,5 +130,6 @@ class Production(metaclass=PoolMeta):
         config, = Config.search([], order=[('id', 'DESC')], limit=1)
         fecha = config.date
         fecha = fecha.strftime('%Y-%m-%d %H:%M:%S')
+        fecha = "2021-01-01" #PRUEBAS
         data = cls.get_data_tecno(fecha)
         return data
