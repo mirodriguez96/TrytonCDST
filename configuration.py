@@ -89,11 +89,11 @@ class Configuration(ModelSQL, ModelView):
     @classmethod
     def encode_file(cls, file, process='encode'):
         if process == 'encode':
-            file64_decod = file.encode()
+            file_decod = file.encode()
         else:
-            file64_decod = file.decode()
+            file_decod = file.decode()
 
-        return file64_decod
+        return file_decod
 
     # Boton de importaciones
     @classmethod
@@ -211,6 +211,7 @@ class Configuration(ModelSQL, ModelView):
                 prod = {
                     'code': code,
                     'name': linea[1].strip(),
+                    'list_price': linea[2].strip(),
                     'sale_price_w_tax': linea[3].strip(),
                     'salable': salable,
                     'purchasable': purchasable,
