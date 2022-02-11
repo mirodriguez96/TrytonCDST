@@ -223,12 +223,14 @@ class Configuration(ModelSQL, ModelView):
                 name_category = linea[4].strip()
                 account_category = Category.search([('name', '=', name_category)])
                 if not account_category:
+                    print(name_category)
                     raise UserError("Error Categoria Producto", "No se encontro la categoria: {name_category}")
                 account_category, = account_category
                 prod['account_category'] = account_category.id
                 name_uom = linea[5].strip()
                 uom = Uom.search([('name', '=', name_uom)])
                 if not uom:
+                    print(name_uom)
                     raise UserError("Error UDM Producto", "No se encontro la unidad de medida: {name_uom}")
                 uom, = uom
                 prod['default_uom'] = uom.id
