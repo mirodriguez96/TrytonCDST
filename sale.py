@@ -317,11 +317,11 @@ class Sale(metaclass=PoolMeta):
         }
         
         result = cls.vm_open_statement(data_statement)
-        print(result)
+        #print(result)
         if result['result']:
             pool = Pool()
             Journal = pool.get('account.statement.journal')
-            print(invoice.reference)
+            #print(invoice.reference)
             tipo_numero = invoice.reference.split('-')
             tipo = tipo_numero[0]
             nro = tipo_numero[1]
@@ -503,27 +503,20 @@ class Sale(metaclass=PoolMeta):
     @classmethod
     def importado(cls, id):
         lista = id.split('-')
-        try:
-            Config = Pool().get('conector.configuration')
-            conexion = Config.conexion()
-            with conexion.cursor() as cursor:
-                cursor.execute("UPDATE dbo.Documentos SET exportado = 'T' WHERE sw ="+lista[0]+" and tipo = "+lista[1]+" and Numero_documento = "+lista[2])
-        except Exception as e:
-            print(e)
-            raise UserError('Error al actualizar como importado: ', e)
+        Config = Pool().get('conector.configuration')
+        query = "UPDATE dbo.Documentos SET exportado = 'T' WHERE sw ="+lista[0]+" and tipo = "+lista[1]+" and Numero_documento = "+lista[2]
+        Config.set_data(query)
 
-    #Función encargada de convertir una fecha dada, al formato y orden para consultas sql server
-    #@classmethod
-    #def convert_date(cls, fecha):
-    #    result = fecha.strftime('%Y-%m-%d %H:%M:%S')
-    #    return result
 
-    #Función encargada de consultar si existe un producto dado de la bd
+    #Función encargada de consultar si existe un producto y es vendible
     @classmethod
     def buscar_producto(cls, id_producto):
         Product = Pool().get('product.product')
-        producto = Product.search([('id_tecno', '=', id_producto), ('salable', '=', True)])
+        producto = Product.search([('id_tecno', '=', id_producto)])
         if producto:
+            if not producto.salable:
+                producto.salable = True
+                producto.save()
             return producto[0]
         else:
             msg1 = f'Error al buscar producto con id: {id_producto}'

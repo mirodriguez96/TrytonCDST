@@ -220,11 +220,17 @@ class Configuration(ModelSQL, ModelView):
                     'depreciable': depreciable,
                     'type': linea[10].strip(),
                 }
-                account_category = linea[4].strip()
-                account_category, = Category.search([('name', '=', account_category)])
+                name_category = linea[4].strip()
+                account_category = Category.search([('name', '=', name_category)])
+                if not account_category:
+                    raise UserError("Error Categoria Producto", "No se encontro la categoria: {name_category}")
+                account_category, = account_category
                 prod['account_category'] = account_category.id
-                uom = linea[5].strip()
-                uom, = Uom.search([('name', '=', uom)])
+                name_uom = linea[5].strip()
+                uom = Uom.search([('name', '=', name_uom)])
+                if not uom:
+                    raise UserError("Error UDM Producto", "No se encontro la unidad de medida: {name_uom}")
+                uom, = uom
                 prod['default_uom'] = uom.id
                 prod['sale_uom'] = uom.id
                 prod['purchase_uom'] = uom.id

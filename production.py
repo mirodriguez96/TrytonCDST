@@ -39,16 +39,21 @@ class Production(metaclass=PoolMeta):
         Production = pool.get('production')
         Location = pool.get('stock.location')
         Product = pool.get('product.product')
-        #Move = pool.get('stock.move')
 
         to_create = []
         for transformacion in data:
             sw = transformacion.sw
             numero_doc = transformacion.Numero_documento
+            id_tecno = str(sw)+'-'+tipo_doc+'-'+str(numero_doc)
+
+            existe = Production.search([('id_tecno', '=', id_tecno)])
+            if existe:
+                #cls.importado(id_tecno)
+                continue
+
             tipo_doc = transformacion.tipo
             fecha = str(transformacion.Fecha_Hora_Factura).split()[0].split('-')
             fecha = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
-            id_tecno = str(sw)+'-'+tipo_doc+'-'+str(numero_doc)
             reference = tipo_doc+'-'+str(numero_doc)
             id_bodega = transformacion.bodega
             bodega, = Location.search([('id_tecno', '=', id_bodega)])
@@ -101,18 +106,19 @@ class Production(metaclass=PoolMeta):
             to_create.append(production)
         #print(to_create)
         producciones = Production.create(to_create)
-        print(producciones)
+        #print(producciones)
         Production.wait(producciones)
         Production.assign(producciones)
         Production.run(producciones)
         #Production.done(producciones)
+        #cls.importado(id_tecno)
         logging.warning('FINISH PRODUCTION')
 
     #Esta función se encarga de traer todos los datos de una tabla dada de acuerdo al rango de fecha dada de la bd
     @classmethod
     def get_data_tecno(cls, date):
         Config = Pool().get('conector.configuration')
-        consult = "SET DATEFORMAT ymd SELECT TOP(100) * FROM dbo.Documentos WHERE sw = 18  AND fecha_hora >= CAST('"+date+"' AS datetime) AND exportado != 'T'"
+        consult = "SET DATEFORMAT ymd SELECT TOP(1000) * FROM dbo.Documentos WHERE sw = 18  AND fecha_hora >= CAST('"+date+"' AS datetime) AND exportado != 'T'"
         data = Config.get_data(consult)
         return data
 
@@ -122,6 +128,13 @@ class Production(metaclass=PoolMeta):
         consult = "SELECT * FROM dbo.Documentos_Lin WHERE sw = "+sw+" AND Numero_Documento = "+nro+" AND tipo = "+tipo+" order by seq"
         data = Config.get_data(consult)
         return data
+
+    @classmethod
+    def importado(cls, id):
+        lista = id.split('-')
+        Config = Pool().get('conector.configuration')
+        query = "UPDATE dbo.Documentos SET exportado = 'T' WHERE sw ="+lista[0]+" and tipo = "+lista[1]+" and Numero_documento = "+lista[2]
+        Config.set_data(query)
 
     #Función encargada de traer los datos de la bd con una fecha dada.
     @classmethod

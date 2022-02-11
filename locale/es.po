@@ -30,7 +30,7 @@ msgctxt "model:ir.action,name:act_payrollelectronic_cdst"
 msgid "Send supplier it"
 msgstr "Enviar al proveedor tecnologico"
 
-msgctxt "model:ir.action,name:act_config"
+msgctxt "model:ir.ui.menu,name:act_config"
 msgid "Configuration"
 msgstr "Configuración"
 
@@ -40,4 +40,4 @@ msgstr "Impuesto al consumo"
 
 msgctxt "model:ir.action,name:act_update_invoice_tecno"
 msgid "Update Invoice Tecno"
-msgstr "Marcar Re-importación TecnoCarnes"
+msgstr "Marcar Re-importar TecnoCarnes"

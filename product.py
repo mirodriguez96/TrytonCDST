@@ -20,7 +20,7 @@ class Cron(metaclass=PoolMeta):
     def __setup__(cls):
         super().__setup__()
         cls.method.selection.append(
-            ('product.product|update_products', "Update products"),
+            ('product.product|update_products', "Importar productos"),
             )
 
 
@@ -34,7 +34,7 @@ class Product(ModelSQL, ModelView):
     @classmethod
     def update_products(cls):
         logging.warning('RUN PRODUCTOS')
-
+        #Importa categorias contables
         cls.update_accounting_categories()
 
         productos_tecno = cls.last_update()
@@ -48,7 +48,7 @@ class Product(ModelSQL, ModelView):
             #Creación de los productos con su respectiva categoria e información
             Producto = Pool().get('product.product')
             Template_Product = Pool().get('product.template')
-            to_category = []
+            #to_category = []
             to_product = []
             to_template = []
             for producto in productos_tecno:
@@ -121,7 +121,7 @@ class Product(ModelSQL, ModelView):
                     #prod.save()
                     to_template.append(temp)
                     to_product.append(prod)
-            Category.save(to_category)
+            #Category.save(to_category)
             Template_Product.save(to_template)
             Producto.save(to_product)
             
@@ -326,25 +326,6 @@ class Product(ModelSQL, ModelView):
             actualizar = Actualizacion()
             actualizar.name = 'PRODUCTOS'
             actualizar.save()
-
-    #Selecciona el impuesto equivalente en la bd Sqlserver
-    @classmethod
-    def select_tax(cls, tax):
-        Tax = Pool().get('account.tax')
-        try:
-            if tax == 3:
-                tax, = Tax.search([('name', '=', 'IVA 19,0%')])
-                return tax.id
-            elif tax == 4:
-                tax, = Tax.search([('name', '=', 'IVA 5,0%')])
-                return tax.id
-            elif tax == 5:
-                tax, = Tax.search([('name', '=', 'IVA SERVICIOS 19,0%')])
-                return tax.id
-            else:
-                return False
-        except Exception as e:
-            raise UserError("Error al seleccionar el impuesto para la categoria: ", e)
 
 #Herencia del party.contact_mechanism e insercción del campo id_tecno
 class ProductCategory(ModelSQL, ModelView):
