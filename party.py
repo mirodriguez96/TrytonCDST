@@ -2,6 +2,7 @@ import datetime
 from trytond.model import ModelSQL, ModelView, fields
 from trytond.pool import Pool, PoolMeta
 from trytond.exceptions import UserError
+import logging
 
 
 __all__ = [
@@ -33,7 +34,7 @@ class Party(ModelSQL, ModelView):
     #teniendo en cuenta la ultima fecha de actualizacion y si existe o no.
     @classmethod
     def update_parties(cls):
-        print("---------------RUN TERCEROS---------------")
+        logging.warning("RUN TERCEROS")
         terceros_db = cls.last_update()
         direcciones_db = cls.last_update_dir()
         cls.create_or_update()
@@ -173,6 +174,7 @@ class Party(ModelSQL, ModelView):
                         address.save()
                 else:
                     cls.create_address_new(tercero, dir)
+        logging.warning("FINISH TERCEROS")
 
 
     @classmethod

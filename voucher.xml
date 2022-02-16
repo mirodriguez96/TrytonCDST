@@ -10,5 +10,12 @@ The COPYRIGHT file at the top level of this repository contains the full copyrig
             <field name="name">paymode_form</field>
         </record>
 
+        
+        <record model="ir.ui.view" id="voucher_configuration_form">
+            <field name="model">account.voucher_configuration</field>
+            <!-- ref=nombre_modulo.id_vista -->
+            <field name="inherit" ref="account_voucher.voucher_config_view_form"/>
+            <field name="name">voucher_configuration</field>
+        </record>
     </data>
 </tryton>

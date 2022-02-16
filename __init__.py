@@ -48,6 +48,7 @@ def register():
         tax.Tax,
         production.Production,
         production.Cron,
+        voucher.VoucherConfiguration,
         module='conector', type_='model')
 
     Pool.register(

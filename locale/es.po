@@ -41,3 +41,19 @@ msgstr "Impuesto al consumo"
 msgctxt "model:ir.action,name:act_update_invoice_tecno"
 msgid "Update Invoice Tecno"
 msgstr "Marcar Re-importar TecnoCarnes"
+
+msgctxt "field:account.voucher_configuration,account_discount_tecno:"
+msgid "Account Discount for Conector TecnoCarnes"
+msgstr "Cuenta de descuento para TecnoCarnes"
+
+msgctxt "field:account.voucher_configuration,account_rete_tecno:"
+msgid "Account Retention for Conector TecnoCarnes"
+msgstr "Cuenta de Retención para TecnoCarnes"
+
+msgctxt "field:account.voucher_configuration,account_retiva_tecno:"
+msgid "Account Retention IVA for Conector TecnoCarnes"
+msgstr "Cuenta de Retención Iva para TecnoCarnes"
+
+msgctxt "field:account.voucher_configuration,account_retica_tecno:"
+msgid "Account Retention ICA for Conector TecnoCarnes"
+msgstr "Cuenta de Retención ICA para TecnoCarnes"

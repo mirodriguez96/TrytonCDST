@@ -1,9 +1,8 @@
-import pprint
 from trytond.model import ModelSQL, ModelView, fields
 from trytond.pool import Pool
 from trytond.exceptions import UserError
 #import base64
-
+import datetime
 
 try:
     import pyodbc
@@ -18,7 +17,8 @@ __all__ = [
 
 TYPES_FILE = [
     ('parties', 'Parties'),
-    ('products', 'Products')
+    ('products', 'Products'),
+    ('balances', 'Balances')
 ]
 
 class Configuration(ModelSQL, ModelView):
@@ -107,6 +107,8 @@ class Configuration(ModelSQL, ModelView):
                     cls.import_csv_parties(lineas)
                 elif config.type_file == "products":
                     cls.import_csv_products(lineas)
+                elif config.type_file == "balances":
+                    cls.import_csv_balances(lineas)
                 else:
                     raise UserError('Importación de archivo: ', 'Seleccione el tipo de importación')
             else:
@@ -224,14 +226,14 @@ class Configuration(ModelSQL, ModelView):
                 account_category = Category.search([('name', '=', name_category)])
                 if not account_category:
                     print(name_category)
-                    raise UserError("Error Categoria Producto", "No se encontro la categoria: {name_category}")
+                    raise UserError("Error Categoria Producto", f"No se encontro la categoria: {name_category}")
                 account_category, = account_category
                 prod['account_category'] = account_category.id
                 name_uom = linea[5].strip()
                 uom = Uom.search([('name', '=', name_uom)])
                 if not uom:
                     print(name_uom)
-                    raise UserError("Error UDM Producto", "No se encontro la unidad de medida: {name_uom}")
+                    raise UserError("Error UDM Producto", f"No se encontro la unidad de medida: {name_uom}")
                 uom, = uom
                 prod['default_uom'] = uom.id
                 prod['sale_uom'] = uom.id
@@ -244,6 +246,52 @@ class Configuration(ModelSQL, ModelView):
         Product.create(products)
         print(not_products)
 
+    @classmethod
+    def import_csv_balances(cls, lineas):
+        pool = Pool()
+        Journal = pool.get('account.journal')
+        Move = pool.get('account.move')
+        Line = pool.get('account.move.line')
+        cont = 0
+        move = {}
+        for linea in lineas:
+            linea = linea.strip()
+            if linea:
+                linea = linea.split(';')
+                if len(linea) != 10:
+                    raise UserError('Importación de archivo: ', 'Error de plantilla !')
+
+                
+                account_line = linea[4].strip()
+                debit_line = linea[5].strip()
+                credit_line = linea[6].strip()
+                party_line = linea[7].strip()
+                description_line = linea[8].strip()
+                date_line = cls.convert_str_date(linea[9])
+                reference_line = linea[10].strip()
+
+                if cont == 0:
+                    name_journal = linea[0].strip()
+                    name_period = linea[1].strip()
+                    efective_date = cls.convert_str_date(linea[2])
+                    description_move = linea[3].strip()
+
+                    journal, = Journal.search([('name', '=', name_journal)])
+
+                    move = {
+                        ''
+                    }
+                cont += 1
+                raise UserError('Importación de archivo: ', 'Tipo de importación en desarrollo...')
+
+    @classmethod
+    def convert_str_date(cls, fecha):
+        result = fecha.strip().split().split('-')
+        # Y-M-D
+        result = datetime.date(int(result[0]), int(result[1]), int(result[2]))
+        return result
+
+    #
     @classmethod
     def get_boolean(cls, val):
         if int(val) == 0:

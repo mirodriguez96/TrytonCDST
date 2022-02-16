@@ -55,7 +55,7 @@ class Purchase(metaclass=PoolMeta):
             Tax = pool.get('account.tax')
             coluns_doc = cls.get_columns_db_tecno('Documentos')
             columns_tipodoc = cls.get_columns_db_tecno('TblTipoDoctos')
-            
+            created_purchase = []
             #Procedemos a realizar la compra
             for compra in compras_tecno:
                 sw = compra[coluns_doc.index('sw')]
@@ -210,8 +210,9 @@ class Purchase(metaclass=PoolMeta):
                             total_tecno = Decimal(compra[coluns_doc.index('valor_total')])
                             diferencia_total = abs(total - total_tecno)
                             if diferencia_total <= 1.0:
-                                invoice.post_batch([invoice])
-                                invoice.post([invoice])
+                                with Transaction().set_context(_skip_warnings=True):
+                                    invoice.post_batch([invoice])
+                                    invoice.post([invoice])
                             invoice.save()
                         except Exception as e:
                             print(e)
@@ -220,7 +221,9 @@ class Purchase(metaclass=PoolMeta):
                         msg1 = f'No se creo factura en la compra: {purchase.id_tecno}'
                         logs += '\n' + msg1
                     purchase.save()
-                cls.importado(id_compra)
+                created_purchase.append(id_compra)
+        for idc in created_purchase:
+            cls.importado(idc)
         #Se crea o actualiza la fecha de importación junto a los logs
         actualizacion.logs = logs
         actualizacion.save()
@@ -423,7 +426,7 @@ class Purchase(metaclass=PoolMeta):
 
             if purchase.id and purchase.id_tecno:
                 lista = purchase.id_tecno.split('-')
-                consult = "UPDATE dbo.Documentos SET exportado = 'N' WHERE sw ="+lista[0]+" and tipo = "+lista[1]+" and Numero_documento = "+lista[2]
+                consult = "UPDATE dbo.Documentos SET exportado = 'S' WHERE sw ="+lista[0]+" and tipo = "+lista[1]+" and Numero_documento = "+lista[2]
                 Conexion.set_data(consult)
                 cursor.execute(*purchase_table.delete(
                     where=purchase_table.id == purchase.id)

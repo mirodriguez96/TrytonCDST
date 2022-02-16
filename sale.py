@@ -514,10 +514,11 @@ class Sale(metaclass=PoolMeta):
         Product = Pool().get('product.product')
         producto = Product.search([('id_tecno', '=', id_producto)])
         if producto:
+            producto, = producto
             if not producto.salable:
                 producto.salable = True
                 producto.save()
-            return producto[0]
+            return producto
         else:
             msg1 = f'Error al buscar producto con id: {id_producto}'
             logging.error(msg1)
@@ -613,7 +614,7 @@ class Sale(metaclass=PoolMeta):
             
             if sale.id and sale.id_tecno:
                 lista = sale.id_tecno.split('-')
-                consult = "UPDATE dbo.Documentos SET exportado = 'N' WHERE sw ="+lista[0]+" and tipo = "+lista[1]+" and Numero_documento = "+lista[2]
+                consult = "UPDATE dbo.Documentos SET exportado = 'S' WHERE sw ="+lista[0]+" and tipo = "+lista[1]+" and Numero_documento = "+lista[2]
                 Conexion.set_data(consult)
                 cursor.execute(*sale_table.delete(
                     where=sale_table.id == sale.id)
