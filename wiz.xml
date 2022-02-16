@@ -12,6 +12,16 @@
             <field name="model">account.invoice,-1</field>
             <field name="action" ref="act_update_invoice_tecno"/>
         </record>
+
+        <record model="ir.action.wizard" id="act_delete_voucher_tecno">
+            <field name="name">Delete Voucher Tecno</field>
+            <field name="wiz_name">account.voucher.delete_voucher_tecno</field>
+        </record>
+        <record model="ir.action.keyword" id="act_delete_voucher_tecno_keyword">
+            <field name="keyword">form_action</field>
+            <field name="model">account.voucher,-1</field>
+            <field name="action" ref="act_delete_voucher_tecno"/>
+        </record>
         
         <!-- ###################### -->
         <!-- # Create Exemplaries # -->

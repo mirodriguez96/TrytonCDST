@@ -44,6 +44,7 @@ class Purchase(metaclass=PoolMeta):
         logs = actualizacion.logs
         if not logs:
             logs = 'logs...'
+        created_purchase = []
         if compras_tecno:
             pool = Pool()
             Purchase = pool.get('purchase.purchase')
@@ -55,7 +56,6 @@ class Purchase(metaclass=PoolMeta):
             Tax = pool.get('account.tax')
             coluns_doc = cls.get_columns_db_tecno('Documentos')
             columns_tipodoc = cls.get_columns_db_tecno('TblTipoDoctos')
-            created_purchase = []
             #Procedemos a realizar la compra
             for compra in compras_tecno:
                 sw = compra[coluns_doc.index('sw')]

@@ -6,6 +6,7 @@ from trytond.transaction import Transaction
 from trytond.wizard import Wizard, StateTransition
 from decimal import Decimal
 import logging
+from sql import Table
 
 import datetime
 
@@ -13,7 +14,8 @@ __all__ = [
     'Voucher',
     'Cron',
     'MultiRevenue',
-    'VoucherConfiguration'
+    'VoucherConfiguration',
+    'Delete Voucher Tecno'
     ]
 
 
@@ -150,6 +152,7 @@ class Voucher(ModelSQL, ModelView):
                             voucher.description = nota
                         voucher.reference = tipo+'-'+nro
                         voucher.save()
+                        valor = Decimal(0)
                         for rec in facturas:
                             ref = rec.tipo_aplica+'-'+str(rec.numero_aplica)
                             move_line = cls.get_moveline(ref, tercero)
@@ -157,7 +160,7 @@ class Voucher(ModelSQL, ModelView):
                                 config_voucher = pool.get('account.voucher_configuration')(1)
                                 line = Line()
                                 line.voucher = voucher
-                                valor_original, amount_to_pay = cls.get_amount_to_pay_moveline_tecno(move_line, voucher)
+                                valor_original, amount_to_pay, untaxed_amount = cls.get_amount_to_pay_moveline_tecno(move_line, voucher)
                                 line.amount_original = valor_original
                                 line.reference = ref
                                 line.move_line = move_line
@@ -188,7 +191,7 @@ class Voucher(ModelSQL, ModelView):
                                     line_rete.voucher = voucher
                                     line_rete.detail = 'RETENCION - '+str(retencion)
                                     line_rete.type = 'tax'
-                                    line_rete.untaxed_amount = valor_original
+                                    line_rete.untaxed_amount = untaxed_amount
                                     line_rete.tax = config_voucher.account_rete_tecno
                                     line_rete.on_change_tax()
                                     line_rete.amount = round(line_rete.amount, 2)
@@ -198,7 +201,7 @@ class Voucher(ModelSQL, ModelView):
                                     line_retiva.voucher = voucher
                                     line_retiva.detail = 'RETENCION IVA - '+str(retencion_iva)
                                     line_retiva.type = 'tax'
-                                    line_retiva.untaxed_amount = valor_original
+                                    line_retiva.untaxed_amount = untaxed_amount
                                     line_retiva.tax = config_voucher.account_retiva_tecno
                                     line_retiva.on_change_tax()
                                     line_retiva.amount = round(line_retiva.amount, 2)
@@ -208,7 +211,7 @@ class Voucher(ModelSQL, ModelView):
                                     line_retica.voucher = voucher
                                     line_retica.detail = 'RETENCION ICA - '+str(retencion_ica)
                                     line_retica.type = 'tax'
-                                    line_retica.untaxed_amount = valor_original
+                                    line_retica.untaxed_amount = untaxed_amount
                                     line_retica.tax = config_voucher.account_retica_tecno
                                     line_retica.on_change_tax()
                                     line_retica.amount = round(line_retica.amount, 2)
@@ -231,7 +234,8 @@ class Voucher(ModelSQL, ModelView):
                         #Se verifica que el comprobante tenga lineas para ser contabilizado (doble verificación por error)
                         if voucher.lines and voucher.amount_to_pay > 0:
                             Voucher.process([voucher])
-                            Voucher.post([voucher])
+                            if voucher.amount_to_pay == valor:
+                                Voucher.post([voucher])
                         voucher.save()
                         created.append(id_tecno)
                     else:
@@ -310,7 +314,8 @@ class Voucher(ModelSQL, ModelView):
             #detail = (model.name + ' ' + move_line.move_origin.number)
             #if amount_to_pay < amount:
             #    amount = amount_to_pay
-        return amount, amount_to_pay
+            untaxed_amount = moveline.move_origin.untaxed_amount
+        return amount, amount_to_pay, untaxed_amount
 
     #Se marca como importado
     @classmethod
@@ -394,6 +399,53 @@ class Voucher(ModelSQL, ModelView):
         return actualizacion
         
 
+    @classmethod
+    def delete_imported_vouchers(cls, vouchers):
+        voucher_table = Table('account_voucher')
+        line_voucher = Table('account_voucher_line')
+        move_table = Table('account_move')
+        move_line_table = Table('account_move_line')
+        cursor = Transaction().connection.cursor()
+        Conexion = Pool().get('conector.configuration')
+
+        for voucher in vouchers:
+            # eliminar lineas de asiento, eliminar asientos, eliminar lineas voucher, eliminar voucher
+            for line in voucher.lines:
+                # Si las lineas del comprobante generaron lineas en el asiento, se eliminan
+                if line.move_line:
+                    cursor.execute(*move_line_table.delete(
+                        where=move_line_table.id == line.move_line.id)
+                    )
+                
+                # Se elimina las lineas del comprobante
+                cursor.execute(*line_voucher.delete(
+                    where=line_voucher.id == line.id)
+                )
+
+            # Si hay asiento del comprobante, se elimina
+            if voucher.move:
+                cursor.execute(*move_table.delete(
+                    where=move_table.id == voucher.move.id)
+                )
+
+            # Si el comprobante no se ha eliminado, se pasa a borrador
+            #if voucher.id:
+            #    cursor.execute(*voucher_table.update(
+            #        columns=[voucher_table.state],
+            #        values=['draft'],
+            #        where=voucher_table.id == voucher.id)
+            #    )
+            
+            # Si el comprobante no se ha eliminado, se marca en la base de datos de importación como no exportado y se elimina
+            if voucher.id and voucher.id_tecno:
+                lista = voucher.id_tecno.split('-')
+                consult = "UPDATE dbo.Documentos SET exportado = 'S' WHERE sw ="+lista[0]+" and tipo = "+lista[1]+" and Numero_documento = "+lista[2]
+                Conexion.set_data(consult)
+                cursor.execute(*voucher_table.delete(
+                    where=voucher_table.id == voucher.id)
+                )
+            else:
+                raise UserError("No se econtró el comprobante", f"{voucher.rec_name}")
 
 
 class VoucherConfiguration(metaclass=PoolMeta):
@@ -443,7 +495,7 @@ class DeleteVoucherTecno(Wizard):
                 to_delete.append(voucher)
             else:
                 raise UserError("Revisa el número del comprobante (tipo-numero): ", rec_party)
-        Voucher.delete_imported_sales(to_delete)
+        Voucher.delete_imported_vouchers(to_delete)
         return 'end'
 
     def end(self):
