@@ -300,6 +300,7 @@ class Voucher(ModelSQL, ModelView):
                 amount = -amount
 
         amount_to_pay = Decimal(0)
+        untaxed_amount = Decimal(0)
         if moveline.move_origin and hasattr(
                 moveline.move_origin, '__name__') and \
                 moveline.move_origin.__name__ == 'account.invoice':
@@ -427,14 +428,6 @@ class Voucher(ModelSQL, ModelView):
                 cursor.execute(*move_table.delete(
                     where=move_table.id == voucher.move.id)
                 )
-
-            # Si el comprobante no se ha eliminado, se pasa a borrador
-            #if voucher.id:
-            #    cursor.execute(*voucher_table.update(
-            #        columns=[voucher_table.state],
-            #        values=['draft'],
-            #        where=voucher_table.id == voucher.id)
-            #    )
             
             # Si el comprobante no se ha eliminado, se marca en la base de datos de importación como no exportado y se elimina
             if voucher.id and voucher.id_tecno:

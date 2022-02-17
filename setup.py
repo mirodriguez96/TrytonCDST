@@ -1,7 +1,3 @@
-"""
-El archivo setup.py describe cómo debe instalarse su módulo.
-"""
-
 #!/usr/bin/env python3
 # This file is part of Tryton.  The COPYRIGHT file at the top level of
 # this repository contains the full copyright notices and license terms.
