@@ -114,8 +114,8 @@ setup(name=name,
     test_loader='trytond.test_loader:Loader',
     tests_require=tests_require,
     #convertir python2 a python3
-    use_2to3=True,
-    convert_2to3_doctests=[
-        'tests/scenario.rst',
-        ],
+    #use_2to3=True,
+    #convert_2to3_doctests=[
+    #    'tests/scenario.rst',
+    #    ],
     )
