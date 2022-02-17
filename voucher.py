@@ -311,7 +311,7 @@ class Voucher(ModelSQL, ModelView):
                 [moveline.move_origin], 'amount_to_pay'
             )
             amount_to_pay = amount_to_pay[moveline.move_origin.id]
-            print(amount, amount_to_pay)
+            #print(amount, amount_to_pay)
             #detail = (model.name + ' ' + move_line.move_origin.number)
             #if amount_to_pay < amount:
             #    amount = amount_to_pay
