@@ -1,7 +1,7 @@
 #!/usr/bin/python
 #! -*- coding: utf8 -*-
 import json
-from builder_phase import ElectronicPayroll
+from . builder_phase import ElectronicPayroll
 #import xmltodict
 import requests
 import base64

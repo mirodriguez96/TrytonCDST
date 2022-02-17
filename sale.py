@@ -46,7 +46,6 @@ class Sale(metaclass=PoolMeta):
         #Se crea o actualiza la fecha de importación
         actualizacion = cls.create_or_update()
         logs = []
-        #now = datetime.datetime.now()
         if ventas_tecno:
             pool = Pool()
             Sale = pool.get('sale.sale')
@@ -61,7 +60,6 @@ class Sale(metaclass=PoolMeta):
             Invoice = pool.get('account.invoice')
             Shop = pool.get('sale.shop')
             Tax = pool.get('account.tax')
-            #LineTax = pool.get('sale.line-account.tax')
             User = pool.get('res.user')
             
             col_param = cls.get_columns_db_tecno('TblParametro')
@@ -397,7 +395,6 @@ class Sale(metaclass=PoolMeta):
         Sale.faster_process({'sale_id':sale.id}, {})
         Sale.process_pos(sale)
         
-
         if sale.payment_term.id_tecno == '0':
             invoice = sale.invoices[0]
             cls.set_payment(invoice, sale)

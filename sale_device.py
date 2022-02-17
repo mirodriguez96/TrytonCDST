@@ -33,13 +33,15 @@ class SaleDevice(metaclass=PoolMeta):
     def import_data_pos(cls):
         #Se requiere previamente haber creado el diario para ventas POS con código VM
         #Posterior a la importación. revisar las configuraciones
+        logging.warning("RUN CONFIG POS")
         cls.create_or_update()
         cls.import_sale_shop()
         cls.import_sale_device()
         cls.import_statement_sale()
-        Transaction().connection.commit()
-        msg1 = f'Recordatorio: Revisar las configuraciones de Tiendas, Terminales de venta y Libros diarios (formas de pago) de las terminales...'
-        logging.warning(msg1)
+        #Transaction().connection.commit()
+        #msg1 = f'Recordatorio: Revisar las configuraciones de Tiendas, Terminales de venta y Libros diarios (formas de pago) de las terminales...'
+        #logging.warning(msg1)
+        logging.warning("FINISH CONFIG POS")
         #raise UserError("RECORDATORIO: ", "Revisa las configuraciones de las tiendas, terminales de venta y libros diarios (formas de pago) de las terminales...")
 
     @classmethod

@@ -1,7 +1,7 @@
 from trytond.model import ModelSQL, ModelView, fields
 from trytond.pool import Pool
 from trytond.exceptions import UserError
-#import base64
+from decimal import Decimal
 import datetime
 
 try:
@@ -249,44 +249,78 @@ class Configuration(ModelSQL, ModelView):
     @classmethod
     def import_csv_balances(cls, lineas):
         pool = Pool()
+        Account = pool.get('account.account')
         Journal = pool.get('account.journal')
+        Period = pool.get('account.period')
         Move = pool.get('account.move')
-        Line = pool.get('account.move.line')
+        Party = pool.get('party.party')
+        #Line = pool.get('account.move.line')
         cont = 0
         move = {}
+        lines = []
         for linea in lineas:
             linea = linea.strip()
-            if linea:
-                linea = linea.split(';')
-                if len(linea) != 10:
-                    raise UserError('Importación de archivo: ', 'Error de plantilla !')
-
-                
-                account_line = linea[4].strip()
-                debit_line = linea[5].strip()
-                credit_line = linea[6].strip()
-                party_line = linea[7].strip()
-                description_line = linea[8].strip()
-                date_line = cls.convert_str_date(linea[9])
-                reference_line = linea[10].strip()
-
-                if cont == 0:
-                    name_journal = linea[0].strip()
-                    name_period = linea[1].strip()
-                    efective_date = cls.convert_str_date(linea[2])
-                    description_move = linea[3].strip()
-
-                    journal, = Journal.search([('name', '=', name_journal)])
-
-                    move = {
-                        ''
-                    }
-                cont += 1
-                raise UserError('Importación de archivo: ', 'Tipo de importación en desarrollo...')
+            if not linea:
+                continue
+            linea = linea.split(';')
+            if len(linea) != 11:
+                raise UserError('Importación de archivo: ', 'Error de plantilla !')
+            if cont == 0:
+                name_journal = linea[0].strip()
+                name_period = linea[1].strip()
+                efective_date = cls.convert_str_date(linea[2])
+                description_move = linea[3].strip()
+                journal, = Journal.search([('name', '=', name_journal)])
+                period, = Period.search([('name', '=', name_period)])
+                move = {
+                    'journal': journal.id,
+                    'period': period.id,
+                    'date': efective_date,
+                    'description': description_move,
+                }
+            cont += 1
+            
+            account_line = linea[4].strip()
+            debit_line = linea[5].strip()
+            if debit_line:
+                debit_line = Decimal(debit_line)
+            else:
+                debit_line = Decimal(0)
+            credit_line = linea[6].strip()
+            if credit_line:
+                credit_line = Decimal(credit_line)
+            else:
+                credit_line = Decimal(0)
+            party_line = linea[7].strip()
+            description_line = linea[8].strip()
+            date_line = cls.convert_str_date(linea[9])
+            reference_line = linea[10].strip()
+            account = Account.search([('code', '=', account_line)])
+            if not account:
+                raise UserError("Error de cuenta", f"No se encontro la cuenta: {account_line}")
+            account, = account
+            line = {
+                'account': account.id,
+                'reference': reference_line,
+                'debit': debit_line,
+                'credit': credit_line,
+                'description': description_line,
+                'maturity_date': date_line
+            }
+            if account.party_required:
+                party = Party.search([('id_number', '=', party_line)])
+                if not party:
+                    raise UserError("Error tercero", f"No se encontro el tercero: {party_line} requerido para la cuenta {account_line}")
+                line['party'] = party[0].id
+            lines.append(line)
+        #Se verifica si hay lineas por crear
+        if lines:
+            move['lines'] = [('create', lines)]
+        Move.create([move])
 
     @classmethod
     def convert_str_date(cls, fecha):
-        result = fecha.strip().split().split('-')
+        result = fecha.strip().split()[0].split('-')
         # Y-M-D
         result = datetime.date(int(result[0]), int(result[1]), int(result[2]))
         return result
