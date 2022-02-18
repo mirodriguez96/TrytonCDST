@@ -8,12 +8,25 @@ from trytond.transaction import Transaction
 from trytond.exceptions import UserError
 
 
-__all__ = [
-    'ActualizarVentas',
-    'CargarVentas',
-    ]
+#__all__ = [
+#    'ActualizarVentas',
+#    'CargarVentas',
+#    ]
 
+class MoveForceDraft(Wizard):
+    'Move Force Drafts'
+    __name__ = 'account.move.force_drafts'
+    start_state = 'force_drafts'
+    force_draft = StateTransition()
 
+    def transition_force_drafts(self):
+        ids_ = Transaction().context['active_ids']
+        if ids_:
+            Move = Pool().get('account.move')
+            Move.drafts(ids_)
+        return 'end'
+
+"""
 #Nota: el uso principal de los asistentes suele ser realizar acciones basadas en alguna entrada del usuario.
 class ActualizarVentas(Wizard):
     'ActualizarVentas'
@@ -25,7 +38,6 @@ class ActualizarVentas(Wizard):
         print("--------------RUN WIZARD VENTAS--------------")
         return 'end'
 
-"""
 class ActualizarVentas(Wizard):
     'ActualizarVentas'
 

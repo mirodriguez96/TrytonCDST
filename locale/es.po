@@ -42,6 +42,10 @@ msgctxt "model:ir.action,name:act_update_invoice_tecno"
 msgid "Update Invoice Tecno"
 msgstr "Marcar Re-importar TecnoCarnes"
 
+msgctxt "model:ir.action,name:act_delete_voucher_tecno"
+msgid "Delete Voucher Tecno"
+msgstr "Marcar Re-importar TecnoCarnes"
+
 msgctxt "field:account.voucher_configuration,account_discount_tecno:"
 msgid "Account Discount for Conector TecnoCarnes"
 msgstr "Cuenta de descuento para TecnoCarnes"
