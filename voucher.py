@@ -401,45 +401,59 @@ class Voucher(ModelSQL, ModelView):
 
     @classmethod
     def delete_imported_vouchers(cls, vouchers):
-        #pool = Pool()
-        #Move = pool.get('account.move')
-        #Voucher = pool.get('account.voucher')
+        pool = Pool()
+        Move = pool.get('account.move')
+        Voucher = pool.get('account.voucher')
         bank_statement_line = Table('bank_statement_line_account_move_line')
         account_move = Table('account_move')
         voucher_table = Table('account_voucher')
         voucher_line_table = Table('account_voucher_line')
+        reconciliation_table = Table('account_move_reconciliation')
         cursor = Transaction().connection.cursor()
         Conexion = Pool().get('conector.configuration')
 
         for voucher in vouchers:
+            # Se marca en la base de datos de importación como no exportado y se elimina
+            lista = voucher.id_tecno.split('-')
+            consult = "UPDATE dbo.Documentos SET exportado = 'S' WHERE exportado = 'T' and sw ="+lista[0]+" and tipo = "+lista[1]+" and Numero_documento = "+lista[2]
+            Conexion.set_data(consult)
+
             if voucher.move:
-                #Move.draft([voucher.move.id])
-                for line in voucher.move.lines:
-                    if line:
+                #Se requiere desconciliar el asiento antes de eliminarlo
+                cls.unreconcile_move(voucher.move)
+
+                if voucher.move and voucher.move.lines:
+                    for move_line in voucher.move.lines:
+                        #if move_line.reconciliation:
+                        #    cursor.execute(*reconciliation_table.delete(
+                        #        where=reconciliation_table.id == move_line.reconciliation.id)
+                        #    )
                         cursor.execute(*bank_statement_line.delete(
-                            where=bank_statement_line.move_line == line.id)
-                        )
-                cursor.execute(*account_move.delete(
-                            where=account_move.id == voucher.move.id)
+                            where=bank_statement_line.move_line == move_line.id)
                         )
                 #Se elimina el asiento
+                #Move.draft([voucher.move.id])
                 #Move.delete([voucher.move])
-            
-            # Se marca en la base de datos de importación como no exportado y se elimina
-            if voucher.id_tecno:
-                lista = voucher.id_tecno.split('-')
-                #Voucher.draft([voucher])
-                #Voucher.delete([voucher])
-                cursor.execute(*voucher_line_table.delete(
-                    where=voucher_line_table.voucher == voucher.id)
-                )
-                cursor.execute(*voucher_table.delete(
-                    where=voucher_table.id == voucher.id)
-                )
-                consult = "UPDATE dbo.Documentos SET exportado = 'S' WHERE sw ="+lista[0]+" and tipo = "+lista[1]+" and Numero_documento = "+lista[2]
-                Conexion.set_data(consult)
-            else:
-                raise UserError("No se econtró el id_tecno del comprobante", f"{voucher.rec_name}")
+                if voucher.move:
+                    cursor.execute(*account_move.delete(
+                                where=account_move.id == voucher.move.id)
+                        )
+            #Se elimina el comprobante
+            #Voucher.draft([voucher])
+            #Voucher.delete([voucher])
+            cursor.execute(*voucher_line_table.delete(
+                where=voucher_line_table.voucher == voucher.id)
+            )
+            cursor.execute(*voucher_table.delete(
+                where=voucher_table.id == voucher.id)
+            )
+    
+    @classmethod
+    def unreconcile_move(cls, move):
+        Reconciliation = Pool().get('account.move.reconciliation')
+        reconciliations = [l.reconciliation for l in move.lines if l.reconciliation]
+        if reconciliations:
+            Reconciliation.delete(reconciliations)
 
 class VoucherConfiguration(metaclass=PoolMeta):
     'Voucher Configuration'
@@ -484,7 +498,7 @@ class DeleteVoucherTecno(Wizard):
             rec_name = voucher.rec_name
             party_name = voucher.party.name
             rec_party = rec_name+' de '+party_name
-            if voucher.number and '-' in voucher.number:
+            if voucher.number and '-' in voucher.number and voucher.id_tecno:
                 to_delete.append(voucher)
             else:
                 raise UserError("Revisa el número del comprobante (tipo-numero): ", rec_party)

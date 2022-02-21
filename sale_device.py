@@ -60,7 +60,7 @@ class SaleDevice(metaclass=PoolMeta):
             id_tecno = bodega[columns.index('IdBodega')]
             location = location.search([('id_tecno', '=', id_tecno)])
             if not location:
-                logging.ERROR('LA BODEGA: '+str(id_tecno)+' NO EXISTE')
+                logging.ERROR(f'LA BODEGA: {id_tecno} NO EXISTE')
                 continue
             nombre = bodega[columns.index('Bodega')].strip()
             location = location[0]
