@@ -91,6 +91,7 @@ class Production(metaclass=PoolMeta):
                 elif cantidad > 0:
                     transf['from_location'] = bodega.production_location.id
                     transf['to_location'] = bodega.storage_location.id
+                    print(line.Valor_Unitario)
                     transf['unit_price'] = Decimal(line.Valor_Unitario)
                     salidas.append(transf)
                     if cont == 0:
@@ -109,8 +110,8 @@ class Production(metaclass=PoolMeta):
         producciones = Production.create(to_create)
         #print(producciones)
         Production.wait(producciones)
-        Production.assign(producciones)
-        Production.run(producciones)
+        #Production.assign(producciones)
+        #Production.run(producciones)
         #Production.done(producciones)
         #cls.importado(id_tecno)
         logging.warning('FINISH PRODUCTION')
