@@ -52,7 +52,7 @@ class Production(metaclass=PoolMeta):
                 #cls.importado(id_tecno)
                 continue
 
-            tipo_doc = transformacion.tipo
+            #tipo_doc = transformacion.tipo
             fecha = str(transformacion.Fecha_Hora_Factura).split()[0].split('-')
             fecha = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
             reference = tipo_doc+'-'+str(numero_doc)
