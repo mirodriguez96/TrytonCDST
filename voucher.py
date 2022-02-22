@@ -401,9 +401,9 @@ class Voucher(ModelSQL, ModelView):
 
     @classmethod
     def delete_imported_vouchers(cls, vouchers):
-        pool = Pool()
-        Move = pool.get('account.move')
-        Voucher = pool.get('account.voucher')
+        #pool = Pool()
+        #Move = pool.get('account.move')
+        #Voucher = pool.get('account.voucher')
         bank_statement_line = Table('bank_statement_line_account_move_line')
         account_move = Table('account_move')
         voucher_table = Table('account_voucher')

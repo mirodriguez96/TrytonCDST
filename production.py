@@ -44,6 +44,7 @@ class Production(metaclass=PoolMeta):
         for transformacion in data:
             sw = transformacion.sw
             numero_doc = transformacion.Numero_documento
+            tipo_doc = transformacion.tipo
             id_tecno = str(sw)+'-'+tipo_doc+'-'+str(numero_doc)
 
             existe = Production.search([('id_tecno', '=', id_tecno)])
