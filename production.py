@@ -101,7 +101,7 @@ class Production(metaclass=PoolMeta):
                         if not producto.producible:
                             #print(producto.producible)
                             #Product.write([producto.template], {'producible': True})
-                            raise UserError("Error en producción", "Producto no marcado como producible {producto.rec_name}")
+                            raise UserError("Error en producción", f"Producto no marcado como producible {producto.rec_name}")
                         production['product'] = producto.id
                     cont += 1
             if entradas:
