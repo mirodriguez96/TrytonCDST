@@ -39,6 +39,7 @@ class Production(metaclass=PoolMeta):
         Production = pool.get('production')
         Location = pool.get('stock.location')
         Product = pool.get('product.product')
+        Template = pool.get('product.template')
 
         to_create = []
         for transformacion in data:
@@ -73,11 +74,10 @@ class Production(metaclass=PoolMeta):
             cont = 0
             for line in lines:
                 cantidad = float(line.Cantidad_Facturada)
-                #print(type(cantidad), cantidad)
                 id_tecno_bodega = line.IdBodega
                 bodega, = Location.search([('id_tecno', '=', id_tecno_bodega)])
                 producto, = Product.search([('id_tecno', '=', line.IdProducto)])
-                print(producto)
+                #print(producto)
                 transf = {
                     'product': producto.id,
                     'quantity': abs(cantidad),
@@ -95,14 +95,17 @@ class Production(metaclass=PoolMeta):
                     #print(line.Valor_Unitario)
                     transf['unit_price'] = Decimal(line.Valor_Unitario)
                     salidas.append(transf)
-                    producto.template = {'sale_price_w_tax': Decimal(line.Valor_Unitario)}
-                    producto.template = {'list_price': Decimal(line.Valor_Unitario)}
-                    producto.save()
+                    template, = Template.search([('products', '=', producto)])
+                    to_write = {
+                        'sale_price_w_tax': Decimal(line.Valor_Unitario),
+                        'list_price': Decimal(line.Valor_Unitario)
+                        }
+                    Template.write([template], to_write)
                     if cont == 0:
-                        if not producto.producible:
-                            #print(producto.producible)
-                            #Product.write([producto.template], {'producible': True})
-                            raise UserError("Error en producción", f"Producto no marcado como producible {producto.rec_name}")
+                        if not producto.template.producible:
+                            #Se actualiza el producto para que sea producible
+                            Template.write([template], {'producible': True})
+                            #raise UserError("Error en producción", f"Producto no marcado como producible {producto.rec_name}")
                         production['product'] = producto.id
                     cont += 1
             if entradas:
