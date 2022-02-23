@@ -420,7 +420,8 @@ class Voucher(ModelSQL, ModelView):
 
             if voucher.move:
                 #Se requiere desconciliar el asiento antes de eliminarlo
-                cls.unreconcile_move(voucher.move)
+                if voucher.move.origin.state == 'paid':
+                    cls.unreconcile_move(voucher.move)
 
                 if voucher.move and voucher.move.lines:
                     for move_line in voucher.move.lines:

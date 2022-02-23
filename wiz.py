@@ -26,6 +26,23 @@ class MoveForceDraft(Wizard):
             Move.drafts(ids_)
         return 'end'
 
+class ReverseProduction(Wizard):
+    'Reverse Production'
+    __name__ = 'production.reverse_production'
+
+    Production = Pool().get('production')
+
+    start_state = 'reverse_production'
+    force_draft = StateTransition()
+
+    def transition_reverse_production(self):
+        ids = Transaction().context['active_ids']
+        if ids:
+            pass
+            #for production in Production.browse(ids):
+            #    pass
+        return 'end'
+
 """
 #Nota: el uso principal de los asistentes suele ser realizar acciones basadas en alguna entrada del usuario.
 class ActualizarVentas(Wizard):

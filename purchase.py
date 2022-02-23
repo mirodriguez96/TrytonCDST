@@ -384,6 +384,12 @@ class Purchase(metaclass=PoolMeta):
         cursor = Transaction().connection.cursor()
         Conexion = pool.get('conector.configuration')
         for purchase in purchases:
+            if purchase.id_tecno:
+                lista = purchase.id_tecno.split('-')
+                consult = "UPDATE dbo.Documentos SET exportado = 'S' WHERE sw ="+lista[0]+" and tipo = "+lista[1]+" and Numero_documento = "+lista[2]
+                Conexion.set_data(consult)
+            else:
+                raise UserError("Error: ", f"No se encontró el id_tecno de {purchase}")
             for invoice in purchase.invoices:
                 if invoice.state == 'paid':
                     cls.unreconcile_move(invoice.move)
@@ -424,13 +430,10 @@ class Purchase(metaclass=PoolMeta):
                     where=stock_move_table.id.in_(stock_moves))
                 )
 
-            if purchase.id and purchase.id_tecno:
-                lista = purchase.id_tecno.split('-')
-                consult = "UPDATE dbo.Documentos SET exportado = 'S' WHERE sw ="+lista[0]+" and tipo = "+lista[1]+" and Numero_documento = "+lista[2]
-                Conexion.set_data(consult)
-                cursor.execute(*purchase_table.delete(
-                    where=purchase_table.id == purchase.id)
-                )
+            # Se elimina la compra
+            cursor.execute(*purchase_table.delete(
+                where=purchase_table.id == purchase.id)
+            )
 
 
     @classmethod

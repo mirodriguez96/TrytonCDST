@@ -568,7 +568,14 @@ class Sale(metaclass=PoolMeta):
         cursor = Transaction().connection.cursor()
         #Sale = Pool().get('sale.sale')
         Conexion = Pool().get('conector.configuration')
-        for sale in sales:            
+        for sale in sales:
+            if sale.id_tecno:
+                lista = sale.id_tecno.split('-')
+                consult = "UPDATE dbo.Documentos SET exportado = 'S' WHERE sw ="+lista[0]+" and tipo = "+lista[1]+" and Numero_documento = "+lista[2]
+                Conexion.set_data(consult)
+            else:
+                raise UserError("Error: ", f"No se encontró el id_tecno de {sale}")
+
             for invoice in sale.invoices:
                 if invoice.state == 'paid':
                     cls.unreconcile_move(invoice.move)
@@ -608,12 +615,8 @@ class Sale(metaclass=PoolMeta):
                 cursor.execute(*stock_move_table.delete(
                     where=stock_move_table.id.in_(stock_moves))
                 )
-            
-            if sale.id and sale.id_tecno:
-                lista = sale.id_tecno.split('-')
-                consult = "UPDATE dbo.Documentos SET exportado = 'S' WHERE sw ="+lista[0]+" and tipo = "+lista[1]+" and Numero_documento = "+lista[2]
-                Conexion.set_data(consult)
-                cursor.execute(*sale_table.delete(
+            #Se elimina la venta
+            cursor.execute(*sale_table.delete(
                     where=sale_table.id == sale.id)
                 )
 

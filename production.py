@@ -123,7 +123,7 @@ class Production(metaclass=PoolMeta):
     @classmethod
     def get_data_tecno(cls, date):
         Config = Pool().get('conector.configuration')
-        consult = "SET DATEFORMAT ymd SELECT TOP(1000) * FROM dbo.Documentos WHERE sw = 18  AND fecha_hora >= CAST('"+date+"' AS datetime) AND exportado != 'T'"
+        consult = "SET DATEFORMAT ymd SELECT TOP(1000) * FROM dbo.Documentos WHERE sw = 12 and tipo = 910  AND fecha_hora >= CAST('"+date+"' AS datetime) AND exportado != 'T'"
         data = Config.get_data(consult)
         return data
 
