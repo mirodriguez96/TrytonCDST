@@ -263,13 +263,13 @@ class Voucher(ModelSQL, ModelView):
     #Se obtiene las lineas de la factura que se desea pagar
     @classmethod
     def get_moveline(cls, reference, party):
+        print(reference)
         pool = Pool()
         Invoice = pool.get('account.invoice')
         MoveLine = pool.get('account.move.line')
         #A continuacion se consulta las lineas a pagar de la factura (reference)
         linea = False
         invoice = Invoice.search([('number', '=', reference)])
-        
         if invoice:
             invoice, = invoice
             if invoice.state != 'posted':

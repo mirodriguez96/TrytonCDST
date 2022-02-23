@@ -152,6 +152,14 @@ class Production(metaclass=PoolMeta):
         config, = Config.search([], order=[('id', 'DESC')], limit=1)
         fecha = config.date
         fecha = fecha.strftime('%Y-%m-%d %H:%M:%S')
-        fecha = "2021-01-01" #PRUEBAS
+        #fecha = "2021-01-01" #PRUEBAS
         data = cls.get_data_tecno(fecha)
         return data
+
+    #Función encargada de revertir las producciones hechas
+    @classmethod
+    def reverse_production(cls, productions):
+        to_reverse = []
+        for production in productions:
+            print(production)
+        print(to_reverse)

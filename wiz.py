@@ -29,18 +29,17 @@ class MoveForceDraft(Wizard):
 class ReverseProduction(Wizard):
     'Reverse Production'
     __name__ = 'production.reverse_production'
-
-    Production = Pool().get('production')
-
     start_state = 'reverse_production'
     force_draft = StateTransition()
 
     def transition_reverse_production(self):
+        Production = Pool().get('production')
         ids = Transaction().context['active_ids']
+        to_produce = []
         if ids:
-            pass
-            #for production in Production.browse(ids):
-            #    pass
+            for production in Production.browse(ids):
+                to_produce.append(production)
+        Production.reverse_production(to_produce)
         return 'end'
 
 """
