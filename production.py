@@ -77,6 +77,7 @@ class Production(metaclass=PoolMeta):
                 id_tecno_bodega = line.IdBodega
                 bodega, = Location.search([('id_tecno', '=', id_tecno_bodega)])
                 producto, = Product.search([('id_tecno', '=', line.IdProducto)])
+                print(producto)
                 transf = {
                     'product': producto.id,
                     'quantity': abs(cantidad),
@@ -94,8 +95,8 @@ class Production(metaclass=PoolMeta):
                     #print(line.Valor_Unitario)
                     transf['unit_price'] = Decimal(line.Valor_Unitario)
                     salidas.append(transf)
-                    producto.template.sale_price_w_tax = Decimal(line.Valor_Unitario)
-                    producto.template.list_price = Decimal(line.Valor_Unitario)
+                    producto.template = {'sale_price_w_tax': Decimal(line.Valor_Unitario)}
+                    producto.template = {'list_price': Decimal(line.Valor_Unitario)}
                     producto.save()
                     if cont == 0:
                         if not producto.producible:
