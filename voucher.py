@@ -209,7 +209,7 @@ class Voucher(ModelSQL, ModelView):
                         line_rete.untaxed_amount = untaxed_amount
                         line_rete.tax = config_voucher.account_rete_tecno
                         line_rete.on_change_tax()
-                        line_rete.amount = round(retencion, 2)
+                        line_rete.amount = round((retencion*-1), 2)
                         line_rete.save()
                     if retencion_iva > 0:
                         line_retiva = Line()
@@ -219,7 +219,7 @@ class Voucher(ModelSQL, ModelView):
                         line_retiva.untaxed_amount = untaxed_amount
                         line_retiva.tax = config_voucher.account_retiva_tecno
                         line_retiva.on_change_tax()
-                        line_retiva.amount = round(retencion_iva, 2)
+                        line_retiva.amount = round((retencion_iva*-1), 2)
                         line_retiva.save()
                     if retencion_ica > 0:
                         line_retica = Line()
@@ -229,7 +229,7 @@ class Voucher(ModelSQL, ModelView):
                         line_retica.untaxed_amount = untaxed_amount
                         line_retica.tax = config_voucher.account_retica_tecno
                         line_retica.on_change_tax()
-                        line_retica.amount = round(retencion_ica, 2)
+                        line_retica.amount = round((retencion_ica*-1), 2)
                         line_retica.save()
                     if ajuste > 0:
                         line_ajuste = Line()
@@ -312,15 +312,17 @@ class Voucher(ModelSQL, ModelView):
 
         amount_to_pay = Decimal(0)
         untaxed_amount = Decimal(0)
-        if moveline.move_origin and hasattr(
-                moveline.move_origin, '__name__') and \
-                moveline.move_origin.__name__ == 'account.invoice':
+        if moveline.move_origin and hasattr(moveline.move_origin, '__name__') and moveline.move_origin.__name__ == 'account.invoice':
 
             amount_to_pay = Invoice.get_amount_to_pay(
                 [moveline.move_origin], 'amount_to_pay'
             )
             amount_to_pay = amount_to_pay[moveline.move_origin.id]
             untaxed_amount = moveline.move_origin.untaxed_amount
+        elif moveline.move_origin and hasattr(moveline.move_origin, '__name__') and moveline.move_origin.__name__ != 'account.invoice':
+            amount_to_pay = amount
+            untaxed_amount = amount
+
         return amount, amount_to_pay, untaxed_amount
 
     #Se marca como importado
