@@ -319,7 +319,7 @@ class Voucher(ModelSQL, ModelView):
             )
             amount_to_pay = amount_to_pay[moveline.move_origin.id]
             untaxed_amount = moveline.move_origin.untaxed_amount
-        elif moveline.move_origin and hasattr(moveline.move_origin, '__name__') and moveline.move_origin.__name__ != 'account.invoice':
+        elif not moveline.move_origin:
             amount_to_pay = amount
             untaxed_amount = amount
 
