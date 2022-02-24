@@ -11,9 +11,9 @@ class Actualizacion(ModelSQL, ModelView):
     __name__ = 'conector.actualizacion'
 
     name = fields.Char('Update', required=True, readonly=True)
-    quantity = function(fields.Integer('Quantity'), 'getter_quantity')
-    imported = function(fields.Integer('Imported'), 'getter_imported')
-    not_imported = function(fields.Integer('Not imported'), 'getter_not_imported')
+    #quantity = function(fields.Integer('Quantity'), 'getter_quantity')
+    #imported = function(fields.Integer('Imported'), 'getter_imported')
+    #not_imported = function(fields.Integer('Not imported'), 'getter_not_imported')
     logs = fields.Text("Logs", readonly=True)
 
     @classmethod
