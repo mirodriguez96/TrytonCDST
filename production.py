@@ -159,7 +159,9 @@ class Production(metaclass=PoolMeta):
     #Función encargada de revertir las producciones hechas
     @classmethod
     def reverse_production(cls, productions):
+        Production = Pool().get('production')
         to_reverse = []
         for production in productions:
+            reverse = Production()
             print(production)
         print(to_reverse)

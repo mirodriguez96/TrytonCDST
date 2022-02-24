@@ -86,6 +86,10 @@ class Voucher(ModelSQL, ModelView):
                 move_line = cls.get_moveline(ref, tercero)
                 if move_line:
                     lineas_a_pagar = True
+                else:
+                    msg1 = f"No se encontró la factura {ref} del comprobante {id_tecno}"
+                    logging.warning(msg1)
+                    logs.append(msg1)
             if not lineas_a_pagar:
                 continue
             #print("Procesando...", id_tecno)
@@ -205,7 +209,7 @@ class Voucher(ModelSQL, ModelView):
                         line_rete.untaxed_amount = untaxed_amount
                         line_rete.tax = config_voucher.account_rete_tecno
                         line_rete.on_change_tax()
-                        line_rete.amount = round(line_rete.amount, 2)
+                        #line_rete.amount = round(retencion, 2)
                         line_rete.save()
                     if retencion_iva > 0:
                         line_retiva = Line()
@@ -215,7 +219,7 @@ class Voucher(ModelSQL, ModelView):
                         line_retiva.untaxed_amount = untaxed_amount
                         line_retiva.tax = config_voucher.account_retiva_tecno
                         line_retiva.on_change_tax()
-                        line_retiva.amount = round(line_retiva.amount, 2)
+                        #line_retiva.amount = round(line_retiva.amount, 2)
                         line_retiva.save()
                     if retencion_ica > 0:
                         line_retica = Line()
@@ -225,7 +229,7 @@ class Voucher(ModelSQL, ModelView):
                         line_retica.untaxed_amount = untaxed_amount
                         line_retica.tax = config_voucher.account_retica_tecno
                         line_retica.on_change_tax()
-                        line_retica.amount = round(line_retica.amount, 2)
+                        #line_retica.amount = round(line_retica.amount, 2)
                         line_retica.save()
                     if ajuste > 0:
                         line_ajuste = Line()
@@ -281,9 +285,11 @@ class Voucher(ModelSQL, ModelView):
         if linea:
             moveline, = MoveLine.search([('id', '=', linea)])
             return moveline
-        #Si no encuentra lineas a pagar...
+        #Si no encuentra lineas a pagar... Se busca en saldos iniciales
         moveline = MoveLine.search([('reference', '=', reference), ('party', '=', party)])
         if moveline:
+            if len(moveline) > 1:
+                raise UserError("Error factura saldos iniciales", "Esperaba una linea de movimiento y obtuvo muchas !")
             moveline, = moveline
             return moveline
         else:
