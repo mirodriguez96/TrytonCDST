@@ -13,6 +13,32 @@ from trytond.exceptions import UserError
 #    'CargarVentas',
 #    ]
 
+class VoucherMoveUnreconcile(Wizard):
+    'Voucher Move Unreconcile'
+    __name__ = 'account.move.voucher_unreconcile'
+    start_state = 'do_unreconcile'
+    do_unreconcile = StateTransition()
+
+    def transition_do_unreconcile(self):
+        pool = Pool()
+        Voucher = pool.get('account.voucher')
+        Reconciliation = pool.get('account.move.reconciliation')
+        #Move = pool.get('account.move')
+        ids_ = Transaction().context['active_ids']
+        if ids_:
+            to_unreconcilie = []
+            for voucher in Voucher.browse(ids_):
+                if voucher.move:
+                    to_unreconcilie.append(voucher.move)
+            for move in to_unreconcilie:
+                reconciliations = [
+                    l.reconciliation for l in move.lines if l.reconciliation
+                ]
+                if reconciliations:
+                    Reconciliation.delete(reconciliations)
+        return 'end'
+
+#Pendiente por terminar...
 class MoveForceDraft(Wizard):
     'Move Force Drafts'
     __name__ = 'account.move.force_drafts'

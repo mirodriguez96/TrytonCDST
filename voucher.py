@@ -416,7 +416,7 @@ class Voucher(ModelSQL, ModelView):
         account_move = Table('account_move')
         voucher_table = Table('account_voucher')
         voucher_line_table = Table('account_voucher_line')
-        reconciliation_table = Table('account_move_reconciliation')
+        #reconciliation_table = Table('account_move_reconciliation')
         cursor = Transaction().connection.cursor()
         Conexion = Pool().get('conector.configuration')
 
@@ -428,28 +428,18 @@ class Voucher(ModelSQL, ModelView):
 
             if voucher.move:
                 #Se requiere desconciliar el asiento antes de eliminarlo
-                if voucher.move.origin.state == 'paid':
-                    cls.unreconcile_move(voucher.move)
-
-                if voucher.move and voucher.move.lines:
+                #cls.unreconcile_move(voucher.move)
+                #Se verifica si hay lineas y se eliminan sus relaciones con la tabla bank_statement_line_account_move_line
+                if voucher.move.lines:
                     for move_line in voucher.move.lines:
-                        #if move_line.reconciliation:
-                        #    cursor.execute(*reconciliation_table.delete(
-                        #        where=reconciliation_table.id == move_line.reconciliation.id)
-                        #    )
                         cursor.execute(*bank_statement_line.delete(
                             where=bank_statement_line.move_line == move_line.id)
                         )
                 #Se elimina el asiento
-                #Move.draft([voucher.move.id])
-                #Move.delete([voucher.move])
-                if voucher.move:
-                    cursor.execute(*account_move.delete(
-                                where=account_move.id == voucher.move.id)
-                        )
-            #Se elimina el comprobante
-            #Voucher.draft([voucher])
-            #Voucher.delete([voucher])
+                cursor.execute(*account_move.delete(
+                            where=account_move.id == voucher.move.id)
+                    )
+            #Se elimina el comprobante y sus lineas
             cursor.execute(*voucher_line_table.delete(
                 where=voucher_line_table.voucher == voucher.id)
             )
@@ -457,12 +447,12 @@ class Voucher(ModelSQL, ModelView):
                 where=voucher_table.id == voucher.id)
             )
     
-    @classmethod
-    def unreconcile_move(cls, move):
-        Reconciliation = Pool().get('account.move.reconciliation')
-        reconciliations = [l.reconciliation for l in move.lines if l.reconciliation]
-        if reconciliations:
-            Reconciliation.delete(reconciliations)
+    #@classmethod
+    #def unreconcile_move(cls, move):
+    #    Reconciliation = Pool().get('account.move.reconciliation')
+    #    reconciliations = [l.reconciliation for l in move.lines if l.reconciliation]
+    #    if reconciliations:
+    #        Reconciliation.delete(reconciliations)
 
 class VoucherConfiguration(metaclass=PoolMeta):
     'Voucher Configuration'

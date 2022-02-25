@@ -15,6 +15,7 @@ from . import location
 from . import invoice
 from . import tax
 from . import production
+from . import wiz
 
 def register():
     Pool.register(
@@ -55,5 +56,6 @@ def register():
         electronic_payroll_wizard.PayrollElectronicCdst,
         invoice.UpdateInvoiceTecno,
         voucher.DeleteVoucherTecno,
+        wiz.VoucherMoveUnreconcile,
         module='conector', type_='wizard')
 
