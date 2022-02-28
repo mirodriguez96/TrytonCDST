@@ -55,7 +55,8 @@ def register():
     Pool.register(
         electronic_payroll_wizard.PayrollElectronicCdst,
         invoice.UpdateInvoiceTecno,
-        voucher.DeleteVoucherTecno,
+        wiz.DeleteVoucherTecno,
         wiz.VoucherMoveUnreconcile,
+        wiz.ReverseProduction,
         module='conector', type_='wizard')
 

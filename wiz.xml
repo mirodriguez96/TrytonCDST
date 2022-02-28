@@ -32,7 +32,16 @@
             <field name="model">account.voucher,-1</field>
             <field name="action" ref="act_voucher_move_unreconcile"/>
         </record>
-
+        <!-- Asistente para revertir la producción -->
+        <record model="ir.action.wizard" id="act_reverse_production">
+            <field name="name">Revertir Producción</field>
+            <field name="wiz_name">production.reverse_production</field>
+        </record>
+        <record model="ir.action.keyword" id="act_reverse_production_keyword">
+            <field name="keyword">form_action</field>
+            <field name="model">production,-1</field>
+            <field name="action" ref="act_reverse_production"/>
+        </record>
     </data>
 
 </tryton>

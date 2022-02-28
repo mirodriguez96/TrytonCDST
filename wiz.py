@@ -1,11 +1,11 @@
 #from trytond.model import ModelView
 from trytond.wizard import Wizard, StateTransition#, StateView, StateAction, Button
-import datetime
-from trytond.model import ModelView, fields
-from trytond.pool import Pool, PoolMeta
+#import datetime
+#from trytond.model import ModelView, fields
+from trytond.pool import Pool
 from trytond.transaction import Transaction
 #from trytond.pyson import PYSONEncoder
-from trytond.exceptions import UserError
+from trytond.exceptions import UserError, UserWarning
 
 
 #__all__ = [
@@ -38,6 +38,38 @@ class VoucherMoveUnreconcile(Wizard):
                     Reconciliation.delete(reconciliations)
         return 'end'
 
+
+class DeleteVoucherTecno(Wizard):
+    'Delete Voucher Tecno'
+    __name__ = 'account.voucher.delete_voucher_tecno'
+    start_state = 'do_submit'
+    do_submit = StateTransition()
+
+    def transition_do_submit(self):
+        pool = Pool()
+        Warning = pool.get('res.user.warning')
+        Voucher = pool.get('account.voucher')
+        ids = Transaction().context['active_ids']
+        #Se agrega un nombre unico a la advertencia
+        warning_name = 'mywarning_%s' % ids
+        if Warning.check(warning_name):
+            raise UserWarning(warning_name, "Los comprobantes debieron ser desconciliado primero.")
+        to_delete = []
+        for voucher in Voucher.browse(ids):
+            rec_name = voucher.rec_name
+            party_name = voucher.party.name
+            rec_party = rec_name+' de '+party_name
+            if voucher.number and '-' in voucher.number and voucher.id_tecno:
+                to_delete.append(voucher)
+            else:
+                raise UserError("Revisa el número del comprobante (tipo-numero): ", rec_party)
+        Voucher.delete_imported_vouchers(to_delete)
+        return 'end'
+
+    def end(self):
+        return 'reload'
+
+
 #Pendiente por terminar...
 class MoveForceDraft(Wizard):
     'Move Force Drafts'
@@ -52,33 +84,29 @@ class MoveForceDraft(Wizard):
             Move.drafts(ids_)
         return 'end'
 
+
+#Asistente encargado de revertir las producciones
 class ReverseProduction(Wizard):
     'Reverse Production'
     __name__ = 'production.reverse_production'
     start_state = 'reverse_production'
-    force_draft = StateTransition()
+    reverse_production = StateTransition()
 
     def transition_reverse_production(self):
         Production = Pool().get('production')
         ids = Transaction().context['active_ids']
-        to_produce = []
+        to_reverse = []
         if ids:
             for production in Production.browse(ids):
-                to_produce.append(production)
-        Production.reverse_production(to_produce)
+                to_reverse.append(production)
+        Production.reverse_production(to_reverse)
         return 'end'
+    
+    def end(self):
+        return 'reload'
 
 """
 #Nota: el uso principal de los asistentes suele ser realizar acciones basadas en alguna entrada del usuario.
-class ActualizarVentas(Wizard):
-    'ActualizarVentas'
-    __name__ = 'conector.actualizar_ventas'
-    start_state = 'actualizar_venta'
-    actualizar_venta = StateTransition()
-
-    def transition_actualizar_venta(self=None):
-        print("--------------RUN WIZARD VENTAS--------------")
-        return 'end'
 
 class ActualizarVentas(Wizard):
     'ActualizarVentas'

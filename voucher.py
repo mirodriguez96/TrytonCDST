@@ -267,7 +267,7 @@ class Voucher(ModelSQL, ModelView):
     #Se obtiene las lineas de la factura que se desea pagar
     @classmethod
     def get_moveline(cls, reference, party):
-        print(reference)
+        #print(reference)
         pool = Pool()
         Invoice = pool.get('account.invoice')
         MoveLine = pool.get('account.move.line')
@@ -409,14 +409,10 @@ class Voucher(ModelSQL, ModelView):
 
     @classmethod
     def delete_imported_vouchers(cls, vouchers):
-        #pool = Pool()
-        #Move = pool.get('account.move')
-        #Voucher = pool.get('account.voucher')
         bank_statement_line = Table('bank_statement_line_account_move_line')
         account_move = Table('account_move')
         voucher_table = Table('account_voucher')
         voucher_line_table = Table('account_voucher_line')
-        #reconciliation_table = Table('account_move_reconciliation')
         cursor = Transaction().connection.cursor()
         Conexion = Pool().get('conector.configuration')
 
@@ -446,13 +442,7 @@ class Voucher(ModelSQL, ModelView):
             cursor.execute(*voucher_table.delete(
                 where=voucher_table.id == voucher.id)
             )
-    
-    #@classmethod
-    #def unreconcile_move(cls, move):
-    #    Reconciliation = Pool().get('account.move.reconciliation')
-    #    reconciliations = [l.reconciliation for l in move.lines if l.reconciliation]
-    #    if reconciliations:
-    #        Reconciliation.delete(reconciliations)
+
 
 class VoucherConfiguration(metaclass=PoolMeta):
     'Voucher Configuration'
@@ -480,29 +470,3 @@ class MultiRevenue(metaclass=PoolMeta):
     __name__ = 'account.multirevenue'
     id_tecno = fields.Char('Id Tabla Sqlserver', required=False)
 
-
-class DeleteVoucherTecno(Wizard):
-    'Delete Voucher Tecno'
-    __name__ = 'account.voucher.delete_voucher_tecno'
-    start_state = 'do_submit'
-    do_submit = StateTransition()
-
-    def transition_do_submit(self):
-        pool = Pool()
-        Voucher = pool.get('account.voucher')
-        ids = Transaction().context['active_ids']
-
-        to_delete = []
-        for voucher in Voucher.browse(ids):
-            rec_name = voucher.rec_name
-            party_name = voucher.party.name
-            rec_party = rec_name+' de '+party_name
-            if voucher.number and '-' in voucher.number and voucher.id_tecno:
-                to_delete.append(voucher)
-            else:
-                raise UserError("Revisa el número del comprobante (tipo-numero): ", rec_party)
-        Voucher.delete_imported_vouchers(to_delete)
-        return 'end'
-
-    def end(self):
-        return 'reload'

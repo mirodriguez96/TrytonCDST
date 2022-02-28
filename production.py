@@ -159,9 +159,33 @@ class Production(metaclass=PoolMeta):
     #Función encargada de revertir las producciones hechas
     @classmethod
     def reverse_production(cls, productions):
-        Production = Pool().get('production')
+        pool = Pool()
+        Production = pool.get('production')
+        Move = pool.get('stock.move')
+        reverse = Production.copy(productions)
         to_reverse = []
-        for production in productions:
-            reverse = Production()
-            print(production)
-        print(to_reverse)
+        for production in reverse:
+            to_inputs = []
+            for output in production.outputs:
+                inp = Move()
+                inp.product = output.product
+                inp.quantity = output.quantity
+                inp.uom = output.uom
+                inp.from_location = output.to_location
+                inp.to_location = output.from_location
+                to_inputs.append(inp)
+            to_outputs = []
+            for input in production.inputs:
+                out = Move()
+                out.product = input.product
+                out.quantity = input.quantity
+                out.uom = input.uom
+                out.from_location = input.to_location
+                out.to_location = input.from_location
+                out.unit_price = input.product.template.list_price
+                to_outputs.append(out)
+            production.inputs = to_inputs
+            production.outputs = to_outputs
+            to_reverse.append(production)
+        #print(to_reverse)
+        Production.save(to_reverse)
