@@ -132,7 +132,8 @@ class Product(ModelSQL, ModelView):
     def update_accounting_categories(cls):
         modelos = cls.get_modelos_tecno()
         if not modelos:
-            raise UserError("Revisar vista modelo contable", "No se encontraron valores")
+            logging.error('Revisar vista modelo contable, No se encontraron valores')
+            #raise UserError("Revisar vista modelo contable", "No se encontraron valores")
         #Creación o actualización de las categorias de los productos
         Category = Pool().get('product.category')
         to_category = []
