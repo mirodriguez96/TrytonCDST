@@ -18,7 +18,8 @@ __all__ = [
 TYPES_FILE = [
     ('parties', 'Parties'),
     ('products', 'Products'),
-    ('balances', 'Balances')
+    ('balances', 'Balances'),
+    ('accounts', 'Accounts'),
 ]
 
 class Configuration(ModelSQL, ModelView):
@@ -109,6 +110,8 @@ class Configuration(ModelSQL, ModelView):
                     cls.import_csv_products(lineas)
                 elif config.type_file == "balances":
                     cls.import_csv_balances(lineas)
+                elif config.type_file == "accounts":
+                    cls.import_csv_accounts(lineas)
                 else:
                     raise UserError('Importación de archivo: ', 'Seleccione el tipo de importación')
             else:
@@ -317,6 +320,88 @@ class Configuration(ModelSQL, ModelView):
         if lines:
             move['lines'] = [('create', lines)]
         Move.create([move])
+
+
+    #Función encargada de verificar las cuentas nuevas a importar
+    @classmethod
+    def import_csv_accounts(cls, lineas):
+        pool = Pool()
+        Account = pool.get('account.account')
+        Type = pool.get('account.account.type')
+        ordered = []
+        for linea in lineas:
+            linea = linea.strip()
+            if not linea:
+                continue            
+            linea = linea.split(';')
+            if linea[0] == 'code':
+                continue
+            if len(linea) != 5:
+                raise UserError('Importación de archivo: ', 'Error en la cantidad de columnas de la plantilla !')
+            ordered.append(linea)
+        ordered = sorted(ordered, key=lambda item:len(item[0]))
+        #to_create = []
+        not_account = []
+        for linea in ordered:
+            #print(linea)
+            code = linea[0].strip()
+            account = Account.search([('code', '=', code)])
+            if account:
+                #print(account)
+                continue
+            name = linea[1].strip().upper()
+            type = linea[2].strip()
+            reconcile = linea[3].strip().upper()
+            if reconcile and reconcile == 'TRUE':
+                reconcile = True
+            else:
+                reconcile = False
+            party_required = linea[4].strip().upper()
+            if party_required and party_required == 'TRUE':
+                party_required = True
+            else:
+                party_required = False
+            account = {
+                'code': code,
+                'name': name,
+                'reconcile': reconcile,
+                'party_required': party_required,
+                'type': None
+            }
+            if type:
+                #print(type)
+                type = Type.search([('sequence', '=', type)])
+                if not type:
+                    raise UserError('Importación de archivo: ', f'Error en la búsqueda del tipo de cuenta de la cuenta {code} - {name}')
+                type, = type
+                account['type'] = type.id
+            #else:
+            #    raise UserError('Importación de archivo: ', f'Error falata el tipo de cuenta de la cuenta {code} - {name}')
+            parent = cls.get_parent_account(code)
+            if parent:
+                #print(parent)
+                account_s = Account.search([('code', '=', parent)])
+                if not account_s:
+                    not_account.append(parent)
+                    continue
+                    #raise UserError('Importación de archivo: ', f'Error al buscar la cuenta padre {parent}')
+                account['parent'] = account_s[0].id
+            #to_create.append(account)
+            Account.create([account])
+        if not_account:
+            raise UserError('Importación de archivo: ', f'Error: Faltan las cuentas padres {not_account}')
+
+    
+    @classmethod
+    def get_parent_account(cls, code):
+        if len(code) < 2:
+            return
+        elif len(code) == 2:
+            return code[0]
+        elif len(code) > 2:
+            if (len(code) % 2) != 0:
+                raise UserError('Importación de archivo: ', f'Error de código {code}')
+            return code[:-2]
 
     @classmethod
     def convert_str_date(cls, fecha):

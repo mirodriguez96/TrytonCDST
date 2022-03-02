@@ -51,7 +51,8 @@ class Production(metaclass=PoolMeta):
             existe = Production.search([('id_tecno', '=', id_tecno)])
             if existe:
                 #cls.importado(id_tecno)
-                continue
+                #cls.reverse_production(existe)
+                pass
 
             #tipo_doc = transformacion.tipo
             fecha = str(transformacion.Fecha_Hora_Factura).split()[0].split('-')

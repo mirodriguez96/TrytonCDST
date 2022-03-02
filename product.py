@@ -124,7 +124,6 @@ class Product(ModelSQL, ModelView):
             #Category.save(to_category)
             Template_Product.save(to_template)
             Producto.save(to_product)
-            
         logging.warning('FINISH PRODUCTOS')
 
 

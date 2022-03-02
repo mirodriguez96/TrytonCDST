@@ -5,4 +5,7 @@
     <field name="name"/>
     <field name="write_date" widget="date"/>
     <field name="write_date" widget="time"/>
+    <field name="quantity"/>
+    <field name="imported"/>
+    <field name="not_imported"/>
 </tree>
