@@ -77,7 +77,6 @@ class Configuration(ModelSQL, ModelView):
         cnxn.close()
         return data
 
-
     #
     @classmethod
     def set_data(cls, query):
@@ -117,6 +116,7 @@ class Configuration(ModelSQL, ModelView):
             else:
                 raise UserError('Importación de archivo: ', 'Agregue un archivo para importar')
 
+    #Importar terceros
     @classmethod
     def import_csv_parties(cls, lineas):
         pool = Pool()
@@ -188,7 +188,7 @@ class Configuration(ModelSQL, ModelView):
         print(len(parties))
         Party.create(parties)
 
-
+    #Importar productos
     @classmethod
     def import_csv_products(cls, lineas):
         pool = Pool()
@@ -249,6 +249,7 @@ class Configuration(ModelSQL, ModelView):
         Product.create(products)
         print(not_products)
 
+    #Importador de saldos iniciales
     @classmethod
     def import_csv_balances(cls, lineas):
         pool = Pool()
@@ -257,7 +258,6 @@ class Configuration(ModelSQL, ModelView):
         Period = pool.get('account.period')
         Move = pool.get('account.move')
         Party = pool.get('party.party')
-        #Line = pool.get('account.move.line')
         cont = 0
         move = {}
         lines = []
@@ -296,7 +296,7 @@ class Configuration(ModelSQL, ModelView):
                 credit_line = Decimal(0)
             party_line = linea[7].strip()
             description_line = linea[8].strip()
-            date_line = cls.convert_str_date(linea[9])
+            maturity_date = linea[9].strip()
             reference_line = linea[10].strip()
             account = Account.search([('code', '=', account_line)])
             if not account:
@@ -308,8 +308,9 @@ class Configuration(ModelSQL, ModelView):
                 'debit': debit_line,
                 'credit': credit_line,
                 'description': description_line,
-                'maturity_date': date_line
             }
+            if maturity_date:
+                line['maturity_date'] = cls.convert_str_date(maturity_date)
             if account.party_required:
                 party = Party.search([('id_number', '=', party_line)])
                 if not party:
