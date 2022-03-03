@@ -3,8 +3,8 @@ from trytond.model import fields
 from trytond.pyson import Eval
 from trytond.wizard import Wizard, StateTransition
 from trytond.transaction import Transaction
-from trytond.exceptions import UserError
-
+from trytond.exceptions import UserError, UserWarning
+from sql import Table
 
 __all__ = [
     'Invoice',
@@ -20,6 +20,7 @@ ELECTRONIC_STATES = [
     ('authorized', 'Authorized'),
     ('accepted', 'Accepted'),
 ]
+
 
 class Invoice(metaclass=PoolMeta):
     'Invoice'
@@ -76,3 +77,48 @@ class UpdateInvoiceTecno(Wizard):
 
     def end(self):
         return 'reload'
+
+
+
+class UpdateNoteDate(Wizard):
+    'Update Note Date'
+    __name__ = 'account.invoice.update_note_date'
+    start_state = 'to_update'
+    to_update = StateTransition()
+
+    def transition_to_update(self):
+        pool = Pool()
+        Warning = pool.get('res.user.warning')
+        Invoice = pool.get('account.invoice')
+        move_table = Table('account_move')
+        note_table = Table('account_note')
+        cursor = Transaction().connection.cursor()
+        ids = Transaction().context['active_ids']
+
+        warning_name = 'warning_udate_note_%s' % ids
+        if Warning.check(warning_name):
+            raise UserWarning(warning_name, "Se va a actualizar las fechas de los anticipos cruzados con respecto a la fecha de la factura.")
+
+        for invoice in Invoice.browse(ids):
+            rec_name = invoice.rec_name
+            party_name = invoice.party.name
+            rec_party = rec_name+' de '+party_name
+            if invoice.number and '-' in invoice.number:
+                movelines = invoice.reconciliation_lines or invoice.payment_lines
+                print(movelines)
+                if movelines:
+                    for line in movelines:
+                        if line.move_origin and hasattr(line.move_origin, '__name__') and line.move_origin.__name__ == 'account.note':
+                            cursor.execute(*move_table.update(
+                                columns=[move_table.date],
+                                values=[invoice.invoice_date],
+                                where=move_table.id == line.move.id)
+                            )
+                            cursor.execute(*note_table.update(
+                                columns=[note_table.date],
+                                values=[invoice.invoice_date],
+                                where=note_table.id == line.move_origin.id)
+                            )
+            else:
+                raise UserError("Revisa el número de la factura (tipo-numero): ", rec_party)
+        return 'end'
