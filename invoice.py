@@ -114,6 +114,16 @@ class UpdateNoteDate(Wizard):
                                 values=[invoice.invoice_date],
                                 where=move_table.id == line.move.id)
                             )
+                            cursor.execute(*move_table.update(
+                                columns=[move_table.post_date],
+                                values=[invoice.invoice_date],
+                                where=move_table.id == line.move.id)
+                            )
+                            cursor.execute(*move_table.update(
+                                columns=[move_table.period],
+                                values=[invoice.move.period.id],
+                                where=move_table.id == line.move.id)
+                            )
                             cursor.execute(*note_table.update(
                                 columns=[note_table.date],
                                 values=[invoice.invoice_date],
