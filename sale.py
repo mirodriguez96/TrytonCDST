@@ -255,7 +255,7 @@ class Sale(metaclass=PoolMeta):
                     logging.warning(msg1)
                     #logs += '\n' + msg1
                 if sale.invoices:
-                    #try:
+                    print(sale.id_tecno)
                     invoice, = sale.invoices
                     invoice.accounting_date = sale.sale_date
                     invoice.number = sale.number
