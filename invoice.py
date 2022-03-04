@@ -103,25 +103,14 @@ class UpdateNoteDate(Wizard):
             rec_name = invoice.rec_name
             party_name = invoice.party.name
             rec_party = rec_name+' de '+party_name
-            if invoice.number and '-' in invoice.number:
+            if invoice.state == 'posted' or invoice.state == 'paid':
                 movelines = invoice.reconciliation_lines or invoice.payment_lines
-                print(movelines)
                 if movelines:
                     for line in movelines:
                         if line.move_origin and hasattr(line.move_origin, '__name__') and line.move_origin.__name__ == 'account.note':
                             cursor.execute(*move_table.update(
-                                columns=[move_table.date],
-                                values=[invoice.invoice_date],
-                                where=move_table.id == line.move.id)
-                            )
-                            cursor.execute(*move_table.update(
-                                columns=[move_table.post_date],
-                                values=[invoice.invoice_date],
-                                where=move_table.id == line.move.id)
-                            )
-                            cursor.execute(*move_table.update(
-                                columns=[move_table.period],
-                                values=[invoice.move.period.id],
+                                columns=[move_table.date, move_table.post_date, move_table.period],
+                                values=[invoice.invoice_date, invoice.invoice_date, invoice.move.period.id],
                                 where=move_table.id == line.move.id)
                             )
                             cursor.execute(*note_table.update(
@@ -130,5 +119,5 @@ class UpdateNoteDate(Wizard):
                                 where=note_table.id == line.move_origin.id)
                             )
             else:
-                raise UserError("Revisa el número de la factura (tipo-numero): ", rec_party)
+                raise UserError("La factura debe estar en estado contabilizada o pagada.", rec_party)
         return 'end'
