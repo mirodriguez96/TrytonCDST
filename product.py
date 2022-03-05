@@ -138,7 +138,7 @@ class Product(ModelSQL, ModelView):
         to_category = []
         for modelo in modelos:
             id_tecno = modelo.IDMODELOS
-            nombre = str(id_tecno)+' - '+modelo.Modelos.strip()
+            nombre = str(id_tecno)+' - '+modelo.MODELOS.strip()
             
             existe = cls.buscar_categoria(id_tecno)
             if not existe:
