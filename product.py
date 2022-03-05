@@ -137,7 +137,7 @@ class Product(ModelSQL, ModelView):
         Category = Pool().get('product.category')
         to_category = []
         for modelo in modelos:
-            id_tecno = modelo.IdModelos
+            id_tecno = modelo.IDMODELOS
             nombre = str(id_tecno)+' - '+modelo.Modelos.strip()
             
             existe = cls.buscar_categoria(id_tecno)
@@ -174,23 +174,23 @@ class Product(ModelSQL, ModelView):
         Account = Pool().get('account.account')
 
         #Gastos
-        l_expense = list(modelo.cuenta1)
+        l_expense = list(modelo.CUENTA1)
         if int(l_expense[0]) >= 5:
-            expense = Account.search([('code', '=', modelo.cuenta1)])
+            expense = Account.search([('code', '=', modelo.CUENTA1)])
             if expense:
                 category['account_expense'] = expense[0]
         
         #Ingresos
-        l_revenue = list(modelo.cuenta3)
+        l_revenue = list(modelo.CUENTA3)
         if l_revenue[0] == '4':
-            revenue = Account.search([('code', '=', modelo.cuenta3)])
+            revenue = Account.search([('code', '=', modelo.CUENTA3)])
             if revenue:
                 category['account_revenue'] = revenue[0]
         
         #Devolucion venta
-        l_return_sale = list(modelo.cuenta4)
+        l_return_sale = list(modelo.CUENTA4)
         if int(l_return_sale[0]) >= 4:
-            return_sale = Account.search([('code', '=', modelo.cuenta4)])
+            return_sale = Account.search([('code', '=', modelo.CUENTA4)])
             if return_sale:
                 category['account_return_sale'] = return_sale[0]
         
