@@ -79,7 +79,7 @@ class Sale(metaclass=PoolMeta):
                 existe = cls.buscar_venta(id_venta)
                 sale = None
                 if not existe:
-                    #print(id_venta)
+                    print(id_venta)
                     #Se trae la fecha de la venta y se adapta al formato correcto para Tryton
                     fecha = str(venta[coluns_doc.index('Fecha_Orden_Venta')]).split()[0].split('-')
                     fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
