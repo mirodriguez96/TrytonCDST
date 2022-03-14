@@ -209,7 +209,7 @@ class Purchase(metaclass=PoolMeta):
                             total = abs(total_amount['total_amount'][invoice.id])
                             total_tecno = Decimal(compra[coluns_doc.index('valor_total')])
                             diferencia_total = abs(total - total_tecno)
-                            if diferencia_total <= 1.0:
+                            if diferencia_total < Decimal(6.0):
                                 with Transaction().set_context(_skip_warnings=True):
                                     invoice.post_batch([invoice])
                                     invoice.post([invoice])

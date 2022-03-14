@@ -61,3 +61,35 @@ msgstr "Cuenta de Retención Iva para TecnoCarnes"
 msgctxt "field:account.voucher_configuration,account_retica_tecno:"
 msgid "Account Retention ICA for Conector TecnoCarnes"
 msgstr "Cuenta de Retención ICA para TecnoCarnes"
+
+msgctxt "model:ir.action,name:wizard_print_portfolio_status"
+msgid "Portfolio Status"
+msgstr "Estado de Cartera"
+
+msgctxt "model:ir.action,name:report_portfolio_status"
+msgid "Portfolio Status"
+msgstr "Estado de Cartera"
+
+msgctxt "field:collection.print_portfolio_status.start,category_party:"
+msgid "Party Categories"
+msgstr "Categorias de Cliente"
+
+msgctxt "field:collection.print_portfolio_status.start,company:"
+msgid "Company"
+msgstr "Empresa"
+
+msgctxt "field:collection.print_portfolio_status.start,date_to:"
+msgid "Date to"
+msgstr "Fecha corte"
+
+msgctxt "field:collection.print_portfolio_status.start,detailed:"
+msgid "Detailed"
+msgstr "Detallado"
+
+msgctxt "field:collection.print_portfolio_status.start,kind:"
+msgid "Kind"
+msgstr "Tipo"
+
+msgctxt "field:collection.print_portfolio_status.start,payment_terms:"
+msgid "Payment Term"
+msgstr "Plazo de pago"

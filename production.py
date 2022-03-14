@@ -51,7 +51,10 @@ class Production(metaclass=PoolMeta):
             existe = Production.search([('id_tecno', '=', id_tecno)])
             if existe:
                 #cls.importado(id_tecno)
-                #cls.reverse_production(existe)
+                existe, = existe
+                existe.id_tecno = ''
+                existe.save()
+                cls.reverse_production(existe)
                 pass
 
             #tipo_doc = transformacion.tipo
@@ -114,9 +117,8 @@ class Production(metaclass=PoolMeta):
             if salidas:
                 production['outputs'] = [('create', salidas)]
             to_create.append(production)
-        #print(to_create)
+        #Se crean las producciones
         producciones = Production.create(to_create)
-        #print(producciones)
         Production.wait(producciones)
         #Production.assign(producciones)
         #Production.run(producciones)

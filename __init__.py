@@ -16,6 +16,7 @@ from . import invoice
 from . import tax
 from . import production
 from . import wiz
+from . import report
 
 def register():
     Pool.register(
@@ -50,6 +51,7 @@ def register():
         production.Production,
         production.Cron,
         voucher.VoucherConfiguration,
+        report.PortfolioStatusStart,
         module='conector', type_='model')
 
     Pool.register(
@@ -59,5 +61,9 @@ def register():
         wiz.DeleteVoucherTecno,
         wiz.VoucherMoveUnreconcile,
         wiz.ReverseProduction,
+        report.PortfolioStatus,
         module='conector', type_='wizard')
 
+    Pool.register(
+        report.PortfolioStatusReport,
+        module='conector', type_='report')

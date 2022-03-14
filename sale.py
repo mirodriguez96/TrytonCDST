@@ -238,7 +238,7 @@ class Sale(metaclass=PoolMeta):
                 Sale.process(to_create)
             #Procesamos la venta para generar la factura y procedemos a rellenar los campos de la factura
             for sale in to_create:
-                #print('INICIO VENTA: '+str(sale.id_tecno))
+                print(f"PROCESS: {sale.id_tecno}")
                 if sale.shipments:
                     shipment_out, = sale.shipments
                     shipment_out.number = sale.number
@@ -255,7 +255,7 @@ class Sale(metaclass=PoolMeta):
                     logging.warning(msg1)
                     #logs += '\n' + msg1
                 if sale.invoices:
-                    print(sale.id_tecno)
+                    #print(sale.id_tecno)
                     invoice, = sale.invoices
                     invoice.accounting_date = sale.sale_date
                     invoice.number = sale.number
@@ -281,7 +281,7 @@ class Sale(metaclass=PoolMeta):
                             else:
                                 total_tecno = valor_total
                     diferencia_total = abs(total_tryton - total_tecno)
-                    if diferencia_total <= 1.0 and invoice.invoice_type != 'P':
+                    if diferencia_total < Decimal(6.0) and invoice.invoice_type != 'P':
                         Invoice.post_batch([invoice])
                         Invoice.post([invoice])
                     else:
@@ -292,8 +292,6 @@ class Sale(metaclass=PoolMeta):
                         logs.append(full_msg)
                         invoice.comment = 'No contabilizada diferencia total mayor al rango permitido'
                         invoice.save()
-                    #if invoice.invoice_type == 'P' and sale.payment_term.id_tecno == '0':
-                    #    cls.set_payment(invoice, sale)
                 else:
                     msg1 = f'Venta sin factura: {sale.id_tecno}'
                     logging.error(msg1)
@@ -492,7 +490,7 @@ class Sale(metaclass=PoolMeta):
     @classmethod
     def get_data_tecno(cls, date):
         Config = Pool().get('conector.configuration')
-        #consult = "SELECT TOP (10) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2)" #TEST
+        #consult = "SELECT * FROM dbo.Documentos WHERE (sw = 1 OR sw = 2) AND tipo = 140 AND Numero_documento > 49 AND Numero_documento < 236" #TEST
         consult = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado != 'T'"
         result = Config.get_data(consult)
         return result

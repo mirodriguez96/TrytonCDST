@@ -63,7 +63,7 @@ class VoucherPayMode(ModelSQL, ModelView):
                     PayMode.save(paym)
             else:
                 #Diario por defecto del plan contable
-                journal, = Journal.search([('code', '=', 'REV')])
+                journal, = Journal.search([('code', '=', 'CASH')])
                 paym = PayMode()
                 paym.id_tecno = idt
                 paym.name = nombre
