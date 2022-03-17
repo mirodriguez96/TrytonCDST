@@ -91,10 +91,11 @@ class Voucher(ModelSQL, ModelView):
                     logs.append(msg1)
             if not lineas_a_pagar:
                 continue
-            #print("Procesando...", id_tecno)
+            print("Procesando...", id_tecno)
             #Se obtiene la forma de pago, según la tabla Documentos_Che de TecnoCarnes
             tipo_pago = cls.get_tipo_pago(sw, tipo, nro)
             if len(tipo_pago) > 1 and sw == '5':
+                continue
                 print('MULTI INGRESO:', id_tecno)
                 multingreso = MultiRevenue()
                 multingreso.code = tipo+'-'+nro
@@ -249,7 +250,17 @@ class Voucher(ModelSQL, ModelView):
                     Voucher.process([voucher])
                     diferencia = abs(voucher.amount_to_pay - valor_aplicado)
                     #print(diferencia, (diferencia < Decimal(6.0)))
-                    if voucher.amount_to_pay == valor_aplicado or diferencia < Decimal(6.0):
+                    if voucher.amount_to_pay == valor_aplicado:
+                        Voucher.post([voucher])
+                    elif diferencia < Decimal(60.0):
+                        line_ajuste = Line()
+                        line_ajuste.voucher = voucher
+                        line_ajuste.detail = 'AJUSTE'
+                        line_ajuste.account = config_voucher.account_adjust_income
+                        if sw == '6':
+                            line_ajuste.account = config_voucher.account_adjust_expense
+                        line_ajuste.amount = diferencia
+                        line_ajuste.save()
                         Voucher.post([voucher])
                 created.append(id_tecno)
             else:
@@ -307,8 +318,10 @@ class Voucher(ModelSQL, ModelView):
                     'number': tipo+'-'+nro,
                     'reference': tipo+'-'+nro,
                     'party': tercero.id,
-                    'payment_mode': paymode,
+                    'payment_mode': paymode.id,
                     'date': fecha_date,
+                    'account': paymode.account.id,
+                    'journal': paymode.journal.id,
                 }
                 #voucher.on_change_payment_mode()
                 voucher['voucher_type'] = 'receipt'
@@ -317,12 +330,9 @@ class Voucher(ModelSQL, ModelView):
                 nota = (doc.notas).replace('\n', ' ').replace('\r', '')
                 if nota:
                     voucher['description'] = nota
-                
-                #voucher.save()
-
                 #Se obtiene las facturas a las que hace referencia el ingreso o egreso
                 facturas = cls.get_dcto_cruce("sw="+sw+" and tipo="+tipo+" and numero="+nro)
-                valor_aplicado = Decimal(doc.valor_aplicado)
+                #valor_aplicado = Decimal(doc.valor_aplicado)
                 lines = []
                 for rec in facturas:
                     ref = rec.tipo_aplica+'-'+str(rec.numero_aplica)
@@ -332,14 +342,16 @@ class Voucher(ModelSQL, ModelView):
                         logging.warning(msg1)
                         logs.append(msg1)
                         continue
+                    #print(move_line)
                     config_voucher = pool.get('account.voucher_configuration')(1)
+                    valor_original, amount_to_pay, untaxed_amount = cls.get_amount_to_pay_moveline(move_line, sw)
                     line = {
+                        'detail': 'FACTURA',
                         'amount_original': valor_original,
-                        'line.reference': ref,
+                        'reference': ref,
                         'move_line': move_line.id,
+                        'account': move_line.account.id,
                     }
-                    valor_original, amount_to_pay, untaxed_amount = cls.get_amount_to_pay_moveline_tecno(move_line, voucher)
-                    #line.on_change_move_line()
                     valor = Decimal(rec.valor)
                     descuento = Decimal(rec.descuento)
                     retencion = Decimal(rec.retencion)
@@ -352,8 +364,6 @@ class Voucher(ModelSQL, ModelView):
                     if valor_pagado > amount_to_pay:
                         valor_pagado = amount_to_pay
                     line['amount'] = Decimal(valor_pagado)
-
-                    #line.save()
                     lines.append(line)
                     #
                     if descuento > 0:
@@ -367,6 +377,7 @@ class Voucher(ModelSQL, ModelView):
                     if retencion > 0:
                         line_rete = {
                             'detail': 'RETENCION - ('+str(retencion)+')',
+                            'account': config_voucher.account_rete_tecno.invoice_account.id,
                             'type': 'tax',
                             'untaxed_amount': untaxed_amount,
                             'tax': config_voucher.account_rete_tecno.id,
@@ -376,6 +387,7 @@ class Voucher(ModelSQL, ModelView):
                     if retencion_iva > 0:
                         line_retiva = {
                             'detail': 'RETENCION IVA - ('+str(retencion_iva)+')',
+                            'account': config_voucher.account_retiva_tecno.invoice_account.id,
                             'type': 'tax',
                             'untaxed_amount': untaxed_amount,
                             'tax': config_voucher.account_retiva_tecno.id,
@@ -385,6 +397,7 @@ class Voucher(ModelSQL, ModelView):
                     if retencion_ica > 0:
                         line_retica = {
                             'detail': 'RETENCION ICA - ('+str(retencion_ica)+')',
+                            'account': config_voucher.account_retica_tecno.invoice_account.id,
                             'type': 'tax',
                             'untaxed_amount': untaxed_amount,
                             'tax': config_voucher.account_retica_tecno.id,
@@ -402,10 +415,11 @@ class Voucher(ModelSQL, ModelView):
                         elif Decimal(move_line.credit) > 0:
                             line_ajuste['account'] = config_voucher.account_adjust_expense
                         lines.append(line_ajuste)
-                    #Se añade las lineas
+                #Se añade las lineas
                 if lines:
                     voucher['lines'] = [('create', lines)]
-                to_create.append(voucher)
+                if voucher:
+                    to_create.append(voucher)
             """
                 #Se verifica que el comprobante tenga lineas para ser procesado y contabilizado (doble verificación por error)
                 if voucher.lines and voucher.amount_to_pay > 0:
@@ -416,10 +430,13 @@ class Voucher(ModelSQL, ModelView):
                         Voucher.post([voucher])
                 created.append(id_tecno)
             """
-        Voucher.create(to_create)
+        vouchers = Voucher.create(to_create)
+        for voucher in vouchers:
+            voucher.on_change_lines()
         actualizacion.add_logs(actualizacion, logs)
         for created in to_create:
-            cls.importado(created['id_tecno'])
+            #cls.importado(created['id_tecno'])
+            print(f"importado {created['id_tecno']}")
         logging.warning("FINISH COMPROBANTES")
 
 
@@ -454,6 +471,34 @@ class Voucher(ModelSQL, ModelView):
         else:
             return False
 
+    @classmethod
+    def get_amount_to_pay_moveline(cls, moveline, sw):
+        pool = Pool()
+        #Model = pool.get('ir.model')
+        Invoice = pool.get('account.invoice')
+
+        amount = moveline.credit or moveline.debit
+        if sw == '5':
+            if moveline.credit > Decimal('0'):
+                amount = -amount
+        else:
+            if moveline.debit > Decimal('0'):
+                amount = -amount
+
+        amount_to_pay = Decimal(0)
+        untaxed_amount = Decimal(0)
+        if moveline.move_origin and hasattr(moveline.move_origin, '__name__') and moveline.move_origin.__name__ == 'account.invoice':
+
+            amount_to_pay = Invoice.get_amount_to_pay(
+                [moveline.move_origin], 'amount_to_pay'
+            )
+            amount_to_pay = amount_to_pay[moveline.move_origin.id]
+            untaxed_amount = moveline.move_origin.untaxed_amount
+        elif not moveline.move_origin:
+            amount_to_pay = amount
+            untaxed_amount = amount
+
+        return amount, amount_to_pay, untaxed_amount
 
     @classmethod
     def get_amount_to_pay_moveline_tecno(cls, moveline, voucher):
@@ -518,8 +563,8 @@ class Voucher(ModelSQL, ModelView):
     @classmethod
     def get_data_tecno(cls, date):
         Config = Pool().get('conector.configuration')
-        #consult = "SELECT TOP(5) * FROM dbo.Documentos WHERE (sw = 5 OR sw = 6) AND fecha_hora >= CAST('"+date+"' AS datetime) AND exportado != 'T'" #TEST
-        consult = "SET DATEFORMAT ymd SELECT TOP(500) * FROM dbo.Documentos WHERE (sw = 5 OR sw = 6) AND fecha_hora >= CAST('"+date+"' AS datetime) AND exportado != 'T'"
+        #consult = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE (sw = 5 OR sw = 6) AND fecha_hora >= CAST('"+date+"' AS datetime) AND exportado != 'T'" #TEST
+        consult = "SET DATEFORMAT ymd SELECT TOP(1000) * FROM dbo.Documentos WHERE (sw = 5 OR sw = 6) AND fecha_hora >= CAST('"+date+"' AS datetime) AND exportado != 'T'"
         data = Config.get_data(consult)
         return data
 
