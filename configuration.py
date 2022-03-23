@@ -273,8 +273,14 @@ class Configuration(ModelSQL, ModelView):
                 name_period = linea[1].strip()
                 efective_date = cls.convert_str_date(linea[2])
                 description_move = linea[3].strip()
-                journal, = Journal.search([('name', '=', name_journal)])
-                period, = Period.search([('name', '=', name_period)])
+                journal = Journal.search([('name', '=', name_journal)])
+                if not journal:
+                    raise UserError('Error diario', f'No se encontró el diario {name_journal}')
+                journal, = journal
+                period = Period.search([('name', '=', name_period)])
+                if not period:
+                    raise UserError('Error periodo', f'No se encontró el diario {name_period}')
+                period, = period
                 move = {
                     'journal': journal.id,
                     'period': period.id,
@@ -406,9 +412,11 @@ class Configuration(ModelSQL, ModelView):
 
     @classmethod
     def convert_str_date(cls, fecha):
-        result = fecha.strip().split()[0].split('-')
-        # Y-M-D
-        result = datetime.date(int(result[0]), int(result[1]), int(result[2]))
+        try:
+            result = fecha.strip().split()[0].split('-')
+            result = datetime.date(int(result[0]), int(result[1]), int(result[2]))
+        except:
+            raise UserError(f"Error fecha {fecha}", "Recuerde que la fecha debe estar con el siguiente formato YY-MM-DD")
         return result
 
     #

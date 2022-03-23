@@ -1,6 +1,6 @@
 from trytond.model import fields
 from trytond.pool import Pool, PoolMeta
-from trytond.exceptions import UserError
+#from trytond.exceptions import UserError
 from decimal import Decimal
 import logging
 import datetime
@@ -106,10 +106,10 @@ class Production(metaclass=PoolMeta):
                         }
                     Template.write([template], to_write)
                     if cont == 0:
+                        #Se actualiza el producto para que sea producible
                         if not producto.template.producible:
-                            #Se actualiza el producto para que sea producible
+                            
                             Template.write([template], {'producible': True})
-                            #raise UserError("Error en producción", f"Producto no marcado como producible {producto.rec_name}")
                         production['product'] = producto.id
                     cont += 1
             if entradas:
@@ -130,7 +130,8 @@ class Production(metaclass=PoolMeta):
     @classmethod
     def get_data_tecno(cls, date):
         Config = Pool().get('conector.configuration')
-        consult = "SET DATEFORMAT ymd SELECT TOP(1000) * FROM dbo.Documentos WHERE sw = 12 and tipo = 910  AND fecha_hora >= CAST('"+date+"' AS datetime) AND exportado != 'T'"
+        consult = "SELECT * FROM dbo.Documentos WHERE sw = 12 and tipo = 110  AND Numero_documento = 126335"
+        #consult = "SET DATEFORMAT ymd SELECT TOP(1000) * FROM dbo.Documentos WHERE sw = 12 and tipo = 110  AND fecha_hora >= CAST('"+date+"' AS datetime) AND exportado != 'T'"
         data = Config.get_data(consult)
         return data
 
