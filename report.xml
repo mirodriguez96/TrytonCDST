@@ -25,7 +25,6 @@ this repository contains the full copyright notices and license terms. -->
             id="menu_print_expired_portfolio" icon="tryton-print" sequence="200"/>
 
         <!-- Reporte nómina -->
-        <!--
         <record model="ir.action.report" id="payroll_export_report">
             <field name="name">Payroll Export Report</field>
             <field name="model"></field>
@@ -45,6 +44,5 @@ this repository contains the full copyright notices and license terms. -->
         </record>
         <menuitem parent="staff.menu_reporting" id="menu_payroll_export_wizard"
             action="payroll_export_wizard"/>
-        -->
     </data>
 </tryton>

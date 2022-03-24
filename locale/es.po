@@ -93,3 +93,19 @@ msgstr "Tipo"
 msgctxt "field:collection.print_portfolio_status.start,payment_terms:"
 msgid "Payment Term"
 msgstr "Plazo de pago"
+
+msgctxt "model:ir.action,name:payroll_export_wizard"
+msgid "Payroll Export Wizard"
+msgstr "Reporte de Nómina"
+
+msgctxt "model:ir.ui.menu,name:menu_payroll_export_wizard"
+msgid "Payroll Export Wizard"
+msgstr "Reporte de Nómina"
+
+msgctxt "field:staff.payroll.export.start,start_period:"
+msgid "Start Period"
+msgstr "Período Inicial"
+
+msgctxt "field:staff.payroll.export.start,end_period:"
+msgid "End Period"
+msgstr "Período Final"

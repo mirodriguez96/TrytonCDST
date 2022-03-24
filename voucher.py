@@ -264,7 +264,7 @@ class Voucher(ModelSQL, ModelView):
                         Voucher.post([voucher])
                 created.append(id_tecno)
             else:
-                msg1 = f"Revisar el tipo de pago de {id_tecno}"
+                msg1 = f"Revisar si {id_tecno} tiene alguna forma de pago en TecnoCarnes"
                 logging.warning(msg1)
                 logs.append(msg1)
                 continue                

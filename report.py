@@ -6,6 +6,7 @@ from trytond.pool import Pool
 from trytond.transaction import Transaction
 #from trytond.exceptions import UserError
 import copy
+from .constants import (ENTITY_ACCOUNTS)
 
 
 class PortfolioStatusStart(ModelView):
@@ -311,7 +312,7 @@ class PortfolioStatusReport(Report):
         return report_context
 
 
-'''
+# REPORTE DE NOMINA MODIFICADO
 class PayrollExportStart(ModelView):
     'Export Payroll Start'
     __name__ = 'report.payroll.export.start'
@@ -332,7 +333,7 @@ class PayrollExport(Wizard):
     'Payroll Export'
     __name__ = 'report.payroll.export'
     start = StateView('report.payroll.export.start',
-                      'staff_payroll_co.payroll_export_start_view_form', [
+                      'conector.payroll_export_start_view_form', [
                           Button('Cancel', 'end', 'tryton-cancel'),
                           Button('Print', 'print_', 'tryton-ok', default=True),
                           ])
@@ -438,4 +439,3 @@ class PayrollExportReport(Report):
         report_context['end_date'] = end_period.name
         report_context['company'] = company.party.name
         return report_context
-'''

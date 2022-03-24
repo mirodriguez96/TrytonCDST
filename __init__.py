@@ -52,6 +52,7 @@ def register():
         production.Cron,
         voucher.VoucherConfiguration,
         report.PortfolioStatusStart,
+        report.PayrollExportStart,
         module='conector', type_='model')
 
     Pool.register(
@@ -62,8 +63,10 @@ def register():
         wiz.VoucherMoveUnreconcile,
         wiz.ReverseProduction,
         report.PortfolioStatus,
+        report.PayrollExport,
         module='conector', type_='wizard')
 
     Pool.register(
         report.PortfolioStatusReport,
+        report.PayrollExportReport,
         module='conector', type_='report')
