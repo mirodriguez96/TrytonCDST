@@ -1,7 +1,7 @@
 import datetime
 from trytond.model import fields
 from trytond.pool import Pool, PoolMeta
-from trytond.exceptions import UserError
+from trytond.exceptions import UserError, UserWarning
 from trytond.transaction import Transaction
 from decimal import Decimal
 import logging
@@ -88,7 +88,7 @@ class Sale(metaclass=PoolMeta):
             if existe:
                 cls.importado(id_venta)
                 continue
-            print(id_venta)
+            #print(id_venta)
             #Se trae la fecha de la venta y se adapta al formato correcto para Tryton
             fecha = str(venta[coluns_doc.index('Fecha_Orden_Venta')]).split()[0].split('-')
             fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
@@ -165,6 +165,7 @@ class Sale(metaclass=PoolMeta):
             
             #SE CREA LA VENTA
             sale.save()
+
             company_operation = Module.search([('name', '=', 'company_operation'), ('state', '=', 'activated')])
 
             retencion_iva = False
@@ -199,6 +200,9 @@ class Sale(metaclass=PoolMeta):
                     linea.quantity = cantidad_facturada * -1
                     #Se indica a que documento hace referencia la devolucion
                     sale.comment = f"DEVOLUCIÓN DE LA FACTURA {venta.Tipo_Docto_Base}-{str(venta.Numero_Docto_Base)}"
+                else:
+                    linea.quantity = cantidad_facturada
+                #Se verifica si tiene activo el módulo centro de operaciones y se añade 1 por defecto
                 if company_operation:
                     company_operation = CompanyOperation(1)
                     linea.operation_center = company_operation
@@ -277,9 +281,10 @@ class Sale(metaclass=PoolMeta):
                 #logging.error(str(e))
                 #logs = logs+"\n"+"Error venta (envio): "+str(sale.id_tecno)+" - "+str(e)
             else:
-                msg1 = f'Venta sin envio: {sale.id_tecno}'
-                logging.warning(msg1)
-                #logs += '\n' + msg1
+                if sale.invoice_type != 'P':
+                    msg1 = f'Venta sin envio: {sale.id_tecno}'
+                    logging.warning(msg1)
+                    logs += '\n' + msg1
             if sale.invoices:
                 #print(sale.id_tecno)
                 invoice, = sale.invoices
@@ -363,8 +368,14 @@ class Sale(metaclass=PoolMeta):
                     raise UserError('sale_pos.msg_party_without_account_receivable', sale.party.name)
             result_payment = sale.faster_add_payment(data_payment, {})
             if result_payment['msg'] != 'ok':
+                Actualizacion = Pool().get('conector.actualizacion')
+                actualizacion, = Actualizacion.search([('name', '=','VENTAS')])
+                log = actualizacion.logs
+                now = datetime.datetime.now() - datetime.timedelta(hours=5)
+                log += f"\n{now} - {result_payment['msg']}"
+                actualizacion.logs = log
+                actualizacion.save()
                 logging.error(result_payment)
-                #raise UserError('error_faster_add_payment', result_payment['msg'])
             sale.workflow_to_end([sale])
 
     
@@ -429,7 +440,10 @@ class Sale(metaclass=PoolMeta):
         pool = Pool()
         User = pool.get('res.user')
         Sale = pool.get('sale.sale')
-        
+        Warning = pool.get('res.user.warning')
+        warning_name = 'process_payment_pos'
+        if Warning.check(warning_name):
+            raise UserWarning(warning_name, "Recuerde que primero debe ejecutar 'actualizador ventas POS'.")
         ventas = cls.get_date_type()
         for venta in ventas:
             id_tecno = str(venta.sw)+'-'+venta.tipo+'-'+str(venta.Numero_documento)
@@ -442,9 +456,9 @@ class Sale(metaclass=PoolMeta):
                     Sale.quote([sale])
                     Sale.confirm([sale])
                     Sale.process([sale])
-                    log = cls.update_invoices_shipments([sale], [venta], [])
+                    cls.update_invoices_shipments([sale], [venta], [])
                     if sale.payment_term.id_tecno == '0':
-                        print(id_tecno)
+                        #print(id_tecno)
                         cls.set_payment(sale)
         logging.warning('FINISH PROCESS POS')
 
@@ -455,14 +469,18 @@ class Sale(metaclass=PoolMeta):
         pool = Pool()
         Sale = pool.get('sale.sale')
         Device = pool.get('sale.device')
+        Module = pool.get('ir.module')
+        CompanyOperation = pool.get('company.operation_center')
         sale_table = Table('sale_sale')
+        line_table = Table('sale_line')
         cursor = Transaction().connection.cursor()
         
         ventas = cls.get_date_type()
         for venta in ventas:
             id_tecno = str(venta.sw)+'-'+venta.tipo+'-'+str(venta.Numero_documento)
             sale = Sale.search([('id_tecno', '=', id_tecno),('invoice_state', '!=', 'paid')])
-            if sale:
+            #Se valida que haya encontrado una venta y tenga valores para actualizar
+            if sale and hasattr(sale[0], 'sale_device') and venta.pc:
                 sale, = sale
                 cls.force_draft([sale])
                 if not sale.sale_device:
@@ -472,6 +490,18 @@ class Sale(metaclass=PoolMeta):
                         values=[sale_device.id, 'P'],
                         where=sale_table.id == sale.id)
                     )
+                company_operation = Module.search([('name', '=', 'company_operation'), ('state', '=', 'activated')])
+                if company_operation:
+                    company_operation = CompanyOperation(1)
+                    for line in sale.lines:
+                        if not line.operation_center:
+                            cursor.execute(*line_table.update(
+                                columns=[line_table.operation_center],
+                                values=[company_operation.id],
+                                where=line_table.id == line.id)
+                            )
+            else:
+                logging.warning(f'NO SE ENCONTRO VENTAS O EQUIPOS PARA REALIZAR LA ACTUALIZACION DE VENTA POS {id_tecno}')
         logging.warning('FINISH UPDATE POS')
 
     #Metodo encargado de obtener la forma en que se pago el comprobante (recibos)
