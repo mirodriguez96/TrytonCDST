@@ -66,10 +66,13 @@ class Sale(metaclass=PoolMeta):
         Tax = pool.get('account.tax')
         User = pool.get('res.user')
         Module = pool.get('ir.module')
-        CompanyOperation = pool.get('company.operation_center')
         conector_actualizacion = Table('conector_actualizacion')
         cursor = Transaction().connection.cursor()
         
+        company_operation = Module.search([('name', '=', 'company_operation'), ('state', '=', 'activated')])
+        if company_operation:
+            CompanyOperation = pool.get('company.operation_center')
+            company_operation = CompanyOperation(1)
         col_param = cls.get_columns_db_tecno('TblParametro')
         venta_pos = cls.get_data_parametros('8')
         venta_electronica = cls.get_data_parametros('9')
@@ -166,8 +169,6 @@ class Sale(metaclass=PoolMeta):
             #SE CREA LA VENTA
             sale.save()
 
-            company_operation = Module.search([('name', '=', 'company_operation'), ('state', '=', 'activated')])
-
             retencion_iva = False
             if venta.retencion_iva and venta.retencion_iva > 0:
                 retencion_iva = True
@@ -204,7 +205,6 @@ class Sale(metaclass=PoolMeta):
                     linea.quantity = cantidad_facturada
                 #Se verifica si tiene activo el módulo centro de operaciones y se añade 1 por defecto
                 if company_operation:
-                    company_operation = CompanyOperation(1)
                     linea.operation_center = company_operation
                 #Comprueba los cambios y trae los impuestos del producto
                 linea.on_change_product()
@@ -470,7 +470,6 @@ class Sale(metaclass=PoolMeta):
         Sale = pool.get('sale.sale')
         Device = pool.get('sale.device')
         Module = pool.get('ir.module')
-        CompanyOperation = pool.get('company.operation_center')
         sale_table = Table('sale_sale')
         line_table = Table('sale_line')
         cursor = Transaction().connection.cursor()
@@ -492,6 +491,7 @@ class Sale(metaclass=PoolMeta):
                     )
                 company_operation = Module.search([('name', '=', 'company_operation'), ('state', '=', 'activated')])
                 if company_operation:
+                    CompanyOperation = pool.get('company.operation_center')
                     company_operation = CompanyOperation(1)
                     for line in sale.lines:
                         if not line.operation_center:
