@@ -483,7 +483,11 @@ class Sale(metaclass=PoolMeta):
                 sale, = sale
                 cls.force_draft([sale])
                 if not sale.sale_device:
-                    sale_device, = Device.search([('id_tecno', '=', venta.pc)])
+                    #print(id_tecno, venta.pc)
+                    sale_device = Device.search([('id_tecno', '=', venta.pc)])
+                    if not sale_device:
+                        continue
+                    sale_device, = sale_device
                     cursor.execute(*sale_table.update(
                         columns=[sale_table.sale_device, sale_table.invoice_type],
                         values=[sale_device.id, 'P'],

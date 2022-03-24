@@ -91,7 +91,7 @@ class Voucher(ModelSQL, ModelView):
                     logs.append(msg1)
             if not lineas_a_pagar:
                 continue
-            print("Procesando...", id_tecno)
+            #print("Procesando...", id_tecno)
             #Se obtiene la forma de pago, según la tabla Documentos_Che de TecnoCarnes
             tipo_pago = cls.get_tipo_pago(sw, tipo, nro)
             if len(tipo_pago) > 1 and sw == '5':
@@ -244,7 +244,6 @@ class Voucher(ModelSQL, ModelView):
                         line_ajuste.save()
                     voucher.on_change_lines()
                     voucher.save()
-                        
                 #Se verifica que el comprobante tenga lineas para ser procesado y contabilizado (doble verificación por error)
                 if voucher.lines and voucher.amount_to_pay > 0:
                     Voucher.process([voucher])
@@ -261,6 +260,7 @@ class Voucher(ModelSQL, ModelView):
                             line_ajuste.account = config_voucher.account_adjust_expense
                         line_ajuste.amount = diferencia
                         line_ajuste.save()
+                        voucher.on_change_lines()
                         Voucher.post([voucher])
                 created.append(id_tecno)
             else:
@@ -271,6 +271,7 @@ class Voucher(ModelSQL, ModelView):
         actualizacion.add_logs(actualizacion, logs)
         for id in created:
             cls.importado(id)
+            #print('CREADO...', id) #TEST
         logging.warning("FINISH COMPROBANTES")
 
     """

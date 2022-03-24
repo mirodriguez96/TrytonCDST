@@ -47,7 +47,6 @@ class SaleDevice(metaclass=PoolMeta):
     @classmethod
     def import_sale_shop(cls):
         bodegas = cls.get_data_table('TblBodega')
-        columns = cls.get_columns_db_tecno('TblBodega')
         pool = Pool()
         Shop = pool.get('sale.shop')
         location = pool.get('stock.location')
@@ -57,11 +56,11 @@ class SaleDevice(metaclass=PoolMeta):
         moneda, = currency.search([('code', '=', 'COP')])
         to_create = []
         for bodega in bodegas:
-            id_tecno = bodega[columns.index('IdBodega')]
+            id_tecno = bodega.IdBodega
             location = location.search([('id_tecno', '=', id_tecno)])
             if not location:
                 raise UserError("Error de bodega", "LA BODEGA DE TECNOCARNES CON ID {id_tecno} NO EXISTE")
-            nombre = bodega[columns.index('Bodega')].strip()
+            nombre = bodega.Bodega
             location = location[0]
             existe = Shop.search([('warehouse', '=', location)])
             company = Transaction().context.get('company')
@@ -141,15 +140,13 @@ class SaleDevice(metaclass=PoolMeta):
         Location = pool.get('stock.location')
         #obtengo la tienda actual
         Shop = pool.get('sale.shop')
-        columns = cls.get_columns_db_tecno('TblEquipo')
         equipos = cls.get_data_table('TblEquipo')
         
-        existe = False
         to_create = []
-        for device in equipos:
-            id_equipo = device[columns.index('IdEquipo')]
-            nombre = device[columns.index('Equipo')]
-            ubicacion = device[columns.index('Ubicacion')]
+        for equipo in equipos:
+            id_equipo = equipo.IdEquipo
+            nombre = equipo.Equipo
+            ubicacion = equipo.Ubicacion
             location = Location.search([('id_tecno', '=', ubicacion)])
             if location:
                 shop = Shop.search([('warehouse', '=', location[0])])
@@ -162,13 +159,9 @@ class SaleDevice(metaclass=PoolMeta):
             #En caso de ser un nombre vacio se continua con el siguiente
             if len(nombre) == 0 or nombre == ' ':
                 continue
-
-            device = SaleD.search([('id_tecno', '=', id_equipo)])
-
-            if device:
-                existe = True
             
-            if not existe:
+            device = SaleD.search([('id_tecno', '=', id_equipo)])
+            if not device:
                 sale_data = {
                     'id_tecno': id_equipo,
                     'name': nombre,
@@ -179,10 +172,10 @@ class SaleDevice(metaclass=PoolMeta):
                 to_create.append(sale_data)
         SaleD.create(to_create)
 
+
     #Libro de Ventas Pos
     @classmethod
     def import_statement_sale(cls):
-        columns_fp = cls.get_columns_db_tecno('TblFormaPago')
         forma_pago = cls.get_data_table('TblFormaPago')
         pool = Pool()
         Account = pool.get('account.account')
@@ -193,11 +186,10 @@ class SaleDevice(metaclass=PoolMeta):
         #company = Transaction().context.get('company')
         to_create = []
         for fp in forma_pago:
-            idt = str(fp[columns_fp.index('IdFormaPago')])
+            idt = str(fp.IdFormaPago)
             journal = Journal.search([('id_tecno', '=', idt)])
             if not journal:
-                nombre = fp[columns_fp.index('FormaPago')].strip()
-                #cuenta = fp[columns_fp.index('Cuenta')]
+                nombre = fp.FormaPago
                 cuenta, = Account.search([('code', '=', '110505')])
                 diario, = Ajournal.search([('code', '=', 'VM')])
                 statement_journal = {
@@ -230,34 +222,10 @@ class SaleDevice(metaclass=PoolMeta):
 
     @classmethod
     def get_data_table(cls, table):
-        data = []
-        try:
-            Config = Pool().get('conector.configuration')
-            conexion = Config.conexion()
-            with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT * FROM dbo."+table+"")
-                data = list(query.fetchall())
-        except Exception as e:
-            print("ERROR QUERY get_data_table: ", e)
-            raise UserError('ERROR QUERY get_data_table: ', str(e))
-        return data
-
-    
-    #Función encargada de consultar las columnas pertenecientes a 'x' tabla de la bd
-    @classmethod
-    def get_columns_db_tecno(cls, table):
-        columns = []
-        try:
-            Config = Pool().get('conector.configuration')
-            conexion = Config.conexion()
-            with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = '"+table+"' ORDER BY ORDINAL_POSITION")
-                for q in query.fetchall():
-                    columns.append(q[0])
-        except Exception as e:
-            print("ERROR QUERY "+table+": ", e)
-        return columns
-
+        Config = Pool().get('conector.configuration')
+        consult = "SELECT * FROM dbo."+table+""
+        result = Config.get_data(consult)
+        return result
 
 #Heredar para agregar el campo id_tecno
 class Journal(metaclass=PoolMeta):

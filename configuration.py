@@ -33,6 +33,7 @@ class Configuration(ModelSQL, ModelView):
     date = fields.Date('Date', required=True, help="Enter the import start date")
     file = fields.Binary('File', help="Enter the file to import with (;)")
     type_file = fields.Selection(TYPES_FILE, 'Type file')
+    #doc_types = fields.Char('Doc types', help="Example: 101;120;103")
 
 
     @classmethod
