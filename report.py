@@ -8,7 +8,7 @@ from trytond.transaction import Transaction
 import copy
 from .constants import (ENTITY_ACCOUNTS)
 
-
+'''
 class PortfolioStatusStart(ModelView):
     'Portfolio Status Start'
     __name__ = 'report.print_portfolio_status.start'
@@ -225,7 +225,7 @@ class PortfolioStatusReport(Report):
                 notes = invoice.agent.rec_name
             if notes and not records[key_id]['notes']:
                 records[key_id]['notes'] = notes
-
+            
             records[key_id][expire_time].append(amount)
             records[key_id]['invoice'].append(invoice)
             records[key_id]['expired_days'] = time_forward
@@ -239,22 +239,19 @@ class PortfolioStatusReport(Report):
             if data['category_party']:
                 cat_ids = str(tuple(data['category_party'])).replace(',', '') if len(
                     data['category_party']) == 1 else str(tuple(data['category_party']))
-                cond1 = f'''where pcr.category in %s and''' % (
+                cond1 = f"where pcr.category in %s and" % (
                     cat_ids)
 
             cond2 = ''
             if move_ids:
-                cond2 = 'and ml.id not in %s' % (str(tuple(move_ids)).replace(
-                    ',', '') if len(move_ids) == 1 else str(tuple(move_ids)))
+                cond2 = 'and ml.id not in %s' % (str(tuple(move_ids)).replace(',', '') if len(move_ids) == 1 else str(tuple(move_ids)))
+            print(cond2)
 
             cond3 = ''
             if data['date_to']:
-                cond3 = ' and am.date <= %s' % (
-                    data['date_to'].strftime("'%Y-%m-%d'"))
-            cond4 = ''
-            #if data['procedures']:
-            #    cond4 = ' and ml.account in %s' % (str(tuple(accounts)).replace(
-            #        ',', '') if len(accounts) == 1 else str(tuple(accounts)))
+                cond3 = ' and am.date <= %s' % (data['date_to'].strftime("'%Y-%m-%d'"))
+            print(cond3)
+
             type_ = 'receivable'
             if data['kind'] == 'in':
                 type_ = 'payable'
@@ -287,13 +284,13 @@ class PortfolioStatusReport(Report):
                 ON pcr.party=pp.id LEFT JOIN party_category AS pc
                 ON pcr.category=pc.id
                 %s at.{type_}='t' AND ac.reconcile='t' AND ml.maturity_date is not null AND am.origin is null AND ml.reconciliation is null
-                %s %s %s
-            group by ml.id, ml.move, pp.name, pc.name, pp.id_number, ml.description, ml.reference, am.date, am.number, ml.maturity_date, ac.code, expired_days, ml.debit, ml.credit;""" % (cond1, cond2, cond3, cond4)
+                %s %s
+            group by ml.id, ml.move, pp.name, pc.name, pp.id_number, ml.description, ml.reference, am.date, am.number, ml.maturity_date, ac.code, expired_days, ml.debit, ml.credit;""" % (cond1, cond2, cond3)
 
             cursor.execute(query)
             columns = list(cursor.description)
             result = cursor.fetchall()
-
+            print('RESULTADO CONSULTA', result)
             for row in result:
                 row_dict = {}
                 for i, col in enumerate(columns):
@@ -310,7 +307,7 @@ class PortfolioStatusReport(Report):
         report_context['records'] = records.values()
         report_context['company'] = company.party.name
         return report_context
-
+'''
 
 # REPORTE DE NOMINA MODIFICADO
 class PayrollExportStart(ModelView):

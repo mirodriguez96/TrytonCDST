@@ -4,6 +4,7 @@ this repository contains the full copyright notices and license terms. -->
 <tryton>
     <data>
         <!-- Reporte cartera detallada -->
+        <!--
         <record model="ir.ui.view" id="print_portfolio_status_start_view_form">
             <field name="model">report.print_portfolio_status.start</field>
             <field name="type">form</field>
@@ -23,7 +24,8 @@ this repository contains the full copyright notices and license terms. -->
         </record>
         <menuitem parent="party.menu_party" action="wizard_print_portfolio_status"
             id="menu_print_expired_portfolio" icon="tryton-print" sequence="200"/>
-
+        -->
+        
         <!-- Reporte nómina -->
         <record model="ir.action.report" id="payroll_export_report">
             <field name="name">Payroll Export Report</field>

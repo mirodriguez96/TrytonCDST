@@ -54,8 +54,14 @@ class Purchase(metaclass=PoolMeta):
             Party = pool.get('party.party')
             Address = pool.get('party.address')
             Tax = pool.get('account.tax')
+            Module = pool.get('ir.module')
             coluns_doc = cls.get_columns_db_tecno('Documentos')
             columns_tipodoc = cls.get_columns_db_tecno('TblTipoDoctos')
+
+            company_operation = Module.search([('name', '=', 'company_operation'), ('state', '=', 'activated')])
+            if company_operation:
+                CompanyOperation = pool.get('company.operation_center')
+                company_operation = CompanyOperation(1)
             #Procedemos a realizar la compra
             for compra in compras_tecno:
                 sw = compra[coluns_doc.index('sw')]
@@ -142,6 +148,8 @@ class Purchase(metaclass=PoolMeta):
                         else:
                             line.quantity = cantidad_facturada
                             purchase.reference = tipo_doc+'-'+str(numero_doc)
+                        if company_operation:
+                            line.operation_center = company_operation
                         #Comprueba los cambios y trae los impuestos del producto
                         line.on_change_product()
                         #Se verifica si el impuesto al consumo fue aplicado
@@ -206,9 +214,11 @@ class Purchase(metaclass=PoolMeta):
                             invoice.validate_invoice([invoice])
                             #Verificamos que el total de la tabla en sqlserver coincidan o tengan una diferencia menor a 4 decimales, para contabilizar la factura
                             total_amount = invoice.get_amount([invoice], 'total_amount')
-                            total = abs(total_amount['total_amount'][invoice.id])
-                            total_tecno = Decimal(compra[coluns_doc.index('valor_total')])
-                            diferencia_total = abs(total - total_tecno)
+                            total_amount = abs(total_amount['total_amount'][invoice.id])
+                            total_tecno = Decimal(abs(compra.valor_total))
+                            retencion_causada = Decimal(abs(compra.retencion_causada))
+                            total_tecno = total_tecno - retencion_causada
+                            diferencia_total = abs(total_amount - total_tecno)
                             if diferencia_total < Decimal(6.0):
                                 with Transaction().set_context(_skip_warnings=True):
                                     invoice.post_batch([invoice])
@@ -216,7 +226,7 @@ class Purchase(metaclass=PoolMeta):
                             invoice.save()
                         except Exception as e:
                             print(e)
-                            raise UserError("ERROR FACTURA: "+str(invoice.number), str(e))
+                            raise UserError(f"ERROR FACTURA: {invoice.number}", str(e))
                     else:
                         msg1 = f'No se creo factura en la compra: {purchase.id_tecno}'
                         logs += '\n' + msg1

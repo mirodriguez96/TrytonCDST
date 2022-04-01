@@ -130,8 +130,9 @@ class Configuration(ModelSQL, ModelView):
             linea = linea.strip()
             if linea:
                 linea = linea.split(';')
-                if len(linea) != 15:
-                    raise UserError('Importación de archivo: ', 'Error de plantilla !')
+                if len(linea) != 13:
+                    raise UserError('Error de plantilla',
+                    'type_document | id_number | name | address/party_name | address/name | address/street | address/country_code | address/department_code | address/city_code | address/phone | address/email | regime_tax | type_person')
                 id_number = linea[1].strip()
                 party = Party.search([('id_number', '=', id_number)])
                 if party:
@@ -140,8 +141,8 @@ class Configuration(ModelSQL, ModelView):
                     'type_document': linea[0].strip(),
                     'id_number': id_number,
                     'name': linea[2].strip().upper(),
-                    'regime_tax': linea[13].strip(),
-                    'type_person': linea[14].strip()
+                    'regime_tax': linea[11].strip(),
+                    'type_person': linea[12].strip()
                 }
                 adress = {
                     'party_name': linea[3].strip().upper(),
@@ -169,14 +170,14 @@ class Configuration(ModelSQL, ModelView):
                     adress['city_code'] = city[0].id
                 to_save['addresses'] = [('create', [adress])]
                 contacts = []
-                phone = linea[10].strip()
+                phone = linea[9].strip()
                 if phone:
                     phone = {
                         'type': 'phone',
                         'value': phone
                     }
                     contacts.append(phone)
-                email = linea[12].strip()
+                email = linea[10].strip()
                 if email:
                     email = {
                         'type': 'email',
@@ -202,8 +203,8 @@ class Configuration(ModelSQL, ModelView):
             linea = linea.strip()
             if linea:
                 linea = linea.split(';')
-                if len(linea) != 15:
-                    raise UserError('Importación de archivo: ', 'Error de plantilla !')
+                if len(linea) != 13:
+                    raise UserError('Error de plantilla', 'code | name | list_price | sale_price_w_tax | account_category | name_uom | salable | purchasable | producible | consumable | type | depreciable | cost_price')
                 code = linea[0].strip()
                 product = Product.search([('code', '=', code)])
                 if product:
@@ -213,7 +214,7 @@ class Configuration(ModelSQL, ModelView):
                 purchasable = cls.get_boolean(linea[7].strip())
                 producible = cls.get_boolean(linea[8].strip())
                 consumable = cls.get_boolean(linea[9].strip())
-                depreciable = cls.get_boolean(linea[13].strip())
+                depreciable = cls.get_boolean(linea[11].strip())
                 prod = {
                     'code': code,
                     'name': linea[1].strip(),
@@ -243,7 +244,7 @@ class Configuration(ModelSQL, ModelView):
                 prod['sale_uom'] = uom.id
                 prod['purchase_uom'] = uom.id
                 prod['products'] = [('create', [{
-                        'cost_price': int(linea[14].strip()),
+                        'cost_price': int(linea[12].strip()),
                     }])]
                 products.append(prod)
         print(len(products))
@@ -268,7 +269,8 @@ class Configuration(ModelSQL, ModelView):
                 continue
             linea = linea.split(';')
             if len(linea) != 11:
-                raise UserError('Importación de archivo: ', 'Error de plantilla !')
+                raise UserError('Error de plantilla',
+                'libro diario | periodo | fecha efectiva | descripcion | linea/cuenta | linea/debito | linea/credito | linea/tercero | linea/descripcion | linea/fecha vencimiento | linea/referencia')
             if cont == 0:
                 name_journal = linea[0].strip()
                 name_period = linea[1].strip()
@@ -345,7 +347,7 @@ class Configuration(ModelSQL, ModelView):
             if linea[0] == 'code':
                 continue
             if len(linea) != 5:
-                raise UserError('Importación de archivo: ', 'Error en la cantidad de columnas de la plantilla !')
+                raise UserError('Error plantilla', 'account | name | type | reconcile | party_required')
             ordered.append(linea)
         ordered = sorted(ordered, key=lambda item:len(item[0]))
         #to_create = []

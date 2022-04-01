@@ -53,7 +53,9 @@ class Voucher(ModelSQL, ModelView):
         Party = pool.get('party.party')
         PayMode = pool.get('account.voucher.paymode')
         MultiRevenue = pool.get('account.multirevenue')
+        MultiRevenueLine = pool.get('account.multirevenue.line')
         Transaction = pool.get('account.multirevenue.transaction')
+        SaleDevice = pool.get('sale.device')
 
         logs = []
         #to_create = []
@@ -123,9 +125,16 @@ class Voucher(ModelSQL, ModelView):
                     if move_line and rec.valor:
                         #valor pagado x la factura
                         valor = Decimal(rec.valor)
-                        line = multingreso.create_new_line(move_line, valor, Decimal(valor), multingreso.transactions)
-                        if line:
-                            to_lines.append(line)
+                        create_line = {
+                            'multirevenue': multingreso.id,
+                            'move_line': move_line.id,
+                            'amount': valor,
+                            'original_amount': move_line.debit,
+                            'is_prepayment': False,
+                            'reference_document': ref,
+                        }
+                        line, = MultiRevenueLine.create([create_line])
+                        to_lines.append(line)
                     else:
                         msg1 = f'No existe la factura: {ref}'
                         logging.warning(msg1)
@@ -135,13 +144,14 @@ class Voucher(ModelSQL, ModelView):
                     multingreso.save()
                 if multingreso.total_transaction and multingreso.total_lines_to_pay:
                     if multingreso.total_transaction <= multingreso.total_lines_to_pay:
-                        MultiRevenue.process([multingreso])
-                        MultiRevenue.generate_vouchers([multingreso])
+                        device, = SaleDevice.search([('id_tecno', '=', doc.pc)])
+                        MultiRevenue.add_statement(multingreso, device)
                     else:
-                        msg1 = f'Total de pago es mayor al que se debe pagar en comprobantes multingreso: {id_tecno}'
+                        msg1 = f'Total de pago es mayor al total a pagar en el multi-ingreso: {id_tecno}'
                         logs.append(msg1)
-                msg1 = f'Revisar comprobantes multingreso: {id_tecno}'
-                logs.append(msg1)
+                else:
+                    msg1 = f'Revisar comprobante multi-ingreso: {id_tecno}'
+                    logs.append(msg1)
                 created.append(id_tecno)
             elif len(tipo_pago) == 1:
                 print('VOUCHER:', id_tecno)
@@ -274,170 +284,6 @@ class Voucher(ModelSQL, ModelView):
             #print('CREADO...', id) #TEST
         logging.warning("FINISH COMPROBANTES")
 
-    """
-    #Funcion encargada de crear los comprobantes importados
-    @classmethod
-    def import_voucher2(cls):
-        logging.warning("RUN COMPROBANTES")
-        documentos_db = cls.last_update()
-        #Se crea o actualiza la fecha de importación
-        actualizacion = cls.create_or_update()
-        if not documentos_db:
-            actualizacion.save()
-            logging.warning("FINISH COMPROBANTES")
-            return
-
-        pool = Pool()
-        Voucher = pool.get('account.voucher')
-        Party = pool.get('party.party')
-        PayMode = pool.get('account.voucher.paymode')
-
-        logs = []
-        to_create = []
-        created = []
-
-        for doc in documentos_db:
-            sw = str(doc.sw)
-            tipo = doc.tipo
-            nro = str(doc.Numero_documento)
-            id_tecno = sw+'-'+tipo+'-'+nro
-            existe = cls.find_voucher(sw+'-'+tipo+'-'+nro)
-            if existe:
-                cls.importado(id_tecno)
-                continue
-            fecha_date = cls.convert_fecha_tecno(doc.fecha_hora)
-            tercero, = Party.search([('id_number', '=', doc.nit_Cedula)])
-            
-            #print("Procesando...", id_tecno)
-            #Se obtiene la forma de pago, según la tabla Documentos_Che de TecnoCarnes
-            tipo_pago = cls.get_tipo_pago(sw, tipo, nro)
-            for pago in tipo_pago:
-                print('VOUCHER:', id_tecno)
-                paymode, = PayMode.search([('id_tecno', '=', pago.forma_pago)])
-                voucher = {
-                    'id_tecno': id_tecno,
-                    'number': tipo+'-'+nro,
-                    'reference': tipo+'-'+nro,
-                    'party': tercero.id,
-                    'payment_mode': paymode.id,
-                    'date': fecha_date,
-                    'account': paymode.account.id,
-                    'journal': paymode.journal.id,
-                }
-                #voucher.on_change_payment_mode()
-                voucher['voucher_type'] = 'receipt'
-                if sw == '6':
-                    voucher['voucher_type'] = 'payment'
-                nota = (doc.notas).replace('\n', ' ').replace('\r', '')
-                if nota:
-                    voucher['description'] = nota
-                #Se obtiene las facturas a las que hace referencia el ingreso o egreso
-                facturas = cls.get_dcto_cruce("sw="+sw+" and tipo="+tipo+" and numero="+nro)
-                #valor_aplicado = Decimal(doc.valor_aplicado)
-                lines = []
-                for rec in facturas:
-                    ref = rec.tipo_aplica+'-'+str(rec.numero_aplica)
-                    move_line = cls.get_moveline(ref, tercero)
-                    if not move_line:
-                        msg1 = f'No existe la factura: {ref}'
-                        logging.warning(msg1)
-                        logs.append(msg1)
-                        continue
-                    #print(move_line)
-                    config_voucher = pool.get('account.voucher_configuration')(1)
-                    valor_original, amount_to_pay, untaxed_amount = cls.get_amount_to_pay_moveline(move_line, sw)
-                    line = {
-                        'detail': 'FACTURA',
-                        'amount_original': valor_original,
-                        'reference': ref,
-                        'move_line': move_line.id,
-                        'account': move_line.account.id,
-                    }
-                    valor = Decimal(rec.valor)
-                    descuento = Decimal(rec.descuento)
-                    retencion = Decimal(rec.retencion)
-                    ajuste = Decimal(rec.ajuste)
-                    retencion_iva = Decimal(rec.retencion_iva)
-                    retencion_ica = Decimal(rec.retencion_ica)
-
-                    valor_pagado = valor + descuento + (retencion) + (ajuste*-1) + (retencion_iva) + (retencion_ica)
-                    valor_pagado = round(valor_pagado, 2)
-                    if valor_pagado > amount_to_pay:
-                        valor_pagado = amount_to_pay
-                    line['amount'] = Decimal(valor_pagado)
-                    lines.append(line)
-                    #
-                    if descuento > 0:
-                        valor_descuento = round((descuento * -1), 2)
-                        line_discount = {
-                            'detail': 'DESCUENTO',
-                            'amount': valor_descuento,
-                            'account': config_voucher.account_discount_tecno.id
-                        }
-                        lines.append(line_discount)
-                    if retencion > 0:
-                        line_rete = {
-                            'detail': 'RETENCION - ('+str(retencion)+')',
-                            'account': config_voucher.account_rete_tecno.invoice_account.id,
-                            'type': 'tax',
-                            'untaxed_amount': untaxed_amount,
-                            'tax': config_voucher.account_rete_tecno.id,
-                            'amount': round((retencion*-1), 2)
-                        }
-                        lines.append(line_rete)
-                    if retencion_iva > 0:
-                        line_retiva = {
-                            'detail': 'RETENCION IVA - ('+str(retencion_iva)+')',
-                            'account': config_voucher.account_retiva_tecno.invoice_account.id,
-                            'type': 'tax',
-                            'untaxed_amount': untaxed_amount,
-                            'tax': config_voucher.account_retiva_tecno.id,
-                            'amount': round((retencion_iva*-1), 2)
-                        }
-                        lines.append(line_retiva)
-                    if retencion_ica > 0:
-                        line_retica = {
-                            'detail': 'RETENCION ICA - ('+str(retencion_ica)+')',
-                            'account': config_voucher.account_retica_tecno.invoice_account.id,
-                            'type': 'tax',
-                            'untaxed_amount': untaxed_amount,
-                            'tax': config_voucher.account_retica_tecno.id,
-                            'amount': round((retencion_ica*-1), 2)
-                        }
-                        lines.append(line_retica)
-                    if ajuste > 0:
-                        valor_ajuste = round(ajuste, 2)
-                        line_ajuste = {
-                            'detail': 'AJUSTE',
-                            'amount': valor_ajuste,
-                        }
-                        if Decimal(move_line.debit) > 0:
-                            line_ajuste['account'] = config_voucher.account_adjust_income
-                        elif Decimal(move_line.credit) > 0:
-                            line_ajuste['account'] = config_voucher.account_adjust_expense
-                        lines.append(line_ajuste)
-                #Se añade las lineas
-                if lines:
-                    voucher['lines'] = [('create', lines)]
-                if voucher:
-                    to_create.append(voucher)
-                #Se verifica que el comprobante tenga lineas para ser procesado y contabilizado (doble verificación por error)
-                #if voucher.lines and voucher.amount_to_pay > 0:
-                #    Voucher.process([voucher])
-                #    diferencia = abs(voucher.amount_to_pay - valor_aplicado)
-                #    #print(diferencia, (diferencia < Decimal(6.0)))
-                #    if voucher.amount_to_pay == valor_aplicado or diferencia < Decimal(6.0):
-                #        Voucher.post([voucher])
-                #created.append(id_tecno)
-        vouchers = Voucher.create(to_create)
-        for voucher in vouchers:
-            voucher.on_change_lines()
-        actualizacion.add_logs(actualizacion, logs)
-        for created in to_create:
-            #cls.importado(created['id_tecno'])
-            print(f"importado {created['id_tecno']}")
-        logging.warning("FINISH COMPROBANTES")
-    """
 
     #Se obtiene las lineas de la factura que se desea pagar
     @classmethod
@@ -469,37 +315,6 @@ class Voucher(ModelSQL, ModelView):
             return moveline
         else:
             return False
-
-    """
-    @classmethod
-    def get_amount_to_pay_moveline(cls, moveline, sw):
-        pool = Pool()
-        #Model = pool.get('ir.model')
-        Invoice = pool.get('account.invoice')
-
-        amount = moveline.credit or moveline.debit
-        if sw == '5':
-            if moveline.credit > Decimal('0'):
-                amount = -amount
-        else:
-            if moveline.debit > Decimal('0'):
-                amount = -amount
-
-        amount_to_pay = Decimal(0)
-        untaxed_amount = Decimal(0)
-        if moveline.move_origin and hasattr(moveline.move_origin, '__name__') and moveline.move_origin.__name__ == 'account.invoice':
-
-            amount_to_pay = Invoice.get_amount_to_pay(
-                [moveline.move_origin], 'amount_to_pay'
-            )
-            amount_to_pay = amount_to_pay[moveline.move_origin.id]
-            untaxed_amount = moveline.move_origin.untaxed_amount
-        elif not moveline.move_origin:
-            amount_to_pay = amount
-            untaxed_amount = amount
-
-        return amount, amount_to_pay, untaxed_amount
-    """
 
     @classmethod
     def get_amount_to_pay_moveline_tecno(cls, moveline, voucher):
@@ -675,3 +490,60 @@ class MultiRevenue(metaclass=PoolMeta):
     __name__ = 'account.multirevenue'
     id_tecno = fields.Char('Id Tabla Sqlserver', required=False)
 
+    #Función encargada de enviar las facturas a ser pagadas con su respectivo pago al estado de cuenta
+    @classmethod
+    def add_statement(cls, multirevenue, device):
+        lines_to_add = {}
+        pool = Pool()
+        Sale = pool.get('sale.sale')
+        #Statement = pool.get('account.statement')
+        StatementeJournal = pool.get('account.statement.journal')
+        lines_created = {}
+        line_paid = []
+        for transaction in multirevenue.transactions:
+            statement_journal, = StatementeJournal.search([('id_tecno', '=', transaction.payment_mode.id_tecno)])
+            args_statement = {
+                'device': device,
+                'date': transaction.date,
+                'journal': statement_journal
+            }
+            #print(statement_journal)
+            #print(args_statement)
+            statement, = Sale.search_or_create_statement(args_statement)
+            amount_tr = transaction.amount
+            lines_created[transaction.id] = {'ids': []}
+            for line in multirevenue.lines:
+                #Se valida que la linea no se haya 'pagado' o tenga un 'valor pagado'
+                if line.id in line_paid or not line.amount:
+                    continue
+                if transaction.id not in lines_to_add.keys():
+                    lines_to_add[transaction.id] = {'sales': {}}
+                    #statement, = Statement.search([
+                    #    ('journal', '=', statement_journal.id),
+                    #    ('state', '=', 'draft'),
+                    #    ('sale_device', '=', device.id),
+                    #    ('date', '=', transaction.date)
+                    #])
+                    lines_to_add[transaction.id]['statement'] = statement.id
+                    lines_to_add[transaction.id]['date'] = transaction.date
+                net_payment = line.amount
+                if net_payment < amount_tr:
+                    _line_amount = line.amount
+                    amount_tr -= net_payment
+                    line_paid.append(line.id)
+                else:
+                    _line_amount = amount_tr
+                    line.amount = line.amount - _line_amount
+                    amount_tr = 0
+                if line.move_line:
+                    sale, = line.origin.sales
+                    lines_to_add[transaction.id]['sales'][sale] = _line_amount
+                else:
+                    raise UserError('multirevenue.msg_without_invoice')
+                    lines_to_add[transaction.id]['sales'][line.origin.sales[0].id] = _line_amount
+                lines_created[transaction.id]['ids'].append(line.id)
+                if amount_tr == 0:
+                    break
+        for key in lines_to_add.keys():
+            result = Sale.multipayment_invoices_statement(lines_to_add[key])
+            #print(result)

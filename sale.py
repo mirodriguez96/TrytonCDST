@@ -332,96 +332,150 @@ class Sale(metaclass=PoolMeta):
 
     #Función encargada de buscar recibos de caja pagados en TecnoCarnes y pagarlos en Tryton
     @classmethod
-    def set_payment(cls, sale):
-        data_statement = {
-            'device': sale.sale_device,
-            'total_money': 0,
-            'date': sale.sale_date
-        }
-        cls.vm_open_statement(data_statement)
+    def set_payment_pos(cls, sale):
         tipo_numero = sale.number.split('-')
         tipo = tipo_numero[0]
         nro = tipo_numero[1]
         pago = cls.get_payment_tecno(tipo, nro)
-        if pago:
-            pool = Pool()
-            Journal = pool.get('account.statement.journal')
-            pago, = pago
-            forma_pago = pago.forma_pago
-            journal, = Journal.search([('id_tecno', '=', forma_pago)])
-            valor_pagado = pago.valor
-            data_payment = {
-                'sale_id': sale.id,
-                'journal_id': journal.id,
-                'cash_received': valor_pagado,
-            }
-            if not sale.party.account_receivable:
-                Party = pool.get('party.party')
-                Configuration = pool.get('account.configuration')
-                config = Configuration(1)
-                if config.default_account_receivable:
-                    account_receivable = {
-                        'account_receivable': config.default_account_receivable.id
-                    }
-                    Party.write([sale.party], account_receivable) #probar
-                else:
-                    raise UserError('sale_pos.msg_party_without_account_receivable', sale.party.name)
-            result_payment = sale.faster_add_payment(data_payment, {})
-            if result_payment['msg'] != 'ok':
-                Actualizacion = Pool().get('conector.actualizacion')
-                actualizacion, = Actualizacion.search([('name', '=','VENTAS')])
-                log = actualizacion.logs
-                now = datetime.datetime.now() - datetime.timedelta(hours=5)
-                log += f"\n{now} - {result_payment['msg']}"
-                actualizacion.logs = log
-                actualizacion.save()
-                logging.error(result_payment)
-            sale.workflow_to_end([sale])
+        if not pago:
+            return
+        #si existe pago pos...
+        pool = Pool()
+        Journal = pool.get('account.statement.journal')
+        Statement = pool.get('account.statement')
+        Actualizacion = pool.get('conector.actualizacion')
+        pago, = pago
+        fecha = str(pago.fecha).split()[0].split('-')
+        fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
+        journal, = Journal.search([('id_tecno', '=', pago.forma_pago)])
+        args_statement = {
+            'device': sale.sale_device,
+            'date': fecha_date,
+            'journal': journal,
+        }
+        statement, = cls.search_or_create_statement(args_statement)
+        valor_pagado = pago.valor
+        data_payment = {
+            'sales': {
+                sale: valor_pagado
+            },
+            'statement': statement.id,
+            'date': fecha_date
+        }
+        result_payment = cls.multipayment_invoices_statement(data_payment)
+        if result_payment['msg'] != 'ok':
+            actualizacion, = Actualizacion.search([('name', '=','VENTAS')])
+            Actualizacion.add_logs(actualizacion, [result_payment['msg']])
+            logging.error(result_payment)
+        sale.workflow_to_end([sale])
 
     
     #Metodo encargado de buscar el estado de cuenta de una terminal y en caso de no existir, se crea.
     @classmethod
-    def vm_open_statement(cls, args):
+    def search_or_create_statement(cls, args):
         pool = Pool()
         Statement = pool.get('account.statement')
         Device = pool.get('sale.device')
         device = Device(args['device'])
-        money = args['total_money']
         date = args['date']
-        journals = [j.id for j in device.journals]
-        statements = Statement.search([
-                ('journal', 'in', journals),
+        journal = args['journal']
+        statement = Statement.search([
+                ('journal', '=', journal.id),
                 ('sale_device', '=', device.id),
-                ('date', '=', date)
+                ('date', '=', date),
+                ('state', '=', 'draft')
             ])
-        journals_of_draft_statements = [s.journal for s in statements if s.state == 'draft']
-        vlist = []
-        if device.journals:
-            for journal in device.journals:
-                statements_date = Statement.search([
+        if not statement:
+            statements_date = Statement.search([
                     ('journal', '=', journal.id),
                     ('date', '=', date),
                     ('sale_device', '=', device.id),
                 ])
-                turn = len(statements_date) + 1
-                if journal not in journals_of_draft_statements:
-                    values = {
-                        'name': '%s - %s' % (device.rec_name, journal.rec_name),
-                        'date': date,
-                        'journal': journal.id,
-                        'company': device.shop.company.id,
-                        'start_balance': journal.default_start_balance or Decimal('0.0'),
-                        'end_balance': Decimal('0.0'),
-                        'turn': turn,
-                        'sale_device': device.id,
-                    }
-                    if journal.kind == 'cash' and money:
-                        values['start_balance'] = Decimal(money)
-                    vlist.append(values)
-        else:
-            msg = f"No se encontró formas de pago (diarios) para la terminal {device.rec_name}"
-            logging.error(msg)
-            raise UserError("ERROR TERMINAL DE VENTA", msg)
+            turn = len(statements_date) + 1
+            values = {
+                'name': '%s - %s' % (device.rec_name, journal.rec_name),
+                'date': date,
+                'journal': journal.id,
+                'company': device.shop.company.id,
+                'start_balance': journal.default_start_balance or Decimal('0.0'),
+                'end_balance': Decimal('0.0'),
+                'turn': turn,
+                'sale_device': device.id,
+            }
+            statement = Statement.create([values])
+        return statement
+
+
+    @classmethod
+    def multipayment_invoices_statement(cls, args, context=None):
+        pool = Pool()
+        Date = pool.get('ir.date')
+        Sale = pool.get('sale.sale')
+        Configuration = pool.get('account.configuration')
+        User = pool.get('res.user')
+        StatementLine = pool.get('account.statement.line')
+        sales = args.get('sales', None)
+        if not sales:
+            sales_ids = args.get('sales_ids', None)
+            sales = Sale.browse(sales_ids)
+        statement_id = args.get('statement', None)
+        if not statement_id:
+            journal_id = args.get('journal_id', None)
+            user_id = context.get('user')
+            user = User(user_id)
+            statements = cls.search([
+                ('journal', '=', journal_id),
+                ('state', '=', 'draft'),
+                ('sale_device', '=', user.sale_device.id),
+            ])
+            if statements:
+                statement_id = statements[0].id
+            else:
+                return
+        date = args.get('date', None)
+        if not date:
+            date = Date.today()
+
+        for sale in sales.keys():
+            if not sale.number:
+                continue
+            if sale.payments:
+                total_paid = sum([p.amount for p in sale.payments])
+                if total_paid >= sale.total_amount:
+                    continue
+            total_amount = args.get('sales')[sale]
+            if not total_amount:
+                total_amount = sale.total_amount
+            if not sale.invoice or (sale.invoice.state != 'posted' and sale.invoice.state != 'paid'):
+                Sale.post_invoice(sale)
+            if not sale.party.account_receivable:
+                Party = pool.get('party.party')
+                config = Configuration(1)
+                if config.default_account_receivable:
+                    Party.write([sale.party], {
+                        'account_receivable': config.default_account_receivable.id
+                    })
+                else:
+                    raise UserError('sale_pos.msg_party_without_account_receivable', sale.party.name)
+            account_id = sale.party.account_receivable.id
+            to_create = {
+                'sale': sale.id,
+                'date': date,
+                'statement': statement_id,
+                'amount': total_amount,
+                'party': sale.party.id,
+                'account': account_id,
+                'description': sale.invoice_number or sale.invoice.number or '',
+            }
+            line, = StatementLine.create([to_create])
+            write_sale = {
+                'turn': line.statement.turn,
+            }
+            if hasattr(sale, 'order_status'):
+                write_sale['order_status'] = 'delivered'
+            sale.write([sale], write_sale)
+            Sale.do_reconcile([sale])
+        return 'ok'
 
 
     @classmethod
@@ -432,7 +486,7 @@ class Sale(metaclass=PoolMeta):
         Sale.faster_process({'sale_id':sale.id}, {})
         Sale.process_pos(sale)
         if sale.payment_term.id_tecno == '0':
-            cls.set_payment(sale)
+            cls.set_payment_pos(sale)
 
     @classmethod
     def process_payment_pos(cls):
@@ -459,7 +513,7 @@ class Sale(metaclass=PoolMeta):
                     cls.update_invoices_shipments([sale], [venta], [])
                     if sale.payment_term.id_tecno == '0':
                         #print(id_tecno)
-                        cls.set_payment(sale)
+                        cls.set_payment_pos(sale)
         logging.warning('FINISH PROCESS POS')
 
     
@@ -625,6 +679,9 @@ class Sale(metaclass=PoolMeta):
     def buscar_producto(cls, id_producto):
         Product = Pool().get('product.product')
         producto = Product.search([('id_tecno', '=', id_producto)])
+        conector_actualizacion = Table('conector_actualizacion')
+        cursor = Transaction().connection.cursor()
+        
         if producto:
             producto, = producto
             if not producto.salable:
@@ -632,9 +689,14 @@ class Sale(metaclass=PoolMeta):
                 producto.save()
             return producto
         else:
-            msg1 = f'Error al buscar producto con id: {id_producto}'
+            cursor.execute(*conector_actualizacion.update(
+                columns=[conector_actualizacion.write_date],
+                values=[None],
+                where=conector_actualizacion.name == 'PRODUCTOS')
+            )
+            msg1 = f'Error al buscar el producto con id: {id_producto}'
             logging.error(msg1)
-            raise UserError(msg1)
+            raise UserError('Error product search', msg1)
             
 
     #Función encargada de traer los datos de la bd con una fecha dada.

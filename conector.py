@@ -28,6 +28,7 @@ class Actualizacion(ModelSQL, ModelView):
     
     #@classmethod
     def getter_quantity(self, name):
+        """
         Config = Pool().get('conector.configuration')
         conexion = Config.search([], order=[('id', 'DESC')], limit=1)
         if conexion:
@@ -43,7 +44,8 @@ class Actualizacion(ModelSQL, ModelView):
             consult += " AND (sw = 5 or sw = 6)"
         result = conexion.get_data(consult)
         result = int(result[0][0])
-        return result
+        """
+        return 0
         
     #@classmethod
     def getter_imported(self, name):
