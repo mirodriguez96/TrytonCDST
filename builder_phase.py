@@ -401,7 +401,7 @@ class ElectronicPayroll(object):
                     subelements['LVacaciones'] = []
                 if concept == 'VacacionesComunes':
                     for l in line.lines_payroll:
-                        quantity = Decimal(1.25 / 30) * l.quantity
+                        #quantity = Decimal(1.25 / 30) * l.quantity
                         #print(l.quantity)
                         e ={
                             #"FechaInicio":str(l.start_date),
@@ -412,9 +412,9 @@ class ElectronicPayroll(object):
                         }
                         subelements['LVacaciones'].append(e)
                 else:
-                    quantity = Decimal(1.25 / 30) * line.quantity
+                    #quantity = Decimal(1.25 / 30) * line.quantity
                     e = {
-                        "Nvcom_cant":rvalue(l.quantity, 2),
+                        "Nvcom_cant":rvalue(line.quantity, 2),
                         "Nvcom_pago":rvalue(line.amount, 2),
                         "Nvvac_tipo": "2"
                     }
