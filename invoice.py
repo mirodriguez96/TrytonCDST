@@ -42,7 +42,6 @@ class UpdateInvoiceTecno(Wizard):
 
     def transition_do_submit(self):
         pool = Pool()
-        Warning = pool.get('res.user.warning')
         Invoice = pool.get('account.invoice')
         Sale = pool.get('sale.sale')
         Purchase = pool.get('purchase.purchase')
@@ -55,19 +54,21 @@ class UpdateInvoiceTecno(Wizard):
             rec_name = invoice.rec_name
             party_name = invoice.party.name
             rec_party = rec_name+' de '+party_name
-            if invoice.number:
-                if not '-' in invoice.number:
-                    warning_name = 'warning_not_number_invoice_%s' % ids
-                    if Warning.check(warning_name):
-                        raise UserWarning(warning_name, "LA FACTURA QUE SE VA A FORZAR BORRADOR NO FUE IMPORTADA.")
+            if invoice.number and '-' in invoice.number:
                 if invoice.type == 'out':
+                    #print('Factura de cliente: ', rec_party)
                     sale = Sale.search([('number', '=', invoice.number)])
                     if sale:
                         to_delete_sales.append(sale[0])
+                    #else:
+                    #    raise UserError("No existe la venta para la factura: ", rec_party)
                 elif invoice.type == 'in':
+                    #print('Factura de proveedor: ', rec_party)
                     purchase = Purchase.search([('number', '=', invoice.number)])
                     if purchase:
                         to_delete_purchases.append(purchase[0])
+                    #else:
+                    #    raise UserError("No existe la compra para la factura: ", rec_party)
             else:
                 raise UserError("Revisa el número de la factura (tipo-numero): ", rec_party)
         Sale.delete_imported_sales(to_delete_sales)
