@@ -326,6 +326,7 @@ class Configuration(ModelSQL, ModelView):
                 if not party:
                     msg = f"No se encontro el tercero: {party_line} requerido para la cuenta {account_line}"
                     not_party.append(msg)
+                    continue
                 line['party'] = party[0].id
             lines.append(line)
         if not_party:
