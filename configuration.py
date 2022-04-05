@@ -330,6 +330,7 @@ class Configuration(ModelSQL, ModelView):
                 line['party'] = party[0].id
             lines.append(line)
         if not_party:
+            result = "\n".join(not_party)
             raise UserError("Error terceros", not_party)
         #Se verifica si hay lineas por crear
         if lines:
