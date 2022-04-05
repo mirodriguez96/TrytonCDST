@@ -331,7 +331,7 @@ class Configuration(ModelSQL, ModelView):
             lines.append(line)
         if not_party:
             result = "\n".join(not_party)
-            raise UserError("Error terceros", not_party)
+            raise UserError("Error terceros", result)
         #Se verifica si hay lineas por crear
         if lines:
             move['lines'] = [('create', lines)]
