@@ -263,6 +263,7 @@ class Configuration(ModelSQL, ModelView):
         cont = 0
         move = {}
         lines = []
+        not_party = []
         for linea in lineas:
             linea = linea.strip()
             if not linea:
@@ -323,9 +324,12 @@ class Configuration(ModelSQL, ModelView):
             if account.party_required:
                 party = Party.search([('id_number', '=', party_line)])
                 if not party:
-                    raise UserError("Error tercero", f"No se encontro el tercero: {party_line} requerido para la cuenta {account_line}")
+                    msg = f"No se encontro el tercero: {party_line} requerido para la cuenta {account_line}"
+                    not_party.append(msg)
                 line['party'] = party[0].id
             lines.append(line)
+        if not_party:
+            raise UserError("Error terceros", not_party)
         #Se verifica si hay lineas por crear
         if lines:
             move['lines'] = [('create', lines)]
