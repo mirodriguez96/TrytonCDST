@@ -312,7 +312,7 @@ class Purchase(metaclass=PoolMeta):
 
     #Esta función se encarga de traer todos los datos de una tabla dada de acuerdo al rango de fecha dada de la bd
     @classmethod
-    def get_data_tecno(cls, date):
+    def get_data_tecno(cls):
         Config = Pool().get('conector.configuration')
         config, = Config.search([], order=[('id', 'DESC')], limit=1)
         fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')

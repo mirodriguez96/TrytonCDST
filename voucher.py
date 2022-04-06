@@ -392,7 +392,6 @@ class Voucher(ModelSQL, ModelView):
         #consult = "SET DATEFORMAT ymd SELECT * FROM dbo.Documentos WHERE (sw = 5 OR sw = 6) AND fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado != 'T' AND tipo = 149" #TEST
         consult = "SET DATEFORMAT ymd SELECT TOP(1000) * FROM dbo.Documentos WHERE (sw = 5 OR sw = 6) AND fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado != 'T'"
         data = Config.get_data(consult)
-        print(data)
         return data
 
     #Metodo encargado de obtener los recibos pagados de un documento dado
