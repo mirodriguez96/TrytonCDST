@@ -96,16 +96,13 @@ class Voucher(ModelSQL, ModelView):
                 move_line = cls.get_moveline(ref, tercero)
                 if move_line:
                     lineas_a_pagar = True
-                #else:
-                #    msg1 = f"No se encontró la factura {ref} del comprobante {id_tecno}"
-                #    logging.warning(msg1)
-                #    logs.append(msg1)
             if not lineas_a_pagar:
                 continue
             #print("Procesando...", id_tecno)
             #Se obtiene la forma de pago, según la tabla Documentos_Che de TecnoCarnes
             tipo_pago = cls.get_tipo_pago(sw, tipo, nro)
             if len(tipo_pago) > 1 and sw == '5':
+                continue
                 print('MULTI-INGRESO:', id_tecno)
                 multingreso = MultiRevenue()
                 multingreso.code = tipo+'-'+nro
