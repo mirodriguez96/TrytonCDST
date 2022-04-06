@@ -27,6 +27,15 @@ class Cron(metaclass=PoolMeta):
         cls.method.selection.append(
             ('account.voucher|import_voucher', "Importar comprobantes"),
             )
+        #cls.method.selection.append(
+        #    ('account.voucher|import_voucher_receipt', "Importar recibos de caja"),
+        #    )
+        #cls.method.selection.append(
+        #    ('account.voucher|import_voucher_payment', "Importar comprobantes de egreso"),
+        #    )
+        #cls.method.selection.append(
+        #    ('account.voucher|import_voucher_multirevenue', "Importar comprobantes de multi-ingreso"),
+        #    )
 
 
 #Heredamos del modelo sale.sale para agregar el campo id_tecno
@@ -39,7 +48,7 @@ class Voucher(ModelSQL, ModelView):
     @classmethod
     def import_voucher(cls):
         logging.warning("RUN COMPROBANTES")
-        documentos_db = cls.last_update()
+        documentos_db = cls.get_data_tecno()
         #Se crea o actualiza la fecha de importación
         actualizacion = cls.create_or_update()
         if not documentos_db:
@@ -87,18 +96,17 @@ class Voucher(ModelSQL, ModelView):
                 move_line = cls.get_moveline(ref, tercero)
                 if move_line:
                     lineas_a_pagar = True
-                else:
-                    msg1 = f"No se encontró la factura {ref} del comprobante {id_tecno}"
-                    logging.warning(msg1)
-                    logs.append(msg1)
+                #else:
+                #    msg1 = f"No se encontró la factura {ref} del comprobante {id_tecno}"
+                #    logging.warning(msg1)
+                #    logs.append(msg1)
             if not lineas_a_pagar:
                 continue
             #print("Procesando...", id_tecno)
             #Se obtiene la forma de pago, según la tabla Documentos_Che de TecnoCarnes
             tipo_pago = cls.get_tipo_pago(sw, tipo, nro)
             if len(tipo_pago) > 1 and sw == '5':
-                continue
-                print('MULTI INGRESO:', id_tecno)
+                print('MULTI-INGRESO:', id_tecno)
                 multingreso = MultiRevenue()
                 multingreso.code = tipo+'-'+nro
                 multingreso.party = tercero
@@ -145,6 +153,8 @@ class Voucher(ModelSQL, ModelView):
                 if multingreso.total_transaction and multingreso.total_lines_to_pay:
                     if multingreso.total_transaction <= multingreso.total_lines_to_pay:
                         device, = SaleDevice.search([('id_tecno', '=', doc.pc)])
+                        #if not device:
+                        #    device = SaleDevice(1)
                         MultiRevenue.add_statement(multingreso, device)
                     else:
                         msg1 = f'Total de pago es mayor al total a pagar en el multi-ingreso: {id_tecno}'
@@ -310,7 +320,8 @@ class Voucher(ModelSQL, ModelView):
         moveline = MoveLine.search([('reference', '=', reference), ('party', '=', party)])
         if moveline:
             if len(moveline) > 1:
-                raise UserError("Error factura saldos iniciales", "Esperaba una linea de movimiento y obtuvo muchas !")
+                raise UserError("Error factura en saldos iniciales", "Esperaba una (reference) linea de movimiento y obtuvo muchas !")
+            print("SALDOS INICIALES")
             moveline, = moveline
             return moveline
         else:
@@ -377,11 +388,14 @@ class Voucher(ModelSQL, ModelView):
 
     #Esta función se encarga de traer todos los datos de una tabla dada de acuerdo al rango de fecha dada de la bd TecnoCarnes
     @classmethod
-    def get_data_tecno(cls, date):
+    def get_data_tecno(cls):
         Config = Pool().get('conector.configuration')
-        #consult = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE (sw = 5 OR sw = 6) AND fecha_hora >= CAST('"+date+"' AS datetime) AND exportado != 'T'" #TEST
-        consult = "SET DATEFORMAT ymd SELECT TOP(1000) * FROM dbo.Documentos WHERE (sw = 5 OR sw = 6) AND fecha_hora >= CAST('"+date+"' AS datetime) AND exportado != 'T'"
+        config = Config(1)
+        fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
+        #consult = "SET DATEFORMAT ymd SELECT * FROM dbo.Documentos WHERE (sw = 5 OR sw = 6) AND fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado != 'T' AND tipo = 149" #TEST
+        consult = "SET DATEFORMAT ymd SELECT TOP(1000) * FROM dbo.Documentos WHERE (sw = 5 OR sw = 6) AND fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado != 'T'"
         data = Config.get_data(consult)
+        print(data)
         return data
 
     #Metodo encargado de obtener los recibos pagados de un documento dado
@@ -398,16 +412,6 @@ class Voucher(ModelSQL, ModelView):
         Config = Pool().get('conector.configuration')
         consult = "SELECT * FROM dbo.Documentos_Che WHERE sw="+sw+" AND tipo="+tipo+" AND numero="+nro
         data = Config.get_data(consult)
-        return data
-
-    #Función encargada de traer los datos de la bd TecnoCarnes con una fecha dada.
-    @classmethod
-    def last_update(cls):
-        Config = Pool().get('conector.configuration')
-        config, = Config.search([], order=[('id', 'DESC')], limit=1)
-        fecha = config.date
-        fecha = fecha.strftime('%Y-%m-%d %H:%M:%S')
-        data = cls.get_data_tecno(fecha)
         return data
 
     #Crea o actualiza un registro de la tabla actualización en caso de ser necesario
@@ -507,8 +511,6 @@ class MultiRevenue(metaclass=PoolMeta):
                 'date': transaction.date,
                 'journal': statement_journal
             }
-            #print(statement_journal)
-            #print(args_statement)
             statement, = Sale.search_or_create_statement(args_statement)
             amount_tr = transaction.amount
             lines_created[transaction.id] = {'ids': []}
@@ -518,12 +520,6 @@ class MultiRevenue(metaclass=PoolMeta):
                     continue
                 if transaction.id not in lines_to_add.keys():
                     lines_to_add[transaction.id] = {'sales': {}}
-                    #statement, = Statement.search([
-                    #    ('journal', '=', statement_journal.id),
-                    #    ('state', '=', 'draft'),
-                    #    ('sale_device', '=', device.id),
-                    #    ('date', '=', transaction.date)
-                    #])
                     lines_to_add[transaction.id]['statement'] = statement.id
                     lines_to_add[transaction.id]['date'] = transaction.date
                 net_payment = line.amount
@@ -545,5 +541,4 @@ class MultiRevenue(metaclass=PoolMeta):
                 if amount_tr == 0:
                     break
         for key in lines_to_add.keys():
-            result = Sale.multipayment_invoices_statement(lines_to_add[key])
-            #print(result)
+            Sale.multipayment_invoices_statement(lines_to_add[key])
