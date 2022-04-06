@@ -41,7 +41,7 @@ class Sale(metaclass=PoolMeta):
     @classmethod
     def import_data_sale(cls):
         logging.warning('RUN VENTAS')
-        data = cls.last_update()
+        data = cls.get_data_tecno()
         cls.add_sale(data)
 
     @classmethod
@@ -473,8 +473,11 @@ class Sale(metaclass=PoolMeta):
             }
             if hasattr(sale, 'order_status'):
                 write_sale['order_status'] = 'delivered'
-            sale.write([sale], write_sale)
-            Sale.do_reconcile([sale])
+            Sale.write([sale], write_sale)
+            if sale.payments:
+                total_paid = sum([p.amount for p in sale.payments])
+                if total_paid == sale.total_amount:
+                    Sale.do_reconcile([sale])
         return 'ok'
 
 
@@ -653,8 +656,10 @@ class Sale(metaclass=PoolMeta):
     @classmethod
     def get_data_tecno(cls, date):
         Config = Pool().get('conector.configuration')
-        #consult = "SELECT * FROM dbo.Documentos WHERE (sw = 1 OR sw = 2) AND tipo = 140 AND Numero_documento > 49 AND Numero_documento < 236" #TEST
-        consult = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado != 'T'"
+        config, = Config.search([], order=[('id', 'DESC')], limit=1)
+        fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
+        #consult = "SELECT * FROM dbo.Documentos WHERE (sw = 1 OR sw = 2) AND tipo = 147 AND fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado != 'T'" #TEST
+        consult = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado != 'T'"
         result = Config.get_data(consult)
         return result
 
@@ -698,16 +703,6 @@ class Sale(metaclass=PoolMeta):
             logging.error(msg1)
             raise UserError('Error product search', msg1)
             
-
-    #Función encargada de traer los datos de la bd con una fecha dada.
-    @classmethod
-    def last_update(cls):
-        Config = Pool().get('conector.configuration')
-        config, = Config.search([], order=[('id', 'DESC')], limit=1)
-        fecha = config.date
-        fecha = fecha.strftime('%Y-%m-%d %H:%M:%S')
-        data = cls.get_data_tecno(fecha)
-        return data
     
     @classmethod
     def get_date_type(cls):

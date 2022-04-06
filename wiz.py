@@ -42,7 +42,7 @@ class DeleteVoucherTecno(Wizard):
         Voucher = pool.get('account.voucher')
         ids = Transaction().context['active_ids']
         #Se agrega un nombre unico a la advertencia
-        warning_name = 'mywarning_%s' % ids
+        warning_name = 'warning_delete_voucher_tecno'
         if Warning.check(warning_name):
             raise UserWarning(warning_name, "Los comprobantes debieron ser desconciliado primero.")
         to_delete = []
@@ -60,8 +60,30 @@ class DeleteVoucherTecno(Wizard):
     def end(self):
         return 'reload'
 
+class DeleteImportRecords(Wizard):
+    'Delete Import Records'
+    __name__ = 'conector.actualizacion.delete_import_records'
+    start_state = 'do_submit'
+    do_submit = StateTransition()
 
-#Pendiente por terminar...
+    def transition_do_submit(self):
+        pool = Pool()
+        Warning = pool.get('res.user.warning')
+        Actualizacion = pool.get('conector.actualizacion')
+        ids = Transaction().context['active_ids']
+        #Se agrega un nombre unico a la advertencia
+        warning_name = 'warning_delete_import_records'
+        if Warning.check(warning_name):
+            raise UserWarning(warning_name, "Los registros de la actualización serán eliminados.")
+        for actualizacion in Actualizacion.browse(ids):
+            actualizacion.logs = 'logs...'
+            actualizacion.save()
+        return 'end'
+
+    def end(self):
+        return 'reload'
+
+#Asistente para forzar a borrador multiples asientos (Pendiente por terminar...)
 class MoveForceDraft(Wizard):
     'Move Force Drafts'
     __name__ = 'account.move.force_drafts'
@@ -96,3 +118,27 @@ class ReverseProduction(Wizard):
     def end(self):
         return 'reload'
 
+#Asistente para eliminar tipos en cuentas padres
+class DeleteAccountType(Wizard):
+    'Delete Account Type'
+    __name__ = 'account.delete_account_type'
+    start_state = 'delete_account_type'
+    delete_account_type = StateTransition()
+
+    def transition_delete_account_type(self):
+        pool = Pool()
+        Account = pool.get('account.account')
+        Warning = pool.get('res.user.warning')
+        ids = Transaction().context['active_ids']
+        warning_name = 'warning_delete_account_type'
+        if Warning.check(warning_name):
+            raise UserWarning(warning_name, "Se van a quitar los tipos a las cuentas que lo tenga y que tengan hijos.")
+        to_delete = []
+        if ids:
+            for account in Account.browse(ids):
+                to_delete.append(account)
+        Account.delete_account_type(to_delete)
+        return 'end'
+    
+    def end(self):
+        return 'reload'

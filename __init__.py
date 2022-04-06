@@ -17,9 +17,11 @@ from . import tax
 from . import production
 from . import wiz
 from . import report
+from . import account
 
 def register():
     Pool.register(
+        account.Account,
         company.Company,
         conector.Actualizacion,
         party.Party,
@@ -62,6 +64,8 @@ def register():
         wiz.DeleteVoucherTecno,
         wiz.VoucherMoveUnreconcile,
         wiz.ReverseProduction,
+        wiz.DeleteImportRecords,
+        wiz.DeleteAccountType,
         #report.PortfolioStatus,
         report.PayrollExport,
         module='conector', type_='wizard')

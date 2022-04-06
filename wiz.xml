@@ -52,6 +52,26 @@
             <field name="model">account.invoice,-1</field>
             <field name="action" ref="act_update_note_date"/>
         </record>
+        <!--Asistente para eliminar los registros de la importación de TecnoCarnes-->
+        <record model="ir.action.wizard" id="act_delete_import_records">
+            <field name="name">Delete Import Logs</field>
+            <field name="wiz_name">conector.actualizacion.delete_import_records</field>
+        </record>
+        <record model="ir.action.keyword" id="act_delete_import_records_keyword">
+            <field name="keyword">form_action</field>
+            <field name="model">conector.actualizacion,-1</field>
+            <field name="action" ref="act_delete_import_records"/>
+        </record>
+        <!--Asistente para eliminar los tipos en cuentas padres-->
+        <record model="ir.action.wizard" id="act_delete_account_type">
+            <field name="name">Remove Type to Parent Account</field>
+            <field name="wiz_name">account.delete_account_type</field>
+        </record>
+        <record model="ir.action.keyword" id="act_delete_account_keyword">
+            <field name="keyword">form_action</field>
+            <field name="model">account.account,-1</field>
+            <field name="action" ref="act_delete_account_type"/>
+        </record>
     </data>
 
 </tryton>
