@@ -36,7 +36,7 @@ msgstr "Configuración"
 
 msgctxt "field:account.tax,consumo:"
 msgid "Tax consumption"
-msgstr "Impuesto al consumo"
+msgstr "Consumo"
 
 msgctxt "model:ir.action,name:act_update_invoice_tecno"
 msgid "Update Invoice Tecno"

@@ -119,7 +119,7 @@ class Purchase(metaclass=PoolMeta):
                     if compra.retencion_ica and compra.retencion_ica > 0:
                         retencion_ica = True
                     retencion_rete = False
-                    if compra.retencion_causada and compra.retencion_causada > 0:
+                    if compra.retencion_causada and compra.retencion_causada > 0 and not retencion_iva and not retencion_ica:
                         retencion_rete = True
 
                     #Ahora traemos las lineas de producto para la compra a procesar

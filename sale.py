@@ -168,7 +168,7 @@ class Sale(metaclass=PoolMeta):
             
             #SE CREA LA VENTA
             sale.save()
-
+            #Se revisa si se aplico alguno de los 3 impuestos en la venta
             retencion_iva = False
             if venta.retencion_iva and venta.retencion_iva > 0:
                 retencion_iva = True
@@ -176,7 +176,7 @@ class Sale(metaclass=PoolMeta):
             if venta.retencion_ica and venta.retencion_ica > 0:
                 retencion_ica = True
             retencion_rete = False
-            if venta.retencion_causada and venta.retencion_causada > 0:
+            if venta.retencion_causada and venta.retencion_causada > 0 and not retencion_iva and not retencion_ica:
                 retencion_rete = True
             
             #Ahora traemos las lineas de producto para la venta a procesar
