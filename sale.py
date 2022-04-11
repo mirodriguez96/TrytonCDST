@@ -176,8 +176,11 @@ class Sale(metaclass=PoolMeta):
             if venta.retencion_ica and venta.retencion_ica > 0:
                 retencion_ica = True
             retencion_rete = False
-            if venta.retencion_causada and venta.retencion_causada > 0 and not retencion_iva and not retencion_ica:
-                retencion_rete = True
+            if venta.retencion_causada and venta.retencion_causada > 0:
+                if not retencion_iva and not retencion_ica:
+                    retencion_rete = True
+                elif (venta.retencion_iva + venta.retencion_ica) != venta.retencion_causada:
+                    retencion_rete = True
             
             #Ahora traemos las lineas de producto para la venta a procesar
             documentos_linea = cls.get_line_where(str(sw), str(numero_doc), str(tipo_doc))
@@ -342,7 +345,7 @@ class Sale(metaclass=PoolMeta):
         #si existe pago pos...
         pool = Pool()
         Journal = pool.get('account.statement.journal')
-        Statement = pool.get('account.statement')
+        #Statement = pool.get('account.statement')
         Actualizacion = pool.get('conector.actualizacion')
         pago, = pago
         fecha = str(pago.fecha).split()[0].split('-')

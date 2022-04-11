@@ -119,8 +119,11 @@ class Purchase(metaclass=PoolMeta):
                     if compra.retencion_ica and compra.retencion_ica > 0:
                         retencion_ica = True
                     retencion_rete = False
-                    if compra.retencion_causada and compra.retencion_causada > 0 and not retencion_iva and not retencion_ica:
-                        retencion_rete = True
+                    if compra.retencion_causada and compra.retencion_causada > 0:
+                        if not retencion_iva and not retencion_ica:
+                            retencion_rete = True
+                        elif (compra.retencion_iva + compra.retencion_ica) != compra.retencion_causada:
+                            retencion_rete = True
 
                     #Ahora traemos las lineas de producto para la compra a procesar
                     documentos_linea = cls.get_line_where(str(sw), str(numero_doc), str(tipo_doc))
