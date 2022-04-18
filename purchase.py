@@ -74,6 +74,7 @@ class Purchase(metaclass=PoolMeta):
                     purchase = Purchase()
                     purchase.number = tipo_doc+'-'+str(numero_doc)
                     purchase.id_tecno = id_compra
+                    print(id_compra)
                     purchase.description = compra[coluns_doc.index('notas')].replace('\n', ' ').replace('\r', '')
                     #Se trae la fecha de la compra y se adapta al formato correcto para Tryton
                     fecha = str(compra[coluns_doc.index('fecha_hora')]).split()[0].split('-')
