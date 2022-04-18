@@ -64,7 +64,7 @@ class Configuration(ModelSQL, ModelView):
             with pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER='+record.server+';DATABASE='+record.db+';UID='+record.user+';PWD='+record.password) as cnxn:
                 return cnxn
         else:
-            raise UserError('Error: ', 'Ingrese por favor los datos de configuracion de la base de datos')
+            raise UserError('Error: ', 'Ingrese por favor todos los datos de configuracion de la base de datos')
 
 
     #Función encargada de enviar la conexión configurada con los datos del primer registro
@@ -86,6 +86,13 @@ class Configuration(ModelSQL, ModelView):
             cursor.execute(query)
         cnxn.close()
 
+    #Se marca en la tabla dbo.Documentos como exportado a Tryton
+    @classmethod
+    def mark_imported(cls, id):
+        lista = id.split('-')
+        query = "UPDATE dbo.Documentos SET exportado = 'T' WHERE sw ="+lista[0]+" and tipo = "+lista[1]+" and Numero_documento = "+lista[2]
+        cls.set_data(query)
+
     #
     @classmethod
     def encode_file(cls, file, process='encode'):
@@ -93,7 +100,6 @@ class Configuration(ModelSQL, ModelView):
             file_decod = file.encode()
         else:
             file_decod = file.decode()
-
         return file_decod
 
     # Boton de importaciones

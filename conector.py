@@ -1,6 +1,9 @@
 from trytond.model import ModelSQL, ModelView, fields
-import datetime
+from trytond.transaction import Transaction
 from trytond.pool import Pool
+from sql import Table
+import datetime
+
 
 __all__ = [
     'Actualizacion',
@@ -21,10 +24,25 @@ class Actualizacion(ModelSQL, ModelView):
     def add_logs(cls, actualizacion, logs):
         now = datetime.datetime.now() - datetime.timedelta(hours=5)
         registos = actualizacion.logs
+        registros_list = registos.split('\n')
         for log in logs:
-            registos += f"\n{now} - {log}"
+            log = f"{now} - {log}"
+            if log not in registros_list:
+                registos += f"\n{log}"
         actualizacion.logs = registos
         actualizacion.save()
+
+    @classmethod
+    def reset_writedate(cls, name):
+        conector_actualizacion = Table('conector_actualizacion')
+        cursor = Transaction().connection.cursor()
+        #Se elimina la fecha de última modificación para que se actualicen los terceros desde (primer importe) una fecha mayor rango
+        cursor.execute(*conector_actualizacion.update(
+                columns=[conector_actualizacion.write_date],
+                values=[None],
+                where=conector_actualizacion.name == name)
+            )
+
     
     #@classmethod
     def getter_quantity(self, name):

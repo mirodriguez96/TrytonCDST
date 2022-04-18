@@ -320,7 +320,7 @@ class Purchase(metaclass=PoolMeta):
         config, = Config.search([], order=[('id', 'DESC')], limit=1)
         fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
         #consult = "SET DATEFORMAT ymd SELECT * FROM dbo.Documentos WHERE (sw = 3 OR sw = 4) AND tipo = 148 AND fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado != 'T'"
-        consult = "SET DATEFORMAT ymd SELECT TOP(100) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND (sw = 3 OR sw = 4) AND exportado != 'T'"
+        consult = "SET DATEFORMAT ymd SELECT TOP(100) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND (sw = 3 OR sw = 4) AND exportado != 'T' ORDER BY fecha_hora ASC"
         result = Config.get_data(consult)
         return result
 

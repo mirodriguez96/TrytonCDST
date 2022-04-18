@@ -390,7 +390,7 @@ class Voucher(ModelSQL, ModelView):
         config = Config(1)
         fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
         #consult = "SET DATEFORMAT ymd SELECT * FROM dbo.Documentos WHERE (sw = 5 OR sw = 6) AND fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado != 'T' AND tipo = 149" #TEST
-        consult = "SET DATEFORMAT ymd SELECT TOP(1000) * FROM dbo.Documentos WHERE (sw = 5 OR sw = 6) AND fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado != 'T'"
+        consult = "SET DATEFORMAT ymd SELECT TOP(1000) * FROM dbo.Documentos WHERE (sw = 5 OR sw = 6) AND fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado != 'T' ORDER BY fecha_hora ASC"
         data = Config.get_data(consult)
         return data
 

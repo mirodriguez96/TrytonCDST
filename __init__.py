@@ -49,6 +49,7 @@ def register():
         purchase.Cron,
         purchase.Purchase,
         invoice.Invoice,
+        invoice.Cron,
         tax.Tax,
         production.Production,
         production.Cron,

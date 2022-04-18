@@ -66,8 +66,6 @@ class Sale(metaclass=PoolMeta):
         Tax = pool.get('account.tax')
         User = pool.get('res.user')
         Module = pool.get('ir.module')
-        conector_actualizacion = Table('conector_actualizacion')
-        cursor = Transaction().connection.cursor()
         
         company_operation = Module.search([('name', '=', 'company_operation'), ('state', '=', 'activated')])
         if company_operation:
@@ -101,12 +99,7 @@ class Sale(metaclass=PoolMeta):
                 msg2 = f' No se encontro el tercero {nit_cedula} de la venta {id_venta}'
                 logging.error(msg2)
                 logs.append(msg2)
-                #Se elimina la fecha de última modificación para que se actualicen los terceros desde (primer importe) una fecha mayor rango
-                cursor.execute(*conector_actualizacion.update(
-                        columns=[conector_actualizacion.write_date],
-                        values=[None],
-                        where=conector_actualizacion.name == 'TERCEROS')
-                    )
+                actualizacion.reset_writedate('TERCEROS')
                 continue
             party = party[0]
             #Se indica a que bodega pertenece
@@ -661,8 +654,8 @@ class Sale(metaclass=PoolMeta):
         Config = Pool().get('conector.configuration')
         config, = Config.search([], order=[('id', 'DESC')], limit=1)
         fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
-        #consult = "SELECT * FROM dbo.Documentos WHERE (sw = 1 OR sw = 2) AND tipo = 147 AND fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado != 'T'" #TEST
-        consult = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado != 'T'"
+        #consult = "SELECT * FROM dbo.Documentos WHERE (sw = 1 OR sw = 2) AND tipo = 260 AND Numero_documento = 214 AND fecha_hora >= CAST('"+fecha+"' AS datetime)" #TEST
+        consult = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado != 'T' ORDER BY fecha_hora ASC"
         result = Config.get_data(consult)
         return result
 

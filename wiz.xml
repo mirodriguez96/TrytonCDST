@@ -44,7 +44,7 @@
         </record>
         <!--Asistente para actualizar las fechas de las notas contables-->
         <record model="ir.action.wizard" id="act_update_note_date">
-            <field name="name">Update Note Date</field>
+            <field name="name">Update Accounting Note Date</field>
             <field name="wiz_name">account.invoice.update_note_date</field>
         </record>
         <record model="ir.action.keyword" id="act_update_note_date_keyword">
