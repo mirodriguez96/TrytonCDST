@@ -3,6 +3,7 @@ from trytond.transaction import Transaction
 from trytond.pool import Pool
 from sql import Table
 import datetime
+from sql.aggregate import Count
 
 
 __all__ = [
@@ -44,9 +45,8 @@ class Actualizacion(ModelSQL, ModelView):
             )
 
     
-    #@classmethod
+    #Se consulta en la base de datos de SQLSERVER
     def getter_quantity(self, name):
-        """
         Config = Pool().get('conector.configuration')
         conexion = Config.search([], order=[('id', 'DESC')], limit=1)
         if conexion:
@@ -60,15 +60,48 @@ class Actualizacion(ModelSQL, ModelView):
             consult += " AND (sw = 3 or sw = 4)"
         elif self.name == 'COMPROBANTES':
             consult += " AND (sw = 5 or sw = 6)"
+        else:
+            return None
         result = conexion.get_data(consult)
         result = int(result[0][0])
-        """
-        return 0
+        print(self.name, result)
+        return result
         
     #@classmethod
     def getter_imported(self, name):
+        cursor = Transaction().connection.cursor()
+        if self.name == 'VENTAS':
+            cursor.execute("SELECT COUNT(*) FROM sale_sale WHERE id_tecno LIKE '%-%'")
+        elif self.name == 'COMPRAS':
+            cursor.execute("SELECT COUNT(*) FROM purchase_purchase WHERE id_tecno LIKE '%-%'")
+        elif self.name == 'COMPROBANTES':
+            cursor.execute("SELECT COUNT(*) FROM account_voucher WHERE id_tecno LIKE '%-%'")
+        else:
+            return None
+        result = cursor.fetchone()[0]
+        print(self.name, result)
+        if result:
+            return result
         return 0
 
     #@classmethod
     def getter_not_imported(self, name):
-        return 0
+        Config = Pool().get('conector.configuration')
+        conexion = Config.search([], order=[('id', 'DESC')], limit=1)
+        if conexion:
+            conexion, = conexion
+        fecha = conexion.date
+        fecha = fecha.strftime('%Y-%m-%d %H:%M:%S')
+        consult = "SET DATEFORMAT ymd SELECT COUNT(*) FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado != 'T'"
+        if self.name == 'VENTAS':
+            consult += " AND (sw = 1 or sw = 2)"
+        elif self.name == 'COMPRAS':
+            consult += " AND (sw = 3 or sw = 4)"
+        elif self.name == 'COMPROBANTES':
+            consult += " AND (sw = 5 or sw = 6)"
+        else:
+            return None
+        result = conexion.get_data(consult)
+        result = int(result[0][0])
+        print(self.name, result)
+        return result
