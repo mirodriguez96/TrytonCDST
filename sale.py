@@ -674,7 +674,7 @@ class Sale(metaclass=PoolMeta):
         config, = Config.search([], order=[('id', 'DESC')], limit=1)
         fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
         #consult = "SELECT * FROM dbo.Documentos WHERE (sw = 1 OR sw = 2) AND tipo = 140 AND Numero_documento > 49 AND Numero_documento < 236" #TEST
-        consult = "SET DATEFORMAT ymd SELECT * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND sw = 1 AND condicion = 0 AND (tipo = 102 OR tipo = 152 OR tipo = 145)"
+        consult = "SET DATEFORMAT ymd SELECT * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND sw = 1 AND condicion = 0 AND (tipo = 145 OR tipo = 152)"
         result = Config.get_data(consult)
         return result
 
