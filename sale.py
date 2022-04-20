@@ -240,9 +240,10 @@ class Sale(metaclass=PoolMeta):
                 with Transaction().set_user(1):
                     context = User.get_preferences()
                 with Transaction().set_context(context, shop=shop.id, _skip_warnings=True):
-                    cls.venta_mostrador(sale)   
-            #Se almacena en una lista las ventas creadas
-            to_create.append(sale)
+                    cls.venta_mostrador(sale)
+            else:
+                #Se almacena en una lista las ventas creadas para ser procesadas
+                to_create.append(sale)
         #Se procesa los registros creados
         with Transaction().set_user(1):
             context = User.get_preferences()
