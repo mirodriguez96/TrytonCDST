@@ -365,7 +365,7 @@ class Sale(metaclass=PoolMeta):
             actualizacion, = Actualizacion.search([('name', '=','VENTAS')])
             Actualizacion.add_logs(actualizacion, [msg])
             logging.error(msg)
-        sale.workflow_to_end([sale])
+        #sale.workflow_to_end([sale]) #REVISAR
 
     
     #Metodo encargado de buscar el estado de cuenta de una terminal y en caso de no existir, se crea.
