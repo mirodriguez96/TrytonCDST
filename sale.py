@@ -497,7 +497,7 @@ class Sale(metaclass=PoolMeta):
         warning_name = 'process_payment_pos'
         if Warning.check(warning_name):
             raise UserWarning(warning_name, "Recuerde que primero debe ejecutar 'actualizador ventas POS'.")
-        ventas = cls.get_date_type()
+        ventas = cls.get_datapos_tecno()
         for venta in ventas:
             id_tecno = str(venta.sw)+'-'+venta.tipo+'-'+str(venta.Numero_documento)
             sale = Sale.search([('id_tecno', '=', id_tecno),('invoice_state', '!=', 'paid')])
@@ -667,10 +667,12 @@ class Sale(metaclass=PoolMeta):
         Config.set_data(query)
     
     @classmethod
-    def get_datapos_tecno(cls, date, tipo):
+    def get_datapos_tecno(cls,):
         Config = Pool().get('conector.configuration')
+        config, = Config.search([], order=[('id', 'DESC')], limit=1)
+        fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
         #consult = "SELECT * FROM dbo.Documentos WHERE (sw = 1 OR sw = 2) AND tipo = 140 AND Numero_documento > 49 AND Numero_documento < 236" #TEST
-        consult = "SET DATEFORMAT ymd SELECT * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+date+"' AS datetime) AND sw = 1 AND condicion = 0 AND (tipo = 152 OR tipo = 145)"
+        consult = "SET DATEFORMAT ymd SELECT * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND sw = 1 AND condicion = 0 AND (tipo = 152 OR tipo = 145)"
         result = Config.get_data(consult)
         return result
 
@@ -699,15 +701,6 @@ class Sale(metaclass=PoolMeta):
             logging.error(msg1)
             raise UserError('Error product search', msg1)
             
-    
-    @classmethod
-    def get_date_type(cls):
-        Config = Pool().get('conector.configuration')
-        config, = Config.search([], order=[('id', 'DESC')], limit=1)
-        fecha = config.date
-        fecha = fecha.strftime('%Y-%m-%d %H:%M:%S')
-        data = cls.get_datapos_tecno(fecha, '145')
-        return data
 
     #Crea o actualiza un registro de la tabla actualización en caso de ser necesario
     @classmethod

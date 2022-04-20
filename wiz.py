@@ -142,3 +142,17 @@ class DeleteAccountType(Wizard):
     
     def end(self):
         return 'reload'
+
+
+#Asistente para eliminar tipos en cuentas padres
+class CheckImportedDoc(Wizard):
+    'Check Imported Documnets'
+    __name__ = 'conector.actualizacion.check_imported'
+    start_state = 'check_imported'
+    check_imported = StateTransition()
+
+    def transition_check_imported(self):
+        pool = Pool()
+        Actualizacion = pool.get('conector.actualizacion')
+        Actualizacion.revisa_secuencia_imp('sale_sale')
+        return 'end'

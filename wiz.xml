@@ -62,6 +62,16 @@
             <field name="model">conector.actualizacion,-1</field>
             <field name="action" ref="act_delete_import_records"/>
         </record>
+        <!--Asistente para revisar los documentos importados de TecnoCarnes-->
+        <record model="ir.action.wizard" id="act_check_imported">
+            <field name="name">Check Imported Docs</field>
+            <field name="wiz_name">conector.actualizacion.check_imported</field>
+        </record>
+        <record model="ir.action.keyword" id="act_check_imported_keyword">
+            <field name="keyword">form_action</field>
+            <field name="model">conector.actualizacion,-1</field>
+            <field name="action" ref="act_check_imported"/>
+        </record>
         <!--Asistente para eliminar los tipos en cuentas padres-->
         <record model="ir.action.wizard" id="act_delete_account_type">
             <field name="name">Remove Type to Parent Account</field>

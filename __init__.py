@@ -67,6 +67,7 @@ def register():
         wiz.ReverseProduction,
         wiz.DeleteImportRecords,
         wiz.DeleteAccountType,
+        wiz.CheckImportedDoc,
         #report.PortfolioStatus,
         report.PayrollExport,
         module='conector', type_='wizard')
