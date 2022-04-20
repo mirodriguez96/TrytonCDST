@@ -25,12 +25,12 @@ class Actualizacion(ModelSQL, ModelView):
     def add_logs(cls, actualizacion, logs):
         now = datetime.datetime.now() - datetime.timedelta(hours=5)
         registos = actualizacion.logs
-        registros_list = registos.split('\n')
-        registros_list 
+        #list_registros = registos.split('\n') 
         for log in logs:
-            log = f"{now} - {log}"
-            if log not in registros_list:
-                registos += f"\n{log}"
+            log = f"\n{now} - {log}"
+            #if log not in registros_list:
+            #    pass
+            registos += log
         actualizacion.logs = registos
         actualizacion.save()
 
@@ -113,6 +113,7 @@ class Actualizacion(ModelSQL, ModelView):
             return
         Config = Pool().get('conector.configuration')
         result_tecno = Config.get_data("select CONCAT(tipo,'-',numero_documento) from Documentos where (sw=1 or sw=2) and year(fecha_hora_factura)=2022 and exportado = 'T' and tipo<>0 order by tipo,numero_documento")
+        logs = []
         #
         data_tryton = {}
         for r in result:
@@ -136,7 +137,11 @@ class Actualizacion(ModelSQL, ModelView):
             for l in data_tecno[tipo]:
                 if l not in data_tryton[tipo]:
                     faltantes[tipo].append(l)
+                    msg = f"DOCUMENTO FALTANTE: {tipo}-{l}"
+                    logs.append(msg)
         for falt in faltantes:
             for doc in faltantes[falt]:
                 Config.set_data("UPDATE dbo.Documentos SET exportado = 'S' WHERE (sw=1 or sw=2) and tipo = "+falt+" and Numero_documento = "+str(doc))
-        print(faltantes)
+        Actualizacion = Pool().get('conector.actualizacion')
+        actualizacion, = Actualizacion.search([('name', '=', 'VENTAS')])
+        cls.add_logs(actualizacion, logs)
