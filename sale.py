@@ -359,10 +359,11 @@ class Sale(metaclass=PoolMeta):
             'date': fecha_date
         }
         result_payment = cls.multipayment_invoices_statement(data_payment)
-        if result_payment['msg'] != 'ok':
+        if result_payment != 'ok':
+            msg = 'ERROR AL PROCESAR EL PAGO DE LA VENTA POS {tipo_numero}'
             actualizacion, = Actualizacion.search([('name', '=','VENTAS')])
-            Actualizacion.add_logs(actualizacion, [result_payment['msg']])
-            logging.error(result_payment)
+            Actualizacion.add_logs(actualizacion, [msg])
+            logging.error(msg)
         sale.workflow_to_end([sale])
 
     
@@ -527,7 +528,7 @@ class Sale(metaclass=PoolMeta):
         line_table = Table('sale_line')
         cursor = Transaction().connection.cursor()
         
-        ventas = cls.get_date_type()
+        ventas = cls.get_datapos_tecno()
         for venta in ventas:
             id_tecno = str(venta.sw)+'-'+venta.tipo+'-'+str(venta.Numero_documento)
             sale = Sale.search([('id_tecno', '=', id_tecno),('invoice_state', '!=', 'paid')])
@@ -672,7 +673,7 @@ class Sale(metaclass=PoolMeta):
         config, = Config.search([], order=[('id', 'DESC')], limit=1)
         fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
         #consult = "SELECT * FROM dbo.Documentos WHERE (sw = 1 OR sw = 2) AND tipo = 140 AND Numero_documento > 49 AND Numero_documento < 236" #TEST
-        consult = "SET DATEFORMAT ymd SELECT * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND sw = 1 AND condicion = 0 AND (tipo = 152 OR tipo = 145)"
+        consult = "SET DATEFORMAT ymd SELECT * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND sw = 1 AND condicion = 0 AND (tipo = 102 OR tipo = 152 OR tipo = 145)"
         result = Config.get_data(consult)
         return result
 
