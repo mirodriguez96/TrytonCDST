@@ -521,7 +521,7 @@ class Sale(metaclass=PoolMeta):
             return
         #ventas = cls.get_datapos_tecno()
         for sale_id in result:
-            sale = Sale(sale_id)
+            sale = Sale(sale_id[0])
             if sale:
                 with Transaction().set_user(1):
                     context = User.get_preferences()
