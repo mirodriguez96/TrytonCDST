@@ -336,38 +336,38 @@ class Sale(metaclass=PoolMeta):
         tipo_numero = sale.number.split('-')
         tipo = tipo_numero[0]
         nro = tipo_numero[1]
-        pago = cls.get_payment_tecno(tipo, nro)
-        if not pago:
+        pagos = cls.get_payment_tecno(tipo, nro)
+        if not pagos:
             return
-        #si existe pago pos...
+        #si existe pagos pos...
         pool = Pool()
         Journal = pool.get('account.statement.journal')
         #Statement = pool.get('account.statement')
         Actualizacion = pool.get('conector.actualizacion')
-        pago, = pago
-        fecha = str(pago.fecha).split()[0].split('-')
-        fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
-        journal, = Journal.search([('id_tecno', '=', pago.forma_pago)])
-        args_statement = {
-            'device': sale.sale_device,
-            'date': fecha_date,
-            'journal': journal,
-        }
-        statement, = cls.search_or_create_statement(args_statement)
-        valor_pagado = pago.valor
-        data_payment = {
-            'sales': {
-                sale: valor_pagado
-            },
-            'statement': statement.id,
-            'date': fecha_date
-        }
-        result_payment = cls.multipayment_invoices_statement(data_payment)
-        if result_payment != 'ok':
-            msg = 'ERROR AL PROCESAR EL PAGO DE LA VENTA POS {tipo_numero}'
-            actualizacion, = Actualizacion.search([('name', '=','VENTAS')])
-            Actualizacion.add_logs(actualizacion, [msg])
-            logging.error(msg)
+        for pago in pagos:
+            fecha = str(pago.fecha).split()[0].split('-')
+            fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
+            journal, = Journal.search([('id_tecno', '=', pago.forma_pago)])
+            args_statement = {
+                'device': sale.sale_device,
+                'date': fecha_date,
+                'journal': journal,
+            }
+            statement, = cls.search_or_create_statement(args_statement)
+            valor_pagado = pago.valor
+            data_payment = {
+                'sales': {
+                    sale: valor_pagado
+                },
+                'statement': statement.id,
+                'date': fecha_date
+            }
+            result_payment = cls.multipayment_invoices_statement(data_payment)
+            if result_payment != 'ok':
+                msg = 'ERROR AL PROCESAR EL PAGO DE LA VENTA POS {tipo_numero}'
+                actualizacion, = Actualizacion.search([('name', '=','VENTAS')])
+                Actualizacion.add_logs(actualizacion, [msg])
+                logging.error(msg)
         #sale.workflow_to_end([sale]) #REVISAR
 
     
