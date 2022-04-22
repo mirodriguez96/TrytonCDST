@@ -145,14 +145,17 @@ class Sale(metaclass=PoolMeta):
             sale.payment_term = plazo_pago
             #Se revisa si la venta es clasificada como electronica o pos y se cambia el tipo
             if tipo_doc in venta_electronica:
+                #continue #TEST
                 sale.invoice_type = '1'
             elif tipo_doc in venta_pos:
                 sale.invoice_type = 'P'
+                sale.invoice_date = fecha_date
                 sale.pos_create_date = fecha_date
                 sale.self_pick_up = True
                 #Busco la terminal y se la asigno
                 sale_device, = SaleDevice.search([('id_tecno', '=', venta[coluns_doc.index('pc')])])
                 sale.sale_device = sale_device
+                sale.invoice_number = sale.number
             #Se busca una dirección del tercero para agregar en la factura y envio
             address = Address.search([('party', '=', party.id)], limit=1)
             if address:
@@ -278,10 +281,10 @@ class Sale(metaclass=PoolMeta):
                 #logging.error(str(e))
                 #logs = logs+"\n"+"Error venta (envio): "+str(sale.id_tecno)+" - "+str(e)
             else:
-                if sale.invoice_type != 'P':
+                if not sale.self_pick_up:
                     msg1 = f'Venta sin envio: {sale.id_tecno}'
                     logging.warning(msg1)
-                    logs += '\n' + msg1
+                    logs.append(msg1)
             if sale.invoices:
                 #print(sale.id_tecno)
                 invoice, = sale.invoices
@@ -437,13 +440,21 @@ class Sale(metaclass=PoolMeta):
         for sale in sales.keys():
             if not sale.number:
                 continue
+            total_paid = Decimal(0.0)
             if sale.payments:
                 total_paid = sum([p.amount for p in sale.payments])
                 if total_paid >= sale.total_amount:
+                    if total_paid == sale.total_amount:
+                        Sale.do_reconcile([sale])
                     continue
-            total_amount = args.get('sales')[sale]
-            if not total_amount:
-                total_amount = sale.total_amount
+            total_pay = args.get('sales')[sale]
+            if not total_pay:
+                total_pay = sale.total_amount
+            else:
+                dif = Decimal(total_paid + total_pay) - sale.total_amount
+                dif = Decimal(abs(dif))
+                if dif < Decimal(600.0):
+                    total_pay = sale.total_amount
             if not sale.invoice or (sale.invoice.state != 'posted' and sale.invoice.state != 'paid'):
                 Sale.post_invoice(sale)
             if not sale.party.account_receivable:
@@ -460,7 +471,7 @@ class Sale(metaclass=PoolMeta):
                 'sale': sale.id,
                 'date': date,
                 'statement': statement_id,
-                'amount': total_amount,
+                'amount': total_pay,
                 'party': sale.party.id,
                 'account': account_id,
                 'description': sale.invoice_number or sale.invoice.number or '',
@@ -472,10 +483,8 @@ class Sale(metaclass=PoolMeta):
             if hasattr(sale, 'order_status'):
                 write_sale['order_status'] = 'delivered'
             Sale.write([sale], write_sale)
-            if sale.payments:
-                total_paid = sum([p.amount for p in sale.payments])
-                if total_paid == sale.total_amount:
-                    Sale.do_reconcile([sale])
+            if total_pay == sale.total_amount:
+                Sale.do_reconcile([sale])
         return 'ok'
 
 
@@ -484,10 +493,14 @@ class Sale(metaclass=PoolMeta):
         pool = Pool()
         Sale = pool.get('sale.sale')
         #Procesar ventas pos
-        Sale.faster_process({'sale_id':sale.id}, {})
-        Sale.process_pos(sale)
+        Sale.quote([sale])
+        Sale.confirm([sale])
+        Sale.process([sale])
+        Sale.post_invoices(sale)
+        Sale.do_stock_moves([sale])
         if sale.payment_term.id_tecno == '0':
             cls.set_payment_pos(sale)
+            Sale.update_state([sale])
 
     @classmethod
     def process_payment_pos(cls):
@@ -495,26 +508,26 @@ class Sale(metaclass=PoolMeta):
         pool = Pool()
         User = pool.get('res.user')
         Sale = pool.get('sale.sale')
+        cursor = Transaction().connection.cursor()
         Warning = pool.get('res.user.warning')
+
         warning_name = 'process_payment_pos'
         if Warning.check(warning_name):
             raise UserWarning(warning_name, "Recuerde que primero debe ejecutar 'actualizador ventas POS'.")
-        ventas = cls.get_datapos_tecno()
-        for venta in ventas:
-            id_tecno = str(venta.sw)+'-'+venta.tipo+'-'+str(venta.Numero_documento)
-            sale = Sale.search([('id_tecno', '=', id_tecno),('invoice_state', '!=', 'paid')])
+        
+        cursor.execute("SELECT id FROM sale_sale WHERE number LIKE '152-%' or id_tecno LIKE '145-%'")
+        result = cursor.fetchall()
+        if not result:
+            return
+        #ventas = cls.get_datapos_tecno()
+        for sale_id in result:
+            sale = Sale(sale_id)
             if sale:
-                sale, = sale
                 with Transaction().set_user(1):
                     context = User.get_preferences()
                 with Transaction().set_context(context, shop=sale.shop.id, _skip_warnings=True):
-                    Sale.quote([sale])
-                    Sale.confirm([sale])
-                    Sale.process([sale])
-                    cls.update_invoices_shipments([sale], [venta], [])
-                    if sale.payment_term.id_tecno == '0':
-                        #print(id_tecno)
-                        cls.set_payment_pos(sale)
+                    #print(sale)
+                    cls.venta_mostrador(sale)
         logging.warning('FINISH PROCESS POS')
 
     
@@ -528,26 +541,24 @@ class Sale(metaclass=PoolMeta):
         sale_table = Table('sale_sale')
         line_table = Table('sale_line')
         cursor = Transaction().connection.cursor()
-        
+
         ventas = cls.get_datapos_tecno()
         for venta in ventas:
-            id_tecno = str(venta.sw)+'-'+venta.tipo+'-'+str(venta.Numero_documento)
-            sale = Sale.search([('id_tecno', '=', id_tecno),('invoice_state', '!=', 'paid')])
+            id_tecno = str(venta.sw)+'-'+str(venta.tipo)+'-'+str(venta.Numero_documento)
+            sale, = Sale.search([('id_tecno', '=', id_tecno)])
             #Se valida que haya encontrado una venta y tenga valores para actualizar
-            if sale and hasattr(sale[0], 'sale_device') and venta.pc:
-                sale, = sale
+            if hasattr(sale, 'sale_device') and venta.pc:
                 cls.force_draft([sale])
-                if not sale.sale_device:
-                    #print(id_tecno, venta.pc)
-                    sale_device = Device.search([('id_tecno', '=', venta.pc)])
-                    if not sale_device:
-                        continue
-                    sale_device, = sale_device
-                    cursor.execute(*sale_table.update(
-                        columns=[sale_table.sale_device, sale_table.invoice_type],
-                        values=[sale_device.id, 'P'],
-                        where=sale_table.id == sale.id)
-                    )
+                print(id_tecno)
+                sale_device = Device.search([('id_tecno', '=', venta.pc)])
+                if not sale_device:
+                    raise UserError('ERROR VENTA POS', f'NO SE ENCONTRO LA TERMINAL {venta.pc} para {id_tecno}')
+                sale_device, = sale_device
+                cursor.execute(*sale_table.update(
+                    columns=[sale_table.sale_device, sale_table.invoice_type, sale_table.invoice_date, sale_table.invoice_number],
+                    values=[sale_device.id, 'P', sale.sale_date, sale.number],
+                    where=sale_table.id == sale.id)
+                )
                 company_operation = Module.search([('name', '=', 'company_operation'), ('state', '=', 'activated')])
                 if company_operation:
                     CompanyOperation = pool.get('company.operation_center')
@@ -674,7 +685,7 @@ class Sale(metaclass=PoolMeta):
         config, = Config.search([], order=[('id', 'DESC')], limit=1)
         fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
         #consult = "SELECT * FROM dbo.Documentos WHERE (sw = 1 OR sw = 2) AND tipo = 140 AND Numero_documento > 49 AND Numero_documento < 236" #TEST
-        consult = "SET DATEFORMAT ymd SELECT * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND sw = 1 AND condicion = 0 AND (tipo = 145 OR tipo = 152)"
+        consult = "SET DATEFORMAT ymd SELECT sw, tipo, Numero_documento, pc FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND sw = 1 AND condicion = 0 AND (tipo = 145 OR tipo = 152) AND exportado = 'T'"
         result = Config.get_data(consult)
         return result
 
@@ -736,6 +747,7 @@ class Sale(metaclass=PoolMeta):
         invoice_table = Table('account_invoice')
         move_table = Table('account_move')
         stock_move_table = Table('stock_move')
+        statement_line = Table('account_statement_line')
         cursor = Transaction().connection.cursor()
 
         for sale in sales:
@@ -763,13 +775,12 @@ class Sale(metaclass=PoolMeta):
                 cursor.execute(*invoice_table.delete(
                     where=invoice_table.id == invoice.id)
                 )
-
-            if sale.id:
-                cursor.execute(*sale_table.update(
-                    columns=[sale_table.state, sale_table.shipment_state, sale_table.invoice_state],
-                    values=['draft', 'none', 'none'],
-                    where=sale_table.id == sale.id)
-                )
+            #Se pasa a estado borrador la venta
+            cursor.execute(*sale_table.update(
+                columns=[sale_table.state, sale_table.shipment_state, sale_table.invoice_state],
+                values=['draft', 'none', 'none'],
+                where=sale_table.id == sale.id)
+            )
             # The stock moves must be delete
             stock_moves = [m.id for line in sale.lines for m in line.moves]
             if stock_moves:
@@ -778,20 +789,22 @@ class Sale(metaclass=PoolMeta):
                     values=['draft'],
                     where=stock_move_table.id.in_(stock_moves)
                 ))
-
+                #Eliminación de los movimientos
                 cursor.execute(*stock_move_table.delete(
                     where=stock_move_table.id.in_(stock_moves))
                 )
+            #Se verifica si tiene lineas de pago y se eliminan
+            if sale.payments:
+                for payment in sale.payments:
+                    cursor.execute(*statement_line.delete(
+                            where=statement_line.id == payment.id)
+                        )
 
 
     @classmethod
     def delete_imported_sales(cls, sales):
         sale_table = Table('sale_sale')
-        invoice_table = Table('account_invoice')
-        move_table = Table('account_move')
-        stock_move_table = Table('stock_move')
         cursor = Transaction().connection.cursor()
-        #Sale = Pool().get('sale.sale')
         Conexion = Pool().get('conector.configuration')
         for sale in sales:
             if sale.id_tecno:
@@ -801,45 +814,8 @@ class Sale(metaclass=PoolMeta):
             else:
                 raise UserError("Error: ", f"No se encontró el id_tecno de {sale}")
 
-            for invoice in sale.invoices:
-                if invoice.state == 'paid':
-                    cls.unreconcile_move(invoice.move)
-                if invoice.move:
-                    cursor.execute(*move_table.update(
-                        columns=[move_table.state],
-                        values=['draft'],
-                        where=move_table.id == invoice.move.id)
-                    )
-                    cursor.execute(*move_table.delete(
-                        where=move_table.id == invoice.move.id)
-                    )
-                cursor.execute(*invoice_table.update(
-                    columns=[invoice_table.state, invoice_table.number],
-                    values=['validate', None],
-                    where=invoice_table.id == invoice.id)
-                )
-                cursor.execute(*invoice_table.delete(
-                    where=invoice_table.id == invoice.id)
-                )
+            cls.force_draft([sale])
 
-            if sale.id:
-                cursor.execute(*sale_table.update(
-                    columns=[sale_table.state, sale_table.shipment_state, sale_table.invoice_state],
-                    values=['draft', 'none', 'none'],
-                    where=sale_table.id == sale.id)
-                )
-            # The stock moves must be delete
-            stock_moves = [m.id for line in sale.lines for m in line.moves]
-            if stock_moves:
-                cursor.execute(*stock_move_table.update(
-                    columns=[stock_move_table.state],
-                    values=['draft'],
-                    where=stock_move_table.id.in_(stock_moves)
-                ))
-
-                cursor.execute(*stock_move_table.delete(
-                    where=stock_move_table.id.in_(stock_moves))
-                )
             #Se elimina la venta
             cursor.execute(*sale_table.delete(
                     where=sale_table.id == sale.id)
