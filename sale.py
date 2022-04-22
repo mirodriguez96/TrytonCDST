@@ -515,7 +515,7 @@ class Sale(metaclass=PoolMeta):
         if Warning.check(warning_name):
             raise UserWarning(warning_name, "Recuerde que primero debe ejecutar 'actualizador ventas POS'.")
         
-        cursor.execute("SELECT id FROM sale_sale WHERE (number LIKE '152-%' or id_tecno LIKE '145-%') and state = 'draft' LIMIT 100")
+        cursor.execute("SELECT id FROM sale_sale WHERE (number LIKE '152-%' or number LIKE '145-%') and state = 'draft' LIMIT 100")
         result = cursor.fetchall()
         if not result:
             return
