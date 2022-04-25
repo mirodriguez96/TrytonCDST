@@ -24,9 +24,9 @@ class Cron(metaclass=PoolMeta):
         cls.method.selection.append(
             ('sale.sale|import_data_sale', "Importar ventas"),
             )
-        cls.method.selection.append(
-            ('sale.sale|update_pos_tecno', "Actualizar ventas POS"),
-            )
+        #cls.method.selection.append(
+        #    ('sale.sale|update_pos_tecno', "Actualizar ventas POS"),
+        #    )
         cls.method.selection.append(
             ('sale.sale|process_payment_pos', "Procesar pagos POS"),
             )
@@ -483,7 +483,7 @@ class Sale(metaclass=PoolMeta):
             if hasattr(sale, 'order_status'):
                 write_sale['order_status'] = 'delivered'
             Sale.write([sale], write_sale)
-            if total_pay == sale.total_amount:
+            if (total_pay + total_paid) == sale.total_amount:
                 Sale.do_reconcile([sale])
         return 'ok'
 
@@ -519,7 +519,6 @@ class Sale(metaclass=PoolMeta):
         result = cursor.fetchall()
         if not result:
             return
-        #ventas = cls.get_datapos_tecno()
         for sale_id in result:
             sale = Sale(sale_id[0])
             if sale:
@@ -532,48 +531,47 @@ class Sale(metaclass=PoolMeta):
         logging.warning('FINISH PROCESS POS')
 
     
-    @classmethod
-    def update_pos_tecno(cls):
-        logging.warning('RUN UPDATE POS')
-        pool = Pool()
-        Sale = pool.get('sale.sale')
-        Device = pool.get('sale.device')
-        Module = pool.get('ir.module')
-        sale_table = Table('sale_sale')
-        line_table = Table('sale_line')
-        cursor = Transaction().connection.cursor()
-
-        ventas = cls.get_datapos_tecno()
-        for venta in ventas:
-            id_tecno = str(venta.sw)+'-'+str(venta.tipo)+'-'+str(venta.Numero_documento)
-            sale, = Sale.search([('id_tecno', '=', id_tecno)])
-            #Se valida que haya encontrado una venta y tenga valores para actualizar
-            if hasattr(sale, 'sale_device') and venta.pc:
-                cls.force_draft([sale])
-                print(id_tecno)
-                sale_device = Device.search([('id_tecno', '=', venta.pc)])
-                if not sale_device:
-                    raise UserError('ERROR VENTA POS', f'NO SE ENCONTRO LA TERMINAL {venta.pc} para {id_tecno}')
-                sale_device, = sale_device
-                cursor.execute(*sale_table.update(
-                    columns=[sale_table.sale_device, sale_table.invoice_type, sale_table.invoice_date, sale_table.invoice_number],
-                    values=[sale_device.id, 'P', sale.sale_date, sale.number],
-                    where=sale_table.id == sale.id)
-                )
-                company_operation = Module.search([('name', '=', 'company_operation'), ('state', '=', 'activated')])
-                if company_operation:
-                    CompanyOperation = pool.get('company.operation_center')
-                    company_operation = CompanyOperation(1)
-                    for line in sale.lines:
-                        if not line.operation_center:
-                            cursor.execute(*line_table.update(
-                                columns=[line_table.operation_center],
-                                values=[company_operation.id],
-                                where=line_table.id == line.id)
-                            )
-            else:
-                logging.warning(f'NO SE ENCONTRO VENTAS O EQUIPOS PARA REALIZAR LA ACTUALIZACION DE VENTA POS {id_tecno}')
-        logging.warning('FINISH UPDATE POS')
+    #@classmethod
+    #def update_pos_tecno(cls):
+    #    logging.warning('RUN UPDATE POS')
+    #    pool = Pool()
+    #    Sale = pool.get('sale.sale')
+    #    Device = pool.get('sale.device')
+    #    Module = pool.get('ir.module')
+    #    sale_table = Table('sale_sale')
+    #    line_table = Table('sale_line')
+    #    cursor = Transaction().connection.cursor()
+    #    ventas = cls.get_datapos_tecno()
+    #    for venta in ventas:
+    #        id_tecno = str(venta.sw)+'-'+str(venta.tipo)+'-'+str(venta.Numero_documento)
+    #        sale, = Sale.search([('id_tecno', '=', id_tecno)])
+    #        #Se valida que haya encontrado una venta y tenga valores para actualizar
+    #        if hasattr(sale, 'sale_device') and venta.pc:
+    #            cls.force_draft([sale])
+    #            print(id_tecno)
+    #            sale_device = Device.search([('id_tecno', '=', venta.pc)])
+    #            if not sale_device:
+    #                raise UserError('ERROR VENTA POS', f'NO SE ENCONTRO LA TERMINAL {venta.pc} para {id_tecno}')
+    #            sale_device, = sale_device
+    #            cursor.execute(*sale_table.update(
+    #                columns=[sale_table.sale_device, sale_table.invoice_type, sale_table.invoice_date, sale_table.invoice_number],
+    #                values=[sale_device.id, 'P', sale.sale_date, sale.number],
+    #                where=sale_table.id == sale.id)
+    #            )
+    #            company_operation = Module.search([('name', '=', 'company_operation'), ('state', '=', 'activated')])
+    #            if company_operation:
+    #                CompanyOperation = pool.get('company.operation_center')
+    #                company_operation = CompanyOperation(1)
+    #                for line in sale.lines:
+    #                    if not line.operation_center:
+    #                        cursor.execute(*line_table.update(
+    #                            columns=[line_table.operation_center],
+    #                            values=[company_operation.id],
+    #                            where=line_table.id == line.id)
+    #                        )
+    #        else:
+    #            logging.warning(f'NO SE ENCONTRO VENTAS O EQUIPOS PARA REALIZAR LA ACTUALIZACION DE VENTA POS {id_tecno}')
+    #    logging.warning('FINISH UPDATE POS')
 
     #Metodo encargado de obtener la forma en que se pago el comprobante (recibos)
     @classmethod
