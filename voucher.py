@@ -1,3 +1,5 @@
+from http.client import CONTINUE
+from conector import Actualizacion
 from trytond.model import ModelView, ModelSQL, fields
 from trytond.pool import Pool, PoolMeta
 from trytond.exceptions import UserError
@@ -25,17 +27,11 @@ class Cron(metaclass=PoolMeta):
     def __setup__(cls):
         super().__setup__()
         cls.method.selection.append(
-            ('account.voucher|import_voucher', "Importar comprobantes"),
+            ('account.voucher|import_voucher', "Importar comprobantes de ingreso"),
             )
-        #cls.method.selection.append(
-        #    ('account.voucher|import_voucher_receipt', "Importar recibos de caja"),
-        #    )
-        #cls.method.selection.append(
-        #    ('account.voucher|import_voucher_payment', "Importar comprobantes de egreso"),
-        #    )
-        #cls.method.selection.append(
-        #    ('account.voucher|import_voucher_multirevenue', "Importar comprobantes de multi-ingreso"),
-        #    )
+        cls.method.selection.append(
+            ('account.voucher|import_voucher_payment', "Importar comprobantes de egreso"),
+            )
 
 
 #Heredamos del modelo sale.sale para agregar el campo id_tecno
@@ -44,19 +40,197 @@ class Voucher(ModelSQL, ModelView):
     __name__ = 'account.voucher'
     id_tecno = fields.Char('Id Tabla Sqlserver', required=False)
 
-    #Funcion encargada de crear los comprobantes ingresos y egresos
+
+    @classmethod
+    def import_voucher_payment(cls):
+        logging.warning("RUN COMPROBANTES DE EGRESO")
+        pool = Pool()
+        Actualizacion = pool.get('conector.actualizacion')
+        actualizacion = Actualizacion.create_or_update('COMPROBANTES DE EGRESO')
+        # Obtenemos los comprobantes de egreso de TecnoCarnes
+        documentos = cls.get_data_tecno_out()
+        if not documentos:
+            actualizacion.save()
+            logging.warning("FINISH COMPROBANTES DE EGRESO")
+            return
+        Voucher = pool.get('account.voucher')
+        Line = pool.get('account.voucher.line')
+        Party = pool.get('party.party')
+        PayMode = pool.get('account.voucher.paymode')
+        logs = []
+        created = []
+        # Comenzamos a recorrer los documentos a procesar y almacenamos los registros y creados en una lista
+        for doc in documentos:
+            sw = str(doc.sw)
+            nro = str(doc.Numero_documento)
+            tipo_numero = doc.tipo+'-'+nro
+            id_tecno = sw+'-'+tipo_numero
+            # Buscamos si ya existe el comprobante
+            comprobante = Voucher.search([('id_tecno', '=', id_tecno)])
+            if comprobante:
+                msg = f"EL DOCUMENTO {id_tecno} YA EXISTIA EN TRYTON"
+                logs.append(msg)
+                continue
+            facturas = cls.get_dcto_cruce("sw="+sw+" and tipo="+doc.tipo+" and numero="+nro)
+            if not facturas:
+                msg1 = f"NO HAY FACTURAS EN TECNOCARNES PARA EL RECIBO {id_tecno}"
+                logging.warning(msg1)
+                logs.append(msg1)
+                continue
+            nit_cedula = doc.nit_Cedula
+            party = Party.search([('id_number', '=', nit_cedula)])
+            if not party:
+                msg = f"EL TERCERO {nit_cedula} NO EXISTE EN TRYTON"
+                logs.append(msg)
+                logging.error(msg)
+                continue
+            party, = party
+            tipo_pago = cls.get_tipo_pago(sw, doc.tipo, nro)
+            if not tipo_pago:
+                msg = f"NO SE ENCONTRO LA FORMA DE PAGO EN LA TABLA DOCUMENTOS_CHE {id_tecno}"
+                logs.append(msg)
+                logging.error(msg)
+                continue
+            forma_pago = tipo_pago[0].forma_pago
+            paymode = PayMode.search([('id_tecno', '=', forma_pago)])
+            if not paymode:
+                msg = f"NO SE ENCONTRO LA FORMA DE PAGO {forma_pago}"
+                logs.append(msg)
+                logging.error(msg)
+                continue
+            paymode, = paymode
+            print('VOUCHER:', id_tecno)
+            fecha_date = cls.convert_fecha_tecno(doc.fecha_hora)
+            voucher = Voucher()
+            voucher.id_tecno = id_tecno
+            voucher.number = tipo_numero
+            voucher.party = party
+            voucher.payment_mode = paymode
+            voucher.on_change_payment_mode()
+            voucher.voucher_type = 'payment'
+            voucher.date = fecha_date
+            nota = (doc.notas).replace('\n', ' ').replace('\r', '')
+            if nota:
+                voucher.description = nota
+            voucher.reference = tipo_numero
+            voucher.save()
+            valor_aplicado = Decimal(doc.valor_aplicado)
+            
+            for rec in facturas:
+                ref = rec.tipo_aplica+'-'+str(rec.numero_aplica)
+                move_line = cls.get_moveline(ref, party)
+                if not move_line:
+                    msg1 = f'NO SE ENCONTRO LA FACTURA {ref} EN TRYTON'
+                    logging.warning(msg1)
+                    logs.append(msg1)
+                    continue
+                line = Line()
+                line.voucher = voucher
+                valor_original, amount_to_pay, untaxed_amount = cls.get_amount_to_pay_moveline_tecno(move_line, voucher)
+                line.amount_original = valor_original
+                line.reference = ref
+                line.move_line = move_line
+                line.on_change_move_line()
+                valor = Decimal(rec.valor)
+                descuento = Decimal(rec.descuento)
+                retencion = Decimal(rec.retencion)
+                ajuste = Decimal(rec.ajuste)
+                retencion_iva = Decimal(rec.retencion_iva)
+                retencion_ica = Decimal(rec.retencion_ica)
+                valor_pagado = valor + descuento + (retencion) + (ajuste*-1) + (retencion_iva) + (retencion_ica)
+                valor_pagado = round(valor_pagado, 2)
+                if valor_pagado > amount_to_pay:
+                    valor_pagado = amount_to_pay
+                line.amount = Decimal(valor_pagado)
+                line.save()
+                config_voucher = pool.get('account.voucher_configuration')(1)
+                if descuento > 0:
+                    line_discount = Line()
+                    line_discount.voucher = voucher
+                    line_discount.detail = 'DESCUENTO'
+                    valor_descuento = round((descuento * -1), 2)
+                    line_discount.amount = valor_descuento
+                    line_discount.account = config_voucher.account_discount_tecno
+                    line_discount.save()
+                if retencion > 0:
+                    line_rete = Line()
+                    line_rete.voucher = voucher
+                    line_rete.detail = 'RETENCION - ('+str(retencion)+')'
+                    line_rete.type = 'tax'
+                    line_rete.untaxed_amount = untaxed_amount
+                    line_rete.tax = config_voucher.account_rete_tecno
+                    line_rete.on_change_tax()
+                    line_rete.amount = round((retencion*-1), 2)
+                    line_rete.save()
+                if retencion_iva > 0:
+                    line_retiva = Line()
+                    line_retiva.voucher = voucher
+                    line_retiva.detail = 'RETENCION IVA - ('+str(retencion_iva)+')'
+                    line_retiva.type = 'tax'
+                    line_retiva.untaxed_amount = untaxed_amount
+                    line_retiva.tax = config_voucher.account_retiva_tecno
+                    line_retiva.on_change_tax()
+                    line_retiva.amount = round((retencion_iva*-1), 2)
+                    line_retiva.save()
+                if retencion_ica > 0:
+                    line_retica = Line()
+                    line_retica.voucher = voucher
+                    line_retica.detail = 'RETENCION ICA - ('+str(retencion_ica)+')'
+                    line_retica.type = 'tax'
+                    line_retica.untaxed_amount = untaxed_amount
+                    line_retica.tax = config_voucher.account_retica_tecno
+                    line_retica.on_change_tax()
+                    line_retica.amount = round((retencion_ica*-1), 2)
+                    line_retica.save()
+                if ajuste > 0:
+                    line_ajuste = Line()
+                    line_ajuste.voucher = voucher
+                    line_ajuste.detail = 'AJUSTE'
+                    if Decimal(move_line.debit) > 0:
+                        line_ajuste.account = config_voucher.account_adjust_income
+                    elif Decimal(move_line.credit) > 0:
+                        line_ajuste.account = config_voucher.account_adjust_expense
+                    valor_ajuste = round(ajuste, 2)
+                    line_ajuste.amount = valor_ajuste
+                    line_ajuste.save()
+                voucher.on_change_lines()
+                voucher.save()
+            #Se verifica que el comprobante tenga lineas para ser procesado y contabilizado (doble verificación por error)
+            if voucher.lines and voucher.amount_to_pay > 0:
+                Voucher.process([voucher])
+                diferencia = abs(voucher.amount_to_pay - valor_aplicado)
+                #print(diferencia, (diferencia < Decimal(6.0)))
+                if voucher.amount_to_pay == valor_aplicado:
+                    Voucher.post([voucher])
+                elif diferencia < Decimal(600.0):
+                    line_ajuste = Line()
+                    line_ajuste.voucher = voucher
+                    line_ajuste.detail = 'AJUSTE'
+                    line_ajuste.account = config_voucher.account_adjust_expense
+                    line_ajuste.amount = diferencia
+                    line_ajuste.save()
+                    voucher.on_change_lines()
+                    Voucher.post([voucher])
+            created.append(id_tecno)
+        Actualizacion.add_logs(actualizacion, logs)
+        for id in created:
+            cls.importado(id)
+            #print(id)
+        logging.warning("FINISH COMPROBANTES DE EGRESO")
+
+
+    #Funcion encargada de crear los comprobantes de ingreso
     @classmethod
     def import_voucher(cls):
-        logging.warning("RUN COMPROBANTES")
+        logging.warning("RUN COMPROBANTES DE INGRESO")
+        pool = Pool()
+        Actualizacion = pool.get('conector.actualizacion')
+        actualizacion = Actualizacion.create_or_update('COMPROBANTES DE INGRESO')
         documentos_db = cls.get_data_tecno()
-        #Se crea o actualiza la fecha de importación
-        actualizacion = cls.create_or_update()
         if not documentos_db:
             actualizacion.save()
-            logging.warning("FINISH COMPROBANTES")
+            logging.warning("FINISH COMPROBANTES DE INGRESO")
             return
-
-        pool = Pool()
         Voucher = pool.get('account.voucher')
         Line = pool.get('account.voucher.line')
         Party = pool.get('party.party')
@@ -65,44 +239,43 @@ class Voucher(ModelSQL, ModelView):
         MultiRevenueLine = pool.get('account.multirevenue.line')
         Transaction = pool.get('account.multirevenue.transaction')
         SaleDevice = pool.get('sale.device')
-
         logs = []
-        #to_create = []
         created = []
-
         for doc in documentos_db:
             sw = str(doc.sw)
             tipo = doc.tipo
             nro = str(doc.Numero_documento)
             id_tecno = sw+'-'+tipo+'-'+nro
-            existe = cls.find_voucher(sw+'-'+tipo+'-'+nro)
-            if existe:
-                cls.importado(id_tecno)
+            comprobante = cls.find_voucher(sw+'-'+tipo+'-'+nro)
+            if comprobante:
+                msg = f"EL DOCUMENTO {id_tecno} YA EXISTIA EN TRYTON"
+                logs.append(msg)
                 continue
-            fecha_date = cls.convert_fecha_tecno(doc.fecha_hora)
-            nit_cedula = doc.nit_Cedula
-            tercero, = Party.search([('id_number', '=', nit_cedula)])
-            #Se obtiene las facturas a las que hace referencia el ingreso o egreso
-            facturas = cls.get_dcto_cruce("sw="+sw+" and tipo="+tipo+" and numero="+nro)
+            facturas = cls.get_dcto_cruce("sw="+sw+" and tipo="+doc.tipo+" and numero="+nro)
             if not facturas:
-                msg1 = f"No hay recibos en TecnoCarnes para el documento: {id_tecno}"
+                msg1 = f"NO HAY FACTURAS EN TECNOCARNES PARA EL RECIBO {id_tecno}"
                 logging.warning(msg1)
                 logs.append(msg1)
                 continue
-            lineas_a_pagar = False
-            #Se comprueba si el comprobante tiene facturas en el sistema Tryton
-            for factura in facturas:
-                ref = factura.tipo_aplica+'-'+str(factura.numero_aplica)
-                move_line = cls.get_moveline(ref, tercero)
-                if move_line:
-                    lineas_a_pagar = True
-            if not lineas_a_pagar:
+            tercero = Party.search([('id_number', '=', doc.nit_Cedula)])
+            if not tercero:
+                msg = f"EL TERCERO {doc.nit_Cedula} NO EXISTE EN TRYTON"
+                logs.append(msg)
+                logging.error(msg)
                 continue
-            #print("Procesando...", id_tecno)
+            tercero, = tercero
             #Se obtiene la forma de pago, según la tabla Documentos_Che de TecnoCarnes
-            tipo_pago = cls.get_tipo_pago(sw, tipo, nro)
-            if len(tipo_pago) > 1 and sw == '5':
+            tipo_pago = cls.get_tipo_pago(sw, doc.tipo, nro)
+            if not tipo_pago:
+                msg = f"NO SE ENCONTRO LA FORMA DE PAGO EN LA TABLA DOCUMENTOS_CHE {id_tecno}"
+                logs.append(msg)
+                logging.error(msg)
                 continue
+            forma_pago = tipo_pago[0].forma_pago
+            
+            fecha_date = cls.convert_fecha_tecno(doc.fecha_hora)
+            if len(tipo_pago) > 1:
+                #continue
                 print('MULTI-INGRESO:', id_tecno)
                 multingreso = MultiRevenue()
                 multingreso.code = tipo+'-'+nro
@@ -141,26 +314,36 @@ class Voucher(ModelSQL, ModelView):
                         line, = MultiRevenueLine.create([create_line])
                         to_lines.append(line)
                     else:
-                        msg1 = f'No existe la factura: {ref}'
-                        logging.warning(msg1)
-                        logs.append(msg1)
+                        msg = f'NO SE ENCONTRO LA FACTURA {ref} EN TRYTON'
+                        logging.warning(msg)
+                        logs.append(msg)
                 if to_lines:
                     multingreso.lines = to_lines
                     multingreso.save()
                 if multingreso.total_transaction and multingreso.total_lines_to_pay:
-                    if multingreso.total_transaction <= multingreso.total_lines_to_pay:
-                        device, = SaleDevice.search([('id_tecno', '=', doc.pc)])
-                        #if not device:
-                        #    device = SaleDevice(1)
-                        MultiRevenue.add_statement(multingreso, device)
-                    else:
-                        msg1 = f'Total de pago es mayor al total a pagar en el multi-ingreso: {id_tecno}'
-                        logs.append(msg1)
+                    #if multingreso.total_transaction <= multingreso.total_lines_to_pay:
+                        device = SaleDevice.search([('id_tecno', '=', doc.pc)])
+                        if not device:
+                            msg = f'NO SE ENCONTRO LA TERMINAL {doc.pc}'
+                            logs.append(msg)
+                            logging.error(msg)
+                            continue
+                        MultiRevenue.add_statement(multingreso, device[0])
+                    #else:
+                    #    msg1 = f'Total de pago es mayor al total a pagar en el multi-ingreso: {id_tecno}'
+                    #    logs.append(msg1)
                 else:
-                    msg1 = f'Revisar comprobante multi-ingreso: {id_tecno}'
-                    logs.append(msg1)
+                    msg = f'REVISAR EL COMPROBANTE MULTI-INGRESO {id_tecno}'
+                    logs.append(msg)
                 created.append(id_tecno)
             elif len(tipo_pago) == 1:
+                paymode = PayMode.search([('id_tecno', '=', forma_pago)])
+                if not paymode:
+                    msg = f"NO SE ENCONTRO LA FORMA DE PAGO {forma_pago}"
+                    logs.append(msg)
+                    logging.error(msg)
+                    continue
+                paymode, = paymode
                 print('VOUCHER:', id_tecno)
                 forma_pago = tipo_pago[0].forma_pago
                 paymode, = PayMode.search([('id_tecno', '=', forma_pago)])
@@ -171,8 +354,6 @@ class Voucher(ModelSQL, ModelView):
                 voucher.payment_mode = paymode
                 voucher.on_change_payment_mode()
                 voucher.voucher_type = 'receipt'
-                if sw == '6':
-                    voucher.voucher_type = 'payment'
                 voucher.date = fecha_date
                 nota = (doc.notas).replace('\n', ' ').replace('\r', '')
                 if nota:
@@ -184,9 +365,9 @@ class Voucher(ModelSQL, ModelView):
                     ref = rec.tipo_aplica+'-'+str(rec.numero_aplica)
                     move_line = cls.get_moveline(ref, tercero)
                     if not move_line:
-                        msg1 = f'No existe la factura: {ref}'
-                        logging.warning(msg1)
-                        logs.append(msg1)
+                        msg = f'NO SE ENCONTRO LA FACTURA {ref} EN TRYTON'
+                        logging.warning(msg)
+                        logs.append(msg)
                         continue
                     config_voucher = pool.get('account.voucher_configuration')(1)
                     line = Line()
@@ -273,23 +454,21 @@ class Voucher(ModelSQL, ModelView):
                         line_ajuste.voucher = voucher
                         line_ajuste.detail = 'AJUSTE'
                         line_ajuste.account = config_voucher.account_adjust_income
-                        if sw == '6':
-                            line_ajuste.account = config_voucher.account_adjust_expense
                         line_ajuste.amount = diferencia
                         line_ajuste.save()
                         voucher.on_change_lines()
                         Voucher.post([voucher])
                 created.append(id_tecno)
             else:
-                msg1 = f"Revisar si {id_tecno} tiene alguna forma de pago en TecnoCarnes"
+                msg1 = f"EL DOCUMENTO {id_tecno} NO ENCONTRO FORMA DE PAGO EN TECNOCARNES"
                 logging.warning(msg1)
                 logs.append(msg1)
-                continue                
-        actualizacion.add_logs(actualizacion, logs)
+                continue
+        Actualizacion.add_logs(actualizacion, logs)
         for id in created:
             cls.importado(id)
             #print('CREADO...', id) #TEST
-        logging.warning("FINISH COMPROBANTES")
+        logging.warning("FINISH COMPROBANTES DE INGRESO")
 
 
     #Se obtiene las lineas de la factura que se desea pagar
@@ -357,9 +536,7 @@ class Voucher(ModelSQL, ModelView):
     @classmethod
     def importado(cls, id):
         Config = Pool().get('conector.configuration')
-        lista = id.split('-')
-        consult = "UPDATE dbo.Documentos SET exportado = 'T' WHERE sw ="+lista[0]+" and tipo = "+lista[1]+" and Numero_documento = "+lista[2]
-        Config.set_data(consult)
+        Config.mark_imported(id)
 
     #Metodo encargado de consultar y verificar si existe un voucher con la id de la BD
     @classmethod
@@ -389,8 +566,19 @@ class Voucher(ModelSQL, ModelView):
         Config = Pool().get('conector.configuration')
         config = Config(1)
         fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
-        #consult = "SET DATEFORMAT ymd SELECT * FROM dbo.Documentos WHERE (sw = 5 OR sw = 6) AND fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado != 'T' AND tipo = 149" #TEST
-        consult = "SET DATEFORMAT ymd SELECT TOP(1000) * FROM dbo.Documentos WHERE (sw = 5 OR sw = 6) AND fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado != 'T' ORDER BY fecha_hora ASC"
+        #consult = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE sw = 5 AND fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado != 'T' ORDER BY fecha_hora ASC" #TEST
+        consult = "SET DATEFORMAT ymd SELECT TOP(200) * FROM dbo.Documentos WHERE sw = 5 AND fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado != 'T' ORDER BY fecha_hora ASC"
+        data = Config.get_data(consult)
+        return data
+
+    #Esta función se encarga de traer todos los datos de una tabla dada de acuerdo al rango de fecha dada de la bd TecnoCarnes
+    @classmethod
+    def get_data_tecno_out(cls):
+        Config = Pool().get('conector.configuration')
+        config = Config(1)
+        fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
+        #consult = "SET DATEFORMAT ymd SELECT * FROM dbo.Documentos WHERE sw = 6 AND fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado != 'T' AND tipo = 149" #TEST
+        consult = "SET DATEFORMAT ymd SELECT TOP(200) * FROM dbo.Documentos WHERE sw = 6 AND fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado != 'T' ORDER BY fecha_hora ASC"
         data = Config.get_data(consult)
         return data
 
@@ -409,22 +597,6 @@ class Voucher(ModelSQL, ModelView):
         consult = "SELECT * FROM dbo.Documentos_Che WHERE sw="+sw+" AND tipo="+tipo+" AND numero="+nro
         data = Config.get_data(consult)
         return data
-
-    #Crea o actualiza un registro de la tabla actualización en caso de ser necesario
-    @classmethod
-    def create_or_update(cls):
-        Actualizacion = Pool().get('conector.actualizacion')
-        actualizacion = Actualizacion.search([('name', '=','COMPROBANTES')])
-        if actualizacion:
-            #Se busca un registro con la actualización
-            actualizacion, = actualizacion
-        else:
-            #Se crea un registro con la actualización
-            actualizacion = Actualizacion()
-            actualizacion.name = 'COMPROBANTES'
-            actualizacion.logs = 'logs...'
-            actualizacion.save()
-        return actualizacion
         
     #
     @classmethod

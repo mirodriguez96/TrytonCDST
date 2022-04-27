@@ -515,7 +515,7 @@ class Sale(metaclass=PoolMeta):
         if Warning.check(warning_name):
             raise UserWarning(warning_name, "Recuerde que primero debe ejecutar 'actualizador ventas POS'.")
         
-        cursor.execute("SELECT id FROM sale_sale WHERE (number LIKE '152-%' or number LIKE '145-%') and state = 'draft' LIMIT 5000")
+        cursor.execute("SELECT id FROM sale_sale WHERE (number LIKE '152-%' or number LIKE '145-%') and state != 'done'")
         result = cursor.fetchall()
         if not result:
             return
@@ -528,6 +528,12 @@ class Sale(metaclass=PoolMeta):
                     print(sale)
                     logging.warning(sale.id_tecno)
                     cls.venta_mostrador(sale)
+            #Se concilia si los pagos suman el total de la venta
+            #if sale.payments:
+            #    total_paid = sum([p.amount for p in sale.payments])
+            #    if total_paid >= sale.total_amount:
+            #        if total_paid == sale.total_amount:
+            #            Sale.do_reconcile([sale])
         logging.warning('FINISH PROCESS POS')
 
     

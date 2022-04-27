@@ -21,6 +21,23 @@ class Actualizacion(ModelSQL, ModelView):
     logs = fields.Text("Logs", readonly=True)
 
 
+    #Crea o actualiza un registro de la tabla actualización en caso de ser necesario
+    @classmethod
+    def create_or_update(cls, name):
+        Actualizacion = Pool().get('conector.actualizacion')
+        actualizacion = Actualizacion.search([('name', '=', name)])
+        if actualizacion:
+            #Se busca un registro con la actualización
+            actualizacion, = actualizacion
+        else:
+            #Se crea un registro con la actualización
+            actualizacion = Actualizacion()
+            actualizacion.name = name
+            actualizacion.logs = 'logs...'
+            actualizacion.save()
+        return actualizacion
+
+
     @classmethod
     def add_logs(cls, actualizacion, logs):
         now = datetime.datetime.now() - datetime.timedelta(hours=5)
@@ -65,8 +82,10 @@ class Actualizacion(ModelSQL, ModelView):
             consult += " AND (sw = 1 or sw = 2)"
         elif self.name == 'COMPRAS':
             consult += " AND (sw = 3 or sw = 4)"
-        elif self.name == 'COMPROBANTES':
-            consult += " AND (sw = 5 or sw = 6)"
+        elif self.name == 'COMPROBANTES DE INGRESO':
+            consult += " AND sw = 5"
+        elif self.name == 'COMPROBANTES DE EGRESO':
+            consult += " AND sw = 6"
         else:
             return None
         result = conexion.get_data(consult)
@@ -80,8 +99,10 @@ class Actualizacion(ModelSQL, ModelView):
             cursor.execute("SELECT COUNT(*) FROM sale_sale WHERE id_tecno LIKE '%-%'")
         elif self.name == 'COMPRAS':
             cursor.execute("SELECT COUNT(*) FROM purchase_purchase WHERE id_tecno LIKE '%-%'")
-        elif self.name == 'COMPROBANTES':
-            cursor.execute("SELECT COUNT(*) FROM account_voucher WHERE id_tecno LIKE '%-%'")
+        elif self.name == 'COMPROBANTES DE INGRESO':
+            cursor.execute("SELECT COUNT(*) FROM account_voucher WHERE id_tecno LIKE '5-%'")
+        elif self.name == 'COMPROBANTES DE EGRESO':
+            cursor.execute("SELECT COUNT(*) FROM account_voucher WHERE id_tecno LIKE '6-%'")
         else:
             return None
         result = cursor.fetchone()[0]
@@ -102,8 +123,10 @@ class Actualizacion(ModelSQL, ModelView):
             consult += " AND (sw = 1 or sw = 2)"
         elif self.name == 'COMPRAS':
             consult += " AND (sw = 3 or sw = 4)"
-        elif self.name == 'COMPROBANTES':
-            consult += " AND (sw = 5 or sw = 6)"
+        elif self.name == 'COMPROBANTES DE INGRESO':
+            consult += " AND sw = 5"
+        elif self.name == 'COMPROBANTES DE EGRESO':
+            consult += " AND sw = 6"
         else:
             return None
         result = conexion.get_data(consult)
