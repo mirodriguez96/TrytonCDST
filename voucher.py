@@ -96,14 +96,13 @@ class Voucher(ModelSQL, ModelView):
                 logs.append(msg)
                 logging.error(msg)
                 continue
-            paymode, = paymode
             print('VOUCHER:', id_tecno)
             fecha_date = cls.convert_fecha_tecno(doc.fecha_hora)
             voucher = Voucher()
             voucher.id_tecno = id_tecno
             voucher.number = tipo_numero
             voucher.party = party
-            voucher.payment_mode = paymode
+            voucher.payment_mode = paymode[0]
             voucher.on_change_payment_mode()
             voucher.voucher_type = 'payment'
             voucher.date = fecha_date
@@ -284,14 +283,19 @@ class Voucher(ModelSQL, ModelView):
                 #Se ingresa las formas de pago
                 for pago in tipo_pago:
                     forma_pago = pago.forma_pago
-                    paymode, = PayMode.search([('id_tecno', '=', forma_pago)])
+                    paymode = PayMode.search([('id_tecno', '=', forma_pago)])
+                    if not paymode:
+                        msg = f"NO SE ENCONTRO LA FORMA DE PAGO {forma_pago}"
+                        logs.append(msg)
+                        logging.error(msg)
+                        continue
                     valor = pago.valor
                     transaction = Transaction()
                     transaction.multirevenue = multingreso
                     transaction.description = 'IMPORTACION TECNO'
                     transaction.amount = Decimal(valor)
                     transaction.date = fecha_date
-                    transaction.payment_mode = paymode
+                    transaction.payment_mode = paymode[0]
                     transaction.save()
                 to_lines = []
                 #Se ingresa las lineas a pagar
@@ -334,22 +338,20 @@ class Voucher(ModelSQL, ModelView):
                     msg = f'REVISAR EL COMPROBANTE MULTI-INGRESO {id_tecno}'
                     logs.append(msg)
                 created.append(id_tecno)
-            elif len(tipo_pago) == 1:
+            elif len(tipo_pago) == 1:                
+                print('VOUCHER:', id_tecno)
+                forma_pago = tipo_pago[0].forma_pago
                 paymode = PayMode.search([('id_tecno', '=', forma_pago)])
                 if not paymode:
                     msg = f"NO SE ENCONTRO LA FORMA DE PAGO {forma_pago}"
                     logs.append(msg)
                     logging.error(msg)
                     continue
-                paymode, = paymode
-                print('VOUCHER:', id_tecno)
-                forma_pago = tipo_pago[0].forma_pago
-                paymode, = PayMode.search([('id_tecno', '=', forma_pago)])
                 voucher = Voucher()
                 voucher.id_tecno = id_tecno
                 voucher.number = tipo+'-'+nro
                 voucher.party = tercero
-                voucher.payment_mode = paymode
+                voucher.payment_mode = paymode[0]
                 voucher.on_change_payment_mode()
                 voucher.voucher_type = 'receipt'
                 voucher.date = fecha_date
