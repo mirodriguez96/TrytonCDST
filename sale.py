@@ -509,25 +509,18 @@ class Sale(metaclass=PoolMeta):
         User = pool.get('res.user')
         Sale = pool.get('sale.sale')
         cursor = Transaction().connection.cursor()
-        Warning = pool.get('res.user.warning')
-
-        warning_name = 'process_payment_pos'
-        if Warning.check(warning_name):
-            raise UserWarning(warning_name, "Recuerde que primero debe ejecutar 'actualizador ventas POS'.")
-        
         cursor.execute("SELECT id FROM sale_sale WHERE (number LIKE '152-%' or number LIKE '145-%') and state != 'done'")
         result = cursor.fetchall()
         if not result:
             return
         for sale_id in result:
             sale = Sale(sale_id[0])
-            if sale:
-                with Transaction().set_user(1):
-                    context = User.get_preferences()
-                with Transaction().set_context(context, shop=sale.shop.id, _skip_warnings=True):
-                    print(sale)
-                    logging.warning(sale.id_tecno)
-                    cls.venta_mostrador(sale)
+            with Transaction().set_user(1):
+                context = User.get_preferences()
+            with Transaction().set_context(context, shop=sale.shop.id, _skip_warnings=True):
+                if sale.payment_term.id_tecno == '0':
+                    cls.set_payment_pos(sale)
+                    Sale.update_state([sale])
             #Se concilia si los pagos suman el total de la venta
             #if sale.payments:
             #    total_paid = sum([p.amount for p in sale.payments])
