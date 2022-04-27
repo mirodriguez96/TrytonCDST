@@ -1,5 +1,3 @@
-from http.client import CONTINUE
-from conector import Actualizacion
 from trytond.model import ModelView, ModelSQL, fields
 from trytond.pool import Pool, PoolMeta
 from trytond.exceptions import UserError
