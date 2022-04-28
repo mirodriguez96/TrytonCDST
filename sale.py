@@ -24,9 +24,9 @@ class Cron(metaclass=PoolMeta):
         cls.method.selection.append(
             ('sale.sale|import_data_sale', "Importar ventas"),
             )
-        #cls.method.selection.append(
-        #    ('sale.sale|update_pos_tecno', "Actualizar ventas POS"),
-        #    )
+        cls.method.selection.append(
+            ('sale.sale|update_pos_tecno', "Actualizar Terminal Ventas POS"),
+            )
         cls.method.selection.append(
             ('sale.sale|process_payment_pos', "Procesar pagos POS"),
             )
@@ -509,70 +509,43 @@ class Sale(metaclass=PoolMeta):
         User = pool.get('res.user')
         Sale = pool.get('sale.sale')
         cursor = Transaction().connection.cursor()
-        cursor.execute("SELECT id FROM sale_sale WHERE (number LIKE '152-%' or number LIKE '145-%') and state != 'done'")
+        cursor.execute("SELECT id, id_tecno FROM sale_sale WHERE (number LIKE '152-%' or number LIKE '145-%') and state != 'done' and state != 'draft'")
         result = cursor.fetchall()
         if not result:
             return
         for sale_id in result:
+            print(sale_id[0])
             sale = Sale(sale_id[0])
+            if not sale.sale_device:
+                print(sale_id[0], 'NO SALE_DEVICE')
+                continue
             with Transaction().set_user(1):
                 context = User.get_preferences()
             with Transaction().set_context(context, shop=sale.shop.id, _skip_warnings=True):
-                if not sale.sale_device:
-                    continue
-                if sale.payment_term.id_tecno == '0':
-                    cls.set_payment_pos(sale)
-                    Sale.update_state([sale])
-            #Se concilia si los pagos suman el total de la venta
-            #if sale.payments:
-            #    total_paid = sum([p.amount for p in sale.payments])
-            #    if total_paid >= sale.total_amount:
-            #        if total_paid == sale.total_amount:
-            #            Sale.do_reconcile([sale])
+                cls.set_payment_pos(sale)
+                Sale.update_state([sale])
         logging.warning('FINISH PROCESS POS')
-
     
-    #@classmethod
-    #def update_pos_tecno(cls):
-    #    logging.warning('RUN UPDATE POS')
-    #    pool = Pool()
-    #    Sale = pool.get('sale.sale')
-    #    Device = pool.get('sale.device')
-    #    Module = pool.get('ir.module')
-    #    sale_table = Table('sale_sale')
-    #    line_table = Table('sale_line')
-    #    cursor = Transaction().connection.cursor()
-    #    ventas = cls.get_datapos_tecno()
-    #    for venta in ventas:
-    #        id_tecno = str(venta.sw)+'-'+str(venta.tipo)+'-'+str(venta.Numero_documento)
-    #        sale, = Sale.search([('id_tecno', '=', id_tecno)])
-    #        #Se valida que haya encontrado una venta y tenga valores para actualizar
-    #        if hasattr(sale, 'sale_device') and venta.pc:
-    #            cls.force_draft([sale])
-    #            print(id_tecno)
-    #            sale_device = Device.search([('id_tecno', '=', venta.pc)])
-    #            if not sale_device:
-    #                raise UserError('ERROR VENTA POS', f'NO SE ENCONTRO LA TERMINAL {venta.pc} para {id_tecno}')
-    #            sale_device, = sale_device
-    #            cursor.execute(*sale_table.update(
-    #                columns=[sale_table.sale_device, sale_table.invoice_type, sale_table.invoice_date, sale_table.invoice_number],
-    #                values=[sale_device.id, 'P', sale.sale_date, sale.number],
-    #                where=sale_table.id == sale.id)
-    #            )
-    #            company_operation = Module.search([('name', '=', 'company_operation'), ('state', '=', 'activated')])
-    #            if company_operation:
-    #                CompanyOperation = pool.get('company.operation_center')
-    #                company_operation = CompanyOperation(1)
-    #                for line in sale.lines:
-    #                    if not line.operation_center:
-    #                        cursor.execute(*line_table.update(
-    #                            columns=[line_table.operation_center],
-    #                            values=[company_operation.id],
-    #                            where=line_table.id == line.id)
-    #                        )
-    #        else:
-    #            logging.warning(f'NO SE ENCONTRO VENTAS O EQUIPOS PARA REALIZAR LA ACTUALIZACION DE VENTA POS {id_tecno}')
-    #    logging.warning('FINISH UPDATE POS')
+    @classmethod
+    def update_pos_tecno(cls):
+        logging.warning('RUN UPDATE POS')
+        pool = Pool()
+        Sale = pool.get('sale.sale')
+        cursor = Transaction().connection.cursor()
+        cursor.execute("SELECT id, id_tecno FROM sale_sale WHERE (number LIKE '152-%' or number LIKE '145-%') and sale_device is null")
+        result = cursor.fetchall()
+        if not result:
+            return
+        for sale_id in result:
+            print(sale_id[0])
+            sale = Sale(sale_id[0])
+            if not sale.sale_device:
+                doc = cls.get_datapos_tecno(sale_id[1])
+                cursor.execute("SELECT id FROM sale_device WHERE id_tecno = '"+doc[0].pc+"'")
+                resultd = cursor.fetchone()
+                print(resultd[0])
+                cursor.execute("UPDATE sale_sale SET sale_device = "+str(resultd[0])+" WHERE id = "+str(sale_id[0]))
+        logging.warning('FINISH UPDATE POS')
 
     #Metodo encargado de obtener la forma en que se pago el comprobante (recibos)
     @classmethod
@@ -680,12 +653,10 @@ class Sale(metaclass=PoolMeta):
         Config.set_data(query)
     
     @classmethod
-    def get_datapos_tecno(cls,):
+    def get_datapos_tecno(cls, id):
         Config = Pool().get('conector.configuration')
-        config, = Config.search([], order=[('id', 'DESC')], limit=1)
-        fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
-        #consult = "SELECT * FROM dbo.Documentos WHERE (sw = 1 OR sw = 2) AND tipo = 140 AND Numero_documento > 49 AND Numero_documento < 236" #TEST
-        consult = "SET DATEFORMAT ymd SELECT sw, tipo, Numero_documento, pc FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND sw = 1 AND condicion = 0 AND (tipo = 145 OR tipo = 152) AND exportado = 'T'"
+        lista = id.split('-')
+        consult = "SELECT pc FROM dbo.Documentos WHERE sw ="+lista[0]+" and tipo = "+lista[1]+" and Numero_documento = "+lista[2]
         result = Config.get_data(consult)
         return result
 
