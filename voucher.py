@@ -85,14 +85,14 @@ class Voucher(ModelSQL, ModelView):
             party, = party
             tipo_pago = cls.get_tipo_pago(sw, doc.tipo, nro)
             if not tipo_pago:
-                msg = f"NO SE ENCONTRO LA FORMA DE PAGO EN LA TABLA DOCUMENTOS_CHE {id_tecno}"
+                msg = f"NO SE ENCONTRO FORMA(S) DE PAGO EN TECNOCARNES (DOCUMENTOS_CHE) PARA EL DOCUMENTO {id_tecno}"
                 logs.append(msg)
                 logging.error(msg)
                 continue
-            forma_pago = tipo_pago[0].forma_pago
-            paymode = PayMode.search([('id_tecno', '=', forma_pago)])
+            #for pago in tipo_pago: 
+            paymode = PayMode.search([('id_tecno', '=', tipo_pago[0].forma_pago)]) # REVISAR CRITICO ¿CUANDO HAY MAS DE 1 FORMA DE PAGO?
             if not paymode:
-                msg = f"NO SE ENCONTRO LA FORMA DE PAGO {forma_pago}"
+                msg = f"NO SE ENCONTRO LA FORMA DE PAGO {tipo_pago[0].forma_pago}"
                 logs.append(msg)
                 logging.error(msg)
                 continue
@@ -264,12 +264,10 @@ class Voucher(ModelSQL, ModelView):
             #Se obtiene la forma de pago, según la tabla Documentos_Che de TecnoCarnes
             tipo_pago = cls.get_tipo_pago(sw, doc.tipo, nro)
             if not tipo_pago:
-                msg = f"NO SE ENCONTRO LA FORMA DE PAGO EN LA TABLA DOCUMENTOS_CHE {id_tecno}"
+                msg = f"NO SE ENCONTRO FORMA(S) DE PAGO EN TECNOCARNES (DOCUMENTOS_CHE) PARA EL DOCUMENTO {id_tecno}"
                 logs.append(msg)
                 logging.error(msg)
-                continue
-            forma_pago = tipo_pago[0].forma_pago
-            
+                continue            
             fecha_date = cls.convert_fecha_tecno(doc.fecha_hora)
             if len(tipo_pago) > 1:
                 #continue
@@ -282,18 +280,16 @@ class Voucher(ModelSQL, ModelView):
                 multingreso.save()
                 #Se ingresa las formas de pago
                 for pago in tipo_pago:
-                    forma_pago = pago.forma_pago
-                    paymode = PayMode.search([('id_tecno', '=', forma_pago)])
+                    paymode = PayMode.search([('id_tecno', '=', pago.forma_pago)])
                     if not paymode:
-                        msg = f"NO SE ENCONTRO LA FORMA DE PAGO {forma_pago}"
+                        msg = f"NO SE ENCONTRO LA FORMA DE PAGO {pago.forma_pago}"
                         logs.append(msg)
                         logging.error(msg)
                         continue
-                    valor = pago.valor
                     transaction = Transaction()
                     transaction.multirevenue = multingreso
                     transaction.description = 'IMPORTACION TECNO'
-                    transaction.amount = Decimal(valor)
+                    transaction.amount = Decimal(pago.valor)
                     transaction.date = fecha_date
                     transaction.payment_mode = paymode[0]
                     transaction.save()
@@ -304,11 +300,10 @@ class Voucher(ModelSQL, ModelView):
                     move_line = cls.get_moveline(ref, tercero)
                     if move_line and rec.valor:
                         #valor pagado x la factura
-                        valor = Decimal(rec.valor)
                         create_line = {
                             'multirevenue': multingreso.id,
                             'move_line': move_line.id,
-                            'amount': valor,
+                            'amount': Decimal(rec.valor),
                             'original_amount': move_line.debit,
                             'is_prepayment': False,
                             'reference_document': ref,
@@ -316,29 +311,26 @@ class Voucher(ModelSQL, ModelView):
                         line, = MultiRevenueLine.create([create_line])
                         to_lines.append(line)
                     else:
-                        msg = f'NO SE ENCONTRO LA FACTURA {ref} EN TRYTON'
+                        msg = f'NO SE ENCONTRO LA FACTURA {ref} EN TRYTON. MULTI-INGRESO {id_tecno}'
                         logging.warning(msg)
                         logs.append(msg)
                 if to_lines:
                     multingreso.lines = to_lines
                     multingreso.save()
-                if multingreso.total_transaction and multingreso.total_lines_to_pay:
-                    #if multingreso.total_transaction <= multingreso.total_lines_to_pay:
-                        device = SaleDevice.search([('id_tecno', '=', doc.pc)])
-                        if not device:
-                            msg = f'NO SE ENCONTRO LA TERMINAL {doc.pc}'
-                            logs.append(msg)
-                            logging.error(msg)
-                            continue
-                        MultiRevenue.add_statement(multingreso, device[0])
-                    #else:
-                    #    msg1 = f'Total de pago es mayor al total a pagar en el multi-ingreso: {id_tecno}'
-                    #    logs.append(msg1)
+                if multingreso.transactions and multingreso.lines:
+                    device = SaleDevice.search([('id_tecno', '=', doc.pc)])
+                    if not device:
+                        msg = f'NO SE ENCONTRO LA TERMINAL {doc.pc}'
+                        logs.append(msg)
+                        logging.error(msg)
+                        continue
+                    MultiRevenue.add_statement(multingreso, device[0])
                 else:
                     msg = f'REVISAR EL COMPROBANTE MULTI-INGRESO {id_tecno}'
                     logs.append(msg)
                 created.append(id_tecno)
-            elif len(tipo_pago) == 1:                
+            elif len(tipo_pago) == 1:
+                #continue
                 print('VOUCHER:', id_tecno)
                 forma_pago = tipo_pago[0].forma_pago
                 paymode = PayMode.search([('id_tecno', '=', forma_pago)])
@@ -566,7 +558,7 @@ class Voucher(ModelSQL, ModelView):
         Config = Pool().get('conector.configuration')
         config = Config(1)
         fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
-        #consult = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE sw = 5 AND fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado != 'T' ORDER BY fecha_hora ASC" #TEST
+        #consult = "SET DATEFORMAT ymd SELECT TOP(10) * FROM dbo.Documentos WHERE sw = 5 AND fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado != 'T' ORDER BY fecha_hora ASC" #TEST
         consult = "SET DATEFORMAT ymd SELECT TOP(200) * FROM dbo.Documentos WHERE sw = 5 AND fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado != 'T' ORDER BY fecha_hora ASC"
         data = Config.get_data(consult)
         return data
@@ -662,13 +654,13 @@ class MultiRevenue(metaclass=PoolMeta):
     __name__ = 'account.multirevenue'
     id_tecno = fields.Char('Id Tabla Sqlserver', required=False)
 
-    #Función encargada de enviar las facturas a ser pagadas con su respectivo pago al estado de cuenta
+    # Función encargada de enviar las facturas a ser pagadas con su respectivo pago al estado de cuenta
     @classmethod
     def add_statement(cls, multirevenue, device):
         lines_to_add = {}
         pool = Pool()
         Sale = pool.get('sale.sale')
-        #Statement = pool.get('account.statement')
+        # Statement = pool.get('account.statement')
         StatementeJournal = pool.get('account.statement.journal')
         lines_created = {}
         line_paid = []
@@ -680,24 +672,28 @@ class MultiRevenue(metaclass=PoolMeta):
                 'journal': statement_journal
             }
             statement, = Sale.search_or_create_statement(args_statement)
-            amount_tr = transaction.amount
+            amount_tr = transaction.amount # Total pagado x forma de pago
             lines_created[transaction.id] = {'ids': []}
             for line in multirevenue.lines:
-                #Se valida que la linea no se haya 'pagado' o tenga un 'valor pagado'
-                if line.id in line_paid or not line.amount:
+                # Se valida que la linea no se haya 'pagado' o tenga un 'valor pagado'
+                if line.id in line_paid or line.amount == 0:
+                    print(line.reference)
                     continue
                 if transaction.id not in lines_to_add.keys():
                     lines_to_add[transaction.id] = {'sales': {}}
                     lines_to_add[transaction.id]['statement'] = statement.id
                     lines_to_add[transaction.id]['date'] = transaction.date
                 net_payment = line.amount
-                if net_payment < amount_tr:
+                if net_payment <= amount_tr:
                     _line_amount = line.amount
+                    line.amount = 0
+                    line.save()
                     amount_tr -= net_payment
                     line_paid.append(line.id)
                 else:
                     _line_amount = amount_tr
                     line.amount = line.amount - _line_amount
+                    line.save()
                     amount_tr = 0
                 if line.move_line:
                     sale, = line.origin.sales
@@ -710,3 +706,31 @@ class MultiRevenue(metaclass=PoolMeta):
                     break
         for key in lines_to_add.keys():
             Sale.multipayment_invoices_statement(lines_to_add[key])
+
+
+    #Reimportar multi-ingresos
+    @classmethod
+    def mark_rimport(cls, multirevenue):
+        move_line_table = Table('account_move_line')
+        statement_line = Table('account_statement_line')
+        cursor = Transaction().connection.cursor()
+        for multi in multirevenue:
+            print(multi.id_tecno)
+            for line in multi.lines:
+                sale, = line.origin.sales
+                print(sale)
+                invoice = line.origin
+                if invoice and invoice.state == 'paid':
+                    for movel in invoice.move.lines:
+                        if movel.account.party_required and not movel.party:
+                            cursor.execute(*move_line_table.update(
+                                columns=[move_line_table.party],
+                                values=[invoice.party.id],
+                                where=move_line_table.id == movel.id)
+                            )
+                    sale.unreconcile_move(invoice.move)
+                if sale.payments:
+                    for payment in sale.payments:
+                        cursor.execute(*statement_line.delete(
+                                where=statement_line.id == payment.id)
+                            )

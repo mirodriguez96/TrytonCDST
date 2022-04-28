@@ -3,7 +3,6 @@ from trytond.transaction import Transaction
 from trytond.pool import Pool
 from sql import Table
 import datetime
-from sql.aggregate import Count
 
 
 __all__ = [
@@ -108,7 +107,7 @@ class Actualizacion(ModelSQL, ModelView):
         result = cursor.fetchone()[0]
         if result:
             return result
-        return 0
+        return None
 
     #@classmethod
     def getter_not_imported(self, name):

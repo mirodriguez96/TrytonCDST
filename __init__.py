@@ -68,6 +68,8 @@ def register():
         wiz.DeleteImportRecords,
         wiz.DeleteAccountType,
         wiz.CheckImportedDoc,
+        wiz.MarkImportMulti,
+        wiz.MoveFixParty,
         #report.PortfolioStatus,
         report.PayrollExport,
         module='conector', type_='wizard')
