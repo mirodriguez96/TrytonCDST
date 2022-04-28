@@ -518,6 +518,8 @@ class Sale(metaclass=PoolMeta):
             with Transaction().set_user(1):
                 context = User.get_preferences()
             with Transaction().set_context(context, shop=sale.shop.id, _skip_warnings=True):
+                if not sale.sale_device:
+                    continue
                 if sale.payment_term.id_tecno == '0':
                     cls.set_payment_pos(sale)
                     Sale.update_state([sale])
