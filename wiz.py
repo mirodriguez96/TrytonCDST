@@ -1,4 +1,3 @@
-import invoice
 from trytond.wizard import Wizard, StateTransition
 from trytond.pool import Pool
 from trytond.transaction import Transaction
