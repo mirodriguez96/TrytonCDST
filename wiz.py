@@ -102,16 +102,22 @@ class MoveFixParty(Wizard): # ACTUALIZAR PARA SOLUCIONAR ASIENTOS DE CUALLQUIER 
             raise UserWarning(warning_name, "A continuación se asignara a las lineas de los asientos (ORIGEN=FACTURA) el tercero de la factura, en las cuentas que lo requieran.")
         ids = Transaction().context['active_ids']
         if ids:
-            for move in Move.browse(ids):
-                if move.origin and move.origin.__name__ == 'account.invoice':
-                    for movel in move.lines:
+            cursor.execute("SELECT id FROM account_move WHERE origin LIKE 'account.invoice,%'")
+            result = cursor.fetchall()
+            if not result:
+                return
+            for move_id in result:
+                #print(move_id[0])
+                move = Move(move_id[0])
+                #if move.origin and move.origin.__name__ == 'account.invoice':
+                for movel in move.lines:
                         if movel.account.party_required and not movel.party:
                             cursor.execute(*move_line_table.update(
                                 columns=[move_line_table.party],
                                 values=[move.origin.party.id],
                                 where=move_line_table.id == movel.id)
                             )
-                            print(move.number)
+                            #print(move.number)
                         # Proceso contrario
                         #if not movel.account.party_required and movel.party:
                         #    cursor.execute(*move_line_table.update(
