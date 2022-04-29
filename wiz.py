@@ -111,21 +111,21 @@ class MoveFixParty(Wizard): # ACTUALIZAR PARA SOLUCIONAR ASIENTOS DE CUALLQUIER 
                 move = Move(move_id[0])
                 #if move.origin and move.origin.__name__ == 'account.invoice':
                 for movel in move.lines:
-                        if movel.account.party_required and not movel.party:
-                            cursor.execute(*move_line_table.update(
-                                columns=[move_line_table.party],
-                                values=[move.origin.party.id],
-                                where=move_line_table.id == movel.id)
-                            )
-                            #print(move.number)
-                        # Proceso contrario
-                        #if not movel.account.party_required and movel.party:
-                        #    cursor.execute(*move_line_table.update(
-                        #        columns=[move_line_table.party],
-                        #        values=[None],
-                        #        where=move_line_table.id == movel.id)
-                        #    )
-                        #    print(move.number)
+                    if movel.account.party_required and not movel.party:
+                        cursor.execute(*move_line_table.update(
+                            columns=[move_line_table.party],
+                            values=[move.origin.party.id],
+                            where=move_line_table.id == movel.id)
+                        )
+                        #print(move.number)
+                    # Proceso contrario
+                    #if not movel.account.party_required and movel.party:
+                    #    cursor.execute(*move_line_table.update(
+                    #        columns=[move_line_table.party],
+                    #        values=[None],
+                    #        where=move_line_table.id == movel.id)
+                    #    )
+                    #    print(move.number)
         return 'end'
 
 

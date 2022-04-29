@@ -5,8 +5,8 @@ from trytond.transaction import Transaction
 from decimal import Decimal
 import logging
 from sql import Table
-
 import datetime
+
 
 __all__ = [
     'Voucher',
@@ -68,6 +68,7 @@ class Voucher(ModelSQL, ModelView):
             if comprobante:
                 msg = f"EL DOCUMENTO {id_tecno} YA EXISTIA EN TRYTON"
                 logs.append(msg)
+                created.append(id_tecno)
                 continue
             facturas = cls.get_dcto_cruce("sw="+sw+" and tipo="+doc.tipo+" and numero="+nro)
             if not facturas:
@@ -247,6 +248,7 @@ class Voucher(ModelSQL, ModelView):
             if comprobante:
                 msg = f"EL DOCUMENTO {id_tecno} YA EXISTIA EN TRYTON"
                 logs.append(msg)
+                created.append(id_tecno)
                 continue
             facturas = cls.get_dcto_cruce("sw="+sw+" and tipo="+doc.tipo+" and numero="+nro)
             if not facturas:
@@ -277,8 +279,10 @@ class Voucher(ModelSQL, ModelView):
                 multingreso.party = tercero
                 multingreso.date = fecha_date
                 multingreso.id_tecno = id_tecno
-                multingreso.save()
-                #Se ingresa las formas de pago
+                #multingreso.save()
+                #Se ingresa las formas de pago (transacciones)
+                to_transactions = []
+                doble_fp = False
                 for pago in tipo_pago:
                     paymode = PayMode.search([('id_tecno', '=', pago.forma_pago)])
                     if not paymode:
@@ -286,29 +290,34 @@ class Voucher(ModelSQL, ModelView):
                         logs.append(msg)
                         logging.error(msg)
                         continue
+                    for existr in to_transactions:
+                        if existr.payment_mode == paymode[0]:
+                            existr.amount += Decimal(pago.valor)
+                            doble_fp = True
+                            continue
+                    if doble_fp:
+                        continue
                     transaction = Transaction()
                     transaction.multirevenue = multingreso
                     transaction.description = 'IMPORTACION TECNO'
                     transaction.amount = Decimal(pago.valor)
                     transaction.date = fecha_date
                     transaction.payment_mode = paymode[0]
-                    transaction.save()
-                to_lines = []
+                    to_transactions.append(transaction)
+                if to_transactions:
+                    multingreso.transactions = to_transactions
                 #Se ingresa las lineas a pagar
+                to_lines = []
                 for rec in facturas:
                     ref = rec.tipo_aplica+'-'+str(rec.numero_aplica)
                     move_line = cls.get_moveline(ref, tercero)
                     if move_line and rec.valor:
-                        #valor pagado x la factura
-                        create_line = {
-                            'multirevenue': multingreso.id,
-                            'move_line': move_line.id,
-                            'amount': Decimal(rec.valor),
-                            'original_amount': move_line.debit,
-                            'is_prepayment': False,
-                            'reference_document': ref,
-                        }
-                        line, = MultiRevenueLine.create([create_line])
+                        line = MultiRevenueLine()
+                        line.move_line = move_line
+                        line.amount = Decimal(rec.valor)
+                        line.original_amount = move_line.debit
+                        line.is_prepayment = False
+                        line.reference_document = ref
                         to_lines.append(line)
                     else:
                         msg = f'NO SE ENCONTRO LA FACTURA {ref} EN TRYTON. MULTI-INGRESO {id_tecno}'
@@ -316,7 +325,7 @@ class Voucher(ModelSQL, ModelView):
                         logs.append(msg)
                 if to_lines:
                     multingreso.lines = to_lines
-                    multingreso.save()
+                multingreso.save()
                 if multingreso.transactions and multingreso.lines:
                     device = SaleDevice.search([('id_tecno', '=', doc.pc)])
                     if not device:
@@ -558,7 +567,7 @@ class Voucher(ModelSQL, ModelView):
         Config = Pool().get('conector.configuration')
         config = Config(1)
         fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
-        #consult = "SET DATEFORMAT ymd SELECT TOP(10) * FROM dbo.Documentos WHERE sw = 5 AND fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado != 'T' ORDER BY fecha_hora ASC" #TEST
+        #consult = "SET DATEFORMAT ymd SELECT TOP(2) * FROM dbo.Documentos WHERE sw = 5 AND fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado != 'T' AND tipo = 117 AND Numero_documento = 5 ORDER BY fecha_hora ASC" #TEST
         consult = "SET DATEFORMAT ymd SELECT TOP(200) * FROM dbo.Documentos WHERE sw = 5 AND fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado != 'T' ORDER BY fecha_hora ASC"
         data = Config.get_data(consult)
         return data
@@ -660,9 +669,7 @@ class MultiRevenue(metaclass=PoolMeta):
         lines_to_add = {}
         pool = Pool()
         Sale = pool.get('sale.sale')
-        # Statement = pool.get('account.statement')
         StatementeJournal = pool.get('account.statement.journal')
-        lines_created = {}
         line_paid = []
         for transaction in multirevenue.transactions:
             statement_journal, = StatementeJournal.search([('id_tecno', '=', transaction.payment_mode.id_tecno)])
@@ -673,22 +680,19 @@ class MultiRevenue(metaclass=PoolMeta):
             }
             statement, = Sale.search_or_create_statement(args_statement)
             amount_tr = transaction.amount # Total pagado x forma de pago
-            lines_created[transaction.id] = {'ids': []}
             for line in multirevenue.lines:
                 # Se valida que la linea no se haya 'pagado' o tenga un 'valor pagado'
                 if line.id in line_paid or line.amount == 0:
-                    print(line.reference)
                     continue
                 if transaction.id not in lines_to_add.keys():
                     lines_to_add[transaction.id] = {'sales': {}}
                     lines_to_add[transaction.id]['statement'] = statement.id
                     lines_to_add[transaction.id]['date'] = transaction.date
-                net_payment = line.amount
-                if net_payment <= amount_tr:
+                if line.amount <= amount_tr:
                     _line_amount = line.amount
                     line.amount = 0
                     line.save()
-                    amount_tr -= net_payment
+                    amount_tr -= line.amount
                     line_paid.append(line.id)
                 else:
                     _line_amount = amount_tr
@@ -700,10 +704,9 @@ class MultiRevenue(metaclass=PoolMeta):
                     lines_to_add[transaction.id]['sales'][sale] = _line_amount
                 else:
                     raise UserError('multirevenue.msg_without_invoice')
-                    lines_to_add[transaction.id]['sales'][line.origin.sales[0].id] = _line_amount
-                lines_created[transaction.id]['ids'].append(line.id)
-                if amount_tr == 0:
+                if amount_tr <= 0:
                     break
+        print(lines_to_add)
         for key in lines_to_add.keys():
             Sale.multipayment_invoices_statement(lines_to_add[key])
 
@@ -711,26 +714,25 @@ class MultiRevenue(metaclass=PoolMeta):
     #Reimportar multi-ingresos
     @classmethod
     def mark_rimport(cls, multirevenue):
-        move_line_table = Table('account_move_line')
-        statement_line = Table('account_statement_line')
-        cursor = Transaction().connection.cursor()
+        pool = Pool()
+        Conexion = pool.get('conector.configuration')
+        MultiRevenue = pool.get('account.multirevenue')
+        Line = pool.get('account.multirevenue.line')
+        Transaction = pool.get('account.multirevenue.transaction')
+        StatementLine = pool.get('account.statement.line')
         for multi in multirevenue:
-            print(multi.id_tecno)
+            #print(multi.id_tecno)
+            lista = multi.id_tecno.split('-')
+            consult = "UPDATE dbo.Documentos SET exportado = 'S' WHERE sw ="+lista[0]+" and tipo = "+lista[1]+" and Numero_documento = "+lista[2]
+            Conexion.set_data(consult)
             for line in multi.lines:
                 sale, = line.origin.sales
-                print(sale)
+                #print(sale)
                 invoice = line.origin
                 if invoice and invoice.state == 'paid':
-                    for movel in invoice.move.lines:
-                        if movel.account.party_required and not movel.party:
-                            cursor.execute(*move_line_table.update(
-                                columns=[move_line_table.party],
-                                values=[invoice.party.id],
-                                where=move_line_table.id == movel.id)
-                            )
                     sale.unreconcile_move(invoice.move)
                 if sale.payments:
-                    for payment in sale.payments:
-                        cursor.execute(*statement_line.delete(
-                                where=statement_line.id == payment.id)
-                            )
+                    StatementLine.delete(sale.payments)
+            Line.delete(multi.lines)
+            Transaction.delete(multi.transactions)
+            MultiRevenue.delete([multi])

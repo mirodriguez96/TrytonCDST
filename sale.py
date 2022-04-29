@@ -24,12 +24,12 @@ class Cron(metaclass=PoolMeta):
         cls.method.selection.append(
             ('sale.sale|import_data_sale', "Importar ventas"),
             )
-        cls.method.selection.append(
-            ('sale.sale|update_pos_tecno', "Actualizar Terminal Ventas POS"),
-            )
-        cls.method.selection.append(
-            ('sale.sale|process_payment_pos', "Procesar pagos POS"),
-            )
+        #cls.method.selection.append(
+        #    ('sale.sale|update_pos_tecno', "Actualizar Terminal Ventas POS"),
+        #    )
+        #cls.method.selection.append(
+        #    ('sale.sale|process_payment_pos', "Procesar pagos POS"),
+        #    )
 
 
 #Heredamos del modelo sale.sale para agregar el campo id_tecno
@@ -407,6 +407,7 @@ class Sale(metaclass=PoolMeta):
         return statement
 
 
+    # Metodo encargado de pagar multiples facturas con multiples formas de pago
     @classmethod
     def multipayment_invoices_statement(cls, args, context=None):
         pool = Pool()
@@ -453,7 +454,7 @@ class Sale(metaclass=PoolMeta):
             else:
                 dif = Decimal(total_paid + total_pay) - sale.total_amount
                 dif = Decimal(abs(dif))
-                if dif < Decimal(600.0):
+                if dif < Decimal(600.0) and dif != 0:
                     total_pay = sale.total_amount
             if not sale.invoice or (sale.invoice.state != 'posted' and sale.invoice.state != 'paid'):
                 Sale.post_invoice(sale)
