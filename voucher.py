@@ -116,7 +116,7 @@ class Voucher(ModelSQL, ModelView):
             
             for rec in facturas:
                 ref = rec.tipo_aplica+'-'+str(rec.numero_aplica)
-                move_line = cls.get_moveline(ref, party)
+                move_line = cls.get_moveline(ref, party, logs)
                 if not move_line:
                     msg1 = f'NO SE ENCONTRO LA FACTURA {ref} EN TRYTON'
                     logging.warning(msg1)
@@ -310,7 +310,7 @@ class Voucher(ModelSQL, ModelView):
                 to_lines = []
                 for rec in facturas:
                     ref = rec.tipo_aplica+'-'+str(rec.numero_aplica)
-                    move_line = cls.get_moveline(ref, tercero)
+                    move_line = cls.get_moveline(ref, tercero, logs)
                     if move_line and rec.valor:
                         line = MultiRevenueLine()
                         line.move_line = move_line
@@ -364,7 +364,7 @@ class Voucher(ModelSQL, ModelView):
                 valor_aplicado = Decimal(doc.valor_aplicado)
                 for rec in facturas:
                     ref = rec.tipo_aplica+'-'+str(rec.numero_aplica)
-                    move_line = cls.get_moveline(ref, tercero)
+                    move_line = cls.get_moveline(ref, tercero, logs)
                     if not move_line:
                         msg = f'NO SE ENCONTRO LA FACTURA {ref} EN TRYTON'
                         logging.warning(msg)
@@ -474,7 +474,7 @@ class Voucher(ModelSQL, ModelView):
 
     #Se obtiene las lineas de la factura que se desea pagar
     @classmethod
-    def get_moveline(cls, reference, party):
+    def get_moveline(cls, reference, party, logs):
         #print(reference)
         pool = Pool()
         Invoice = pool.get('account.invoice')
@@ -497,8 +497,11 @@ class Voucher(ModelSQL, ModelView):
         moveline = MoveLine.search([('reference', '=', reference), ('party', '=', party)])
         if moveline:
             if len(moveline) > 1:
-                raise UserError("Error factura en saldos iniciales", "Esperaba una (reference) linea de movimiento y obtuvo muchas !")
-            print("SALDOS INICIALES")
+                msg = f"Esperaba unica referencia ({reference}) en linea de movimiento (saldos iniciales) y obtuvo muchas !"
+                logs.append(msg)
+                return False
+                raise UserError("Error factura en saldos iniciales", f"Esperaba unica referencia ({reference}) linea de movimiento y obtuvo muchas !")
+            #print("SALDOS INICIALES")
             moveline, = moveline
             return moveline
         else:
@@ -568,7 +571,7 @@ class Voucher(ModelSQL, ModelView):
         config = Config(1)
         fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
         #consult = "SET DATEFORMAT ymd SELECT TOP(2) * FROM dbo.Documentos WHERE sw = 5 AND fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado != 'T' AND tipo = 117 AND Numero_documento = 5 ORDER BY fecha_hora ASC" #TEST
-        consult = "SET DATEFORMAT ymd SELECT TOP(200) * FROM dbo.Documentos WHERE sw = 5 AND fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado != 'T' ORDER BY fecha_hora ASC"
+        consult = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE sw = 5 AND fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado != 'T' ORDER BY fecha_hora ASC"
         data = Config.get_data(consult)
         return data
 
@@ -579,7 +582,7 @@ class Voucher(ModelSQL, ModelView):
         config = Config(1)
         fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
         #consult = "SET DATEFORMAT ymd SELECT * FROM dbo.Documentos WHERE sw = 6 AND fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado != 'T' AND tipo = 149" #TEST
-        consult = "SET DATEFORMAT ymd SELECT TOP(200) * FROM dbo.Documentos WHERE sw = 6 AND fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado != 'T' ORDER BY fecha_hora ASC"
+        consult = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE sw = 6 AND fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado != 'T' ORDER BY fecha_hora ASC"
         data = Config.get_data(consult)
         return data
 
@@ -706,7 +709,7 @@ class MultiRevenue(metaclass=PoolMeta):
                     raise UserError('multirevenue.msg_without_invoice')
                 if amount_tr <= 0:
                     break
-        print(lines_to_add)
+        #print(lines_to_add)
         for key in lines_to_add.keys():
             Sale.multipayment_invoices_statement(lines_to_add[key])
 
