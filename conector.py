@@ -100,6 +100,11 @@ class Actualizacion(ModelSQL, ModelView):
             cursor.execute("SELECT COUNT(*) FROM purchase_purchase WHERE id_tecno LIKE '%-%'")
         elif self.name == 'COMPROBANTES DE INGRESO':
             cursor.execute("SELECT COUNT(*) FROM account_voucher WHERE id_tecno LIKE '5-%'")
+            quantity = int(cursor.fetchone()[0])
+            cursor.execute("SELECT COUNT(*) FROM account_multirevenue WHERE id_tecno LIKE '5-%'")
+            quantity2 = int(cursor.fetchone()[0])
+            quantity += quantity2
+            return quantity
         elif self.name == 'COMPROBANTES DE EGRESO':
             cursor.execute("SELECT COUNT(*) FROM account_voucher WHERE id_tecno LIKE '6-%'")
         else:

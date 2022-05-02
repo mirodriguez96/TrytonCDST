@@ -20,6 +20,8 @@ TYPES_FILE = [
     ('products', 'Products'),
     ('balances', 'Balances'),
     ('accounts', 'Accounts'),
+    ('product_costs', 'Product costs'),
+    ('inventory', "Inventory"),
 ]
 
 class Configuration(ModelSQL, ModelView):
@@ -118,8 +120,12 @@ class Configuration(ModelSQL, ModelView):
                     cls.import_csv_balances(lineas)
                 elif config.type_file == "accounts":
                     cls.import_csv_accounts(lineas)
+                elif config.type_file == "product_costs":
+                    cls.import_csv_product_costs(lineas)
+                elif config.type_file == "inventory":
+                    cls.import_csv_inventory(lineas)
                 else:
-                    raise UserError('Importación de archivo: ', 'Seleccione el tipo de importación')
+                    raise UserError('Importar archivo: ', 'Seleccione el tipo de importación')
             else:
                 raise UserError('Importación de archivo: ', 'Agregue un archivo para importar')
 
@@ -441,3 +447,75 @@ class Configuration(ModelSQL, ModelView):
             return False
         if int(val) == 1:
             return True
+
+
+    @classmethod
+    def import_csv_product_costs(cls, lineas):
+        pool = Pool()
+        Product = pool.get('product.product')
+        ProductTemplate = pool.get('product.template')
+        ModifyCost = pool.get('product.modify_cost_price', type='wizard')
+        _id, _, _ = ModifyCost.create()
+        modify_cost = ModifyCost(_id)
+        for linea in lineas:
+            linea = linea.strip()
+            if not linea:
+                continue            
+            linea = linea.split(';')
+            if len(linea) != 3:
+                raise UserError('Error plantilla', ' code_product | cost | date ')
+            code_product = linea[0]
+            template = ProductTemplate.search([('code', '=', code_product)])
+            if not template:
+                raise UserError("ERROR PRODUCTO", f"No se encontro el producto con código {code_product}")
+            product, = Product.search([('template', '=', template[0])])
+            cost = Decimal(linea[1])
+            if not cost or cost == 0:
+                raise UserError("ERROR COSTO", f"No se encontro el costo para el producto con código {code_product}")
+            date = cls.convert_str_date(linea[2])
+            # Se procede a ejecutar el asistente
+            modify_cost.model = Product
+            modify_cost.records = [product]
+            modify_cost.start.date = date
+            modify_cost.start.cost_price = cost
+            modify_cost.transition_modify()
+
+
+    @classmethod
+    def import_csv_inventory(cls, lineas):
+        pool = Pool()
+        Inventory = pool.get('stock.inventory')
+        Line = pool.get('stock.inventory.line')
+        Location = pool.get('stock.location')
+        Product = pool.get('product.product')
+        ProductTemplate = pool.get('product.template')
+        inventory = Inventory()
+        to_lines = []
+        first = True
+        for linea in lineas:
+            linea = linea.strip()
+            if not linea:
+                continue            
+            linea = linea.split(';')
+            if len(linea) != 4:
+                raise UserError('Error plantilla', ' location | date | product | quantity ')
+            # Se verifica que es la primera linea para crear el inventario
+            if first:
+                location, = Location.search([('name', '=', linea[0].strip())])
+                inventory.location = location
+                date = cls.convert_str_date(linea[1])
+                inventory.date = date
+                first = False
+            line = Line()
+            code_product = linea[2]
+            template = ProductTemplate.search([('code', '=', code_product)])
+            if not template:
+                raise UserError("ERROR PRODUCTO", f"No se encontro el producto con código {code_product}")
+            product, = Product.search([('template', '=', template[0])])
+            line.product = product
+            line.quantity = Decimal(linea[3])
+            to_lines.append(line)
+        if to_lines:
+            inventory.lines = to_lines
+            inventory.save()
+        print('FIN')
