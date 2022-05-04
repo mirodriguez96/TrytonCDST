@@ -787,7 +787,8 @@ class MultiRevenue(metaclass=PoolMeta):
                 voucher, = Voucher.create([voucher_to_create[key][line_id]])
                 voucher.on_change_lines()
                 Voucher.process([voucher])
-                Voucher.post([voucher])
+                if voucher.amount_to_pay > Decimal("0.0"):
+                    Voucher.post([voucher])
 
 
     #Reimportar multi-ingresos
