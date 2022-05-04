@@ -729,7 +729,7 @@ class Sale(metaclass=PoolMeta):
                     invoice.electronic_state == 'submitted':
                         raise UserError('account_col.msg_with_electronic_invoice')
                 if invoice.state == 'paid':
-                    cls.unreconcile_move(invoice.move)
+                    sale.unreconcile_move(invoice.move)
                 if invoice.move:
                     cursor.execute(*move_table.update(
                         columns=[move_table.state],
@@ -792,11 +792,3 @@ class Sale(metaclass=PoolMeta):
             cursor.execute(*sale_table.delete(
                     where=sale_table.id == sale.id)
                 )
-
-
-    @classmethod
-    def unreconcile_move(self, move):
-        Reconciliation = Pool().get('account.move.reconciliation')
-        reconciliations = [l.reconciliation for l in move.lines if l.reconciliation]
-        if reconciliations:
-            Reconciliation.delete(reconciliations)
