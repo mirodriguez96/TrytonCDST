@@ -237,13 +237,14 @@ class Voucher(ModelSQL, ModelView):
                         valor_pagado = Decimal(rec.valor + rec.descuento + rec.retencion + (rec.ajuste*-1) + rec.retencion_iva + rec.retencion_ica)
                         line = MultiRevenueLine()
                         line.move_line = move_line
-                        if valor_pagado > move_line.debit:
-                            valor_pagado = move_line.debit
+                        amount_to_pay = Decimal(move_line.move.origin.amount_to_pay)
+                        if valor_pagado > amount_to_pay:
+                            valor_pagado = amount_to_pay
                         line.amount = valor_pagado
-                        line.original_amount = move_line.debit
+                        line.original_amount = amount_to_pay
                         line.is_prepayment = False
                         line.reference_document = ref
-                        line.others_concepts = cls.get_others_tecno(rec, move_line.debit)
+                        line.others_concepts = cls.get_others_tecno(rec, amount_to_pay)
                         to_lines.append(line)
                     else:
                         msg = f'NO SE ENCONTRO LA FACTURA {ref} EN TRYTON O REVISA SU VALOR {str(rec.valor)}. MULTI-INGRESO {id_tecno}'
