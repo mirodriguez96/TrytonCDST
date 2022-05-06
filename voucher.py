@@ -591,6 +591,7 @@ class Voucher(ModelSQL, ModelView):
         data = Config.get_data(consult)
         return data
 
+
     @classmethod
     def force_draft_voucher(cls, vouchers):
         pool = Pool()
@@ -604,7 +605,7 @@ class Voucher(ModelSQL, ModelView):
         Voucher.draft(vouchers)
         Voucher.save(vouchers)
         
-    #
+
     @classmethod
     def delete_imported_vouchers(cls, vouchers):
         pool = Pool()
@@ -612,10 +613,10 @@ class Voucher(ModelSQL, ModelView):
         Conexion = pool.get('conector.configuration')
 
         for voucher in vouchers:
-            # Se marca en la base de datos de importación como no exportado y se elimina
-            #lista = voucher.id_tecno.split('-')
-            #consult = "UPDATE dbo.Documentos SET exportado = 'S' WHERE exportado = 'T' and sw ="+lista[0]+" and tipo = "+lista[1]+" and Numero_documento = "+lista[2]
-            #Conexion.set_data(consult)
+            # Se marca en la base de datos de importación como NO exportado y se elimina
+            lista = voucher.id_tecno.split('-')
+            consult = "UPDATE dbo.Documentos SET exportado = 'S' WHERE exportado = 'T' and sw ="+lista[0]+" and tipo = "+lista[1]+" and Numero_documento = "+lista[2]
+            Conexion.set_data(consult)
             cls.force_draft_voucher([voucher])
         Voucher.delete(vouchers)
 
