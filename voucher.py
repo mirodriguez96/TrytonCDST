@@ -195,7 +195,7 @@ class Voucher(ModelSQL, ModelView):
                 continue            
             fecha_date = cls.convert_fecha_tecno(doc.fecha_hora)
             if len(tipo_pago) > 1:
-                #continue
+                continue
                 print('MULTI-INGRESO:', id_tecno)
                 multingreso = MultiRevenue()
                 multingreso.code = tipo+'-'+nro
@@ -590,43 +590,34 @@ class Voucher(ModelSQL, ModelView):
         consult = "SELECT * FROM dbo.Documentos_Che WHERE sw="+sw+" AND tipo="+tipo+" AND numero="+nro
         data = Config.get_data(consult)
         return data
+
+    @classmethod
+    def force_draft_voucher(cls, vouchers):
+        pool = Pool()
+        Voucher = pool.get('account.voucher')
+        Move = pool.get('account.move')
+        for voucher in vouchers:
+            if voucher.move:
+                Move.draft([voucher.move.id])
+                Move.delete([voucher.move])
+            voucher.number = None
+        Voucher.draft(vouchers)
+        Voucher.save(vouchers)
         
     #
     @classmethod
     def delete_imported_vouchers(cls, vouchers):
-        bank_statement_line = Table('bank_statement_line_account_move_line')
-        account_move = Table('account_move')
-        voucher_table = Table('account_voucher')
-        voucher_line_table = Table('account_voucher_line')
-        cursor = Transaction().connection.cursor()
-        Conexion = Pool().get('conector.configuration')
+        pool = Pool()
+        Voucher = pool.get('account.voucher')
+        Conexion = pool.get('conector.configuration')
 
         for voucher in vouchers:
             # Se marca en la base de datos de importación como no exportado y se elimina
-            lista = voucher.id_tecno.split('-')
-            consult = "UPDATE dbo.Documentos SET exportado = 'S' WHERE exportado = 'T' and sw ="+lista[0]+" and tipo = "+lista[1]+" and Numero_documento = "+lista[2]
-            Conexion.set_data(consult)
-
-            if voucher.move:
-                #Se requiere desconciliar el asiento antes de eliminarlo
-                #cls.unreconcile_move(voucher.move)
-                #Se verifica si hay lineas y se eliminan sus relaciones con la tabla bank_statement_line_account_move_line
-                if voucher.move.lines:
-                    for move_line in voucher.move.lines:
-                        cursor.execute(*bank_statement_line.delete(
-                            where=bank_statement_line.move_line == move_line.id)
-                        )
-                #Se elimina el asiento
-                cursor.execute(*account_move.delete(
-                            where=account_move.id == voucher.move.id)
-                    )
-            #Se elimina el comprobante y sus lineas
-            cursor.execute(*voucher_line_table.delete(
-                where=voucher_line_table.voucher == voucher.id)
-            )
-            cursor.execute(*voucher_table.delete(
-                where=voucher_table.id == voucher.id)
-            )
+            #lista = voucher.id_tecno.split('-')
+            #consult = "UPDATE dbo.Documentos SET exportado = 'S' WHERE exportado = 'T' and sw ="+lista[0]+" and tipo = "+lista[1]+" and Numero_documento = "+lista[2]
+            #Conexion.set_data(consult)
+            cls.force_draft_voucher([voucher])
+        Voucher.delete(vouchers)
 
 
 class VoucherConfiguration(metaclass=PoolMeta):
@@ -799,9 +790,9 @@ class MultiRevenue(metaclass=PoolMeta):
         pool = Pool()
         #Sale = pool.get('sale.sale')
         Conexion = pool.get('conector.configuration')
-        #MultiRevenue = pool.get('account.multirevenue')
-        #Line = pool.get('account.multirevenue.line')
-        #Transaction = pool.get('account.multirevenue.transaction')
+        MultiRevenue = pool.get('account.multirevenue')
+        Line = pool.get('account.multirevenue.line')
+        Transaction = pool.get('account.multirevenue.transaction')
         #StatementLine = pool.get('account.statement.line')
         for multi in multirevenue:
             #print(multi.id_tecno)

@@ -22,6 +22,16 @@
             <field name="model">account.voucher,-1</field>
             <field name="action" ref="act_delete_voucher_tecno"/>
         </record>
+        <!--Asistente para forzar los voucher a borrador-->
+        <record model="ir.action.wizard" id="act_force_draft_voucher">
+            <field name="name">Force Draft Voucher</field>
+            <field name="wiz_name">account.voucher.force_draft_voucher</field>
+        </record>
+        <record model="ir.action.keyword" id="act_force_draft_voucher_keyword">
+            <field name="keyword">form_action</field>
+            <field name="model">account.voucher,-1</field>
+            <field name="action" ref="act_force_draft_voucher"/>
+        </record>
         <!--Asistente para desconciliar el asiento del comprobante-->
         <record model="ir.action.wizard" id="act_voucher_move_unreconcile">
             <field name="name">Desconciliar Asiento del Comprobante</field>

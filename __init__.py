@@ -70,6 +70,7 @@ def register():
         wiz.CheckImportedDoc,
         wiz.MarkImportMulti,
         wiz.MoveFixParty,
+        wiz.ForceDraftVoucher,
         #report.PortfolioStatus,
         report.PayrollExport,
         module='conector', type_='wizard')

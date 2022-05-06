@@ -15,7 +15,7 @@ class VoucherMoveUnreconcile(Wizard):
         pool = Pool()
         Voucher = pool.get('account.voucher')
         Reconciliation = pool.get('account.move.reconciliation')
-        #Move = pool.get('account.move')
+        Move = pool.get('account.move')
         ids_ = Transaction().context['active_ids']
         if ids_:
             to_unreconcilie = []
@@ -23,11 +23,10 @@ class VoucherMoveUnreconcile(Wizard):
                 if voucher.move:
                     to_unreconcilie.append(voucher.move)
             for move in to_unreconcilie:
-                reconciliations = [
-                    l.reconciliation for l in move.lines if l.reconciliation
-                ]
+                reconciliations = [l.reconciliation for l in move.lines if l.reconciliation]
                 if reconciliations:
                     Reconciliation.delete(reconciliations)
+                Move.draft([move.id])
         return 'end'
 
 
@@ -48,18 +47,37 @@ class DeleteVoucherTecno(Wizard):
             raise UserWarning(warning_name, "Los comprobantes debieron ser desconciliado primero.")
         to_delete = []
         for voucher in Voucher.browse(ids):
-            rec_name = voucher.rec_name
-            party_name = voucher.party.name
-            rec_party = rec_name+' de '+party_name
             if voucher.number and '-' in voucher.number and voucher.id_tecno:
                 to_delete.append(voucher)
             else:
-                raise UserError("Revisa el número del comprobante (tipo-numero): ", rec_party)
+                raise UserError("Revisar el número del comprobante (tipo-numero): ")
         Voucher.delete_imported_vouchers(to_delete)
         return 'end'
 
     def end(self):
         return 'reload'
+
+class ForceDraftVoucher(Wizard):
+    'Force Draft Voucher'
+    __name__ = 'account.voucher.force_draft_voucher'
+    start_state = 'do_force'
+    do_force = StateTransition()
+
+    def transition_do_force(self):
+        pool = Pool()
+        Warning = pool.get('res.user.warning')
+        Voucher = pool.get('account.voucher')
+        ids = Transaction().context['active_ids']
+        #Se agrega un nombre unico a la advertencia
+        warning_name = 'warning_force_draft_voucher'
+        if Warning.check(warning_name):
+            raise UserWarning(warning_name, "Los comprobantes debieron ser desconciliado primero.")
+        to_force = []
+        for voucher in Voucher.browse(ids):
+            to_force.append(voucher)
+        Voucher.force_draft_voucher(to_force)
+        return 'end'
+
 
 class DeleteImportRecords(Wizard):
     'Delete Import Records'
@@ -205,6 +223,3 @@ class MarkImportMulti(Wizard):
                 to_mark.append(multingreso)
         MultiRevenue.mark_rimport(to_mark)
         return 'end'
-
-    def end(self):
-        return 'reload'
