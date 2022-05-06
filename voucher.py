@@ -788,25 +788,17 @@ class MultiRevenue(metaclass=PoolMeta):
     @classmethod
     def mark_rimport(cls, multirevenue):
         pool = Pool()
-        #Sale = pool.get('sale.sale')
         Conexion = pool.get('conector.configuration')
         MultiRevenue = pool.get('account.multirevenue')
         Line = pool.get('account.multirevenue.line')
+        OthersConcepts = pool.get('account.multirevenue.others_concepts')
         Transaction = pool.get('account.multirevenue.transaction')
-        #StatementLine = pool.get('account.statement.line')
         for multi in multirevenue:
-            #print(multi.id_tecno)
             lista = multi.id_tecno.split('-')
             consult = "UPDATE dbo.Documentos SET exportado = 'S' WHERE sw ="+lista[0]+" and tipo = "+lista[1]+" and Numero_documento = "+lista[2]
             Conexion.set_data(consult)
-            #for line in multi.lines:
-                #sale, = line.origin.sales
-                #print(sale)
-                #invoice = line.origin
-                #if invoice and invoice.state == 'paid':
-                    #Sale.unreconcile_move(invoice.move)
-                #if sale.payments:
-                #    StatementLine.delete(sale.payments)
-            #Line.delete(multi.lines)
-            #Transaction.delete(multi.transactions)
-            #MultiRevenue.delete([multi])
+            for line in multi.lines:
+                OthersConcepts.delete(line.others_concepts)
+            Line.delete(multi.lines)
+            Transaction.delete(multi.transactions)
+        MultiRevenue.delete(multirevenue)

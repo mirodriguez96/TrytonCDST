@@ -223,3 +223,6 @@ class MarkImportMulti(Wizard):
                 to_mark.append(multingreso)
         MultiRevenue.mark_rimport(to_mark)
         return 'end'
+
+    def end(self):
+        return 'reload'
