@@ -559,7 +559,7 @@ class Voucher(ModelSQL, ModelView):
         Config = Pool().get('conector.configuration')
         config = Config(1)
         fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
-        #consult = "SET DATEFORMAT ymd SELECT TOP(2) * FROM dbo.Documentos WHERE sw = 5 AND fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado != 'T' AND tipo = 117 AND Numero_documento = 5 ORDER BY fecha_hora ASC" #TEST
+        #consult = "SELECT * FROM dbo.Documentos WHERE sw = 5 AND tipo = 117 AND Numero_documento = 191" #TEST
         consult = "SET DATEFORMAT ymd SELECT TOP(10) * FROM dbo.Documentos WHERE sw = 5 AND fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado != 'T' ORDER BY fecha_hora ASC"
         data = Config.get_data(consult)
         return data
@@ -760,6 +760,8 @@ class MultiRevenue(metaclass=PoolMeta):
                     move_line = line.move_line
                     origin_number = line.origin.number if line.origin else None
                     total_amount = line.origin.total_amount if line.origin and line.origin.__name__ == 'account.invoice' else move_line.amount
+                    if _line_amount > total_amount: # Se valida que el pago no sea mayor
+                        _line_amount = total_amount
                     voucher_to_create[transaction.id][line.id]['lines'][0][1].append({
                         'detail': origin_number or move_line.reference or move_line.description,
                         'amount': _line_amount,
@@ -784,7 +786,6 @@ class MultiRevenue(metaclass=PoolMeta):
                     break
         for key in voucher_to_create.keys():
             for line_id in voucher_to_create[key]:
-                #print(voucher_to_create[key][line_id])
                 voucher, = Voucher.create([voucher_to_create[key][line_id]])
                 voucher.on_change_lines()
                 Voucher.process([voucher])
@@ -796,11 +797,11 @@ class MultiRevenue(metaclass=PoolMeta):
     @classmethod
     def mark_rimport(cls, multirevenue):
         pool = Pool()
-        Sale = pool.get('sale.sale')
+        #Sale = pool.get('sale.sale')
         Conexion = pool.get('conector.configuration')
-        MultiRevenue = pool.get('account.multirevenue')
-        Line = pool.get('account.multirevenue.line')
-        Transaction = pool.get('account.multirevenue.transaction')
+        #MultiRevenue = pool.get('account.multirevenue')
+        #Line = pool.get('account.multirevenue.line')
+        #Transaction = pool.get('account.multirevenue.transaction')
         #StatementLine = pool.get('account.statement.line')
         for multi in multirevenue:
             #print(multi.id_tecno)
