@@ -424,7 +424,7 @@ class Voucher(ModelSQL, ModelView):
                 logs.append(msg)
                 continue
             config_voucher = pool.get('account.voucher_configuration')(1)
-            voucher.party = move_line.party
+            #voucher.party = move_line.party
             valor_original, amount_to_pay, untaxed_amount = cls.get_amounts_to_pay(move_line, voucher.voucher_type)
             line = Line()
             line.amount_original = valor_original
