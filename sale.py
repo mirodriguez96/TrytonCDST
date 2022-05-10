@@ -106,14 +106,14 @@ class Sale(metaclass=PoolMeta):
             id_tecno_bodega = venta[coluns_doc.index('bodega')]
             bodega = location.search([('id_tecno', '=', id_tecno_bodega)])
             if not bodega:
-                msg2 = f' Bodega {id_tecno_bodega} no existe de la venta {id_venta}'
+                msg2 = f'Bodega {id_tecno_bodega} no existe de la venta {id_venta}'
                 logging.error(msg2)
                 logs.append(msg2)
                 continue
             bodega = bodega[0]
-            shop = Shop.search([('warehouse', '=', bodega)])
+            shop = Shop.search([('warehouse', '=', bodega.id)])
             if not shop:
-                msg2 = f' Bodega (shop) {id_tecno_bodega} no existe de la venta {id_venta}'
+                msg2 = f'Bodega (shop) {id_tecno_bodega} no existe de la venta {id_venta}'
                 logging.error(msg2)
                 logs.append(msg2)
                 continue
