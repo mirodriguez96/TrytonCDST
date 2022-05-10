@@ -293,6 +293,7 @@ class Voucher(ModelSQL, ModelView):
                 if lines:
                     voucher.lines = lines
                     voucher.on_change_lines()
+                voucher.save()
                 #Se verifica que el comprobante tenga lineas para ser procesado y contabilizado (doble verificación por error)
                 if voucher.lines and voucher.amount_to_pay > 0:
                     Voucher.process([voucher])
@@ -310,7 +311,7 @@ class Voucher(ModelSQL, ModelView):
                         line_ajuste.save()
                         voucher.on_change_lines()
                         Voucher.post([voucher])
-                voucher.save()
+                    voucher.save()
                 created.append(id_tecno)
             else:
                 msg1 = f"EL DOCUMENTO {id_tecno} NO ENCONTRO FORMA DE PAGO EN TECNOCARNES"
@@ -423,6 +424,7 @@ class Voucher(ModelSQL, ModelView):
                 logs.append(msg)
                 continue
             config_voucher = pool.get('account.voucher_configuration')(1)
+            voucher.party = move_line.party
             valor_original, amount_to_pay, untaxed_amount = cls.get_amounts_to_pay(move_line, voucher.voucher_type)
             line = Line()
             line.amount_original = valor_original
@@ -559,7 +561,7 @@ class Voucher(ModelSQL, ModelView):
         Config = Pool().get('conector.configuration')
         config = Config(1)
         fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
-        #consult = "SELECT * FROM dbo.Documentos WHERE sw = 5 AND tipo = 117 AND Numero_documento = 191" #TEST
+        #consult = "SELECT * FROM dbo.Documentos WHERE sw = 5 AND tipo = 119 AND Numero_documento = 969" #TEST
         consult = "SET DATEFORMAT ymd SELECT TOP(10) * FROM dbo.Documentos WHERE sw = 5 AND fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado != 'T' ORDER BY fecha_hora ASC"
         data = Config.get_data(consult)
         return data

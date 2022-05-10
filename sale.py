@@ -684,7 +684,8 @@ class Sale(metaclass=PoolMeta):
             )
             msg1 = f'Error al buscar el producto con id: {id_producto}'
             logging.error(msg1)
-            raise UserError('Error product search', msg1)
+            Product.update_products()
+            #raise UserError('Error product search', msg1)
             
 
     #Crea o actualiza un registro de la tabla actualización en caso de ser necesario
