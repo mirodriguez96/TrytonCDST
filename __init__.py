@@ -71,6 +71,7 @@ def register():
         wiz.MarkImportMulti,
         wiz.MoveFixParty,
         wiz.ForceDraftVoucher,
+        wiz.FixBugsConector,
         #report.PortfolioStatus,
         report.PayrollExport,
         module='conector', type_='wizard')

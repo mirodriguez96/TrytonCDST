@@ -5,6 +5,26 @@ from trytond.exceptions import UserError, UserWarning
 from sql import Table
 
 
+class FixBugsConector(Wizard):
+    'Fix Bugs Conector'
+    __name__ = 'conector.configuration.fix_bugs_conector'
+    start_state = 'fix_bugs_conector'
+    fix_bugs_conector = StateTransition()
+
+    def transition_fix_bugs_conector(self):
+        pool = Pool()
+        Warning = pool.get('res.user.warning')
+        Invoice = pool.get('account.invoice')
+        #ids = Transaction().context['active_ids']
+        #Se agrega un nombre unico a la advertencia
+        warning_name = 'warning_fix_bugs_conector'
+        if Warning.check(warning_name):
+            raise UserWarning(warning_name, "No continuar si desconoce el funcionamiento interno del asistente.")
+        invoices = Invoice.search([('state', '=', 'paid'), ('payment_lines', '=', None)])
+        print(len(invoices))
+        Invoice.process(invoices)
+        return 'end'
+
 class VoucherMoveUnreconcile(Wizard):
     'Voucher Move Unreconcile'
     __name__ = 'account.move.voucher_unreconcile'

@@ -2,6 +2,16 @@
 <tryton>
     
     <data>
+        <!--Asistente para reparar errores encontrados o generados en Tryton-->
+        <record model="ir.action.wizard" id="act_fix_bugs_conector">
+            <field name="name">Fix Bugs Conector</field>
+            <field name="wiz_name">conector.configuration.fix_bugs_conector</field>
+        </record>
+        <record model="ir.action.keyword" id="act_fix_bugs_conector_keyword">
+            <field name="keyword">form_action</field>
+            <field name="model">conector.configuration,-1</field>
+            <field name="action" ref="act_fix_bugs_conector"/>
+        </record>
         <!--Asistente para eliminar las facturas importados de TecnoCarnes-->
         <record model="ir.action.wizard" id="act_update_invoice_tecno">
             <field name="name">Update Invoice Tecno</field>
