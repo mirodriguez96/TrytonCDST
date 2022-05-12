@@ -320,8 +320,8 @@ class Voucher(ModelSQL, ModelView):
                 continue
         Actualizacion.add_logs(actualizacion, logs)
         for id in created:
-            cls.importado(id)
-            #print('CREADO...', id) #TEST
+            #cls.importado(id)
+            print('CREADO...', id) #TEST
         logging.warning("FINISH COMPROBANTES DE INGRESO")
 
 
@@ -405,7 +405,7 @@ class Voucher(ModelSQL, ModelView):
         else:
             multirevenue = MultiRevenue.search([('id_tecno', '=', idt)])
             if multirevenue:
-                return True
+                return multirevenue
             else:
                 return False
 
@@ -414,6 +414,7 @@ class Voucher(ModelSQL, ModelView):
     def get_lines_vtecno(cls, facturas, voucher, logs):
         pool = Pool()
         Line = pool.get('account.voucher.line')
+        config_voucher = pool.get('account.voucher_configuration')(1)
         to_lines = []
         for rec in facturas:
             ref = rec.tipo_aplica+'-'+str(rec.numero_aplica)
@@ -423,8 +424,7 @@ class Voucher(ModelSQL, ModelView):
                 logging.warning(msg)
                 logs.append(msg)
                 continue
-            config_voucher = pool.get('account.voucher_configuration')(1)
-            #voucher.party = move_line.party
+            #print(ref)
             valor_original, amount_to_pay, untaxed_amount = cls.get_amounts_to_pay(move_line, voucher.voucher_type)
             line = Line()
             line.amount_original = valor_original
@@ -446,13 +446,16 @@ class Voucher(ModelSQL, ModelView):
             # Se crean lineas adicionales en el comprobante en caso de ser necesario
             if descuento > 0:
                 line_discount = Line()
+                line_discount.party = move_line.party
+                line_discount.reference = ref
                 line_discount.detail = 'DESCUENTO'
-                valor_descuento = round((descuento * -1), 2)
-                line_discount.amount = valor_descuento
+                line_discount.amount = round((descuento * -1), 2)
                 line_discount.account = config_voucher.account_discount_tecno
                 to_lines.append(line_discount)
             if retencion > 0:
                 line_rete = Line()
+                line_rete.party = move_line.party
+                line_rete.reference = ref
                 line_rete.detail = 'RETENCION - ('+str(retencion)+')'
                 line_rete.type = 'tax'
                 line_rete.untaxed_amount = untaxed_amount
@@ -462,6 +465,8 @@ class Voucher(ModelSQL, ModelView):
                 to_lines.append(line_rete)
             if retencion_iva > 0:
                 line_retiva = Line()
+                line_retiva.party = move_line.party
+                line_retiva.reference = ref
                 line_retiva.detail = 'RETENCION IVA - ('+str(retencion_iva)+')'
                 line_retiva.type = 'tax'
                 line_retiva.untaxed_amount = untaxed_amount
@@ -471,6 +476,8 @@ class Voucher(ModelSQL, ModelView):
                 to_lines.append(line_retiva)
             if retencion_ica > 0:
                 line_retica = Line()
+                line_retica.party = move_line.party
+                line_retica.reference = ref
                 line_retica.detail = 'RETENCION ICA - ('+str(retencion_ica)+')'
                 line_retica.type = 'tax'
                 line_retica.untaxed_amount = untaxed_amount
@@ -480,13 +487,14 @@ class Voucher(ModelSQL, ModelView):
                 to_lines.append(retencion_ica)
             if ajuste > 0:
                 line_ajuste = Line()
+                line_ajuste.party = move_line.party
+                line_ajuste.reference = ref
                 line_ajuste.detail = 'AJUSTE'
                 if Decimal(move_line.debit) > 0:
                     line_ajuste.account = config_voucher.account_adjust_income
                 elif Decimal(move_line.credit) > 0:
                     line_ajuste.account = config_voucher.account_adjust_expense
-                valor_ajuste = round(ajuste, 2)
-                line_ajuste.amount = valor_ajuste
+                line_ajuste.amount = round(ajuste, 2)
                 to_lines.append(line_ajuste)
         return to_lines
 
@@ -561,7 +569,7 @@ class Voucher(ModelSQL, ModelView):
         Config = Pool().get('conector.configuration')
         config = Config(1)
         fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
-        #consult = "SELECT * FROM dbo.Documentos WHERE sw = 5 AND tipo = 119 AND Numero_documento = 969" #TEST
+        #consult = "SELECT * FROM dbo.Documentos WHERE sw = 5 AND tipo = 117 AND Numero_documento = 169" #TEST
         consult = "SET DATEFORMAT ymd SELECT TOP(10) * FROM dbo.Documentos WHERE sw = 5 AND fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado != 'T' ORDER BY fecha_hora ASC"
         data = Config.get_data(consult)
         return data

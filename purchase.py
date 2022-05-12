@@ -238,6 +238,7 @@ class Purchase(metaclass=PoolMeta):
                 created_purchase.append(id_compra)
         for idc in created_purchase:
             cls.importado(idc)
+            #print('creado...', idc) #TEST
         #Se crea o actualiza la fecha de importación junto a los logs
         actualizacion.logs = logs
         actualizacion.save()

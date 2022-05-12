@@ -78,7 +78,8 @@ class Sale(metaclass=PoolMeta):
             venta_pos = venta_pos[0][col_param.index('Valor')].strip().split(',')
         if venta_electronica:
             venta_electronica = venta_electronica[0][col_param.index('Valor')].strip().split(',')
-        to_create = []
+        to_created = []
+        to_process = []
         #Procedemos a realizar una venta
         for venta in ventas_tecno:
             sw = venta[coluns_doc.index('sw')]
@@ -244,21 +245,23 @@ class Sale(metaclass=PoolMeta):
                     context = User.get_preferences()
                 with Transaction().set_context(context, shop=shop.id, _skip_warnings=True):
                     cls.venta_mostrador(sale)
+                to_created.append(sale.id_tecno)
             else:
                 #Se almacena en una lista las ventas creadas para ser procesadas
-                to_create.append(sale)
+                to_process.append(sale)
+                to_created.append(sale.id_tecno)
         #Se procesa los registros creados
         with Transaction().set_user(1):
             context = User.get_preferences()
         with Transaction().set_context(context, _skip_warnings=True):
-            Sale.quote(to_create)
-            Sale.confirm(to_create)
-            Sale.process(to_create)
-        log = cls.update_invoices_shipments(to_create, ventas_tecno, logs)
+            Sale.quote(to_process)
+            Sale.confirm(to_process)
+            Sale.process(to_process)
+        log = cls.update_invoices_shipments(to_process, ventas_tecno, logs)
         actualizacion.add_logs(actualizacion, log)
-        for sale in to_create:
-            cls.importado(sale.id_tecno)
-            #print('creado...', sale.id_tecno) #TEST
+        for id_tecno in to_created:
+            cls.importado(id_tecno)
+            #print('creado...', id_tecno) #TEST
         logging.warning('FINISH VENTAS')
 
 
@@ -292,14 +295,14 @@ class Sale(metaclass=PoolMeta):
                 invoice.number = sale.number
                 invoice.reference = sale.reference
                 invoice.invoice_date = sale.sale_date
+                invoice.invoice_type = 'C'
                 tipo_numero = sale.number.split('-')
                 #Se agrega en la descripcion el nombre del tipo de documento de la tabla en sqlserver
                 desc = cls.get_tipo_dcto(tipo_numero[0])
                 if desc:
                     invoice.description = desc[0].TipoDoctos.replace('\n', ' ').replace('\r', '')
                 invoice.save()
-                if invoice.invoice_type != 'P':
-                    Invoice.validate_invoice([invoice])
+                Invoice.validate_invoice([invoice])
                 total_tryton = abs(invoice.untaxed_amount)
                 #Se almacena el total de la venta traida de TecnoCarnes
                 total_tecno = 0
@@ -313,7 +316,7 @@ class Sale(metaclass=PoolMeta):
                         else:
                             total_tecno = valor_total
                 diferencia_total = abs(total_tryton - total_tecno)
-                if diferencia_total < Decimal(6.0) and invoice.invoice_type != 'P':
+                if diferencia_total < Decimal(6.0):
                     Invoice.post_batch([invoice])
                     Invoice.post([invoice])
                 else:
