@@ -320,8 +320,8 @@ class Voucher(ModelSQL, ModelView):
                 continue
         Actualizacion.add_logs(actualizacion, logs)
         for id in created:
-            #cls.importado(id)
-            print('CREADO...', id) #TEST
+            cls.importado(id)
+            #print('CREADO...', id) #TEST
         logging.warning("FINISH COMPROBANTES DE INGRESO")
 
 
