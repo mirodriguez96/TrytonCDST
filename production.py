@@ -33,7 +33,13 @@ class Production(metaclass=PoolMeta):
     @classmethod
     def import_data_production(cls):
         logging.warning('RUN PRODUCTION')
-        data = cls.last_update()
+        parametro = cls.get_data_parametros('37')
+        valor_parametro = parametro.Valor.split(',')
+        datos = []
+        for tipo in valor_parametro:
+            result = cls.last_update(tipo)
+            if result:
+                datos.append(result)
 
         pool = Pool()
         Production = pool.get('production')
@@ -42,96 +48,97 @@ class Production(metaclass=PoolMeta):
         Template = pool.get('product.template')
 
         to_create = []
-        for transformacion in data:
-            sw = transformacion.sw
-            numero_doc = transformacion.Numero_documento
-            tipo_doc = transformacion.tipo
-            id_tecno = str(sw)+'-'+tipo_doc+'-'+str(numero_doc)
+        for data in datos:
+            for transformacion in data:
+                sw = transformacion.sw
+                numero_doc = transformacion.Numero_documento
+                tipo_doc = transformacion.tipo
+                id_tecno = str(sw)+'-'+tipo_doc+'-'+str(numero_doc)
 
-            existe = Production.search([('id_tecno', '=', id_tecno)])
-            if existe:
-                #cls.importado(id_tecno)
-                existe, = existe
-                existe.id_tecno = ''
-                existe.save()
-                cls.reverse_production(existe)
-                pass
+                existe = Production.search([('id_tecno', '=', id_tecno)])
+                if existe:
+                    #cls.importado(id_tecno)
+                    existe, = existe
+                    existe.id_tecno = ''
+                    existe.save()
+                    cls.reverse_production(existe)
+                    pass
 
-            #tipo_doc = transformacion.tipo
-            fecha = str(transformacion.Fecha_Hora_Factura).split()[0].split('-')
-            fecha = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
-            reference = tipo_doc+'-'+str(numero_doc)
-            id_bodega = transformacion.bodega
-            bodega, = Location.search([('id_tecno', '=', id_bodega)])
-            production = {
-                'id_tecno': id_tecno,
-                'reference': reference,
-                'planned_date': fecha,
-                'planned_start_date': fecha,
-                'effective_date': fecha,
-                'warehouse': bodega.id,
-                'location': bodega.production_location.id,
-            }
-            lines = cls.get_data_line(str(sw), tipo_doc, str(numero_doc))
-            entradas = []
-            salidas = []
-            cont = 0
-            for line in lines:
-                cantidad = float(line.Cantidad_Facturada)
-                id_tecno_bodega = line.IdBodega
-                bodega, = Location.search([('id_tecno', '=', id_tecno_bodega)])
-                producto, = Product.search([('id_tecno', '=', line.IdProducto)])
-                #print(producto)
-                transf = {
-                    'product': producto.id,
-                    'quantity': abs(cantidad),
-                    'uom': producto.default_uom.id,
+                #tipo_doc = transformacion.tipo
+                fecha = str(transformacion.Fecha_Hora_Factura).split()[0].split('-')
+                fecha = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
+                reference = tipo_doc+'-'+str(numero_doc)
+                id_bodega = transformacion.bodega
+                bodega, = Location.search([('id_tecno', '=', id_bodega)])
+                production = {
+                    'id_tecno': id_tecno,
+                    'reference': reference,
+                    'planned_date': fecha,
+                    'planned_start_date': fecha,
+                    'effective_date': fecha,
+                    'warehouse': bodega.id,
+                    'location': bodega.production_location.id,
                 }
-                #Entrada (-1)
-                if cantidad < 0:
-                    transf['from_location'] = bodega.storage_location.id
-                    transf['to_location'] = bodega.production_location.id
-                    entradas.append(transf)
-                #Salida (1)
-                elif cantidad > 0:
-                    transf['from_location'] = bodega.production_location.id
-                    transf['to_location'] = bodega.storage_location.id
-                    #print(line.Valor_Unitario)
-                    transf['unit_price'] = Decimal(line.Valor_Unitario)
-                    salidas.append(transf)
-                    template, = Template.search([('products', '=', producto)])
-                    to_write = {
-                        'sale_price_w_tax': Decimal(line.Valor_Unitario),
-                        'list_price': Decimal(line.Valor_Unitario)
-                        }
-                    Template.write([template], to_write)
-                    if cont == 0:
-                        #Se actualiza el producto para que sea producible
-                        if not producto.template.producible:
-                            
-                            Template.write([template], {'producible': True})
-                        production['product'] = producto.id
-                    cont += 1
-            if entradas:
-                production['inputs'] = [('create', entradas)]
-            if salidas:
-                production['outputs'] = [('create', salidas)]
-            to_create.append(production)
+                lines = cls.get_data_line(str(sw), tipo_doc, str(numero_doc))
+                entradas = []
+                salidas = []
+                cont = 0
+                for line in lines:
+                    cantidad = float(line.Cantidad_Facturada)
+                    id_tecno_bodega = line.IdBodega
+                    bodega, = Location.search([('id_tecno', '=', id_tecno_bodega)])
+                    producto, = Product.search([('id_tecno', '=', line.IdProducto)])
+                    #print(producto)
+                    transf = {
+                        'product': producto.id,
+                        'quantity': abs(cantidad),
+                        'uom': producto.default_uom.id,
+                    }
+                    #Entrada (-1)
+                    if cantidad < 0:
+                        transf['from_location'] = bodega.storage_location.id
+                        transf['to_location'] = bodega.production_location.id
+                        entradas.append(transf)
+                    #Salida (1)
+                    elif cantidad > 0:
+                        transf['from_location'] = bodega.production_location.id
+                        transf['to_location'] = bodega.storage_location.id
+                        #print(line.Valor_Unitario)
+                        transf['unit_price'] = Decimal(line.Valor_Unitario)
+                        salidas.append(transf)
+                        template, = Template.search([('products', '=', producto)])
+                        to_write = {
+                            'sale_price_w_tax': Decimal(line.Valor_Unitario),
+                            'list_price': Decimal(line.Valor_Unitario)
+                            }
+                        Template.write([template], to_write)
+                        if cont == 0:
+                            #Se actualiza el producto para que sea producible
+                            if not producto.template.producible:
+                                
+                                Template.write([template], {'producible': True})
+                            production['product'] = producto.id
+                        cont += 1
+                if entradas:
+                    production['inputs'] = [('create', entradas)]
+                if salidas:
+                    production['outputs'] = [('create', salidas)]
+                to_create.append(production)
         #Se crean las producciones
         producciones = Production.create(to_create)
         Production.wait(producciones)
         #Production.assign(producciones)
         #Production.run(producciones)
         #Production.done(producciones)
-        #cls.importado(id_tecno)
+        cls.importado(id_tecno)
         logging.warning('FINISH PRODUCTION')
 
     #Esta función se encarga de traer todos los datos de una tabla dada de acuerdo al rango de fecha dada de la bd
     @classmethod
-    def get_data_tecno(cls, date):
+    def get_data_tecno(cls, date, tipo):
         Config = Pool().get('conector.configuration')
-        consult = "SELECT * FROM dbo.Documentos WHERE sw = 12 and tipo = 110  AND Numero_documento = 126335"
-        #consult = "SET DATEFORMAT ymd SELECT TOP(1000) * FROM dbo.Documentos WHERE sw = 12 and tipo = 110  AND fecha_hora >= CAST('"+date+"' AS datetime) AND exportado != 'T'"
+        #consult = "SELECT * FROM dbo.Documentos WHERE sw = 12 and tipo = 110  AND Numero_documento = 126335"
+        consult = "SET DATEFORMAT ymd SELECT TOP(100) * FROM dbo.Documentos WHERE sw = 12 and tipo = '"+tipo+"'  AND fecha_hora >= CAST('"+date+"' AS datetime) AND exportado != 'T'"
         data = Config.get_data(consult)
         return data
 
@@ -151,14 +158,23 @@ class Production(metaclass=PoolMeta):
 
     #Función encargada de traer los datos de la bd con una fecha dada.
     @classmethod
-    def last_update(cls):
+    def last_update(cls, tipo):
         Config = Pool().get('conector.configuration')
         config, = Config.search([], order=[('id', 'DESC')], limit=1)
         fecha = config.date
         fecha = fecha.strftime('%Y-%m-%d %H:%M:%S')
         #fecha = "2021-01-01" #PRUEBAS
-        data = cls.get_data_tecno(fecha)
+        data = cls.get_data_tecno(fecha, tipo)
         return data
+
+
+    @classmethod
+    def get_data_parametros(cls, id):
+        Config = Pool().get('conector.configuration')(1)
+        query = "SELECT * FROM dbo.TblParametro WHERE IdParametro = "+id
+        data = Config.get_data(query)
+        return data
+
 
     #Función encargada de revertir las producciones hechas
     @classmethod
