@@ -34,7 +34,7 @@ class Production(metaclass=PoolMeta):
     def import_data_production(cls):
         logging.warning('RUN PRODUCTION')
         parametro = cls.get_data_parametros('37')
-        valor_parametro = parametro.Valor.split(',')
+        valor_parametro = parametro[0].Valor.split(',')
         datos = []
         for tipo in valor_parametro:
             result = cls.last_update(tipo)

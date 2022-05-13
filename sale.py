@@ -61,7 +61,7 @@ class Sale(metaclass=PoolMeta):
         payment_term = pool.get('account.invoice.payment_term')
         Party = pool.get('party.party')
         Address = pool.get('party.address')
-        coluns_doc = cls.get_columns_db_tecno('Documentos')
+        #coluns_doc = cls.get_columns_db_tecno('Documentos')
         Shop = pool.get('sale.shop')
         Tax = pool.get('account.tax')
         User = pool.get('res.user')
@@ -82,9 +82,9 @@ class Sale(metaclass=PoolMeta):
         to_process = []
         #Procedemos a realizar una venta
         for venta in ventas_tecno:
-            sw = venta[coluns_doc.index('sw')]
-            numero_doc = venta[coluns_doc.index('Numero_documento')]
-            tipo_doc = venta[coluns_doc.index('tipo')].strip()
+            sw = venta.sw
+            numero_doc = venta.Numero_documento
+            tipo_doc = venta.tipo
             id_venta = str(sw)+'-'+tipo_doc+'-'+str(numero_doc)
             existe = cls.buscar_venta(id_venta)
             if existe:
@@ -92,9 +92,9 @@ class Sale(metaclass=PoolMeta):
                 continue
             print(id_venta)
             #Se trae la fecha de la venta y se adapta al formato correcto para Tryton
-            fecha = str(venta[coluns_doc.index('fecha_hora')]).split()[0].split('-')
+            fecha = str(venta.fecha_hora).split()[0].split('-')
             fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
-            nit_cedula = venta[coluns_doc.index('nit_Cedula')]
+            nit_cedula = venta.nit_Cedula
             party = Party.search([('id_number', '=', nit_cedula)])
             if not party:
                 msg2 = f' No se encontro el tercero {nit_cedula} de la venta {id_venta}'
@@ -104,7 +104,7 @@ class Sale(metaclass=PoolMeta):
                 continue
             party = party[0]
             #Se indica a que bodega pertenece
-            id_tecno_bodega = venta[coluns_doc.index('bodega')]
+            id_tecno_bodega = venta.bodega
             bodega = location.search([('id_tecno', '=', id_tecno_bodega)])
             if not bodega:
                 msg2 = f'Bodega {id_tecno_bodega} no existe de la venta {id_venta}'
@@ -120,7 +120,7 @@ class Sale(metaclass=PoolMeta):
                 continue
             shop = shop[0]
             #Se le asigna el plazo de pago correspondiente
-            condicion = venta[coluns_doc.index('condicion')]
+            condicion = venta.condicion
             plazo_pago = payment_term.search([('id_tecno', '=', condicion)])
             if not plazo_pago:
                 msg2 = f'Plazo de pago {condicion} no existe de la venta {id_venta}'
@@ -135,7 +135,7 @@ class Sale(metaclass=PoolMeta):
             sale.number = tipo_doc+'-'+str(numero_doc)
             sale.reference = tipo_doc+'-'+str(numero_doc)
             sale.id_tecno = id_venta
-            sale.description = venta[coluns_doc.index('notas')].replace('\n', ' ').replace('\r', '')
+            sale.description = (venta.notas).replace('\n', ' ').replace('\r', '')
             sale.invoice_type = 'C'
             sale.sale_date = fecha_date
             sale.party = party.id
@@ -154,7 +154,7 @@ class Sale(metaclass=PoolMeta):
                 sale.pos_create_date = fecha_date
                 sale.self_pick_up = True
                 #Busco la terminal y se la asigno
-                sale_device, = SaleDevice.search([('id_tecno', '=', venta[coluns_doc.index('pc')])])
+                sale_device, = SaleDevice.search([('id_tecno', '=', venta.pc)])
                 sale.sale_device = sale_device
                 sale.invoice_number = sale.number
             #Se busca una dirección del tercero para agregar en la factura y envio
@@ -181,18 +181,18 @@ class Sale(metaclass=PoolMeta):
             
             #Ahora traemos las lineas de producto para la venta a procesar
             documentos_linea = cls.get_line_where(str(sw), str(numero_doc), str(tipo_doc))
-            col_line = cls.get_columns_db_tecno('Documentos_Lin')
+            #col_line = cls.get_columns_db_tecno('Documentos_Lin')
             #create_line = []
             for lin in documentos_linea:
                 linea = SaleLine()
-                id_producto = str(lin[col_line.index('IdProducto')])
+                id_producto = str(lin.IdProducto)
                 producto = cls.buscar_producto(id_producto)
                 linea.sale = sale
                 linea.product = producto
                 linea.type = 'line'
                 linea.unit = producto.template.default_uom
                 #Se verifica si es una devolución
-                cant = float(lin[col_line.index('Cantidad_Facturada')])
+                cant = float(lin.Cantidad_Facturada)
                 cantidad_facturada = abs(round(cant, 3))
                 if linea.unit.id == 1:
                     cantidad_facturada = int(cantidad_facturada)
@@ -209,7 +209,7 @@ class Sale(metaclass=PoolMeta):
                 #Comprueba los cambios y trae los impuestos del producto
                 linea.on_change_product()
                 #Se verifica si el impuesto al consumo fue aplicado
-                impuesto_consumo = lin[col_line.index('Impuesto_Consumo')]
+                impuesto_consumo = lin.Impuesto_Consumo
                 #A continuación se verifica las retenciones e impuesto al consumo
                 impuestos_linea = []
                 for impuestol in linea.taxes:
@@ -231,11 +231,11 @@ class Sale(metaclass=PoolMeta):
                     elif clase_impuesto != '05' and clase_impuesto != '06' and clase_impuesto != '07' and not impuestol.consumo:
                         impuestos_linea.append(impuestol)
                 linea.taxes = impuestos_linea
-                linea.unit_price = lin[col_line.index('Valor_Unitario')]
+                linea.unit_price = lin.Valor_Unitario
                 #Verificamos si hay descuento para la linea de producto y se agrega su respectivo descuento
-                if lin[col_line.index('Porcentaje_Descuento_1')] > 0:
-                    porcentaje = lin[col_line.index('Porcentaje_Descuento_1')]/100
-                    linea.base_price = lin[col_line.index('Valor_Unitario')]
+                if lin.Porcentaje_Descuento_1 > 0:
+                    porcentaje = lin.Porcentaje_Descuento_1/100
+                    linea.base_price = lin.Valor_Unitario
                     linea.discount_rate = Decimal(str(porcentaje))
                     linea.on_change_discount_rate()
                 #Se guarda la linea para la venta
@@ -260,8 +260,8 @@ class Sale(metaclass=PoolMeta):
         log = cls.update_invoices_shipments(to_process, ventas_tecno, logs)
         actualizacion.add_logs(actualizacion, log)
         for id_tecno in to_created:
-            cls.importado(id_tecno)
-            #print('creado...', id_tecno) #TEST
+            #cls.importado(id_tecno)
+            print('creado...', id_tecno) #TEST
         logging.warning('FINISH VENTAS')
 
 
@@ -612,16 +612,10 @@ class Sale(metaclass=PoolMeta):
     #Esta función se encarga de traer todos los datos de una tabla dada de la bd
     @classmethod
     def get_line_where(cls, sw, nro, tipo):
-        data = []
-        try:
-            Config = Pool().get('conector.configuration')
-            conexion = Config.conexion()
-            with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT * FROM dbo.Documentos_Lin WHERE sw = "+sw+" AND Numero_Documento = "+nro+" AND tipo = "+tipo+" order by seq")
-                data = list(query.fetchall())
-        except Exception as e:
-            print("ERROR QUERY Documentos_Lin: ", e)
-        return data
+        Config = Pool().get('conector.configuration')(1)
+        consult = "SELECT * FROM dbo.Documentos_Lin WHERE sw = "+sw+" AND Numero_Documento = "+nro+" AND tipo = "+tipo+" order by seq"
+        result = Config.get_data(consult)
+        return result
 
     #Función encargada de consultar las columnas pertenecientes a 'x' tabla de la bd
     @classmethod
@@ -641,10 +635,9 @@ class Sale(metaclass=PoolMeta):
     #Esta función se encarga de traer todos los datos de una tabla dada de acuerdo al rango de fecha dada de la bd
     @classmethod
     def get_data_tecno(cls):
-        Config = Pool().get('conector.configuration')
-        config, = Config.search([], order=[('id', 'DESC')], limit=1)
-        fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
-        #consult = "SELECT * FROM dbo.Documentos WHERE (sw = 1 OR sw = 2) AND tipo = 260 AND Numero_documento = 214 AND fecha_hora >= CAST('"+fecha+"' AS datetime)" #TEST
+        Config = Pool().get('conector.configuration')(1)
+        fecha = Config.date.strftime('%Y-%m-%d %H:%M:%S')
+        #consult = "SELECT * FROM dbo.Documentos WHERE sw = 1 AND tipo = 140 AND Numero_documento = 21059" #TEST
         consult = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado != 'T' ORDER BY fecha_hora ASC"
         result = Config.get_data(consult)
         return result
