@@ -33,6 +33,9 @@ class Production(metaclass=PoolMeta):
     @classmethod
     def import_data_production(cls):
         logging.warning('RUN PRODUCTION')
+        pool = Pool()
+        Actualizacion = pool.get('conector.actualizacion')
+        actualizacion = Actualizacion.create_or_update('PRODUCCION')
         parametro = cls.get_data_parametros('37')
         valor_parametro = parametro[0].Valor.split(',')
         datos = []
@@ -40,13 +43,15 @@ class Production(metaclass=PoolMeta):
             result = cls.last_update(tipo)
             if result:
                 datos.append(result)
-
-        pool = Pool()
+        if not datos:
+            actualizacion.save()
+            logging.warning("FINISH PRODUCTION")
+            return
         Production = pool.get('production')
         Location = pool.get('stock.location')
         Product = pool.get('product.product')
         Template = pool.get('product.template')
-
+        logs = []
         to_create = []
         for data in datos:
             for transformacion in data:
@@ -54,16 +59,14 @@ class Production(metaclass=PoolMeta):
                 numero_doc = transformacion.Numero_documento
                 tipo_doc = transformacion.tipo
                 id_tecno = str(sw)+'-'+tipo_doc+'-'+str(numero_doc)
-
                 existe = Production.search([('id_tecno', '=', id_tecno)])
                 if existe:
                     #cls.importado(id_tecno)
                     existe, = existe
-                    existe.id_tecno = ''
+                    existe.id_tecno = None
                     existe.save()
                     cls.reverse_production(existe)
-                    pass
-
+                    continue
                 #tipo_doc = transformacion.tipo
                 fecha = str(transformacion.Fecha_Hora_Factura).split()[0].split('-')
                 fecha = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
@@ -125,12 +128,20 @@ class Production(metaclass=PoolMeta):
                     production['outputs'] = [('create', salidas)]
                 to_create.append(production)
         #Se crean las producciones
-        producciones = Production.create(to_create)
-        Production.wait(producciones)
-        #Production.assign(producciones)
-        #Production.run(producciones)
-        #Production.done(producciones)
-        cls.importado(id_tecno)
+        excepcion = False
+        try:
+            producciones = Production.create(to_create)
+            Production.wait(producciones)
+            #Production.assign(producciones)
+            #Production.run(producciones)
+            #Production.done(producciones)
+        except Exception as e:
+            excepcion = True
+            logs.append(str(e))
+        Actualizacion.add_logs(actualizacion, logs)
+        if not excepcion:
+            for prod in producciones:
+                cls.importado(prod.id_tecno)
         logging.warning('FINISH PRODUCTION')
 
     #Esta función se encarga de traer todos los datos de una tabla dada de acuerdo al rango de fecha dada de la bd

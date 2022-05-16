@@ -43,6 +43,13 @@ class Invoice(metaclass=PoolMeta):
     def default_electronic_state():
         return 'none'
 
+
+    @classmethod
+    def unreconcile_move(self, move):
+        Reconciliation = Pool().get('account.move.reconciliation')
+        reconciliations = [l.reconciliation for l in move.lines if l.reconciliation]
+        if reconciliations:
+            Reconciliation.delete(reconciliations)
     
     #Nota de crédito
     @classmethod

@@ -71,13 +71,13 @@ class Sale(metaclass=PoolMeta):
         if company_operation:
             CompanyOperation = pool.get('company.operation_center')
             company_operation = CompanyOperation(1)
-        col_param = cls.get_columns_db_tecno('TblParametro')
+        #col_param = cls.get_columns_db_tecno('TblParametro')
         venta_pos = cls.get_data_parametros('8')
         venta_electronica = cls.get_data_parametros('9')
         if venta_pos:
-            venta_pos = venta_pos[0][col_param.index('Valor')].strip().split(',')
+            venta_pos = (venta_pos[0].Valor).strip().split(',')
         if venta_electronica:
-            venta_electronica = venta_electronica[0][col_param.index('Valor')].strip().split(',')
+            venta_electronica = (venta_electronica[0].Valor).strip().split(',')
         to_created = []
         to_process = []
         #Procedemos a realizar una venta
@@ -617,21 +617,6 @@ class Sale(metaclass=PoolMeta):
         result = Config.get_data(consult)
         return result
 
-    #Función encargada de consultar las columnas pertenecientes a 'x' tabla de la bd
-    @classmethod
-    def get_columns_db_tecno(cls, table):
-        columns = []
-        try:
-            Config = Pool().get('conector.configuration')
-            conexion = Config.conexion()
-            with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = '"+table+"' ORDER BY ORDINAL_POSITION")
-                for q in query.fetchall():
-                    columns.append(q[0])
-        except Exception as e:
-            print("ERROR QUERY "+table+": ", e)
-        return columns
-
     #Esta función se encarga de traer todos los datos de una tabla dada de acuerdo al rango de fecha dada de la bd
     @classmethod
     def get_data_tecno(cls):
@@ -726,7 +711,7 @@ class Sale(metaclass=PoolMeta):
                     invoice.electronic_state == 'submitted':
                         raise UserError('account_col.msg_with_electronic_invoice')
                 if invoice.state == 'paid':
-                    sale.unreconcile_move(invoice.move)
+                    invoice.unreconcile_move(invoice.move)
                 if invoice.move:
                     cursor.execute(*move_table.update(
                         columns=[move_table.state],
