@@ -153,6 +153,7 @@ class Voucher(ModelSQL, ModelView):
             actualizacion.save()
             logging.warning("FINISH COMPROBANTES DE INGRESO")
             return
+        #Module = pool.get('ir.module')
         Voucher = pool.get('account.voucher')
         Line = pool.get('account.voucher.line')
         Party = pool.get('party.party')
@@ -288,11 +289,17 @@ class Voucher(ModelSQL, ModelView):
                 nota = (doc.notas).replace('\n', ' ').replace('\r', '')
                 if nota:
                     voucher.description = nota
+                #company_operation = Module.search([('name', '=', 'company_operation'), ('state', '=', 'activated')])
+                #if company_operation:
+                #    operation_center = pool.get('company.operation_center')(1)
+                #    voucher.operation_center = operation_center
                 valor_aplicado = Decimal(doc.valor_aplicado)
                 lines = cls.get_lines_vtecno(facturas, voucher, logs)
                 if lines:
                     voucher.lines = lines
                     voucher.on_change_lines()
+                    #if company_operation:
+                    #    voucher.on_change_operation_center()
                 voucher.save()
                 #Se verifica que el comprobante tenga lineas para ser procesado y contabilizado (doble verificación por error)
                 if voucher.lines and voucher.amount_to_pay > 0:
@@ -328,10 +335,10 @@ class Voucher(ModelSQL, ModelView):
     #Se obtiene las lineas de la factura que se desea pagar
     @classmethod
     def get_moveline(cls, reference, party, logs):
-        #print(reference)
         pool = Pool()
         Invoice = pool.get('account.invoice')
         MoveLine = pool.get('account.move.line')
+
         #A continuacion se consulta las lineas a pagar de la factura (reference)
         linea = False
         invoice = Invoice.search([('number', '=', reference)])
@@ -360,9 +367,9 @@ class Voucher(ModelSQL, ModelView):
 
     @classmethod
     def get_amounts_to_pay(cls, moveline, voucher_type):
-        pool = Pool()
+        #pool = Pool()
         #Model = pool.get('ir.model')
-        Invoice = pool.get('account.invoice')
+        #Invoice = pool.get('account.invoice')
 
         amount = moveline.credit or moveline.debit
         if voucher_type == 'receipt':
@@ -375,11 +382,9 @@ class Voucher(ModelSQL, ModelView):
         amount_to_pay = Decimal(0)
         untaxed_amount = Decimal(0)
         if moveline.move_origin and hasattr(moveline.move_origin, '__name__') and moveline.move_origin.__name__ == 'account.invoice':
-
-            amount_to_pay = Invoice.get_amount_to_pay(
-                [moveline.move_origin], 'amount_to_pay'
-            )
-            amount_to_pay = amount_to_pay[moveline.move_origin.id]
+            #amount_to_pay = Invoice.get_amount_to_pay([moveline.move_origin], 'amount_to_pay')
+            #amount_to_pay = amount_to_pay[moveline.move_origin.id]
+            amount_to_pay = moveline.move.origin.amount_to_pay
             untaxed_amount = moveline.move_origin.untaxed_amount
         elif not moveline.move_origin:
             amount_to_pay = amount
@@ -424,8 +429,9 @@ class Voucher(ModelSQL, ModelView):
                 logging.warning(msg)
                 logs.append(msg)
                 continue
-            #print(ref)
+            print(ref)
             valor_original, amount_to_pay, untaxed_amount = cls.get_amounts_to_pay(move_line, voucher.voucher_type)
+            #print(valor_original, amount_to_pay, untaxed_amount)
             line = Line()
             line.amount_original = valor_original
             line.reference = ref
@@ -484,7 +490,7 @@ class Voucher(ModelSQL, ModelView):
                 line_retica.tax = config_voucher.account_retica_tecno
                 line_retica.on_change_tax()
                 line_retica.amount = round((retencion_ica*-1), 2)
-                to_lines.append(retencion_ica)
+                to_lines.append(line_retica)
             if ajuste > 0:
                 line_ajuste = Line()
                 line_ajuste.party = move_line.party
@@ -499,63 +505,63 @@ class Voucher(ModelSQL, ModelView):
         return to_lines
 
 
-    @classmethod
-    def get_others_tecno(cls, rec, original_amount):
-        pool = Pool()
-        OthersConcepts = pool.get('account.multirevenue.others_concepts')
-        config_voucher = pool.get('account.voucher_configuration')(1)
-        valor = Decimal(rec.valor)
-        descuento = Decimal(rec.descuento)
-        retencion = Decimal(rec.retencion)
-        ajuste = Decimal(rec.ajuste)
-        retencion_iva = Decimal(rec.retencion_iva)
-        retencion_ica = Decimal(rec.retencion_ica)
-        valor_pagado = valor + descuento + retencion + (ajuste*-1) + retencion_iva + retencion_ica
-        to_others = []
-        if descuento > 0:
-            line_discount = OthersConcepts()
-            line_discount.description = 'DESCUENTO'
-            line_discount.amount = round((descuento * -1), 2)
-            line_discount.account = config_voucher.account_discount_tecno
-            to_others.append(line_discount)
-            valor_pagado += line_discount.amount
-        if retencion > 0:
-            line_rete = OthersConcepts()
-            line_rete.description = 'RETENCION'
-            line_rete.account = config_voucher.account_rete_tecno
-            line_rete.amount = round((retencion*-1), 2)
-            to_others.append(line_rete)
-            valor_pagado += line_rete.amount
-        if retencion_iva > 0:
-            line_retiva = OthersConcepts()
-            line_retiva.description = 'RETENCION IVA'
-            line_retiva.account = config_voucher.account_retiva_tecno
-            line_retiva.amount = round((retencion_iva*-1), 2)
-            to_others.append(line_retiva)
-            valor_pagado += line_retiva.amount
-        if retencion_ica > 0:
-            line_retica = OthersConcepts()
-            line_retica.description = 'RETENCION ICA'
-            line_retica.account = config_voucher.account_retica_tecno
-            line_retica.amount = round((retencion_ica*-1), 2)
-            to_others.append(retencion_ica)
-            valor_pagado += line_retica.amount
-        if ajuste > 0:
-            line_ajuste = OthersConcepts()
-            line_ajuste.description = 'AJUSTE'
-            line_ajuste.account = config_voucher.account_adjust_income
-            line_ajuste.amount = round(ajuste, 2)
-            to_others.append(line_ajuste)
-            valor_pagado += line_ajuste.amount
-        #Se verifica si la diferencia es minima para llevarla a un ajuste
-        difference = (original_amount - valor_pagado)
-        if difference != 0 and abs(difference) < 50:
-            line_ajuste = OthersConcepts()
-            line_ajuste.description = 'REDONDEO'
-            line_ajuste.account = config_voucher.account_adjust_income
-            line_ajuste.amount = Decimal(difference * -1)
-            to_others.append(line_ajuste)
-        return to_others
+    #@classmethod
+    #def get_others_tecno(cls, rec, original_amount):
+    #    pool = Pool()
+    #    OthersConcepts = pool.get('account.multirevenue.others_concepts')
+    #    config_voucher = pool.get('account.voucher_configuration')(1)
+    #    valor = Decimal(rec.valor)
+    #    descuento = Decimal(rec.descuento)
+    #    retencion = Decimal(rec.retencion)
+    #    ajuste = Decimal(rec.ajuste)
+    #    retencion_iva = Decimal(rec.retencion_iva)
+    #    retencion_ica = Decimal(rec.retencion_ica)
+    #    valor_pagado = valor + descuento + retencion + (ajuste*-1) + retencion_iva + retencion_ica
+    #    to_others = []
+    #    if descuento > 0:
+    #        line_discount = OthersConcepts()
+    #        line_discount.description = 'DESCUENTO'
+    #        line_discount.amount = round((descuento * -1), 2)
+    #        line_discount.account = config_voucher.account_discount_tecno
+    #        to_others.append(line_discount)
+    #        valor_pagado += line_discount.amount
+    #    if retencion > 0:
+    #        line_rete = OthersConcepts()
+    #        line_rete.description = 'RETENCION'
+    #        line_rete.account = config_voucher.account_rete_tecno
+    #        line_rete.amount = round((retencion*-1), 2)
+    #        to_others.append(line_rete)
+    #        valor_pagado += line_rete.amount
+    #    if retencion_iva > 0:
+    #        line_retiva = OthersConcepts()
+    #        line_retiva.description = 'RETENCION IVA'
+    #        line_retiva.account = config_voucher.account_retiva_tecno
+    #        line_retiva.amount = round((retencion_iva*-1), 2)
+    #        to_others.append(line_retiva)
+    #        valor_pagado += line_retiva.amount
+    #    if retencion_ica > 0:
+    #        line_retica = OthersConcepts()
+    #        line_retica.description = 'RETENCION ICA'
+    #        line_retica.account = config_voucher.account_retica_tecno
+    #        line_retica.amount = round((retencion_ica*-1), 2)
+    #        to_others.append(retencion_ica)
+    #        valor_pagado += line_retica.amount
+    #    if ajuste > 0:
+    #        line_ajuste = OthersConcepts()
+    #        line_ajuste.description = 'AJUSTE'
+    #        line_ajuste.account = config_voucher.account_adjust_income
+    #        line_ajuste.amount = round(ajuste, 2)
+    #        to_others.append(line_ajuste)
+    #        valor_pagado += line_ajuste.amount
+    #    #Se verifica si la diferencia es minima para llevarla a un ajuste
+    #    difference = (original_amount - valor_pagado)
+    #    if difference != 0 and abs(difference) < 50:
+    #        line_ajuste = OthersConcepts()
+    #        line_ajuste.description = 'REDONDEO'
+    #        line_ajuste.account = config_voucher.account_adjust_income
+    #        line_ajuste.amount = Decimal(difference * -1)
+    #        to_others.append(line_ajuste)
+    #    return to_others
 
     @classmethod
     def convert_fecha_tecno(cls, fecha_tecno):
