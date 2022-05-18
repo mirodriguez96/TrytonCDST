@@ -239,7 +239,7 @@ class Purchase(metaclass=PoolMeta):
                     created_purchase.append(id_compra)
                 except Exception as e:
                     msg = f"EXCEPCION: Compra {id_compra}  {str(e)}"
-                    logs.append(msg)
+                    logs += '\n' + msg
                     continue
         for idc in created_purchase:
             cls.importado(idc)
