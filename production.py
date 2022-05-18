@@ -65,7 +65,7 @@ class Production(metaclass=PoolMeta):
                     existe, = existe
                     existe.id_tecno = None
                     existe.save()
-                    cls.reverse_production(existe)
+                    cls.reverse_production([existe])
                     continue
                 #tipo_doc = transformacion.tipo
                 fecha = str(transformacion.Fecha_Hora_Factura).split()[0].split('-')
