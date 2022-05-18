@@ -68,174 +68,179 @@ class Purchase(metaclass=PoolMeta):
                 numero_doc = compra[coluns_doc.index('Numero_documento')]
                 tipo_doc = compra[coluns_doc.index('tipo')].strip()
                 id_compra = str(sw)+'-'+tipo_doc+'-'+str(numero_doc)
-                existe = cls.buscar_compra(id_compra)
-                if not existe:
-                    #purchase = {}
-                    purchase = Purchase()
-                    purchase.number = tipo_doc+'-'+str(numero_doc)
-                    purchase.id_tecno = id_compra
-                    print(id_compra)
-                    purchase.description = compra[coluns_doc.index('notas')].replace('\n', ' ').replace('\r', '')
-                    #Se trae la fecha de la compra y se adapta al formato correcto para Tryton
-                    fecha = str(compra[coluns_doc.index('fecha_hora')]).split()[0].split('-')
-                    fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
-                    purchase.purchase_date = fecha_date
-                    party_id_number = compra[coluns_doc.index('nit_Cedula')]
-                    party = Party.search([('id_number', '=', party_id_number)])
-                    if not party:
-                        msg1 = f'Error compra: {id_compra}'
-                        msg2 = f'No se encontró el cliente con id: {party_id_number}'
-                        full_msg = ' - '.join([msg1, msg2])
-                        logging.warning(full_msg)
-                        logs += '\n' + full_msg
-                        continue
-                    party = party[0]                        
-                    purchase.party = party
-                    purchase.invoice_party = party
-                    #Se busca una dirección del tercero para agregar en la factura y envio
-                    address = Address.search([('party', '=', party.id)], limit=1)
-                    if address:
-                        purchase.invoice_address = address[0].id
-                    #Se indica a que bodega pertenece
-                    bodega = location.search([('id_tecno', '=', compra[coluns_doc.index('bodega')])])
-                    if not bodega:
-                        logging.warning("No se econtro la bodega: "+compra[coluns_doc.index('bodega')], id_compra)
-                        logs = logs+"\n"+"Error compra: "+id_compra+" - NO EXISTE LA BODEGA: "+compra[coluns_doc.index('bodega')]
-                        continue
-                    bodega = bodega[0]
-                    purchase.warehouse = bodega
-                    #Se le asigna el plazo de pago correspondiente
-                    condicion = compra[coluns_doc.index('condicion')]
-                    plazo_pago = payment_term.search([('id_tecno', '=', condicion)])
-                    if not plazo_pago:
-                        logging.warning("No se econtro el plazo de pago: "+condicion, id_compra)
-                        logs = logs+"\n"+"Error compra: "+id_compra+" - No se econtro el plazo de pago: "+condicion
-                        continue
-                    purchase.payment_term = plazo_pago[0]
+                try:
+                    existe = cls.buscar_compra(id_compra)
+                    if not existe:
+                        #purchase = {}
+                        purchase = Purchase()
+                        purchase.number = tipo_doc+'-'+str(numero_doc)
+                        purchase.id_tecno = id_compra
+                        print(id_compra)
+                        purchase.description = compra[coluns_doc.index('notas')].replace('\n', ' ').replace('\r', '')
+                        #Se trae la fecha de la compra y se adapta al formato correcto para Tryton
+                        fecha = str(compra[coluns_doc.index('fecha_hora')]).split()[0].split('-')
+                        fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
+                        purchase.purchase_date = fecha_date
+                        party_id_number = compra[coluns_doc.index('nit_Cedula')]
+                        party = Party.search([('id_number', '=', party_id_number)])
+                        if not party:
+                            msg1 = f'Error compra: {id_compra}'
+                            msg2 = f'No se encontró el cliente con id: {party_id_number}'
+                            full_msg = ' - '.join([msg1, msg2])
+                            logging.warning(full_msg)
+                            logs += '\n' + full_msg
+                            continue
+                        party = party[0]                        
+                        purchase.party = party
+                        purchase.invoice_party = party
+                        #Se busca una dirección del tercero para agregar en la factura y envio
+                        address = Address.search([('party', '=', party.id)], limit=1)
+                        if address:
+                            purchase.invoice_address = address[0].id
+                        #Se indica a que bodega pertenece
+                        bodega = location.search([('id_tecno', '=', compra[coluns_doc.index('bodega')])])
+                        if not bodega:
+                            logging.warning("No se econtro la bodega: "+compra[coluns_doc.index('bodega')], id_compra)
+                            logs = logs+"\n"+"Error compra: "+id_compra+" - NO EXISTE LA BODEGA: "+compra[coluns_doc.index('bodega')]
+                            continue
+                        bodega = bodega[0]
+                        purchase.warehouse = bodega
+                        #Se le asigna el plazo de pago correspondiente
+                        condicion = compra[coluns_doc.index('condicion')]
+                        plazo_pago = payment_term.search([('id_tecno', '=', condicion)])
+                        if not plazo_pago:
+                            logging.warning("No se econtro el plazo de pago: "+condicion, id_compra)
+                            logs = logs+"\n"+"Error compra: "+id_compra+" - No se econtro el plazo de pago: "+condicion
+                            continue
+                        purchase.payment_term = plazo_pago[0]
 
-                    retencion_iva = False
-                    if compra.retencion_iva and compra.retencion_iva > 0:
-                        retencion_iva = True
-                    retencion_ica = False
-                    if compra.retencion_ica and compra.retencion_ica > 0:
-                        retencion_ica = True
-                    retencion_rete = False
-                    if compra.retencion_causada and compra.retencion_causada > 0:
-                        if not retencion_iva and not retencion_ica:
-                            retencion_rete = True
-                        elif (compra.retencion_iva + compra.retencion_ica) != compra.retencion_causada:
-                            retencion_rete = True
+                        retencion_iva = False
+                        if compra.retencion_iva and compra.retencion_iva > 0:
+                            retencion_iva = True
+                        retencion_ica = False
+                        if compra.retencion_ica and compra.retencion_ica > 0:
+                            retencion_ica = True
+                        retencion_rete = False
+                        if compra.retencion_causada and compra.retencion_causada > 0:
+                            if not retencion_iva and not retencion_ica:
+                                retencion_rete = True
+                            elif (compra.retencion_iva + compra.retencion_ica) != compra.retencion_causada:
+                                retencion_rete = True
 
-                    #Ahora traemos las lineas de producto para la compra a procesar
-                    documentos_linea = cls.get_line_where(str(sw), str(numero_doc), str(tipo_doc))
-                    col_line = cls.get_columns_db_tecno('Documentos_Lin')
-                    for lin in documentos_linea:
-                        id_producto = str(lin[col_line.index('IdProducto')])
-                        #print(id_producto)
-                        producto = cls.buscar_producto(id_producto)
-                        if not producto.template.purchasable:
-                            raise UserError("El siguiente producto no es comprable: ", producto)
-                        #template, = Template.search([('id', '=', producto.template)])
-                        line = PurchaseLine()
-                        line.product = producto
-                        line.purchase = purchase
-                        line.type = 'line'
-                        line.unit = producto.template.default_uom
-                        #Se verifica si es una devolución
-                        cantidad_facturada = abs(round(lin[col_line.index('Cantidad_Facturada')], 3))
-                        if line.unit.id == 1:
-                            cantidad_facturada = int(cantidad_facturada)
-                        if sw == 4:
-                            line.quantity = cantidad_facturada * -1
-                            #Se indica a que documento hace referencia la devolucion
-                            purchase.reference = compra[coluns_doc.index('Tipo_Docto_Base')].strip()+'-'+str(compra[coluns_doc.index('Numero_Docto_Base')])
+                        #Ahora traemos las lineas de producto para la compra a procesar
+                        documentos_linea = cls.get_line_where(str(sw), str(numero_doc), str(tipo_doc))
+                        col_line = cls.get_columns_db_tecno('Documentos_Lin')
+                        for lin in documentos_linea:
+                            id_producto = str(lin[col_line.index('IdProducto')])
+                            #print(id_producto)
+                            producto = cls.buscar_producto(id_producto)
+                            if not producto.template.purchasable:
+                                raise UserError("El siguiente producto no es comprable: ", producto)
+                            #template, = Template.search([('id', '=', producto.template)])
+                            line = PurchaseLine()
+                            line.product = producto
+                            line.purchase = purchase
+                            line.type = 'line'
+                            line.unit = producto.template.default_uom
+                            #Se verifica si es una devolución
+                            cantidad_facturada = abs(round(lin[col_line.index('Cantidad_Facturada')], 3))
+                            if line.unit.id == 1:
+                                cantidad_facturada = int(cantidad_facturada)
+                            if sw == 4:
+                                line.quantity = cantidad_facturada * -1
+                                #Se indica a que documento hace referencia la devolucion
+                                purchase.reference = compra[coluns_doc.index('Tipo_Docto_Base')].strip()+'-'+str(compra[coluns_doc.index('Numero_Docto_Base')])
+                            else:
+                                line.quantity = cantidad_facturada
+                                purchase.reference = tipo_doc+'-'+str(numero_doc)
+                            if company_operation:
+                                line.operation_center = company_operation
+                            #Comprueba los cambios y trae los impuestos del producto
+                            line.on_change_product()
+                            #Se verifica si el impuesto al consumo fue aplicado
+                            impuesto_consumo = lin[col_line.index('Impuesto_Consumo')]
+                            #A continuación se verifica las retenciones e impuesto al consumo
+                            impuestos_linea = []
+                            for impuestol in line.taxes:
+                                clase_impuesto = impuestol.classification_tax
+                                if clase_impuesto == '05' and retencion_iva:
+                                    impuestos_linea.append(impuestol)
+                                elif clase_impuesto == '06' and retencion_rete:
+                                    impuestos_linea.append(impuestol)
+                                elif clase_impuesto == '07' and retencion_ica:
+                                    impuestos_linea.append(impuestol)
+                                elif impuestol.consumo and impuesto_consumo > 0:
+                                    #Se busca el impuesto al consumo con el mismo valor para aplicarlo
+                                    tax = Tax.search([('consumo', '=', True), ('type', '=', 'fixed'), ('amount', '=', impuesto_consumo)])
+                                    if tax:
+                                        tax, = tax
+                                        impuestos_linea.append(tax)
+                                    else:
+                                        raise UserError('ERROR IMPUESTO', 'No se encontró el impuesto al consumo: '+id_compra)
+                                elif clase_impuesto != '05' and clase_impuesto != '06' and clase_impuesto != '07' and not impuestol.consumo:
+                                    impuestos_linea.append(impuestol)
+                            line.taxes = impuestos_linea
+                            
+                            line.unit_price = lin[col_line.index('Valor_Unitario')]
+                            line.save()
+                        #Procesamos la compra para generar la factura y procedemos a rellenar los campos de la factura
+                        #purchase.save()
+                        purchase.quote([purchase])
+                        purchase.confirm([purchase])
+                        #Se requiere procesar de forma 'manual' la compra para que genere la factura
+                        purchase.process([purchase])
+                        #Se hace uso del asistente para crear el envio del proveedor
+                        purchase.generate_shipment([purchase])
+                        if purchase.shipments:
+                            try:
+                                shipment_in, = purchase.shipments
+                                shipment_in.number = tipo_doc+'-'+str(numero_doc)
+                                shipment_in.reference = tipo_doc+'-'+str(numero_doc)
+                                shipment_in.planned_date = fecha_date
+                                shipment_in.effective_date = fecha_date
+                                shipment_in.receive([shipment_in])
+                                shipment_in.done([shipment_in])
+                            except Exception as e:
+                                print(e)
+                                raise UserError("ERROR ENVIO: "+str(shipment_in.number), str(e))
                         else:
-                            line.quantity = cantidad_facturada
-                            purchase.reference = tipo_doc+'-'+str(numero_doc)
-                        if company_operation:
-                            line.operation_center = company_operation
-                        #Comprueba los cambios y trae los impuestos del producto
-                        line.on_change_product()
-                        #Se verifica si el impuesto al consumo fue aplicado
-                        impuesto_consumo = lin[col_line.index('Impuesto_Consumo')]
-                        #A continuación se verifica las retenciones e impuesto al consumo
-                        impuestos_linea = []
-                        for impuestol in line.taxes:
-                            clase_impuesto = impuestol.classification_tax
-                            if clase_impuesto == '05' and retencion_iva:
-                                impuestos_linea.append(impuestol)
-                            elif clase_impuesto == '06' and retencion_rete:
-                                impuestos_linea.append(impuestol)
-                            elif clase_impuesto == '07' and retencion_ica:
-                                impuestos_linea.append(impuestol)
-                            elif impuestol.consumo and impuesto_consumo > 0:
-                                #Se busca el impuesto al consumo con el mismo valor para aplicarlo
-                                tax = Tax.search([('consumo', '=', True), ('type', '=', 'fixed'), ('amount', '=', impuesto_consumo)])
-                                if tax:
-                                    tax, = tax
-                                    impuestos_linea.append(tax)
-                                else:
-                                    raise UserError('ERROR IMPUESTO', 'No se encontró el impuesto al consumo: '+id_compra)
-                            elif clase_impuesto != '05' and clase_impuesto != '06' and clase_impuesto != '07' and not impuestol.consumo:
-                                impuestos_linea.append(impuestol)
-                        line.taxes = impuestos_linea
-                        
-                        line.unit_price = lin[col_line.index('Valor_Unitario')]
-                        line.save()
-                    #Procesamos la compra para generar la factura y procedemos a rellenar los campos de la factura
-                    #purchase.save()
-                    purchase.quote([purchase])
-                    purchase.confirm([purchase])
-                    #Se requiere procesar de forma 'manual' la compra para que genere la factura
-                    purchase.process([purchase])
-                    #Se hace uso del asistente para crear el envio del proveedor
-                    purchase.generate_shipment([purchase])
-                    if purchase.shipments:
-                        try:
-                            shipment_in, = purchase.shipments
-                            shipment_in.number = tipo_doc+'-'+str(numero_doc)
-                            shipment_in.reference = tipo_doc+'-'+str(numero_doc)
-                            shipment_in.planned_date = fecha_date
-                            shipment_in.effective_date = fecha_date
-                            shipment_in.receive([shipment_in])
-                            shipment_in.done([shipment_in])
-                        except Exception as e:
-                            print(e)
-                            raise UserError("ERROR ENVIO: "+str(shipment_in.number), str(e))
-                    else:
-                        msg1 = f'No se creo envio en la compra: {purchase.id_tecno}'
-                        logs += '\n' + msg1
-                    if purchase.invoices:
-                        try:
-                            invoice, = purchase.invoices
-                            invoice.number = tipo_doc+'-'+str(numero_doc)
-                            invoice.reference = tipo_doc+'-'+str(numero_doc)
-                            invoice.invoice_date = fecha_date
-                            #Se agrega en la descripcion el nombre del tipo de documento de la tabla en sqlserver
-                            desc = cls.get_tipo_dcto(tipo_doc)
-                            if desc:
-                                invoice.description = desc[0][columns_tipodoc.index('TipoDoctos')].replace('\n', ' ').replace('\r', '')
-                            invoice.validate_invoice([invoice])
-                            #Verificamos que el total de la tabla en sqlserver coincidan o tengan una diferencia menor a 4 decimales, para contabilizar la factura
-                            total_amount = invoice.get_amount([invoice], 'total_amount')
-                            total_amount = abs(total_amount['total_amount'][invoice.id])
-                            total_tecno = Decimal(abs(compra.valor_total))
-                            retencion_causada = Decimal(abs(compra.retencion_causada))
-                            total_tecno = total_tecno - retencion_causada
-                            diferencia_total = abs(total_amount - total_tecno)
-                            if diferencia_total < Decimal(6.0):
-                                with Transaction().set_context(_skip_warnings=True):
-                                    invoice.post_batch([invoice])
-                                    invoice.post([invoice])
-                            invoice.save()
-                        except Exception as e:
-                            print(e)
-                            raise UserError(f"ERROR FACTURA: {invoice.number}", str(e))
-                    else:
-                        msg1 = f'No se creo factura en la compra: {purchase.id_tecno}'
-                        logs += '\n' + msg1
-                    purchase.save()
-                created_purchase.append(id_compra)
+                            msg1 = f'No se creo envio en la compra: {purchase.id_tecno}'
+                            logs += '\n' + msg1
+                        if purchase.invoices:
+                            try:
+                                invoice, = purchase.invoices
+                                invoice.number = tipo_doc+'-'+str(numero_doc)
+                                invoice.reference = tipo_doc+'-'+str(numero_doc)
+                                invoice.invoice_date = fecha_date
+                                #Se agrega en la descripcion el nombre del tipo de documento de la tabla en sqlserver
+                                desc = cls.get_tipo_dcto(tipo_doc)
+                                if desc:
+                                    invoice.description = desc[0][columns_tipodoc.index('TipoDoctos')].replace('\n', ' ').replace('\r', '')
+                                invoice.validate_invoice([invoice])
+                                #Verificamos que el total de la tabla en sqlserver coincidan o tengan una diferencia menor a 4 decimales, para contabilizar la factura
+                                total_amount = invoice.get_amount([invoice], 'total_amount')
+                                total_amount = abs(total_amount['total_amount'][invoice.id])
+                                total_tecno = Decimal(abs(compra.valor_total))
+                                retencion_causada = Decimal(abs(compra.retencion_causada))
+                                total_tecno = total_tecno - retencion_causada
+                                diferencia_total = abs(total_amount - total_tecno)
+                                if diferencia_total < Decimal(6.0):
+                                    with Transaction().set_context(_skip_warnings=True):
+                                        invoice.post_batch([invoice])
+                                        invoice.post([invoice])
+                                invoice.save()
+                            except Exception as e:
+                                print(e)
+                                raise UserError(f"ERROR FACTURA: {invoice.number}", str(e))
+                        else:
+                            msg1 = f'No se creo factura en la compra: {purchase.id_tecno}'
+                            logs += '\n' + msg1
+                        purchase.save()
+                    created_purchase.append(id_compra)
+                except Exception as e:
+                    msg = f"EXCEPCION: Compra {id_compra}  {str(e)}"
+                    logs.append(msg)
+                    continue
         for idc in created_purchase:
             cls.importado(idc)
             #print('creado...', idc) #TEST

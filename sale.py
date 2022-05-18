@@ -260,8 +260,8 @@ class Sale(metaclass=PoolMeta):
         log = cls.update_invoices_shipments(to_process, ventas_tecno, logs)
         actualizacion.add_logs(actualizacion, log)
         for id_tecno in to_created:
-            #cls.importado(id_tecno)
-            print('creado...', id_tecno) #TEST
+            cls.importado(id_tecno)
+            #print('creado...', id_tecno) #TEST 
         logging.warning('FINISH VENTAS')
 
 
@@ -622,7 +622,7 @@ class Sale(metaclass=PoolMeta):
     def get_data_tecno(cls):
         Config = Pool().get('conector.configuration')(1)
         fecha = Config.date.strftime('%Y-%m-%d %H:%M:%S')
-        #consult = "SELECT * FROM dbo.Documentos WHERE sw = 1 AND tipo = 140 AND Numero_documento = 21059" #TEST
+        #consult = "SELECT * FROM dbo.Documentos WHERE sw = 1 AND tipo = 501 AND Numero_documento = 122734" #TEST
         consult = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado != 'T' ORDER BY fecha_hora ASC"
         result = Config.get_data(consult)
         return result
@@ -648,25 +648,31 @@ class Sale(metaclass=PoolMeta):
     def buscar_producto(cls, id_producto):
         Product = Pool().get('product.product')
         producto = Product.search([('id_tecno', '=', id_producto)])
-        conector_actualizacion = Table('conector_actualizacion')
-        cursor = Transaction().connection.cursor()
+        #conector_actualizacion = Table('conector_actualizacion')
+        #cursor = Transaction().connection.cursor()
         
         if producto:
             producto, = producto
             if not producto.salable:
                 producto.salable = True
+                producto.sale_uom = producto.default_uom
                 producto.save()
+                msg1 = f'Error el producto con id: {id_producto} aparecia NO vendible'
+                logging.error(msg1)
+                raise UserError('Error product', msg1)
+                return False
             return producto
         else:
-            cursor.execute(*conector_actualizacion.update(
-                columns=[conector_actualizacion.write_date],
-                values=[None],
-                where=conector_actualizacion.name == 'PRODUCTOS')
-            )
+            #cursor.execute(*conector_actualizacion.update(
+            #    columns=[conector_actualizacion.write_date],
+            #    values=[None],
+            #    where=conector_actualizacion.name == 'PRODUCTOS')
+            #)
             msg1 = f'Error al buscar el producto con id: {id_producto}'
             logging.error(msg1)
-            Product.update_products()
-            #raise UserError('Error product search', msg1)
+            #Product.update_products()
+            raise UserError('Error product', msg1)
+            return False
             
 
     #Crea o actualiza un registro de la tabla actualización en caso de ser necesario

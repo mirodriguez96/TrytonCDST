@@ -55,6 +55,7 @@ class Invoice(metaclass=PoolMeta):
     @classmethod
     def import_credit_note(cls):
         logging.warning('RUN NOTA')
+        pool = Pool()
         nota_tecno = cls.get_data_tecno()
         actualizacion = cls.create_or_update()
 
@@ -63,12 +64,12 @@ class Invoice(metaclass=PoolMeta):
             return
 
         logs = []
-        pool = Pool()
+        
         Party = pool.get('party.party')
         Invoice = pool.get('account.invoice')
         Line = pool.get('account.invoice.line')
         Product = Pool().get('product.product')
-        Config = pool.get('conector.configuration')
+        Config = pool.get('conector.configuration')(1)
         PaymentTerm = pool.get('account.invoice.payment_term')
 
         invoices_create = []

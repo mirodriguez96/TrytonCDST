@@ -429,7 +429,7 @@ class Voucher(ModelSQL, ModelView):
                 logging.warning(msg)
                 logs.append(msg)
                 continue
-            print(ref)
+            #print(ref)
             valor_original, amount_to_pay, untaxed_amount = cls.get_amounts_to_pay(move_line, voucher.voucher_type)
             #print(valor_original, amount_to_pay, untaxed_amount)
             line = Line()

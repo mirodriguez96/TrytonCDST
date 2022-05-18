@@ -132,7 +132,7 @@ class Production(metaclass=PoolMeta):
         try:
             producciones = Production.create(to_create)
             Production.wait(producciones)
-            #Production.assign(producciones)
+            Production.assign(producciones)
             #Production.run(producciones)
             #Production.done(producciones)
         except Exception as e:
