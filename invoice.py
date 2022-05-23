@@ -1,14 +1,13 @@
 from decimal import Decimal
 from trytond.pool import PoolMeta, Pool
 from trytond.model import fields
-from trytond.pyson import Eval
+from trytond.pyson import Eval, Not, And
 from trytond.wizard import Wizard, StateTransition
 from trytond.transaction import Transaction
 from trytond.exceptions import UserError, UserWarning
 from sql import Table
 import logging
 import datetime
-
 
 
 ELECTRONIC_STATES = [
@@ -29,14 +28,26 @@ class Cron(metaclass=PoolMeta):
     def __setup__(cls):
         super().__setup__()
         cls.method.selection.append(
-            ('account.invoice|import_credit_note', "Importar Nota de Crédito"),
+            ('account.invoice|import_credit_note', "Importar Notas de Crédito"),
             )
+        cls.method.selection.append(
+            ('account.invoice|import_debit_note', "Importar Notas de Débito"),
+            )
+
 
 class Invoice(metaclass=PoolMeta):
     'Invoice'
     __name__ = 'account.invoice'
     electronic_state = fields.Selection(ELECTRONIC_STATES, 'Electronic State',
-                                        states={'invisible': Eval('type') != 'out'}, readonly=True)
+        states={'invisible': And(Eval('type') != 'out', ~Eval('equivalent_invoice'))}, readonly=True)
+    original_invoice = fields.Many2One('account.invoice', 'Original Invoice', domain=[
+        ('type', '=', 'out'),
+        ('party', '=', Eval('party')), ],
+        states={
+            'invisible': Not(Eval('invoice_type').in_(['91', '92'])),
+            'readonly': Eval('state').in_(['posted', 'paid'])
+            }
+    )
     id_tecno = fields.Char('Id Tabla Sqlserver (credit note)', required=False)
 
     @staticmethod
@@ -51,122 +62,187 @@ class Invoice(metaclass=PoolMeta):
         if reconciliations:
             Reconciliation.delete(reconciliations)
     
-    #Nota de crédito
+    #Importar notas de TecnoCarnes
     @classmethod
-    def import_credit_note(cls):
-        logging.warning('RUN NOTA')
+    def import_notas_tecno(cls, nota_tecno):
+        logging.warning(f'RUN NOTAS DE {nota_tecno}')
         pool = Pool()
-        nota_tecno = cls.get_data_tecno()
-        actualizacion = cls.create_or_update()
-
-        if not nota_tecno:
+        Config = pool.get('conector.configuration')
+        Actualizacion = pool.get('conector.actualizacion')
+        actualizacion = Actualizacion.create_or_update(f'NOTAS DE {nota_tecno}')
+        # Obtenemos las notas de credito de TecnoCarnes
+        if nota_tecno == "CREDITO":
+            documentos = Config.get_documentos_tecno('32')
+        else:
+            documentos = Config.get_documentos_tecno('31')
+        if not documentos:
             actualizacion.save()
+            logging.warning(f"FINISH NOTAS DE {nota_tecno}")
             return
-
-        logs = []
-        
+        ###
+        Module = pool.get('ir.module')
+        Tax = pool.get('account.tax')
         Party = pool.get('party.party')
         Invoice = pool.get('account.invoice')
         Line = pool.get('account.invoice.line')
-        Product = Pool().get('product.product')
-        Config = pool.get('conector.configuration')(1)
+        Product = pool.get('product.product')
         PaymentTerm = pool.get('account.invoice.payment_term')
-
+        Configuration = pool.get('account.configuration')(1)
+        operation_center = Module.search([('name', '=', 'company_operation'), ('state', '=', 'activated')])
+        if operation_center:
+            operation_center = pool.get('company.operation_center')(1)
+        logs = []
         invoices_create = []
-        lines_create = []
-        for nota in nota_tecno:
-            id_nota = str(nota.sw)+'-'+nota.tipo+'-'+str(nota.Numero_documento)
-            invoice = Invoice.search([('id_tecno', '=', id_nota)])
-            if invoice:
-                msg = f"La nota {id_nota} ya existe en Tryton"
-                logs.append(msg)
-                Config.mark_imported(id_nota)
-                continue
-            party = Party.search([('id_number', '=', nota.nit_Cedula)])
-            if not party:
-                msg = f' No se encontro el tercero {nota.nit_Cedula} de la nota {id_nota}'
-                logging.error(msg)
-                logs.append(msg)
-                actualizacion.reset_writedate('TERCEROS')
-                continue
-            party = party[0]
-            plazo_pago = PaymentTerm.search([('id_tecno', '=', nota.condicion)])
-            if not plazo_pago:
-                msg = f'Plazo de pago {nota.condicion} no existe para la nota {id_nota}'
-                logging.error(msg)
-                logs.append(msg)
-                continue
-            plazo_pago = plazo_pago[0]
-            fecha = str(nota.fecha_hora).split()[0].split('-')
-            fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
-
-            invoice = Invoice()
-            invoice.party = party
-            invoice.invoice_date = fecha_date
-            invoice.number = nota.tipo+'-'+str(nota.Numero_documento)
-            invoice.reference = nota.tipo+'-'+str(nota.Numero_documento)
-            invoice.description = 'NOTA DE CREDITO'
-            invoice.invoice_type = '91'
-            invoice.payment_term = plazo_pago
-
-            linea_tecno = cls.get_dataline_tecno(id_nota)
-            for linea in linea_tecno:
-                product = Product.search([('id_tecno', '=', linea.IdProducto)])
-                if not product:
-                    msg = f"no se encontro el producto con id {linea.IdProducto}"
+        with Transaction().set_context(_skip_warnings=True):
+            for nota in documentos:
+                id_nota = str(nota.sw)+'-'+nota.tipo+'-'+str(nota.Numero_documento)
+                reference = nota.tipo+'-'+str(nota.Numero_documento)
+                invoice = Invoice.search([('id_tecno', '=', id_nota)])
+                if invoice:
+                    msg = f"LA NOTA {id_nota} YA EXISTE EN TRYTON"
                     logs.append(msg)
-                    raise UserError("ERROR PRODUCTO", msg)
-                cantidad = abs(round(linea.Cantidad_Facturada, 3)) * -1
-                valor_unitario = Decimal(linea.Valor_Unitario)
-                line = Line()
-                line.invoice = invoice
-                line.product = product[0]
-                line.quantity = cantidad
-                line.unit_price = valor_unitario
-                lines_create.append(line)
-        
-        Invoice.create(invoices_create)
-        Line.create(lines_create)
-        Invoice.post(invoices_create)
+                    Config.update_exportado(id_nota, 'T')
+                    continue
+                party = Party.search([('id_number', '=', nota.nit_Cedula)])
+                if not party:
+                    msg = f' NO SE ENCONTRO EL TERCERO {nota.nit_Cedula} DE LA NOTA {id_nota}'
+                    logging.error(msg)
+                    logs.append(msg)
+                    actualizacion.reset_writedate('TERCEROS')
+                    Config.update_exportado(id_nota, 'E')
+                    continue
+                party = party[0]
+                plazo_pago = PaymentTerm.search([('id_tecno', '=', nota.condicion)])
+                if not plazo_pago:
+                    msg = f'Plazo de pago {nota.condicion} no existe para la nota {id_nota}'
+                    logging.error(msg)
+                    logs.append(msg)
+                    Config.update_exportado(id_nota, 'E')
+                    continue
+                plazo_pago = plazo_pago[0]
+                fecha = str(nota.fecha_hora).split()[0].split('-')
+                fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
+                print(id_nota)
+                invoice = Invoice()
+                invoice.id_tecno = id_nota
+                invoice.party = party
+                invoice.on_change_party() #Se usa para traer la dirección del tercero
+                invoice.invoice_date = fecha_date
+                invoice.number = reference
+                invoice.reference = reference
+                description = (nota.notas).replace('\n', ' ').replace('\r', '')
+                if description:
+                    invoice.description = description
+                if nota_tecno == "CREDITO":
+                    invoice.type = 'out'
+                    invoice.invoice_type = '91'
+                    if party.account_receivable:
+                        invoice.account = party.account_receivable
+                    elif Configuration.default_account_receivable:
+                        invoice.account = Configuration.default_account_receivable
+                    else:
+                        msg = f'LA NOTA {id_nota} NO SE CREO POR FALTA DE CUENTA POR COBRAR EN EL TERCERO Y LA CONFIGURACION CONTABLE POR DEFECTO'
+                        logging.error(msg)
+                        logs.append(msg)
+                        Config.update_exportado(id_nota, 'E')
+                        continue
+                else:
+                    invoice.type = 'in'
+                    invoice.invoice_type = '92'
+                    if party.account_payable:
+                        invoice.account = party.account_payable
+                    elif Configuration.default_account_payable:
+                        invoice.account = Configuration.default_account_payable
+                    else:
+                        msg = f'LA NOTA {id_nota} NO SE CREO POR FALTA DE CUENTA POR PAGAR EN EL TERCERO Y LA CONFIGURACION CONTABLE POR DEFECTO'
+                        logging.error(msg)
+                        logs.append(msg)
+                        Config.update_exportado(id_nota, 'E')
+                        continue
+                invoice.payment_term = plazo_pago
+                dcto_base = str(nota.Tipo_Docto_Base)+'-'+str(nota.Numero_Docto_Base)
+                original_invoice, = Invoice.search([('number', '=', dcto_base)])
+                invoice.original_invoice = original_invoice
+                invoice.comment = f"NOTA DE {nota_tecno} DE LA FACTURA {dcto_base}"
+                invoice.on_change_type()
+                retencion_rete = False
+                if nota.retencion_causada > 0:
+                    if not nota.retencion_iva == 0 and not nota.retencion_ica == 0:
+                        retencion_rete = True
+                    elif (nota.retencion_iva + nota.retencion_ica) != nota.retencion_causada:
+                        retencion_rete = True
+                to_lines = []
+                lineas_tecno = Config.get_lineasd_tecno(id_nota)
+                for linea in lineas_tecno:
+                    product = Product.search([('id_tecno', '=', linea.IdProducto)])
+                    if not product:
+                        msg = f"no se encontro el producto con id {linea.IdProducto}"
+                        logs.append(msg)
+                        raise UserError("ERROR PRODUCTO", msg)
+                    cantidad = abs(round(linea.Cantidad_Facturada, 3)) * -1
+                    line = Line()
+                    line.product = product[0]
+                    line.quantity = cantidad
+                    line.unit_price = linea.Valor_Unitario
+                    if operation_center:
+                        line.operation_center = operation_center
+                    line.on_change_product()
+                    tax_line = []
+                    for impuestol in line.taxes:
+                        clase_impuesto = impuestol.classification_tax
+                        if clase_impuesto == '05' and nota.retencion_iva > 0:
+                            tax_line.append(impuestol)
+                        elif clase_impuesto == '06' and retencion_rete:
+                            tax_line.append(impuestol)
+                        elif clase_impuesto == '07' and nota.retencion_ica > 0:
+                            tax_line.append(impuestol)
+                        elif impuestol.consumo and linea.Impuesto_Consumo > 0:
+                            #Se busca el impuesto al consumo con el mismo valor para aplicarlo
+                            tax = Tax.search([('consumo', '=', True), ('type', '=', 'fixed'), ('amount', '=', linea.Impuesto_Consumo)])
+                            if tax:
+                                tax_line.append(tax[0])
+                            else:
+                                msg = f'NO SE ENCONTRO EL IMPUESTO FIJO DE TIPO CONSUMO CON VALOR DE {linea.Impuesto_Consumo} EN EL DOCUMENTO {id_nota}'
+                                logging.error(msg)
+                                logs.append(msg)
+                                Config.update_exportado(id_nota, 'E')
+                                continue
+                        elif clase_impuesto != '05' and clase_impuesto != '06' and clase_impuesto != '07' and not impuestol.consumo:
+                            tax_line.append(impuestol)
+                    line.taxes = tax_line
+                    if linea.Porcentaje_Descuento_1 > 0:
+                        descuento = (linea.Valor_Unitario * Decimal(linea.Porcentaje_Descuento_1)) / 100
+                        line.unit_price = Decimal(linea.Valor_Unitario - descuento)
+                        line.on_change_product()
+                        line.gross_unit_price = linea.Valor_Unitario 
+                        #line.discount = Decimal(linea.Porcentaje_Descuento_1/100)
+                    to_lines.append(line)
+                if to_lines:
+                    invoice.lines = to_lines
+                invoice.on_change_lines()
+                invoice.save()
+                Invoice.validate_invoice([invoice])
+                total_tryton = abs(invoice.total_amount)
+                total_tecno = Decimal(abs(nota.valor_total))
+                diferencia_total = abs(total_tryton - total_tecno)
+                if diferencia_total < Decimal(6.0):
+                    Invoice.post([invoice])
+                invoices_create.append(invoice)
         actualizacion.add_logs(actualizacion, logs)
         for invoice in invoices_create:
-            Config.mark_imported(invoice.id_tecno)
-        logging.warning('FINISH NOTA')
+            Config.update_exportado(invoice.id_tecno, 'T')
+        logging.warning(f"FINISH NOTAS DE {nota_tecno}")
 
 
+    #Nota de crédito
     @classmethod
-    def get_data_tecno(cls):
-        Config = Pool().get('conector.configuration')
-        config, = Config.search([], order=[('id', 'DESC')], limit=1)
-        fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
-        consult = "SET DATEFORMAT ymd SELECT * FROM dbo.Documentos WHERE sw = 32 AND fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado != 'T'"
-        result = Config.get_data(consult)
-        return result
+    def import_credit_note(cls):
+        cls.import_notas_tecno('CREDITO')
 
+    #Nota de débito
     @classmethod
-    def get_dataline_tecno(cls, id):
-        lista = id.split('-')
-        Config = Pool().get('conector.configuration')
-        consult = "SELECT * FROM dbo.Documentos_Lin WHERE sw = "+lista[0]+" AND Numero_Documento = "+lista[1]+" AND tipo = "+lista[2]+" order by seq"
-        result = Config.get_data(consult)
-        return result
-
-    
-    #Crea o actualiza un registro de la tabla actualización en caso de ser necesario
-    @classmethod
-    def create_or_update(cls):
-        Actualizacion = Pool().get('conector.actualizacion')
-        actualizacion = Actualizacion.search([('name', '=','NOTA DE CREDITO')])
-        if actualizacion:
-            #Se busca un registro con la actualización
-            actualizacion, = actualizacion
-        else:
-            #Se crea un registro con la actualización
-            actualizacion = Actualizacion()
-            actualizacion.name = 'NOTA DE CREDITO'
-            actualizacion.logs = 'logs...'
-            actualizacion.save()
-        return actualizacion
+    def import_debit_note(cls):
+        cls.import_notas_tecno('DEBITO')
 
 
 class UpdateInvoiceTecno(Wizard):

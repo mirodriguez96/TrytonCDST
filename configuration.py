@@ -95,6 +95,29 @@ class Configuration(ModelSQL, ModelView):
         query = "UPDATE dbo.Documentos SET exportado = 'T' WHERE sw ="+lista[0]+" and tipo = "+lista[1]+" and Numero_documento = "+lista[2]
         cls.set_data(query)
 
+    #Se marca en la tabla dbo.Documentos como exportado a Tryton
+    @classmethod
+    def update_exportado(cls, id, e):
+        lista = id.split('-')
+        query = "UPDATE dbo.Documentos SET exportado = '"+e+"' WHERE sw ="+lista[0]+" and tipo = "+lista[1]+" and Numero_documento = "+lista[2]
+        cls.set_data(query)
+
+    @classmethod
+    def get_documentos_tecno(cls, sw):
+        Config = Pool().get('conector.configuration')(1)
+        fecha = Config.date.strftime('%Y-%m-%d %H:%M:%S')
+        #query = "SELECT * FROM dbo.Documentos WHERE sw = "+sw+" AND tipo = 123 AND Numero_documento = 123456" #TEST
+        query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND sw = "+sw+" AND exportado != 'T' AND exportado != 'E' ORDER BY fecha_hora ASC"
+        data = cls.get_data(query)
+        return data
+
+    @classmethod
+    def get_lineasd_tecno(cls, id):
+        lista = id.split('-')
+        query = "SELECT * FROM dbo.Documentos_Lin WHERE sw = "+lista[0]+" AND tipo = "+lista[1]+" AND Numero_Documento = "+lista[2]+" order by seq"
+        data = cls.get_data(query)
+        return data
+
     #
     @classmethod
     def encode_file(cls, file, process='encode'):
