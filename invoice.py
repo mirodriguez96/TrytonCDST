@@ -1,4 +1,5 @@
 from decimal import Decimal
+from math import prod
 from trytond.pool import PoolMeta, Pool
 from trytond.model import fields
 from trytond.pyson import Eval, Not, And
@@ -133,32 +134,21 @@ class Invoice(metaclass=PoolMeta):
                 description = (nota.notas).replace('\n', ' ').replace('\r', '')
                 if description:
                     invoice.description = description
+                invoice.type = 'out'
                 if nota_tecno == "CREDITO":
-                    invoice.type = 'out'
                     invoice.invoice_type = '91'
-                    if party.account_receivable:
-                        invoice.account = party.account_receivable
-                    elif Configuration.default_account_receivable:
-                        invoice.account = Configuration.default_account_receivable
-                    else:
-                        msg = f'LA NOTA {id_nota} NO SE CREO POR FALTA DE CUENTA POR COBRAR EN EL TERCERO Y LA CONFIGURACION CONTABLE POR DEFECTO'
-                        logging.error(msg)
-                        logs.append(msg)
-                        Config.update_exportado(id_nota, 'E')
-                        continue
                 else:
-                    invoice.type = 'in'
                     invoice.invoice_type = '92'
-                    if party.account_payable:
-                        invoice.account = party.account_payable
-                    elif Configuration.default_account_payable:
-                        invoice.account = Configuration.default_account_payable
-                    else:
-                        msg = f'LA NOTA {id_nota} NO SE CREO POR FALTA DE CUENTA POR PAGAR EN EL TERCERO Y LA CONFIGURACION CONTABLE POR DEFECTO'
-                        logging.error(msg)
-                        logs.append(msg)
-                        Config.update_exportado(id_nota, 'E')
-                        continue
+                if party.account_receivable:
+                    invoice.account = party.account_receivable
+                elif Configuration.default_account_receivable:
+                    invoice.account = Configuration.default_account_receivable
+                else:
+                    msg = f'LA NOTA {id_nota} NO SE CREO POR FALTA DE CUENTA POR COBRAR EN EL TERCERO Y LA CONFIGURACION CONTABLE POR DEFECTO'
+                    logging.error(msg)
+                    logs.append(msg)
+                    Config.update_exportado(id_nota, 'E')
+                    continue
                 invoice.payment_term = plazo_pago
                 dcto_base = str(nota.Tipo_Docto_Base)+'-'+str(nota.Numero_Docto_Base)
                 original_invoice, = Invoice.search([('number', '=', dcto_base)])
@@ -167,7 +157,7 @@ class Invoice(metaclass=PoolMeta):
                 invoice.on_change_type()
                 retencion_rete = False
                 if nota.retencion_causada > 0:
-                    if not nota.retencion_iva == 0 and not nota.retencion_ica == 0:
+                    if nota.retencion_iva == 0 and nota.retencion_ica == 0:
                         retencion_rete = True
                     elif (nota.retencion_iva + nota.retencion_ica) != nota.retencion_causada:
                         retencion_rete = True
@@ -179,7 +169,10 @@ class Invoice(metaclass=PoolMeta):
                         msg = f"no se encontro el producto con id {linea.IdProducto}"
                         logs.append(msg)
                         raise UserError("ERROR PRODUCTO", msg)
-                    cantidad = abs(round(linea.Cantidad_Facturada, 3)) * -1
+                    if nota_tecno == "CREDITO":
+                        cantidad = abs(round(linea.Cantidad_Facturada, 3)) * -1
+                    else:
+                        cantidad = abs(round(linea.Cantidad_Facturada, 3))
                     line = Line()
                     line.product = product[0]
                     line.quantity = cantidad
@@ -222,8 +215,13 @@ class Invoice(metaclass=PoolMeta):
                 invoice.on_change_lines()
                 invoice.save()
                 Invoice.validate_invoice([invoice])
-                total_tryton = abs(invoice.total_amount)
-                total_tecno = Decimal(abs(nota.valor_total))
+                total_tryton = abs(invoice.untaxed_amount)
+                valor_total = Decimal(abs(nota.valor_total))
+                valor_impuesto = Decimal(abs(nota.Valor_impuesto) + abs(nota.Impuesto_Consumo) + abs(nota.retencion_causada))
+                if valor_impuesto > 0:
+                    total_tecno = valor_total - valor_impuesto
+                else:
+                    total_tecno = valor_total
                 diferencia_total = abs(total_tryton - total_tecno)
                 if diferencia_total < Decimal(6.0):
                     Invoice.post([invoice])
@@ -267,19 +265,13 @@ class UpdateInvoiceTecno(Wizard):
             rec_party = rec_name+' de '+party_name
             if invoice.number and '-' in invoice.number:
                 if invoice.type == 'out':
-                    #print('Factura de cliente: ', rec_party)
                     sale = Sale.search([('number', '=', invoice.number)])
                     if sale:
                         to_delete_sales.append(sale[0])
-                    #else:
-                    #    raise UserError("No existe la venta para la factura: ", rec_party)
                 elif invoice.type == 'in':
-                    #print('Factura de proveedor: ', rec_party)
                     purchase = Purchase.search([('number', '=', invoice.number)])
                     if purchase:
                         to_delete_purchases.append(purchase[0])
-                    #else:
-                    #    raise UserError("No existe la compra para la factura: ", rec_party)
             else:
                 raise UserError("Revisa el número de la factura (tipo-numero): ", rec_party)
         Sale.delete_imported_sales(to_delete_sales)
