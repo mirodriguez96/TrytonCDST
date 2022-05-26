@@ -22,6 +22,7 @@ from . import account
 def register():
     Pool.register(
         account.Account,
+        account.BalanceStockStart,
         company.Company,
         conector.Actualizacion,
         party.Party,
@@ -59,6 +60,7 @@ def register():
         module='conector', type_='model')
 
     Pool.register(
+        account.BalanceStock,
         electronic_payroll_wizard.PayrollElectronicCdst,
         invoice.UpdateInvoiceTecno,
         invoice.UpdateNoteDate,
