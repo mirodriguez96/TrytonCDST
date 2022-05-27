@@ -53,6 +53,7 @@ class Voucher(ModelSQL, ModelView):
         Line = pool.get('account.voucher.line')
         Party = pool.get('party.party')
         PayMode = pool.get('account.voucher.paymode')
+        Module = pool.get('ir.module')
         logs = []
         created = []
         # Comenzamos a recorrer los documentos a procesar y almacenamos los registros y creados en una lista
@@ -109,11 +110,17 @@ class Voucher(ModelSQL, ModelView):
             nota = (doc.notas).replace('\n', ' ').replace('\r', '')
             if nota:
                 voucher.description = nota
+            company_operation = Module.search([('name', '=', 'company_operation'), ('state', '=', 'activated')])
+            if company_operation:
+                operation_center = pool.get('company.operation_center')(1)
+                voucher.operation_center = operation_center
             valor_aplicado = Decimal(doc.valor_aplicado)
             lines = cls.get_lines_vtecno(facturas, voucher, logs)
             if lines:
                 voucher.lines = lines
                 voucher.on_change_lines()
+                #if company_operation:
+                #    voucher.on_change_operation_center()
             #Se verifica que el comprobante tenga lineas para ser procesado y contabilizado (doble verificación por error)
             if voucher.lines and voucher.amount_to_pay > 0:
                 Voucher.process([voucher])
@@ -127,6 +134,9 @@ class Voucher(ModelSQL, ModelView):
                     line_ajuste.detail = 'AJUSTE'
                     line_ajuste.account = config_voucher.account_adjust_expense
                     line_ajuste.amount = diferencia
+                    if company_operation:
+                        operation_center = pool.get('company.operation_center')(1)
+                        line_ajuste.operation_center = operation_center
                     line_ajuste.save()
                     voucher.on_change_lines()
                     Voucher.post([voucher])
@@ -151,7 +161,7 @@ class Voucher(ModelSQL, ModelView):
             actualizacion.save()
             logging.warning("FINISH COMPROBANTES DE INGRESO")
             return
-        #Module = pool.get('ir.module')
+        Module = pool.get('ir.module')
         Voucher = pool.get('account.voucher')
         Line = pool.get('account.voucher.line')
         Party = pool.get('party.party')
@@ -287,10 +297,10 @@ class Voucher(ModelSQL, ModelView):
                 nota = (doc.notas).replace('\n', ' ').replace('\r', '')
                 if nota:
                     voucher.description = nota
-                #company_operation = Module.search([('name', '=', 'company_operation'), ('state', '=', 'activated')])
-                #if company_operation:
-                #    operation_center = pool.get('company.operation_center')(1)
-                #    voucher.operation_center = operation_center
+                company_operation = Module.search([('name', '=', 'company_operation'), ('state', '=', 'activated')])
+                if company_operation:
+                    operation_center = pool.get('company.operation_center')(1)
+                    voucher.operation_center = operation_center
                 valor_aplicado = Decimal(doc.valor_aplicado)
                 lines = cls.get_lines_vtecno(facturas, voucher, logs)
                 if lines:
@@ -313,6 +323,9 @@ class Voucher(ModelSQL, ModelView):
                         line_ajuste.detail = 'AJUSTE'
                         line_ajuste.account = config_voucher.account_adjust_income
                         line_ajuste.amount = diferencia
+                        if company_operation:
+                            operation_center = pool.get('company.operation_center')(1)
+                            line_ajuste.operation_center = operation_center
                         line_ajuste.save()
                         voucher.on_change_lines()
                         Voucher.post([voucher])
@@ -416,6 +429,7 @@ class Voucher(ModelSQL, ModelView):
     @classmethod
     def get_lines_vtecno(cls, facturas, voucher, logs):
         pool = Pool()
+        Module = pool.get('ir.module')
         Line = pool.get('account.voucher.line')
         config_voucher = pool.get('account.voucher_configuration')(1)
         to_lines = []
@@ -435,6 +449,10 @@ class Voucher(ModelSQL, ModelView):
             line.reference = ref
             line.move_line = move_line
             line.on_change_move_line()
+            company_operation = Module.search([('name', '=', 'company_operation'), ('state', '=', 'activated')])
+            if company_operation:
+                operation_center = pool.get('company.operation_center')(1)
+                line.operation_center = operation_center
             valor = Decimal(rec.valor)
             descuento = Decimal(rec.descuento)
             retencion = Decimal(rec.retencion)
@@ -455,6 +473,9 @@ class Voucher(ModelSQL, ModelView):
                 line_discount.detail = 'DESCUENTO'
                 line_discount.amount = round((descuento * -1), 2)
                 line_discount.account = config_voucher.account_discount_tecno
+                if company_operation:
+                    operation_center = pool.get('company.operation_center')(1)
+                    line_discount.operation_center = operation_center
                 to_lines.append(line_discount)
             if retencion > 0:
                 line_rete = Line()
@@ -466,6 +487,9 @@ class Voucher(ModelSQL, ModelView):
                 line_rete.tax = config_voucher.account_rete_tecno
                 line_rete.on_change_tax()
                 line_rete.amount = round((retencion*-1), 2)
+                if company_operation:
+                    operation_center = pool.get('company.operation_center')(1)
+                    line_rete.operation_center = operation_center
                 to_lines.append(line_rete)
             if retencion_iva > 0:
                 line_retiva = Line()
@@ -477,6 +501,9 @@ class Voucher(ModelSQL, ModelView):
                 line_retiva.tax = config_voucher.account_retiva_tecno
                 line_retiva.on_change_tax()
                 line_retiva.amount = round((retencion_iva*-1), 2)
+                if company_operation:
+                    operation_center = pool.get('company.operation_center')(1)
+                    line_retiva.operation_center = operation_center
                 to_lines.append(line_retiva)
             if retencion_ica > 0:
                 line_retica = Line()
@@ -488,6 +515,9 @@ class Voucher(ModelSQL, ModelView):
                 line_retica.tax = config_voucher.account_retica_tecno
                 line_retica.on_change_tax()
                 line_retica.amount = round((retencion_ica*-1), 2)
+                if company_operation:
+                    operation_center = pool.get('company.operation_center')(1)
+                    line_retica.operation_center = operation_center
                 to_lines.append(line_retica)
             if ajuste > 0:
                 line_ajuste = Line()
@@ -499,6 +529,9 @@ class Voucher(ModelSQL, ModelView):
                 elif Decimal(move_line.credit) > 0:
                     line_ajuste.account = config_voucher.account_adjust_expense
                 line_ajuste.amount = round(ajuste, 2)
+                if company_operation:
+                    operation_center = pool.get('company.operation_center')(1)
+                    line_ajuste.operation_center = operation_center
                 to_lines.append(line_ajuste)
         return to_lines
 
