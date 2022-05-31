@@ -208,7 +208,7 @@ class Product(ModelSQL, ModelView):
     @classmethod
     def buscar_producto(cls, id_producto):
         Product = Pool().get('product.product')
-        producto = Product.search([('id_tecno', '=', id_producto)])
+        producto = Product.search(['OR', ('id_tecno', '=', id_producto), ('code', '=', id_producto)])
         if producto:
             return producto[0]
         else:

@@ -647,7 +647,7 @@ class Sale(metaclass=PoolMeta):
     @classmethod
     def buscar_producto(cls, id_producto):
         Product = Pool().get('product.product')
-        producto = Product.search([('id_tecno', '=', id_producto)])
+        producto = Product.search(['OR', ('id_tecno', '=', id_producto), ('code', '=', id_producto)])
         #conector_actualizacion = Table('conector_actualizacion')
         #cursor = Transaction().connection.cursor()
         

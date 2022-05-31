@@ -34,13 +34,14 @@ class Production(metaclass=PoolMeta):
     def import_data_production(cls):
         logging.warning('RUN PRODUCTION')
         pool = Pool()
+        Config = pool.get('conector.configuration')
         Actualizacion = pool.get('conector.actualizacion')
         actualizacion = Actualizacion.create_or_update('PRODUCCION')
-        parametro = cls.get_data_parametros('37')
+        parametro = Config.get_data_parametros('37')
         valor_parametro = parametro[0].Valor.split(',')
         datos = []
         for tipo in valor_parametro:
-            result = cls.last_update(tipo)
+            result = Config.get_documentos_tipo('12', tipo)
             if result:
                 datos.append(result)
         if not datos:
@@ -82,7 +83,7 @@ class Production(metaclass=PoolMeta):
                     'warehouse': bodega.id,
                     'location': bodega.production_location.id,
                 }
-                lines = cls.get_data_line(str(sw), tipo_doc, str(numero_doc))
+                lines = Config.get_lineasd_tecno(id_tecno)
                 entradas = []
                 salidas = []
                 cont = 0
@@ -139,52 +140,13 @@ class Production(metaclass=PoolMeta):
             excepcion = True
             logs.append(str(e))
         Actualizacion.add_logs(actualizacion, logs)
-        if not excepcion:
+        if excepcion:
             for prod in producciones:
-                cls.importado(prod.id_tecno)
+                Config.update_exportado(prod.id_tecno, 'E')
+        else:
+            for prod in producciones:
+                Config.update_exportado(prod.id_tecno, 'T')
         logging.warning('FINISH PRODUCTION')
-
-    #Esta función se encarga de traer todos los datos de una tabla dada de acuerdo al rango de fecha dada de la bd
-    @classmethod
-    def get_data_tecno(cls, date, tipo):
-        Config = Pool().get('conector.configuration')
-        #consult = "SELECT * FROM dbo.Documentos WHERE sw = 12 and tipo = 110  AND Numero_documento = 126335"
-        consult = "SET DATEFORMAT ymd SELECT TOP(100) * FROM dbo.Documentos WHERE sw = 12 and tipo = '"+tipo+"'  AND fecha_hora >= CAST('"+date+"' AS datetime) AND exportado != 'T'"
-        data = Config.get_data(consult)
-        return data
-
-    @classmethod
-    def get_data_line(cls, sw, tipo, nro):
-        Config = Pool().get('conector.configuration')
-        consult = "SELECT * FROM dbo.Documentos_Lin WHERE sw = "+sw+" AND Numero_Documento = "+nro+" AND tipo = "+tipo+" order by seq"
-        data = Config.get_data(consult)
-        return data
-
-    @classmethod
-    def importado(cls, id):
-        lista = id.split('-')
-        Config = Pool().get('conector.configuration')
-        query = "UPDATE dbo.Documentos SET exportado = 'T' WHERE sw ="+lista[0]+" and tipo = "+lista[1]+" and Numero_documento = "+lista[2]
-        Config.set_data(query)
-
-    #Función encargada de traer los datos de la bd con una fecha dada.
-    @classmethod
-    def last_update(cls, tipo):
-        Config = Pool().get('conector.configuration')
-        config, = Config.search([], order=[('id', 'DESC')], limit=1)
-        fecha = config.date
-        fecha = fecha.strftime('%Y-%m-%d %H:%M:%S')
-        #fecha = "2021-01-01" #PRUEBAS
-        data = cls.get_data_tecno(fecha, tipo)
-        return data
-
-
-    @classmethod
-    def get_data_parametros(cls, id):
-        Config = Pool().get('conector.configuration')(1)
-        query = "SELECT * FROM dbo.TblParametro WHERE IdParametro = "+id
-        data = Config.get_data(query)
-        return data
 
 
     #Función encargada de revertir las producciones hechas

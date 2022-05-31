@@ -112,9 +112,23 @@ class Configuration(ModelSQL, ModelView):
         return data
 
     @classmethod
+    def get_documentos_tipo(cls, sw, tipo):
+        Config = Pool().get('conector.configuration')(1)
+        fecha = Config.date.strftime('%Y-%m-%d %H:%M:%S')
+        query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND sw = "+sw+" AND tipo = "+tipo+" AND exportado != 'T' AND exportado != 'E' ORDER BY fecha_hora ASC"
+        data = cls.get_data(query)
+        return data
+
+    @classmethod
     def get_lineasd_tecno(cls, id):
         lista = id.split('-')
         query = "SELECT * FROM dbo.Documentos_Lin WHERE sw = "+lista[0]+" AND tipo = "+lista[1]+" AND Numero_Documento = "+lista[2]+" order by seq"
+        data = cls.get_data(query)
+        return data
+
+    @classmethod
+    def get_data_parametros(cls, id):
+        query = "SELECT * FROM dbo.TblParametro WHERE IdParametro = "+id
         data = cls.get_data(query)
         return data
 
