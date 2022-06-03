@@ -129,23 +129,23 @@ class Production(metaclass=PoolMeta):
                     production['outputs'] = [('create', salidas)]
                 to_create.append(production)
         #Se crean las producciones
-        excepcion = False
-        try:
-            producciones = Production.create(to_create)
-            Production.wait(producciones)
-            Production.assign(producciones)
+        #excepcion = False
+        #try:
+        producciones = Production.create(to_create)
+        Production.wait(producciones)
+        Production.assign(producciones)
             #Production.run(producciones)
             #Production.done(producciones)
-        except Exception as e:
-            excepcion = True
-            logs.append(str(e))
+        #except Exception as e:
+        #    excepcion = True
+        #    logs.append(str(e))
         Actualizacion.add_logs(actualizacion, logs)
-        if excepcion:
-            for prod in producciones:
-                Config.update_exportado(prod.id_tecno, 'E')
-        else:
-            for prod in producciones:
-                Config.update_exportado(prod.id_tecno, 'T')
+        #if excepcion:
+        #    for prod in producciones:
+        #        Config.update_exportado(prod.id_tecno, 'E')
+        #else:
+        for prod in producciones:
+            Config.update_exportado(prod.id_tecno, 'T')
         logging.warning('FINISH PRODUCTION')
 
 
