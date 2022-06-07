@@ -167,13 +167,13 @@ class Sale(metaclass=PoolMeta):
             sale.save()
             #Se revisa si se aplico alguno de los 3 impuestos en la venta
             retencion_iva = False
-            if venta.retencion_iva and venta.retencion_iva > 0:
+            if venta.retencion_iva > 0:
                 retencion_iva = True
             retencion_ica = False
-            if venta.retencion_ica and venta.retencion_ica > 0:
+            if venta.retencion_ica > 0:
                 retencion_ica = True
             retencion_rete = False
-            if venta.retencion_causada and venta.retencion_causada > 0:
+            if venta.retencion_causada > 0:
                 if not retencion_iva and not retencion_ica:
                     retencion_rete = True
                 elif (venta.retencion_iva + venta.retencion_ica) != venta.retencion_causada:
@@ -199,8 +199,10 @@ class Sale(metaclass=PoolMeta):
                 #print(cant, cantidad_facturada)
                 if sw == 2:
                     linea.quantity = cantidad_facturada * -1
+                    dcto_base = str(venta.Tipo_Docto_Base)+'-'+str(venta.Numero_Docto_Base)
                     #Se indica a que documento hace referencia la devolucion
-                    sale.comment = f"DEVOLUCIÓN DE LA FACTURA {venta.Tipo_Docto_Base}-{str(venta.Numero_Docto_Base)}"
+                    #sale.reference = dcto_base
+                    sale.comment = f"DEVOLUCIÓN DE LA FACTURA {dcto_base}"
                 else:
                     linea.quantity = cantidad_facturada
                 #Se verifica si tiene activo el módulo centro de operaciones y se añade 1 por defecto
@@ -215,11 +217,14 @@ class Sale(metaclass=PoolMeta):
                 for impuestol in linea.taxes:
                     clase_impuesto = impuestol.classification_tax
                     if clase_impuesto == '05' and retencion_iva:
-                        impuestos_linea.append(impuestol)
+                        if impuestol not in impuestos_linea:
+                            impuestos_linea.append(impuestol)
                     elif clase_impuesto == '06' and retencion_rete:
-                        impuestos_linea.append(impuestol)
+                        if impuestol not in impuestos_linea:
+                            impuestos_linea.append(impuestol)
                     elif clase_impuesto == '07' and retencion_ica:
-                        impuestos_linea.append(impuestol)
+                        if impuestol not in impuestos_linea:
+                            impuestos_linea.append(impuestol)
                     elif impuestol.consumo and impuesto_consumo > 0:
                         #Se busca el impuesto al consumo con el mismo valor para aplicarlo
                         tax = Tax.search([('consumo', '=', True), ('type', '=', 'fixed'), ('amount', '=', impuesto_consumo)])
@@ -229,7 +234,8 @@ class Sale(metaclass=PoolMeta):
                         else:
                             raise UserError('ERROR IMPUESTO', 'No se encontró el impuesto al consumo: '+id_venta)
                     elif clase_impuesto != '05' and clase_impuesto != '06' and clase_impuesto != '07' and not impuestol.consumo:
-                        impuestos_linea.append(impuestol)
+                        if impuestol not in impuestos_linea:
+                            impuestos_linea.append(impuestol)
                 linea.taxes = impuestos_linea
                 linea.unit_price = lin.Valor_Unitario
                 #Verificamos si hay descuento para la linea de producto y se agrega su respectivo descuento
@@ -239,6 +245,7 @@ class Sale(metaclass=PoolMeta):
                     linea.discount_rate = Decimal(str(porcentaje))
                     linea.on_change_discount_rate()
                 #Se guarda la linea para la venta
+                #linea.on_change_quantity()
                 linea.save()
             if sale.invoice_type == 'P':
                 with Transaction().set_user(1):
@@ -622,7 +629,7 @@ class Sale(metaclass=PoolMeta):
     def get_data_tecno(cls):
         Config = Pool().get('conector.configuration')(1)
         fecha = Config.date.strftime('%Y-%m-%d %H:%M:%S')
-        #consult = "SELECT * FROM dbo.Documentos WHERE sw = 1 AND tipo = 501 AND Numero_documento = 122734" #TEST
+        #consult = "SELECT * FROM dbo.Documentos WHERE tipo = 260 AND Numero_documento = 453" #TEST
         consult = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado != 'T' ORDER BY fecha_hora ASC"
         result = Config.get_data(consult)
         return result
