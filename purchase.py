@@ -164,11 +164,14 @@ class Purchase(metaclass=PoolMeta):
                             for impuestol in line.taxes:
                                 clase_impuesto = impuestol.classification_tax
                                 if clase_impuesto == '05' and retencion_iva:
-                                    impuestos_linea.append(impuestol)
+                                    if impuestol not in impuestos_linea:
+                                        impuestos_linea.append(impuestol)
                                 elif clase_impuesto == '06' and retencion_rete:
-                                    impuestos_linea.append(impuestol)
+                                    if impuestol not in impuestos_linea:
+                                        impuestos_linea.append(impuestol)
                                 elif clase_impuesto == '07' and retencion_ica:
-                                    impuestos_linea.append(impuestol)
+                                    if impuestol not in impuestos_linea:
+                                        impuestos_linea.append(impuestol)
                                 elif impuestol.consumo and impuesto_consumo > 0:
                                     #Se busca el impuesto al consumo con el mismo valor para aplicarlo
                                     tax = Tax.search([('consumo', '=', True), ('type', '=', 'fixed'), ('amount', '=', impuesto_consumo)])
@@ -178,7 +181,8 @@ class Purchase(metaclass=PoolMeta):
                                     else:
                                         raise UserError('ERROR IMPUESTO', 'No se encontró el impuesto al consumo: '+id_compra)
                                 elif clase_impuesto != '05' and clase_impuesto != '06' and clase_impuesto != '07' and not impuestol.consumo:
-                                    impuestos_linea.append(impuestol)
+                                    if impuestol not in impuestos_linea:
+                                        impuestos_linea.append(impuestol)
                             line.taxes = impuestos_linea
                             
                             line.unit_price = lin[col_line.index('Valor_Unitario')]

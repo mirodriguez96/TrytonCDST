@@ -350,7 +350,6 @@ class Voucher(ModelSQL, ModelView):
         pool = Pool()
         Invoice = pool.get('account.invoice')
         MoveLine = pool.get('account.move.line')
-
         #A continuacion se consulta las lineas a pagar de la factura (reference)
         linea = False
         invoice = Invoice.search([('number', '=', reference)])

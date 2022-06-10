@@ -144,6 +144,7 @@ class Sale(metaclass=PoolMeta):
             sale.warehouse = bodega
             sale.shop = shop
             sale.payment_term = plazo_pago
+            sale.self_pick_up = False
             #Se revisa si la venta es clasificada como electronica o pos y se cambia el tipo
             if tipo_doc in venta_electronica:
                 #continue #TEST
@@ -201,7 +202,7 @@ class Sale(metaclass=PoolMeta):
                     linea.quantity = cantidad_facturada * -1
                     dcto_base = str(venta.Tipo_Docto_Base)+'-'+str(venta.Numero_Docto_Base)
                     #Se indica a que documento hace referencia la devolucion
-                    #sale.reference = dcto_base
+                    sale.reference = dcto_base
                     sale.comment = f"DEVOLUCIÓN DE LA FACTURA {dcto_base}"
                 else:
                     linea.quantity = cantidad_facturada
@@ -276,6 +277,7 @@ class Sale(metaclass=PoolMeta):
     @classmethod
     def update_invoices_shipments(cls, sales, ventas_tecno, logs):
         Invoice = Pool().get('account.invoice')
+        PaymentLine = Pool().get('account.invoice-account.move.line')
         #Procesamos la venta para generar la factura y procedemos a rellenar los campos de la factura
         for sale in sales:
             #print(f"PROCESS: {sale.id_tecno}")
@@ -313,9 +315,14 @@ class Sale(metaclass=PoolMeta):
                 total_tryton = abs(invoice.untaxed_amount)
                 #Se almacena el total de la venta traida de TecnoCarnes
                 total_tecno = 0
+                devolucion = False
+                dcto_base = None
                 for venta in ventas_tecno:
                     tipo_numero_tecno = venta.tipo.strip()+'-'+str(venta.Numero_documento)
                     if tipo_numero_tecno == sale.number:
+                        if venta.sw == 2:
+                            devolucion = True
+                            dcto_base = str(venta.Tipo_Docto_Base)+'-'+str(venta.Numero_Docto_Base)
                         valor_total = Decimal(abs(venta.valor_total))
                         valor_impuesto = Decimal(abs(venta.Valor_impuesto) + abs(venta.Impuesto_Consumo))
                         if valor_impuesto > 0:
@@ -323,16 +330,29 @@ class Sale(metaclass=PoolMeta):
                         else:
                             total_tecno = valor_total
                 diferencia_total = abs(total_tryton - total_tecno)
+                if devolucion:
+                    original_invoice, = Invoice.search([('number', '=', dcto_base)])
+                    invoice.original_invoice = original_invoice
                 if diferencia_total < Decimal(6.0):
                     Invoice.post_batch([invoice])
                     Invoice.post([invoice])
+                    if invoice.original_invoice and (invoice.original_invoice.amount_to_pay + invoice.amount_to_pay != 0):
+                        paymentline = PaymentLine()
+                        paymentline.invoice = original_invoice
+                        paymentline.invoice_account = invoice.account
+                        paymentline.invoice_party = invoice.party
+                        for ml in invoice.move.lines:
+                            if ml.account.type.receivable:
+                                paymentline.line = ml
+                        paymentline.save()
+                    Invoice.reconcile_invoice(invoice)
                 else:
                     msg1 = f'Factura: {sale.id_tecno}'
                     msg2 = f'No contabilizada diferencia total mayor al rango permitido'
                     full_msg = ' - '.join([msg1, msg2])
-                    logging.error(msg2)
+                    logging.error(full_msg)
                     logs.append(full_msg)
-                    invoice.comment = 'No contabilizada diferencia total mayor al rango permitido'
+                    invoice.comment = msg2
                     invoice.save()
             else:
                 msg1 = f'Venta sin factura: {sale.id_tecno}'
@@ -629,7 +649,7 @@ class Sale(metaclass=PoolMeta):
     def get_data_tecno(cls):
         Config = Pool().get('conector.configuration')(1)
         fecha = Config.date.strftime('%Y-%m-%d %H:%M:%S')
-        #consult = "SELECT * FROM dbo.Documentos WHERE tipo = 260 AND Numero_documento = 453" #TEST
+        #consult = "SELECT * FROM dbo.Documentos WHERE tipo = 146 AND Numero_documento = 25" #TEST
         consult = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado != 'T' ORDER BY fecha_hora ASC"
         result = Config.get_data(consult)
         return result

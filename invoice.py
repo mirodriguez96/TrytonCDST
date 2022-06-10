@@ -1,5 +1,4 @@
 from decimal import Decimal
-from math import prod
 from trytond.pool import PoolMeta, Pool
 from trytond.model import fields
 from trytond.pyson import Eval, Not, And
@@ -184,11 +183,14 @@ class Invoice(metaclass=PoolMeta):
                     for impuestol in line.taxes:
                         clase_impuesto = impuestol.classification_tax
                         if clase_impuesto == '05' and nota.retencion_iva > 0:
-                            tax_line.append(impuestol)
+                            if impuestol not in tax_line:
+                                tax_line.append(impuestol)
                         elif clase_impuesto == '06' and retencion_rete:
-                            tax_line.append(impuestol)
+                            if impuestol not in tax_line:
+                                tax_line.append(impuestol)
                         elif clase_impuesto == '07' and nota.retencion_ica > 0:
-                            tax_line.append(impuestol)
+                            if impuestol not in tax_line:
+                                tax_line.append(impuestol)
                         elif impuestol.consumo and linea.Impuesto_Consumo > 0:
                             #Se busca el impuesto al consumo con el mismo valor para aplicarlo
                             tax = Tax.search([('consumo', '=', True), ('type', '=', 'fixed'), ('amount', '=', linea.Impuesto_Consumo)])
@@ -201,7 +203,8 @@ class Invoice(metaclass=PoolMeta):
                                 Config.update_exportado(id_nota, 'E')
                                 continue
                         elif clase_impuesto != '05' and clase_impuesto != '06' and clase_impuesto != '07' and not impuestol.consumo:
-                            tax_line.append(impuestol)
+                            if impuestol not in tax_line:
+                                tax_line.append(impuestol)
                     line.taxes = tax_line
                     if linea.Porcentaje_Descuento_1 > 0:
                         descuento = (linea.Valor_Unitario * Decimal(linea.Porcentaje_Descuento_1)) / 100
