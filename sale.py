@@ -331,21 +331,27 @@ class Sale(metaclass=PoolMeta):
                             total_tecno = valor_total
                 diferencia_total = abs(total_tryton - total_tecno)
                 if devolucion:
-                    original_invoice, = Invoice.search([('number', '=', dcto_base)])
-                    invoice.original_invoice = original_invoice
+                    original_invoice = Invoice.search([('number', '=', dcto_base)])
+                    if original_invoice:
+                        invoice.original_invoice = original_invoice[0]
+                    else:
+                        msg = f"NO SE ENCONTRO LA FACTURA {dcto_base} PARA CRUZAR CON LA DEVOLUCION {invoice.number}"
+                        logs.append(msg)
+                        logging.error(msg)
                 if diferencia_total < Decimal(6.0):
                     Invoice.post_batch([invoice])
                     Invoice.post([invoice])
-                    if invoice.original_invoice and (invoice.original_invoice.amount_to_pay + invoice.amount_to_pay != 0):
-                        paymentline = PaymentLine()
-                        paymentline.invoice = original_invoice
-                        paymentline.invoice_account = invoice.account
-                        paymentline.invoice_party = invoice.party
-                        for ml in invoice.move.lines:
-                            if ml.account.type.receivable:
-                                paymentline.line = ml
-                        paymentline.save()
-                    Invoice.reconcile_invoice(invoice)
+                    if invoice.original_invoice:
+                        if invoice.original_invoice.amount_to_pay + invoice.amount_to_pay != 0:
+                            paymentline = PaymentLine()
+                            paymentline.invoice = invoice.original_invoice
+                            paymentline.invoice_account = invoice.account
+                            paymentline.invoice_party = invoice.party
+                            for ml in invoice.move.lines:
+                                if ml.account.type.receivable:
+                                    paymentline.line = ml
+                            paymentline.save()
+                        Invoice.reconcile_invoice(invoice)
                 else:
                     msg1 = f'Factura: {sale.id_tecno}'
                     msg2 = f'No contabilizada diferencia total mayor al rango permitido'
