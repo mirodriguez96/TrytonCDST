@@ -378,10 +378,6 @@ class Voucher(ModelSQL, ModelView):
 
     @classmethod
     def get_amounts_to_pay(cls, moveline, voucher_type):
-        #pool = Pool()
-        #Model = pool.get('ir.model')
-        #Invoice = pool.get('account.invoice')
-
         amount = moveline.credit or moveline.debit
         if voucher_type == 'receipt':
             if moveline.credit > Decimal('0'):
@@ -393,8 +389,6 @@ class Voucher(ModelSQL, ModelView):
         amount_to_pay = Decimal(0)
         untaxed_amount = Decimal(0)
         if moveline.move_origin and hasattr(moveline.move_origin, '__name__') and moveline.move_origin.__name__ == 'account.invoice':
-            #amount_to_pay = Invoice.get_amount_to_pay([moveline.move_origin], 'amount_to_pay')
-            #amount_to_pay = amount_to_pay[moveline.move_origin.id]
             amount_to_pay = moveline.move.origin.amount_to_pay
             untaxed_amount = moveline.move_origin.untaxed_amount
         elif not moveline.move_origin:
@@ -693,54 +687,6 @@ class MultiRevenue(metaclass=PoolMeta):
     'MultiRevenue'
     __name__ = 'account.multirevenue'
     id_tecno = fields.Char('Id Tabla Sqlserver', required=False)
-
-    # Función encargada de enviar las facturas a ser pagadas con su respectivo pago al estado de cuenta
-    #@classmethod
-    #def add_statement(cls, multirevenue, device):
-    #    lines_to_add = {}
-    #    pool = Pool()
-    #    Sale = pool.get('sale.sale')
-    #    StatementeJournal = pool.get('account.statement.journal')
-    #    line_paid = []
-    #    for transaction in multirevenue.transactions:
-    #        statement_journal, = StatementeJournal.search([('id_tecno', '=', transaction.payment_mode.id_tecno)])
-    #        args_statement = {
-    #            'device': device,
-    #            'date': transaction.date,
-    #            'journal': statement_journal
-    #        }
-    #        statement, = Sale.search_or_create_statement(args_statement)
-    #        amount_tr = transaction.amount # Total pagado x forma de pago
-    #        for line in multirevenue.lines:
-    #            # Se valida que la linea no se haya 'pagado' o tenga un 'valor pagado'
-    #            if line.id in line_paid or line.amount == 0:
-    #                continue
-    #            if transaction.id not in lines_to_add.keys():
-    #                lines_to_add[transaction.id] = {'sales': {}}
-    #                lines_to_add[transaction.id]['statement'] = statement.id
-    #                lines_to_add[transaction.id]['date'] = transaction.date
-    #            if line.amount <= amount_tr:
-    #                _line_amount = line.amount
-    #                line.amount = 0
-    #                line.save()
-    #                amount_tr -= line.amount
-    #                line_paid.append(line.id)
-    #            else:
-    #                _line_amount = amount_tr
-    #                line.amount = line.amount - _line_amount
-    #                line.save()
-    #                amount_tr = 0
-    #            if line.move_line:
-    #                sale, = line.origin.sales
-    #                lines_to_add[transaction.id]['sales'][sale] = _line_amount
-    #            else:
-    #                raise UserError('multirevenue.msg_without_invoice')
-    #            if amount_tr <= 0:
-    #                break
-    #    #print(lines_to_add)
-    #    for key in lines_to_add.keys():
-    #        Sale.multipayment_invoices_statement(lines_to_add[key])
-
 
     @classmethod
     def create_voucher_tecno(cls, multirevenue):

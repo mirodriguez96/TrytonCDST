@@ -20,6 +20,7 @@ class FixBugsConector(Wizard):
         warning_name = 'warning_fix_bugs_conector'
         if Warning.check(warning_name):
             raise UserWarning(warning_name, "No continue si desconoce el funcionamiento interno del asistente.")
+        #return 'end'
         sales = Sale.search([('id_tecno', 'like', '2-%')])
         print(len(sales))
         for sale in sales:
@@ -27,9 +28,12 @@ class FixBugsConector(Wizard):
                 invoice = sale.invoice
                 origin_invoice = Invoice.search([('number', '=', invoice.reference)])
                 if not origin_invoice:
-                    print(invoice)
+                    #print(invoice)
                     continue
                 origin_invoice, = origin_invoice
+                # if not invoice.original_invoice:
+                #     cursor = Transaction().connection.cursor()
+                #     cursor.execute("UPDATE account_invoice SET original_invoice = "+str(origin_invoice.id)+" WHERE id = "+str(invoice.id))
                 if origin_invoice.state == 'posted':
                     cruzado = False
                     for payment_line in origin_invoice.payment_lines:
@@ -37,19 +41,18 @@ class FixBugsConector(Wizard):
                             if payment_line.id == ml.id:
                                 cruzado = True
                     if not cruzado:
-                        cursor = Transaction().connection.cursor()
-                        cursor.execute("UPDATE account_invoice SET original_invoice = "+str(origin_invoice.id)+" WHERE id = "+str(invoice.id))
-                        # if invoice.original_invoice and (origin_invoice.amount_to_pay + invoice.amount_to_pay != 0):
-                        #     paymentline = PaymentLine()
-                        #     paymentline.invoice = origin_invoice
-                        #     paymentline.invoice_account = invoice.account
-                        #     paymentline.invoice_party = invoice.party
-                        #     for ml in invoice.move.lines:
-                        #         if ml.account.type.receivable:
-                        #             paymentline.line = ml
-                        #     paymentline.save()
-                        # print(invoice)
-                        # Invoice.reconcile_invoice(invoice)
+                        if invoice.original_invoice and (origin_invoice.amount_to_pay + invoice.amount_to_pay != 0):
+                            paymentline = PaymentLine()
+                            paymentline.invoice = origin_invoice
+                            paymentline.invoice_account = origin_invoice.account
+                            paymentline.invoice_party = origin_invoice.party
+                            for ml in invoice.move.lines:
+                                if ml.account.type.receivable:
+                                    paymentline.line = ml
+                            paymentline.save()
+                        print(invoice)
+                        Invoice.reconcile_invoice(invoice)
+            Transaction().connection.commit()
         return 'end'
 
 class VoucherMoveUnreconcile(Wizard):
@@ -164,7 +167,7 @@ class MoveFixParty(Wizard): # ACTUALIZAR PARA SOLUCIONAR ASIENTOS DE CUALLQUIER 
         cursor = Transaction().connection.cursor()
         warning_name = 'warning_fix_party_account'
         if Warning.check(warning_name):
-            raise UserWarning(warning_name, "A continuación se asignara a las lineas de los asientos (ORIGEN=FACTURA) el tercero de la factura, en las cuentas que lo requieran.")
+            raise UserWarning(warning_name, "A continuación se asignara a las lineas de los asientos el tercero de la factura (ORIGEN=FACTURA), en las cuentas que lo requieran.")
         ids = Transaction().context['active_ids']
         if ids:
             cursor.execute("SELECT id FROM account_move WHERE origin LIKE 'account.invoice,%'")
