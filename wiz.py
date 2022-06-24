@@ -38,11 +38,12 @@ class FixBugsConector(Wizard):
                 #     cursor = Transaction().connection.cursor()
                 #     cursor.execute("UPDATE account_invoice SET original_invoice = "+str(origin_invoice.id)+" WHERE id = "+str(invoice.id))
                 if origin_invoice.state == 'posted':
+                    cruzado = False
                     for payment_line in origin_invoice.payment_lines:
                         for ml in invoice.move.lines:
-                            if payment_line.line == ml:
-                                continue
-                    if invoice.original_invoice and (origin_invoice.amount_to_pay + invoice.amount_to_pay != 0):
+                            if payment_line == ml:
+                                cruzado = True
+                    if not cruzado and invoice.original_invoice and (origin_invoice.amount_to_pay + invoice.amount_to_pay != 0):
                         paymentline = PaymentLine()
                         paymentline.invoice = origin_invoice
                         paymentline.invoice_account = origin_invoice.account
