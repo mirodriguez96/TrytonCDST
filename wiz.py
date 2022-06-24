@@ -20,7 +20,10 @@ class FixBugsConector(Wizard):
         warning_name = 'warning_fix_bugs_conector'
         if Warning.check(warning_name):
             raise UserWarning(warning_name, "No continue si desconoce el funcionamiento interno del asistente.")
-        #return 'end'
+        # invoices = Invoice.search([('amount_to_pay_today', '>', 0), ('amount_to_pay_today', '<', 500)])
+        # for inv in invoices:
+        #     print(inv)
+        # return 'end'
         sales = Sale.search([('id_tecno', 'like', '2-%')])
         print(len(sales))
         for sale in sales:
@@ -35,23 +38,21 @@ class FixBugsConector(Wizard):
                 #     cursor = Transaction().connection.cursor()
                 #     cursor.execute("UPDATE account_invoice SET original_invoice = "+str(origin_invoice.id)+" WHERE id = "+str(invoice.id))
                 if origin_invoice.state == 'posted':
-                    cruzado = False
                     for payment_line in origin_invoice.payment_lines:
                         for ml in invoice.move.lines:
-                            if payment_line.id == ml.id:
-                                cruzado = True
-                    if not cruzado:
-                        if invoice.original_invoice and (origin_invoice.amount_to_pay + invoice.amount_to_pay != 0):
-                            paymentline = PaymentLine()
-                            paymentline.invoice = origin_invoice
-                            paymentline.invoice_account = origin_invoice.account
-                            paymentline.invoice_party = origin_invoice.party
-                            for ml in invoice.move.lines:
-                                if ml.account.type.receivable:
-                                    paymentline.line = ml
-                            paymentline.save()
-                        print(invoice)
-                        Invoice.reconcile_invoice(invoice)
+                            if payment_line.line == ml:
+                                continue
+                    if invoice.original_invoice and (origin_invoice.amount_to_pay + invoice.amount_to_pay != 0):
+                        paymentline = PaymentLine()
+                        paymentline.invoice = origin_invoice
+                        paymentline.invoice_account = origin_invoice.account
+                        paymentline.invoice_party = origin_invoice.party
+                        for ml in invoice.move.lines:
+                            if ml.account.type.receivable:
+                                paymentline.line = ml
+                        paymentline.save()
+                    print(invoice)
+                    Invoice.reconcile_invoice(invoice)
             Transaction().connection.commit()
         return 'end'
 
