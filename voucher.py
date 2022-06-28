@@ -553,21 +553,21 @@ class Voucher(ModelSQL, ModelView):
         if retencion > 0:
             line_rete = OthersConcepts()
             line_rete.description = 'RETENCION'
-            line_rete.account = config_voucher.account_rete_tecno
+            line_rete.account = config_voucher.account_adjust_income #se añade cualquier cuenta
             line_rete.amount = round((retencion*-1), 2)
             to_others.append(line_rete)
             valor_pagado += line_rete.amount
         if retencion_iva > 0:
             line_retiva = OthersConcepts()
-            line_retiva.description = 'RETENCION IVA'
-            line_retiva.account = config_voucher.account_retiva_tecno
+            line_retiva.description = 'RETIVA:'
+            line_retiva.account = config_voucher.account_adjust_income #se añade cualquier cuenta
             line_retiva.amount = round((retencion_iva*-1), 2)
             to_others.append(line_retiva)
             valor_pagado += line_retiva.amount
         if retencion_ica > 0:
             line_retica = OthersConcepts()
-            line_retica.description = 'RETENCION ICA'
-            line_retica.account = config_voucher.account_retica_tecno
+            line_retica.description = 'RETICA'
+            line_retica.account = config_voucher.account_adjust_income #se añade cualquier cuenta
             line_retica.amount = round((retencion_ica*-1), 2)
             to_others.append(retencion_ica)
             valor_pagado += line_retica.amount
@@ -600,7 +600,7 @@ class Voucher(ModelSQL, ModelView):
         Config = Pool().get('conector.configuration')
         config = Config(1)
         fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
-        #consult = "SELECT * FROM dbo.Documentos WHERE sw = 5 AND tipo = 117 AND Numero_documento = 791" #TEST
+        #consult = "SELECT * FROM dbo.Documentos WHERE sw = 5 AND tipo = 117 AND Numero_documento = 2289" #TEST
         consult = "SET DATEFORMAT ymd SELECT TOP(10) * FROM dbo.Documentos WHERE sw = 5 AND fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado != 'T' ORDER BY fecha_hora ASC"
         data = Config.get_data(consult)
         return data
@@ -662,6 +662,7 @@ class Voucher(ModelSQL, ModelView):
         Voucher.delete(vouchers)
 
 
+# Se añaden campos relacionados con las retenciones aplicadas en TecnoCarnes
 class VoucherConfiguration(metaclass=PoolMeta):
     'Voucher Configuration'
     __name__ = 'account.voucher_configuration'
@@ -694,7 +695,7 @@ class MultiRevenue(metaclass=PoolMeta):
         pool = Pool()
         Voucher = pool.get('account.voucher')
         operation_center = pool.get('company.operation_center')(1)
-        voucher_type = 'receipt'
+        config_voucher = pool.get('account.voucher_configuration')(1)
         line_paid = []
         concept_ids = []
         for transaction in multirevenue.transactions:
@@ -710,7 +711,7 @@ class MultiRevenue(metaclass=PoolMeta):
                     voucher_to_create[transaction.id][line.id] = {
                         'party': line.origin.party.id,
                         'company': multirevenue.company.id,
-                        'voucher_type': voucher_type,
+                        'voucher_type': 'receipt',
                         'date': transaction.date,
                         'description': f"MULTI-INGRESO FACTURA {line.origin.number}",
                         'reference': multirevenue.code,
@@ -727,12 +728,31 @@ class MultiRevenue(metaclass=PoolMeta):
                 for concept in line.others_concepts:
                     if concept.id in concept_ids:
                         continue
-                    voucher_to_create[transaction.id][line.id]['lines'][0][1].append({
+                    c_line = {
+                        'party': line.origin.party.id,
+                        'reference': line.origin.reference,
                         'detail': concept.description,
                         'amount': concept.amount,
-                        'account':  concept.account.id,
                         'operation_center': operation_center.id
-                    })
+                    }
+                    if concept.description == 'RETENCION':
+                        c_line['untaxed_amount'] = line.original_amount
+                        c_line['type'] = 'tax'
+                        c_line['tax'] = config_voucher.account_rete_tecno.id
+                        c_line['account'] = config_voucher.account_rete_tecno.invoice_account.id
+                    elif concept.description == 'RETIVA':
+                        c_line['untaxed_amount'] = line.original_amount
+                        c_line['type'] = 'tax'
+                        c_line['tax'] = config_voucher.account_retiva_tecno.id
+                        c_line['account'] = config_voucher.account_retiva_tecno.invoice_account.id
+                    elif concept.description == 'RETICA':
+                        c_line['untaxed_amount'] = line.original_amount
+                        c_line['type'] = 'tax'
+                        c_line['tax'] = config_voucher.account_retica_tecno.id
+                        c_line['account'] = config_voucher.account_retica_tecno.invoice_account.id
+                    else:
+                        c_line['account'] = concept.account.id
+                    voucher_to_create[transaction.id][line.id]['lines'][0][1].append(c_line)
                     concept_amounts += concept.amount
                     concept_ids.append(concept.id)
                 net_payment = line.amount + concept_amounts
