@@ -38,16 +38,16 @@ class Cron(metaclass=PoolMeta):
 class Invoice(metaclass=PoolMeta):
     'Invoice'
     __name__ = 'account.invoice'
-    electronic_state = fields.Selection(ELECTRONIC_STATES, 'Electronic State',
-        states={'invisible': And(Eval('type') != 'out', ~Eval('equivalent_invoice'))}, readonly=True)
-    original_invoice = fields.Many2One('account.invoice', 'Original Invoice', domain=[
-        ('type', '=', 'out'),
-        ('party', '=', Eval('party')), ],
-        states={
-            'invisible': Not(Eval('invoice_type').in_(['91', '92'])),
-            'readonly': Eval('state').in_(['posted', 'paid'])
-            }
-    )
+    # electronic_state = fields.Selection(ELECTRONIC_STATES, 'Electronic State',
+    #     states={'invisible': And(Eval('type') != 'out', ~Eval('equivalent_invoice'))}, readonly=True)
+    # original_invoice = fields.Many2One('account.invoice', 'Original Invoice', domain=[
+    #     ('type', '=', 'out'),
+    #     ('party', '=', Eval('party')), ],
+    #     states={
+    #         'invisible': Not(Eval('invoice_type').in_(['91', '92'])),
+    #         'readonly': Eval('state').in_(['posted', 'paid'])
+    #         }
+    # )
     id_tecno = fields.Char('Id Tabla Sqlserver (credit note)', required=False)
 
     @staticmethod
