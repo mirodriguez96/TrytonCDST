@@ -71,11 +71,16 @@ class Sale(metaclass=PoolMeta):
         if company_operation:
             CompanyOperation = pool.get('company.operation_center')
             company_operation = CompanyOperation(1)
-        #col_param = cls.get_columns_db_tecno('TblParametro')
-        venta_pos = cls.get_data_parametros('8')
+        venta_pos = []
+        pdevoluciones_pos = cls.get_data_parametros('10')
+        if pdevoluciones_pos:
+            pdevoluciones_pos = (pdevoluciones_pos[0].Valor).strip().split(',')
+            venta_pos += pdevoluciones_pos
+        pventa_pos = cls.get_data_parametros('8')
+        if pventa_pos:
+            pventa_pos = (pventa_pos[0].Valor).strip().split(',')
+            venta_pos += pventa_pos
         venta_electronica = cls.get_data_parametros('9')
-        if venta_pos:
-            venta_pos = (venta_pos[0].Valor).strip().split(',')
         if venta_electronica:
             venta_electronica = (venta_electronica[0].Valor).strip().split(',')
         to_created = []
@@ -153,7 +158,7 @@ class Sale(metaclass=PoolMeta):
                 sale.invoice_type = 'P'
                 sale.invoice_date = fecha_date
                 sale.pos_create_date = fecha_date
-                sale.self_pick_up = True
+                # sale.self_pick_up = True
                 #Busco la terminal y se la asigno
                 sale_device, = SaleDevice.search([('id_tecno', '=', venta.pc)])
                 sale.sale_device = sale_device
