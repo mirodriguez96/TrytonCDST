@@ -220,7 +220,7 @@ class Invoice(metaclass=PoolMeta):
                 Invoice.validate_invoice([invoice])
                 total_tryton = abs(invoice.untaxed_amount)
                 valor_total = Decimal(abs(nota.valor_total))
-                valor_impuesto = Decimal(abs(nota.Valor_impuesto) + abs(nota.Impuesto_Consumo) + abs(nota.retencion_causada))
+                valor_impuesto = Decimal(abs(nota.Valor_impuesto) + abs(nota.Impuesto_Consumo)) # + abs(nota.retencion_causada))
                 if valor_impuesto > 0:
                     total_tecno = valor_total - valor_impuesto
                 else:
