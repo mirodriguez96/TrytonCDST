@@ -114,13 +114,23 @@
         </record>
         <!--Asistente que marca para reimportar los multi-ingresos-->
         <record model="ir.action.wizard" id="act_multirevenue_mark_rimport">
-            <field name="name">Multirevenue Mark Import</field>
+            <field name="name">Reimportar Multi-ingreso</field>
             <field name="wiz_name">account.multirevenue.mark_rimport</field>
         </record>
         <record model="ir.action.keyword" id="act_multirevenue_mark_rimport_keyword">
             <field name="keyword">form_action</field>
             <field name="model">account.multirevenue,-1</field>
             <field name="action" ref="act_multirevenue_mark_rimport"/>
+        </record>
+        <!--Asistente para desconciliar los asientos creados por los comprobantes creados del multi-ingresos-->
+        <record model="ir.action.wizard" id="act_unreconcilie_multi">
+            <field name="name">Desconciliar Asientos Multi-ingreso</field>
+            <field name="wiz_name">account.multirevenue.unreconcilie_multi</field>
+        </record>
+        <record model="ir.action.keyword" id="act_unreconcilie_multi_keyword">
+            <field name="keyword">form_action</field>
+            <field name="model">account.multirevenue,-1</field>
+            <field name="action" ref="act_unreconcilie_multi"/>
         </record>
     </data>
 

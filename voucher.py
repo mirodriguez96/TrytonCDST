@@ -632,6 +632,21 @@ class Voucher(ModelSQL, ModelView):
         data = Config.get_data(consult)
         return data
 
+    
+    @classmethod
+    def unreconcilie_move_voucher(cls, vouchers):
+        pool = Pool()
+        Reconciliation = pool.get('account.move.reconciliation')
+        Move = pool.get('account.move')
+        to_unreconcilie = []
+        for voucher in vouchers:
+            if voucher.move:
+                to_unreconcilie.append(voucher.move)
+        for move in to_unreconcilie:
+            reconciliations = [l.reconciliation for l in move.lines if l.reconciliation]
+            if reconciliations:
+                Reconciliation.delete(reconciliations)
+            Move.draft([move.id])
 
     @classmethod
     def force_draft_voucher(cls, vouchers):
@@ -810,10 +825,14 @@ class MultiRevenue(metaclass=PoolMeta):
         Line = pool.get('account.multirevenue.line')
         OthersConcepts = pool.get('account.multirevenue.others_concepts')
         Transaction = pool.get('account.multirevenue.transaction')
+        Voucher = pool.get('account.voucher')
         for multi in multirevenue:
             lista = multi.id_tecno.split('-')
             consult = "UPDATE dbo.Documentos SET exportado = 'S' WHERE sw ="+lista[0]+" and tipo = "+lista[1]+" and Numero_documento = "+lista[2]
             Conexion.set_data(consult)
+            vouchers = Voucher.search([('reference', '=', multi.code)])
+            Voucher.force_draft_voucher(vouchers)
+            Voucher.delete(vouchers)
             for line in multi.lines:
                 OthersConcepts.delete(line.others_concepts)
             Line.delete(multi.lines)

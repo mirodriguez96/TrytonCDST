@@ -12,49 +12,49 @@ class FixBugsConector(Wizard):
     fix_bugs_conector = StateTransition()
 
     def transition_fix_bugs_conector(self):
-        pool = Pool()
-        Warning = pool.get('res.user.warning')
-        Invoice = pool.get('account.invoice')
-        Sale = pool.get('sale.sale')
-        PaymentLine = Pool().get('account.invoice-account.move.line')
-        warning_name = 'warning_fix_bugs_conector'
-        if Warning.check(warning_name):
-            raise UserWarning(warning_name, "No continue si desconoce el funcionamiento interno del asistente.")
-        # invoices = Invoice.search([('amount_to_pay_today', '>', 0), ('amount_to_pay_today', '<', 500)])
-        # for inv in invoices:
-        #     print(inv)
-        # return 'end'
-        sales = Sale.search([('id_tecno', 'like', '2-%')])
-        print(len(sales))
-        for sale in sales:
-            if sale.invoice and sale.invoice.state == 'posted':
-                invoice = sale.invoice
-                origin_invoice = Invoice.search([('number', '=', invoice.reference)])
-                if not origin_invoice:
-                    #print(invoice)
-                    continue
-                origin_invoice, = origin_invoice
-                # if not invoice.original_invoice:
-                #     cursor = Transaction().connection.cursor()
-                #     cursor.execute("UPDATE account_invoice SET original_invoice = "+str(origin_invoice.id)+" WHERE id = "+str(invoice.id))
-                if origin_invoice.state == 'posted':
-                    cruzado = False
-                    for payment_line in origin_invoice.payment_lines:
-                        for ml in invoice.move.lines:
-                            if payment_line == ml:
-                                cruzado = True
-                    if not cruzado and invoice.original_invoice and (origin_invoice.amount_to_pay + invoice.amount_to_pay != 0):
-                        paymentline = PaymentLine()
-                        paymentline.invoice = origin_invoice
-                        paymentline.invoice_account = origin_invoice.account
-                        paymentline.invoice_party = origin_invoice.party
-                        for ml in invoice.move.lines:
-                            if ml.account.type.receivable:
-                                paymentline.line = ml
-                        paymentline.save()
-                    print(invoice)
-                    Invoice.reconcile_invoice(invoice)
-            Transaction().connection.commit()
+        # pool = Pool()
+        # Warning = pool.get('res.user.warning')
+        # Invoice = pool.get('account.invoice')
+        # Sale = pool.get('sale.sale')
+        # PaymentLine = Pool().get('account.invoice-account.move.line')
+        # warning_name = 'warning_fix_bugs_conector'
+        # if Warning.check(warning_name):
+        #     raise UserWarning(warning_name, "No continue si desconoce el funcionamiento interno del asistente.")
+        # # invoices = Invoice.search([('amount_to_pay_today', '>', 0), ('amount_to_pay_today', '<', 500)])
+        # # for inv in invoices:
+        # #     print(inv)
+        # # return 'end'
+        # sales = Sale.search([('id_tecno', 'like', '2-%')])
+        # print(len(sales))
+        # for sale in sales:
+        #     if sale.invoice and sale.invoice.state == 'posted':
+        #         invoice = sale.invoice
+        #         origin_invoice = Invoice.search([('number', '=', invoice.reference)])
+        #         if not origin_invoice:
+        #             #print(invoice)
+        #             continue
+        #         origin_invoice, = origin_invoice
+        #         # if not invoice.original_invoice:
+        #         #     cursor = Transaction().connection.cursor()
+        #         #     cursor.execute("UPDATE account_invoice SET original_invoice = "+str(origin_invoice.id)+" WHERE id = "+str(invoice.id))
+        #         if origin_invoice.state == 'posted':
+        #             cruzado = False
+        #             for payment_line in origin_invoice.payment_lines:
+        #                 for ml in invoice.move.lines:
+        #                     if payment_line == ml:
+        #                         cruzado = True
+        #             if not cruzado and invoice.original_invoice and (origin_invoice.amount_to_pay + invoice.amount_to_pay != 0):
+        #                 paymentline = PaymentLine()
+        #                 paymentline.invoice = origin_invoice
+        #                 paymentline.invoice_account = origin_invoice.account
+        #                 paymentline.invoice_party = origin_invoice.party
+        #                 for ml in invoice.move.lines:
+        #                     if ml.account.type.receivable:
+        #                         paymentline.line = ml
+        #                 paymentline.save()
+        #             print(invoice)
+        #             Invoice.reconcile_invoice(invoice)
+        #     Transaction().connection.commit()
         return 'end'
 
 class VoucherMoveUnreconcile(Wizard):
@@ -66,19 +66,10 @@ class VoucherMoveUnreconcile(Wizard):
     def transition_do_unreconcile(self):
         pool = Pool()
         Voucher = pool.get('account.voucher')
-        Reconciliation = pool.get('account.move.reconciliation')
-        Move = pool.get('account.move')
         ids_ = Transaction().context['active_ids']
         if ids_:
-            to_unreconcilie = []
-            for voucher in Voucher.browse(ids_):
-                if voucher.move:
-                    to_unreconcilie.append(voucher.move)
-            for move in to_unreconcilie:
-                reconciliations = [l.reconciliation for l in move.lines if l.reconciliation]
-                if reconciliations:
-                    Reconciliation.delete(reconciliations)
-                Move.draft([move.id])
+            vouchers = Voucher.browse(ids_)
+            Voucher.unreconcilie_move_voucher(vouchers)
         return 'end'
 
 
@@ -258,7 +249,25 @@ class CheckImportedDoc(Wizard):
         Actualizacion.revisa_secuencia_imp('sale_sale')
         return 'end'
 
+# Asistente encargado de desconciliar los asientos de los comprobantes creados por el multi-ingreso
+class UnreconcilieMulti(Wizard):
+    'Unreconcilie Multi'
+    __name__ = 'account.multirevenue.unreconcilie_multi'
+    start_state = 'unreconcilie_multi'
+    unreconcilie_multi = StateTransition()
 
+    def transition_unreconcilie_multi(self):
+        pool = Pool()
+        MultiRevenue = pool.get('account.multirevenue')
+        Voucher = pool.get('account.voucher')
+        ids = Transaction().context['active_ids']
+        if ids:
+            for multi in MultiRevenue.browse(ids):
+                vouchers = Voucher.search([('reference', '=', multi.code)])
+                Voucher.unreconcilie_move_voucher(vouchers)
+        return 'end'
+
+# Asistente encargado de marcar el multi-ingreso (documento) para re-importar y elimina los vouchers (comprobantes) creados
 class MarkImportMulti(Wizard):
     'Check Imported Documnets'
     __name__ = 'account.multirevenue.mark_rimport'
@@ -268,12 +277,13 @@ class MarkImportMulti(Wizard):
     def transition_mark_import(self):
         pool = Pool()
         MultiRevenue = pool.get('account.multirevenue')
+        warning_name = 'warning_mark_rimport_multirevenue'
+        if Warning.check(warning_name):
+            raise UserWarning(warning_name, "Primero se debe desconciliar los asientos de los multi-ingresos (Desconciliar Asientos Multi-ingreso)")
         ids = Transaction().context['active_ids']
-        to_mark = []
         if ids:
-            for multingreso in MultiRevenue.browse(ids):
-                to_mark.append(multingreso)
-        MultiRevenue.mark_rimport(to_mark)
+            multingresos = MultiRevenue.browse(ids)
+            MultiRevenue.mark_rimport(multingresos)
         return 'end'
 
     def end(self):
