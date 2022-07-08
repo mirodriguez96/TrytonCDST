@@ -276,6 +276,7 @@ class MarkImportMulti(Wizard):
 
     def transition_mark_import(self):
         pool = Pool()
+        Warning = pool.get('res.user.warning')
         MultiRevenue = pool.get('account.multirevenue')
         warning_name = 'warning_mark_rimport_multirevenue'
         if Warning.check(warning_name):
