@@ -1,4 +1,5 @@
-from trytond.wizard import Wizard, StateTransition
+from trytond.model import ModelView, fields
+from trytond.wizard import Wizard, StateTransition, StateView, Button
 from trytond.pool import Pool
 from trytond.transaction import Transaction
 from trytond.exceptions import UserError, UserWarning
@@ -289,3 +290,100 @@ class MarkImportMulti(Wizard):
 
     def end(self):
         return 'reload'
+
+class CreateAdjustmentNotesParameters(ModelView):
+    'Create Exemplaries Parameters'
+    __name__ = 'account.note.create_adjustment_note.parameters'
+    invoice_type = fields.Selection([('in', 'Proveedor'), ('out', 'Cliente')], 'Invoice type', required=True)
+    adjustment_account = fields.Many2One('account.account', 'Adjustment account', required=True)
+    analytic_account = fields.Many2One('analytic_account.account', 'Analytic account', required=True)
+
+class CreateAdjustmentNotes(Wizard):
+    'Create Exemplaries'
+    __name__ = 'account.note.create_adjustment_note'
+    start = StateView('account.note.create_adjustment_note.parameters',
+            'conector.view_adjustment_note_form', [
+                Button('Cancel', 'end', 'tryton-cancel'),
+                Button('Add', 'add_note', 'tryton-ok', default=True),
+            ])
+    add_note = StateTransition()
+
+    def transition_add_note(self):
+        pool = Pool()
+        AccountConfig = pool.get('account.configuration')
+        Config = pool.get('account.voucher_configuration')
+        Note = pool.get('account.note')
+        Line = pool.get('account.note.line')
+        #AnalyticAccount = pool.get('analytic_account.account')
+        Invoice = pool.get('account.invoice')
+        invoices = Invoice.search([('type', '=', self.start.invoice_type), ('state', '=', 'posted')])
+        inv_adjustment = []
+        for inv in invoices:
+            if inv.amount_to_pay < 600 and inv.amount_to_pay > 0:
+                inv_adjustment.append(inv)
+        if not inv_adjustment:
+            return 'end'
+        # Se procesa las facturas que cumplan con la condicion
+        config = Config.get_configuration()
+        for inv in inv_adjustment:
+            lines_to_create = []
+            print(inv)
+            operation_center = None
+            for ml in inv.move.lines:
+                aconfig = AccountConfig(1)
+                if (ml.account == aconfig.default_account_payable and ml.account.type.payable) or (ml.account == aconfig.default_account_receivable and ml.account.type.receivable):
+                    _line = Line()
+                    _line.debit = ml.credit
+                    _line.credit = ml.debit
+                    _line.party = ml.party
+                    _line.account = ml.account
+                    _line.description = ml.description
+                    _line.move_line = ml
+                    _line.analytic_account = self.start.analytic_account
+                    if hasattr(ml, 'operation_center') and ml.operation_center:
+                        operation_center = ml.operation_center
+                        _line.operation_center = operation_center
+                    lines_to_create.append(_line)
+            last_date = None
+            for pl in inv.payment_lines:
+                _line = Line()
+                _line.debit = pl.credit
+                _line.credit = pl.debit
+                _line.party = pl.party
+                _line.account = pl.account
+                _line.description = pl.description
+                _line.analytic_account = self.start.analytic_account
+                if last_date:
+                    if last_date < ml.date:
+                        last_date = ml.date
+                else:
+                    last_date = ml.date
+                if operation_center:
+                    _line.operation_center = operation_center
+                lines_to_create.append(_line)
+            amount_to_pay = inv.amount_to_pay
+            inv.payment_lines = []
+            inv.save()
+            # Se crea la línea del ajuste
+            _line = Line()
+            _line.party = pl.party
+            _line.account = pl.account
+            _line.description = pl.description
+            if self.start.invoice_type == 'out':
+                _line.debit = amount_to_pay
+                _line.credit = 0
+            else:
+                _line.debit = 0
+                _line.credit = amount_to_pay
+            if operation_center:
+                _line.operation_center = operation_center
+            _line.analytic_account = self.start.analytic_account
+            lines_to_create.append(_line)
+            note = Note()
+            note.journal = config.default_journal_note
+            note.description = f"AJUSTE FACTURA {inv.number}"
+            note.date = last_date
+            note.lines = lines_to_create
+            Note.save([note])
+            Note.post([note])
+        return 'end'

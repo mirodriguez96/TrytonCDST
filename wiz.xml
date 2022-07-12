@@ -132,6 +132,22 @@
             <field name="model">account.multirevenue,-1</field>
             <field name="action" ref="act_unreconcilie_multi"/>
         </record>
+        <!--Asistente encargado de crear nota de ajuste a las facturas-->
+        <record model="ir.action.wizard" id="act_create_adjustment_note">
+            <field name="name">Create Adjustment Notes</field>
+            <field name="wiz_name">account.note.create_adjustment_note</field>
+            <field name="model">account.note</field>
+        </record>
+        <record model="ir.ui.view" id="view_adjustment_note_form">
+            <field name="model">account.note.create_adjustment_note.parameters</field>
+            <field name="type">form</field>
+            <field name="name">create_adjustment_note_form</field>
+        </record>
+        <record model="ir.action.keyword" id="act_create_adjustment_note_keyword">
+            <field name="keyword">form_action</field>
+            <field name="model">account.note,-1</field>
+            <field name="action" ref="act_create_adjustment_note"/>
+        </record>
     </data>
 
 </tryton>
