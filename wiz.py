@@ -191,7 +191,7 @@ class MoveFixParty(Wizard): # ACTUALIZAR PARA SOLUCIONAR ASIENTOS DE CUALLQUIER 
         return 'end'
 
 
-#Asistente encargado de revertir las producciones
+# Asistente encargado de revertir las producciones
 class ReverseProduction(Wizard):
     'Reverse Production'
     __name__ = 'production.reverse_production'
@@ -211,7 +211,7 @@ class ReverseProduction(Wizard):
     def end(self):
         return 'reload'
 
-#Asistente para eliminar tipos en cuentas padres
+# Asistente para eliminar tipos en cuentas padres
 class DeleteAccountType(Wizard):
     'Delete Account Type'
     __name__ = 'account.delete_account_type'
@@ -237,7 +237,7 @@ class DeleteAccountType(Wizard):
         return 'reload'
 
 
-#Asistente para eliminar tipos en cuentas padres
+# Asistente para eliminar tipos en cuentas padres
 class CheckImportedDoc(Wizard):
     'Check Imported Documnets'
     __name__ = 'conector.actualizacion.check_imported'
@@ -291,6 +291,7 @@ class MarkImportMulti(Wizard):
     def end(self):
         return 'reload'
 
+# Vista encargada de solicitar la información necesaria para el asistente de ajuste a las facturas
 class CreateAdjustmentNotesParameters(ModelView):
     'Create Exemplaries Parameters'
     __name__ = 'account.note.create_adjustment_note.parameters'
@@ -298,6 +299,7 @@ class CreateAdjustmentNotesParameters(ModelView):
     adjustment_account = fields.Many2One('account.account', 'Adjustment account', required=True)
     analytic_account = fields.Many2One('analytic_account.account', 'Analytic account', required=True)
 
+# Asistente encargado de crear las notas contables que realizaran el ajuste a las facturas con salod menor a 600 pesos
 class CreateAdjustmentNotes(Wizard):
     'Create Exemplaries'
     __name__ = 'account.note.create_adjustment_note'
@@ -310,11 +312,10 @@ class CreateAdjustmentNotes(Wizard):
 
     def transition_add_note(self):
         pool = Pool()
-        AccountConfig = pool.get('account.configuration')
         Config = pool.get('account.voucher_configuration')
         Note = pool.get('account.note')
         Line = pool.get('account.note.line')
-        #AnalyticAccount = pool.get('analytic_account.account')
+        Warning = pool.get('res.user.warning')
         Invoice = pool.get('account.invoice')
         invoices = Invoice.search([('type', '=', self.start.invoice_type), ('state', '=', 'posted')])
         inv_adjustment = []
@@ -323,15 +324,18 @@ class CreateAdjustmentNotes(Wizard):
                 inv_adjustment.append(inv)
         if not inv_adjustment:
             return 'end'
+        warning_name = 'warning_create_adjustment_note'
+        if Warning.check(warning_name):
+            raise UserWarning(warning_name, f"Cantidad de facturas a realizar el ajuste: {len(inv_adjustment)}")
         # Se procesa las facturas que cumplan con la condicion
         config = Config.get_configuration()
         for inv in inv_adjustment:
             lines_to_create = []
             print(inv)
             operation_center = None
+            inv_account = inv.account
             for ml in inv.move.lines:
-                aconfig = AccountConfig(1)
-                if (ml.account == aconfig.default_account_payable and ml.account.type.payable) or (ml.account == aconfig.default_account_receivable and ml.account.type.receivable):
+                if ml.account == inv_account and (ml.account.type.payable or ml.account.type.receivable):
                     _line = Line()
                     _line.debit = ml.credit
                     _line.credit = ml.debit
@@ -342,7 +346,7 @@ class CreateAdjustmentNotes(Wizard):
                     _line.analytic_account = self.start.analytic_account
                     if hasattr(ml, 'operation_center') and ml.operation_center:
                         operation_center = ml.operation_center
-                        _line.operation_center = operation_center
+                        _line.operation_center = ml.operation_center
                     lines_to_create.append(_line)
             last_date = None
             for pl in inv.payment_lines:
