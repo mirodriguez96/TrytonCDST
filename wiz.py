@@ -348,7 +348,7 @@ class CreateAdjustmentNotes(Wizard):
                         operation_center = ml.operation_center
                         _line.operation_center = ml.operation_center
                     lines_to_create.append(_line)
-            last_date = None
+            last_date = inv.invoice_date
             for pl in inv.payment_lines:
                 _line = Line()
                 _line.debit = pl.credit
