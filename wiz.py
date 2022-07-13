@@ -296,7 +296,7 @@ class CreateAdjustmentNotesParameters(ModelView):
     'Create Exemplaries Parameters'
     __name__ = 'account.note.create_adjustment_note.parameters'
     invoice_type = fields.Selection([('in', 'Proveedor'), ('out', 'Cliente')], 'Invoice type', required=True)
-    adjustment_account = fields.Many2One('account.account', 'Adjustment account', required=True)
+    adjustment_account = fields.Many2One('account.account', 'Adjustment account', domain=[('type', '!=', None)], required=True)
     analytic_account = fields.Many2One('analytic_account.account', 'Analytic account', required=True)
 
 # Asistente encargado de crear las notas contables que realizaran el ajuste a las facturas con salod menor a 600 pesos
