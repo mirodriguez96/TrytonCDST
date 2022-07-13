@@ -391,4 +391,5 @@ class CreateAdjustmentNotes(Wizard):
             note.lines = lines_to_create
             Note.save([note])
             Note.post([note])
+            Transaction().connection.commit()
         return 'end'
