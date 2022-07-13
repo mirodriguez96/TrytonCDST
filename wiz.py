@@ -356,6 +356,7 @@ class CreateAdjustmentNotes(Wizard):
                 _line.party = pl.party
                 _line.account = pl.account
                 _line.description = pl.description
+                _line.move_line = pl
                 _line.analytic_account = self.start.analytic_account
                 if last_date:
                     if last_date < ml.date:
@@ -370,9 +371,9 @@ class CreateAdjustmentNotes(Wizard):
             inv.save()
             # Se crea la línea del ajuste
             _line = Line()
-            _line.party = pl.party
-            _line.account = pl.account
-            _line.description = pl.description
+            _line.party = inv.party
+            _line.account = self.start.adjustment_account
+            _line.description = f"AJUSTE FACTURA {inv.number}"
             if self.start.invoice_type == 'out':
                 _line.debit = amount_to_pay
                 _line.credit = 0
