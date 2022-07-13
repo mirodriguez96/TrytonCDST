@@ -158,7 +158,7 @@ class Sale(metaclass=PoolMeta):
                 sale.invoice_type = 'P'
                 sale.invoice_date = fecha_date
                 sale.pos_create_date = fecha_date
-                # sale.self_pick_up = True
+                sale.self_pick_up = True
                 #Busco la terminal y se la asigno
                 sale_device, = SaleDevice.search([('id_tecno', '=', venta.pc)])
                 sale.sale_device = sale_device
