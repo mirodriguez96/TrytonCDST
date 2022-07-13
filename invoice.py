@@ -126,6 +126,7 @@ class Invoice(metaclass=PoolMeta):
                 invoice = Invoice()
                 invoice.id_tecno = id_nota
                 invoice.party = party
+                invoice.cufe = '0'
                 invoice.on_change_party() #Se usa para traer la dirección del tercero
                 invoice.invoice_date = fecha_date
                 invoice.number = reference
@@ -153,6 +154,10 @@ class Invoice(metaclass=PoolMeta):
                 original_invoice, = Invoice.search([('number', '=', dcto_base)])
                 invoice.original_invoice = original_invoice
                 invoice.comment = f"NOTA DE {nota_tecno} DE LA FACTURA {dcto_base}"
+                invoice.number_document_reference = dcto_base
+                invoice.cufe_document_reference = '0'
+                invoice.date_document_reference = original_invoice.invoice_date
+                invoice.type_invoice_reference = original_invoice.invoice_type
                 invoice.on_change_type()
                 retencion_rete = False
                 if nota.retencion_causada > 0:
