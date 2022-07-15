@@ -27,7 +27,8 @@ class FixBugsConector(Wizard):
         for inv in invoices:
             if inv.amount_to_pay == 0:
                 print(inv)
-                inv.process()
+                with Transaction().set_context(_skip_warnings=True):
+                    Invoice.process([inv])
         return 'end'
         # sales = Sale.search([('id_tecno', 'like', '2-%')])
         # print(len(sales))
