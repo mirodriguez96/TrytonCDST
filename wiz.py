@@ -25,52 +25,47 @@ class FixBugsConector(Wizard):
             raise UserWarning(warning_name, "No continue si desconoce el funcionamiento interno del asistente.")
         
         # Procesar facturas que su estado = contabilizado y por pagar = 0
-        invoices = Invoice.search([('state', '=', 'posted'), ('payment_lines', '!=', None)])
+        # invoices = Invoice.search([('state', '=', 'posted'), ('payment_lines', '!=', None)])
+        # print(len(invoices))
+        # for inv in invoices:
+        #     if inv.amount_to_pay == 0:
+        #         print(inv)
+        #         reconcile_invoice = [l for l in inv.payment_lines if not l.reconciliation] 
+        #         reconcile_invoice.extend([l for l in inv.lines_to_pay if not l.reconciliation])
+        #         if reconcile_invoice:
+        #             MoveLine.reconcile(reconcile_invoice)
+        #         with Transaction().set_context(_skip_warnings=True):
+        #             Invoice.process([inv])
+        #         Transaction().connection.commit()
+        # return 'end'
+
+        #Procesamiento devoluciones y coinciliación de facturas
+        domain_invoice = [
+            ('type', '=', 'out'),
+            ('invoice_type', '!=', '91'),
+            ('invoice_type', '!=', '92'),
+            ('state', '=', 'posted'),
+            ('original_invoice', '!=', None),
+            ('original_invoice.state', '=', 'posted')
+        ]
+        invoices = Invoice.search(domain_invoice)
         print(len(invoices))
         for inv in invoices:
-            if inv.amount_to_pay == 0:
-                print(inv)
-                reconcile_invoice = [l for l in inv.payment_lines if not l.reconciliation] 
-                reconcile_invoice.extend([l for l in inv.lines_to_pay if not l.reconciliation])
-                if reconcile_invoice:
-                    MoveLine.reconcile(reconcile_invoice)
-                with Transaction().set_context(_skip_warnings=True):
-                    Invoice.process([inv])
-                Transaction().connection.commit()
+            for lp in inv.lines_to_pay:
+                if lp not in inv.original_invoice.payment_lines:
+                    print(inv.original_invoice)
+                    payment_lines = list(inv.original_invoice.payment_lines)
+                    payment_lines.append(lp)
+                    inv.original_invoice.payment_lines = payment_lines
+                    reconcile_invoice = [l for l in inv.original_invoice.payment_lines if not l.reconciliation] 
+                    reconcile_invoice.extend([l for l in inv.original_invoice.lines_to_pay if not l.reconciliation])
+                    if reconcile_invoice:
+                        MoveLine.reconcile(reconcile_invoice)
+                    with Transaction().set_context(_skip_warnings=True):
+                        Invoice.process([inv.original_invoice])
+                        Invoice.process([inv])
+            Transaction().connection.commit()
         return 'end'
-
-        # sales = Sale.search([('id_tecno', 'like', '2-%')])
-        # print(len(sales))
-        # for sale in sales:
-        #     if sale.invoice and sale.invoice.state == 'posted':
-        #         invoice = sale.invoice
-        #         origin_invoice = Invoice.search([('number', '=', invoice.reference)])
-        #         if not origin_invoice:
-        #             #print(invoice)
-        #             continue
-        #         origin_invoice, = origin_invoice
-        #         # if not invoice.original_invoice:
-        #         #     cursor = Transaction().connection.cursor()
-        #         #     cursor.execute("UPDATE account_invoice SET original_invoice = "+str(origin_invoice.id)+" WHERE id = "+str(invoice.id))
-        #         if origin_invoice.state == 'posted':
-        #             cruzado = False
-        #             for payment_line in origin_invoice.payment_lines:
-        #                 for ml in invoice.move.lines:
-        #                     if payment_line == ml:
-        #                         cruzado = True
-        #             if not cruzado and invoice.original_invoice and (origin_invoice.amount_to_pay + invoice.amount_to_pay != 0):
-        #                 paymentline = PaymentLine()
-        #                 paymentline.invoice = origin_invoice
-        #                 paymentline.invoice_account = origin_invoice.account
-        #                 paymentline.invoice_party = origin_invoice.party
-        #                 for ml in invoice.move.lines:
-        #                     if ml.account.type.receivable:
-        #                         paymentline.line = ml
-        #                 paymentline.save()
-        #             print(invoice)
-        #             Invoice.reconcile_invoice(invoice)
-        #     Transaction().connection.commit()
-        # return 'end'
 
 class VoucherMoveUnreconcile(Wizard):
     'Voucher Move Unreconcile'
