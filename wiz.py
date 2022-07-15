@@ -4,6 +4,7 @@ from trytond.pool import Pool
 from trytond.transaction import Transaction
 from trytond.exceptions import UserError, UserWarning
 from sql import Table
+import datetime
 
 
 class FixBugsConector(Wizard):
@@ -13,18 +14,21 @@ class FixBugsConector(Wizard):
     fix_bugs_conector = StateTransition()
 
     def transition_fix_bugs_conector(self):
-        # pool = Pool()
-        # Warning = pool.get('res.user.warning')
-        # Invoice = pool.get('account.invoice')
-        # Sale = pool.get('sale.sale')
-        # PaymentLine = Pool().get('account.invoice-account.move.line')
-        # warning_name = 'warning_fix_bugs_conector'
-        # if Warning.check(warning_name):
-        #     raise UserWarning(warning_name, "No continue si desconoce el funcionamiento interno del asistente.")
-        # # invoices = Invoice.search([('amount_to_pay_today', '>', 0), ('amount_to_pay_today', '<', 500)])
-        # # for inv in invoices:
-        # #     print(inv)
-        # # return 'end'
+        pool = Pool()
+        Warning = pool.get('res.user.warning')
+        Invoice = pool.get('account.invoice')
+        Sale = pool.get('sale.sale')
+        PaymentLine = Pool().get('account.invoice-account.move.line')
+        warning_name = 'warning_fix_bugs_conector'
+        if Warning.check(warning_name):
+            raise UserWarning(warning_name, "No continue si desconoce el funcionamiento interno del asistente.")
+        invoices = Invoice.search([('state', '=', 'posted'), ('payment_lines', '!=', None)])
+        print(len(invoices))
+        for inv in invoices:
+            if inv.amount_to_pay == 0:
+                print(inv)
+                inv.process()
+        return 'end'
         # sales = Sale.search([('id_tecno', 'like', '2-%')])
         # print(len(sales))
         # for sale in sales:
@@ -312,6 +316,7 @@ class CreateAdjustmentNotes(Wizard):
 
     def transition_add_note(self):
         pool = Pool()
+        Period = pool.get('account.period')
         Config = pool.get('account.voucher_configuration')
         Note = pool.get('account.note')
         Line = pool.get('account.note.line')
@@ -385,9 +390,13 @@ class CreateAdjustmentNotes(Wizard):
             _line.analytic_account = self.start.analytic_account
             lines_to_create.append(_line)
             note = Note()
+            period = Period.search([('state', '=', 'open'), ('start_date', '>=', last_date), ('end_date', '<=', last_date)])
+            if period:
+                note.date = last_date
+            else:
+                note.date = datetime.date.today()
             note.journal = config.default_journal_note
             note.description = f"AJUSTE FACTURA {inv.number}"
-            note.date = last_date
             note.lines = lines_to_create
             Note.save([note])
             Note.post([note])
