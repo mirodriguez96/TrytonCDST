@@ -19,17 +19,26 @@ class FixBugsConector(Wizard):
         Invoice = pool.get('account.invoice')
         Sale = pool.get('sale.sale')
         PaymentLine = Pool().get('account.invoice-account.move.line')
+        MoveLine = pool.get('account.move.line')
         warning_name = 'warning_fix_bugs_conector'
         if Warning.check(warning_name):
             raise UserWarning(warning_name, "No continue si desconoce el funcionamiento interno del asistente.")
+        
+        # Procesar facturas que su estado = contabilizado y por pagar = 0
         invoices = Invoice.search([('state', '=', 'posted'), ('payment_lines', '!=', None)])
         print(len(invoices))
         for inv in invoices:
             if inv.amount_to_pay == 0:
                 print(inv)
+                reconcile_invoice = [l for l in inv.payment_lines if not l.reconciliation] 
+                reconcile_invoice.extend([l for l in inv.lines_to_pay if not l.reconciliation])
+                if reconcile_invoice:
+                    MoveLine.reconcile(reconcile_invoice)
                 with Transaction().set_context(_skip_warnings=True):
                     Invoice.process([inv])
+                Transaction().connection.commit()
         return 'end'
+
         # sales = Sale.search([('id_tecno', 'like', '2-%')])
         # print(len(sales))
         # for sale in sales:
@@ -61,7 +70,7 @@ class FixBugsConector(Wizard):
         #             print(invoice)
         #             Invoice.reconcile_invoice(invoice)
         #     Transaction().connection.commit()
-        return 'end'
+        # return 'end'
 
 class VoucherMoveUnreconcile(Wizard):
     'Voucher Move Unreconcile'
