@@ -155,7 +155,7 @@ class DeleteImportRecords(Wizard):
     def end(self):
         return 'reload'
 
-# Asistente encargado de asignarle a las lineas de los asientos el tercero requerido
+# Asistente encargado de asignarle a las lineas de los asientos, el tercero requerido
 class MoveFixParty(Wizard): # ACTUALIZAR PARA SOLUCIONAR ASIENTOS DE CUALLQUIER ORIGEN
     'Move Fix Party'
     __name__ = 'account.move.fix_party_account'
@@ -256,7 +256,16 @@ class CheckImportedDoc(Wizard):
     def transition_check_imported(self):
         pool = Pool()
         Actualizacion = pool.get('conector.actualizacion')
-        Actualizacion.revisa_secuencia_imp('sale_sale')
+        ids = Transaction().context['active_ids']
+        for actualizacion in Actualizacion.browse(ids):
+            if actualizacion.name == 'VENTAS':
+                Actualizacion.revisa_secuencia_imp('sale_sale', [1, 2], actualizacion.name)
+            elif actualizacion.name == 'COMPRAS':
+                Actualizacion.revisa_secuencia_imp('purchase_purchase', [3, 4], actualizacion.name)
+            elif actualizacion.name == 'COMPROBANTES DE INGRESO':
+                Actualizacion.revisa_secuencia_imp('account_voucher', [5], actualizacion.name)
+            elif actualizacion.name == 'COMPROBANTES DE EGRESO':
+                Actualizacion.revisa_secuencia_imp('account_voucher', [6], actualizacion.name)
         return 'end'
 
 # Asistente encargado de desconciliar los asientos de los comprobantes creados por el multi-ingreso

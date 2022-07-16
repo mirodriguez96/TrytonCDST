@@ -138,43 +138,35 @@ class Actualizacion(ModelSQL, ModelView):
         return result
 
     @classmethod
-    def revisa_secuencia_imp(cls, table):
+    def revisa_secuencia_imp(cls, table, l_sw, name_a):
         cursor = Transaction().connection.cursor()
-        cursor.execute("SELECT number FROM "+table+" WHERE id_tecno LIKE '%-%'")
+        consult = "SELECT number FROM "+table+" WHERE "
+        for sw in l_sw:
+            consult += f"id_tecno LIKE '{sw}-%'"
+            if l_sw.index(sw) != (len(l_sw)-1):
+                consult += " OR "
+        cursor.execute(consult)
         result = cursor.fetchall()
         if not result:
             return
-        Config = Pool().get('conector.configuration')
-        result_tecno = Config.get_data("select CONCAT(tipo,'-',numero_documento) from Documentos where (sw=1 or sw=2) and year(fecha_hora_factura)=2022 and exportado = 'T' and tipo<>0 order by tipo,numero_documento")
+        result = [r[0] for r in result]
+        Config = Pool().get('conector.configuration')(1)
+        fecha = Config.date
+        fecha = fecha.strftime('%Y-%m-%d %H:%M:%S')
+        consult2 = "SELECT CONCAT(tipo,'-',numero_documento) FROM Documentos WHERE ("
+        for sw in l_sw:
+            consult2 += f"sw = {sw}"
+            if l_sw.index(sw) != (len(l_sw)-1):
+                consult2 += " OR "
+        consult2 += ") AND fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado = 'T' AND tipo<>0 ORDER BY tipo,numero_documento"
+        result_tecno = Config.get_data(consult2)
+        result_tecno = [r[0] for r in result_tecno]
+        list_difference = [r for r in result_tecno if r not in result]
         logs = []
-        #
-        data_tryton = {}
-        for r in result:
-            tipo = r[0].split('-')[0]
-            numero = r[0].split('-')[1]
-            if tipo not in data_tryton.keys():
-                data_tryton[tipo] = []
-            data_tryton[tipo].append(numero)
-        #
-        data_tecno = {}
-        for t in result_tecno:
-            tipo = t[0].split('-')[0]
-            numero = t[0].split('-')[1]
-            if tipo not in data_tecno.keys():
-                data_tecno[tipo] = []
-            data_tecno[tipo].append(numero)
-        faltantes = {}
-        for tipo in data_tecno:
-            if tipo not in faltantes.keys():
-                faltantes[tipo] = []
-            for l in data_tecno[tipo]:
-                if l not in data_tryton[tipo]:
-                    faltantes[tipo].append(l)
-                    msg = f"DOCUMENTO FALTANTE: {tipo}-{l}"
-                    logs.append(msg)
-        for falt in faltantes:
-            for doc in faltantes[falt]:
-                Config.set_data("UPDATE dbo.Documentos SET exportado = 'S' WHERE (sw=1 or sw=2) and tipo = "+falt+" and Numero_documento = "+str(doc))
+        for falt in list_difference:
+            lid = falt.split('-')
+            Config.set_data(f"UPDATE dbo.Documentos SET exportado = 'S' WHERE tipo = {lid[0]} AND Numero_documento = {lid[1]}")
+            logs.append(f"DOCUMENTO FALTANTE: {falt}")
         Actualizacion = Pool().get('conector.actualizacion')
-        actualizacion, = Actualizacion.search([('name', '=', 'VENTAS')])
+        actualizacion, = Actualizacion.search([('name', '=', name_a)])
         cls.add_logs(actualizacion, logs)

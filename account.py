@@ -124,7 +124,7 @@ class BalanceStock(Wizard):
             stock_accounts = set()
             with Transaction().set_context(self.stock_balance_context()):
                 for product in Product.search(self.product_domain()):
-                    print(product.name)
+                    print(product)
                     stock_account = product.account_category.account_stock
                     balances[stock_account] += (Decimal(product.quantity) * product.avg_cost_price) or Decimal(0)
                     stock_accounts.add(stock_account.id)

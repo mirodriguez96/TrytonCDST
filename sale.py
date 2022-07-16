@@ -24,12 +24,6 @@ class Cron(metaclass=PoolMeta):
         cls.method.selection.append(
             ('sale.sale|import_data_sale', "Importar ventas"),
             )
-        #cls.method.selection.append(
-        #    ('sale.sale|update_pos_tecno', "Actualizar Terminal Ventas POS"),
-        #    )
-        #cls.method.selection.append(
-        #    ('sale.sale|process_payment_pos', "Procesar pagos POS"),
-        #    )
 
 
 #Heredamos del modelo sale.sale para agregar el campo id_tecno
@@ -61,7 +55,6 @@ class Sale(metaclass=PoolMeta):
         payment_term = pool.get('account.invoice.payment_term')
         Party = pool.get('party.party')
         Address = pool.get('party.address')
-        #coluns_doc = cls.get_columns_db_tecno('Documentos')
         Shop = pool.get('sale.shop')
         Tax = pool.get('account.tax')
         User = pool.get('res.user')
@@ -158,7 +151,7 @@ class Sale(metaclass=PoolMeta):
                 sale.invoice_type = 'P'
                 sale.invoice_date = fecha_date
                 sale.pos_create_date = fecha_date
-                sale.self_pick_up = True
+                #sale.self_pick_up = True
                 #Busco la terminal y se la asigno
                 sale_device, = SaleDevice.search([('id_tecno', '=', venta.pc)])
                 sale.sale_device = sale_device
@@ -258,6 +251,7 @@ class Sale(metaclass=PoolMeta):
                     context = User.get_preferences()
                 with Transaction().set_context(context, shop=shop.id, _skip_warnings=True):
                     cls.venta_mostrador(sale)
+                    cls.finish_shipment_process([sale])
                 to_created.append(sale.id_tecno)
             else:
                 #Se almacena en una lista las ventas creadas para ser procesadas
@@ -278,33 +272,28 @@ class Sale(metaclass=PoolMeta):
         logging.warning('FINISH VENTAS')
 
 
+    # Funcion encargada de finalizar el proceso de envío de la venta
+    @classmethod
+    def finish_shipment_process(sales):
+        for sale in sales:
+            for shipment in sale.shipments:
+                shipment.number = sale.number
+                shipment.reference = sale.reference
+                shipment.effective_date = sale.sale_date
+                shipment.wait([shipment])
+                shipment.pick([shipment])
+                shipment.pack([shipment])
+                shipment.done([shipment])
+
     #Se actualiza las facturas y envios con la información de la venta
     @classmethod
     def update_invoices_shipments(cls, sales, ventas_tecno, logs):
         Invoice = Pool().get('account.invoice')
         PaymentLine = Pool().get('account.invoice-account.move.line')
+        cls.finish_shipment_process(sales)
         #Procesamos la venta para generar la factura y procedemos a rellenar los campos de la factura
         for sale in sales:
-            #print(f"PROCESS: {sale.id_tecno}")
-            if sale.shipments:
-                shipment_out, = sale.shipments
-                shipment_out.number = sale.number
-                shipment_out.reference = sale.reference
-                shipment_out.effective_date = sale.sale_date
-                shipment_out.wait([shipment_out])
-                shipment_out.pick([shipment_out])#Revvisar
-                shipment_out.pack([shipment_out])#Revvisar
-                shipment_out.done([shipment_out])
-                #logging.error(str(e))
-                #logs = logs+"\n"+"Error venta (envio): "+str(sale.id_tecno)+" - "+str(e)
-            else:
-                if not sale.self_pick_up:
-                    msg1 = f'Venta sin envio: {sale.id_tecno}'
-                    logging.warning(msg1)
-                    logs.append(msg1)
-            if sale.invoices:
-                #print(sale.id_tecno)
-                invoice, = sale.invoices
+            for invoice in sale.invoices:
                 invoice.accounting_date = sale.sale_date
                 invoice.number = sale.number
                 invoice.reference = sale.reference
@@ -804,17 +793,16 @@ class Sale(metaclass=PoolMeta):
         sale_table = Table('sale_sale')
         cursor = Transaction().connection.cursor()
         Conexion = Pool().get('conector.configuration')
+        ids_tecno = []
         for sale in sales:
             if sale.id_tecno:
-                lista = sale.id_tecno.split('-')
-                consult = "UPDATE dbo.Documentos SET exportado = 'S' WHERE sw ="+lista[0]+" and tipo = "+lista[1]+" and Numero_documento = "+lista[2]
-                Conexion.set_data(consult)
+                ids_tecno.append(sale.id_tecno)
             else:
                 raise UserError("Error: ", f"No se encontró el id_tecno de {sale}")
-
             cls.force_draft([sale])
-
             #Se elimina la venta
-            cursor.execute(*sale_table.delete(
-                    where=sale_table.id == sale.id)
-                )
+            cursor.execute(*sale_table.delete(where=sale_table.id == sale.id))
+        for id in ids_tecno:
+            lid = id.split('-')
+            consult = "UPDATE dbo.Documentos SET exportado = 'S' WHERE sw ="+lid[0]+" and tipo = "+lid[1]+" and Numero_documento = "+lid[2]
+            Conexion.set_data(consult)
