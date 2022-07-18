@@ -395,11 +395,10 @@ class Purchase(metaclass=PoolMeta):
         stock_move_table = Table('stock_move')
         cursor = Transaction().connection.cursor()
         Conexion = pool.get('conector.configuration')
+        ids_tecno = []
         for purchase in purchases:
             if purchase.id_tecno:
-                lista = purchase.id_tecno.split('-')
-                consult = "UPDATE dbo.Documentos SET exportado = 'S' WHERE sw ="+lista[0]+" and tipo = "+lista[1]+" and Numero_documento = "+lista[2]
-                Conexion.set_data(consult)
+                ids_tecno.append(purchase.id_tecno)
             else:
                 raise UserError("Error: ", f"No se encontró el id_tecno de {purchase}")
             for invoice in purchase.invoices:
@@ -446,6 +445,8 @@ class Purchase(metaclass=PoolMeta):
             cursor.execute(*purchase_table.delete(
                 where=purchase_table.id == purchase.id)
             )
+        for idt in ids_tecno:
+            Conexion.update_exportado(idt, 'S')
 
 
     @classmethod

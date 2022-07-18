@@ -667,14 +667,14 @@ class Voucher(ModelSQL, ModelView):
         pool = Pool()
         Voucher = pool.get('account.voucher')
         Conexion = pool.get('conector.configuration')
-
+        ids_tecno = []
         for voucher in vouchers:
-            # Se marca en la base de datos de importación como NO exportado y se elimina
-            lista = voucher.id_tecno.split('-')
-            consult = "UPDATE dbo.Documentos SET exportado = 'S' WHERE exportado = 'T' and sw ="+lista[0]+" and tipo = "+lista[1]+" and Numero_documento = "+lista[2]
-            Conexion.set_data(consult)
+            ids_tecno.append(voucher.id_tecno)
             cls.force_draft_voucher([voucher])
         Voucher.delete(vouchers)
+        # Se marca en la base de datos de importación como NO exportado y se elimina
+        for idt in ids_tecno:
+            Conexion.update_exportado(idt, 'S')
 
 
 # Se añaden campos relacionados con las retenciones aplicadas en TecnoCarnes
@@ -826,10 +826,9 @@ class MultiRevenue(metaclass=PoolMeta):
         OthersConcepts = pool.get('account.multirevenue.others_concepts')
         Transaction = pool.get('account.multirevenue.transaction')
         Voucher = pool.get('account.voucher')
+        ids_tecno = []
         for multi in multirevenue:
-            lista = multi.id_tecno.split('-')
-            consult = "UPDATE dbo.Documentos SET exportado = 'S' WHERE sw ="+lista[0]+" and tipo = "+lista[1]+" and Numero_documento = "+lista[2]
-            Conexion.set_data(consult)
+            ids_tecno.append(multi.id_tecno)
             vouchers = Voucher.search([('reference', '=', multi.code)])
             Voucher.force_draft_voucher(vouchers)
             Voucher.delete(vouchers)
@@ -838,3 +837,5 @@ class MultiRevenue(metaclass=PoolMeta):
             Line.delete(multi.lines)
             Transaction.delete(multi.transactions)
         MultiRevenue.delete(multirevenue)
+        for idt in ids_tecno:
+            Conexion.update_exportado(idt, 'S')

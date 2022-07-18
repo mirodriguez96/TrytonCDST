@@ -803,6 +803,4 @@ class Sale(metaclass=PoolMeta):
             #Se elimina la venta
             cursor.execute(*sale_table.delete(where=sale_table.id == sale.id))
         for id in ids_tecno:
-            lid = id.split('-')
-            consult = "UPDATE dbo.Documentos SET exportado = 'S' WHERE sw ="+lid[0]+" and tipo = "+lid[1]+" and Numero_documento = "+lid[2]
-            Conexion.set_data(consult)
+            Conexion.update_exportado(id, 'S')
