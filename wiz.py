@@ -57,10 +57,11 @@ class FixBugsConector(Wizard):
                     payment_lines = list(inv.original_invoice.payment_lines)
                     payment_lines.append(lp)
                     inv.original_invoice.payment_lines = payment_lines
-                    reconcile_invoice = [l for l in inv.original_invoice.payment_lines if not l.reconciliation] 
-                    reconcile_invoice.extend([l for l in inv.original_invoice.lines_to_pay if not l.reconciliation])
-                    if reconcile_invoice:
-                        MoveLine.reconcile(reconcile_invoice)
+                    if abs(inv.amount_to_pay) == abs(inv.original_invoice.amount_to_pay) or abs(inv.amount_to_pay) == abs(inv.original_invoice.amount_to_pay_today):
+                        reconcile_invoice = [l for l in inv.original_invoice.payment_lines if not l.reconciliation] 
+                        reconcile_invoice.extend([l for l in inv.original_invoice.lines_to_pay if not l.reconciliation])
+                        if reconcile_invoice:
+                            MoveLine.reconcile(reconcile_invoice)
                     with Transaction().set_context(_skip_warnings=True):
                         Invoice.process([inv.original_invoice])
                         Invoice.process([inv])
