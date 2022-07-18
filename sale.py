@@ -266,8 +266,8 @@ class Sale(metaclass=PoolMeta):
         log = cls.update_invoices_shipments(to_process, ventas_tecno, logs)
         actualizacion.add_logs(actualizacion, log)
         for id_tecno in to_created:
-            #cls.importado(id_tecno)
-            print('creado...', id_tecno) #TEST 
+            cls.importado(id_tecno)
+            #print('creado...', id_tecno) #TEST 
         logging.warning('FINISH VENTAS')
 
 
