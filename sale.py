@@ -252,11 +252,10 @@ class Sale(metaclass=PoolMeta):
                 with Transaction().set_context(context, shop=shop.id, _skip_warnings=True):
                     cls.venta_mostrador(sale)
                     cls.finish_shipment_process([sale])
-                to_created.append(sale.id_tecno)
             else:
                 #Se almacena en una lista las ventas creadas para ser procesadas
                 to_process.append(sale)
-                to_created.append(sale.id_tecno)
+            to_created.append(sale.id_tecno)
         #Se procesa los registros creados
         with Transaction().set_user(1):
             context = User.get_preferences()
@@ -267,14 +266,14 @@ class Sale(metaclass=PoolMeta):
         log = cls.update_invoices_shipments(to_process, ventas_tecno, logs)
         actualizacion.add_logs(actualizacion, log)
         for id_tecno in to_created:
-            cls.importado(id_tecno)
-            #print('creado...', id_tecno) #TEST 
+            #cls.importado(id_tecno)
+            print('creado...', id_tecno) #TEST 
         logging.warning('FINISH VENTAS')
 
 
     # Funcion encargada de finalizar el proceso de envío de la venta
     @classmethod
-    def finish_shipment_process(sales):
+    def finish_shipment_process(cls, sales):
         for sale in sales:
             for shipment in sale.shipments:
                 shipment.number = sale.number
