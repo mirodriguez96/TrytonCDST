@@ -359,7 +359,7 @@ class CreateAdjustmentNotes(Wizard):
                     _line.account = ml.account
                     _line.description = ml.description
                     _line.move_line = ml
-                    _line.analytic_account = self.start.analytic_account
+                    # _line.analytic_account = self.start.analytic_account
                     if hasattr(ml, 'operation_center') and ml.operation_center:
                         operation_center = ml.operation_center
                         _line.operation_center = ml.operation_center
@@ -373,7 +373,7 @@ class CreateAdjustmentNotes(Wizard):
                 _line.account = pl.account
                 _line.description = pl.description
                 _line.move_line = pl
-                _line.analytic_account = self.start.analytic_account
+                # _line.analytic_account = self.start.analytic_account
                 if last_date:
                     if last_date < ml.date:
                         last_date = ml.date
