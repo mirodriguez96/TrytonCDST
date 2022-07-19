@@ -132,6 +132,12 @@ class Configuration(ModelSQL, ModelView):
         data = cls.get_data(query)
         return data
 
+    @classmethod
+    def get_tbltipodoctos(cls, id):
+        query = "SELECT * FROM dbo.TblTipoDoctos WHERE idTipoDoctos = "+id
+        data = cls.get_data(query)
+        return data
+
     #
     @classmethod
     def encode_file(cls, file, process='encode'):

@@ -59,7 +59,10 @@ class Sale(metaclass=PoolMeta):
         Tax = pool.get('account.tax')
         User = pool.get('res.user')
         Module = pool.get('ir.module')
-        
+        Config = pool.get('conector.configuration')
+        AnalyticEntry = pool.get('analytic.account.entry')
+        AnalyticAccount = pool.get('analytic_account.account')
+
         company_operation = Module.search([('name', '=', 'company_operation'), ('state', '=', 'activated')])
         if company_operation:
             CompanyOperation = pool.get('company.operation_center')
@@ -89,6 +92,10 @@ class Sale(metaclass=PoolMeta):
                 cls.importado(id_venta)
                 continue
             print(id_venta)
+            tbltipodocto, = Config.get_tbltipodoctos(tipo_doc)
+            analytic_account = None
+            if tbltipodocto.Encabezado != 0:
+                analytic_account, = AnalyticAccount.search([('code', '=', str(tbltipodocto.Encabezado))])
             #Se trae la fecha de la venta y se adapta al formato correcto para Tryton
             fecha = str(venta.fecha_hora).split()[0].split('-')
             fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
@@ -243,8 +250,14 @@ class Sale(metaclass=PoolMeta):
                     linea.base_price = lin.Valor_Unitario
                     linea.discount_rate = Decimal(str(porcentaje))
                     linea.on_change_discount_rate()
-                #Se guarda la linea para la venta
-                #linea.on_change_quantity()
+                # Se guarda la linea para la venta
+                # linea.on_change_quantity()
+                if hasattr(SaleLine, 'analytic_accounts'):
+                    root, = AnalyticAccount.search([('type', '=', 'root')])
+                    analytic_entry = AnalyticEntry()
+                    analytic_entry.root = root
+                    analytic_entry.account = analytic_account
+                    linea.analytic_accounts = [analytic_entry]
                 linea.save()
             if sale.invoice_type == 'P':
                 with Transaction().set_user(1):
@@ -266,8 +279,8 @@ class Sale(metaclass=PoolMeta):
         log = cls.update_invoices_shipments(to_process, ventas_tecno, logs)
         actualizacion.add_logs(actualizacion, log)
         for id_tecno in to_created:
-            cls.importado(id_tecno)
-            #print('creado...', id_tecno) #TEST 
+            #cls.importado(id_tecno)
+            print('creado...', id_tecno) #TEST 
         logging.warning('FINISH VENTAS')
 
 
@@ -648,8 +661,8 @@ class Sale(metaclass=PoolMeta):
     def get_data_tecno(cls):
         Config = Pool().get('conector.configuration')(1)
         fecha = Config.date.strftime('%Y-%m-%d %H:%M:%S')
-        #consult = "SELECT * FROM dbo.Documentos WHERE tipo = 146 AND Numero_documento = 25" #TEST
-        consult = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado != 'T' ORDER BY fecha_hora ASC"
+        consult = "SELECT * FROM dbo.Documentos WHERE tipo = 145 AND Numero_documento = 32071" #TEST
+        #consult = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado != 'T' ORDER BY fecha_hora ASC"
         result = Config.get_data(consult)
         return result
 
