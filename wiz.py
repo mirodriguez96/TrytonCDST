@@ -25,10 +25,13 @@ class FixBugsConector(Wizard):
         
         shipments = Shipment.search([('state', '=', 'waiting')])
         print(len(shipments))
-        with Transaction().set_context(_skip_warnings=True):
-            Shipment.pick(shipments)
-            Shipment.pack(shipments)
-            Shipment.done(shipments)
+        for shipment in shipments:
+            print(shipment)
+            with Transaction().set_context(_skip_warnings=True):
+                Shipment.pick([shipment])
+                Shipment.pack([shipment])
+                Shipment.done([shipment])
+            Transaction().connection.commit()
         
         # Procesar facturas que su estado = contabilizado y por pagar = 0
         # invoices = Invoice.search([('state', '=', 'posted'), ('payment_lines', '!=', None)])
@@ -417,5 +420,7 @@ class CreateAdjustmentNotes(Wizard):
             note.lines = lines_to_create
             Note.save([note])
             Note.post([note])
+            with Transaction().set_context(_skip_warnings=True):
+                Invoice.process([inv])
             Transaction().connection.commit()
         return 'end'
