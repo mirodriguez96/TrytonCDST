@@ -16,13 +16,19 @@ class FixBugsConector(Wizard):
     def transition_fix_bugs_conector(self):
         pool = Pool()
         Warning = pool.get('res.user.warning')
-        Invoice = pool.get('account.invoice')
-        Sale = pool.get('sale.sale')
-        PaymentLine = Pool().get('account.invoice-account.move.line')
-        MoveLine = pool.get('account.move.line')
         warning_name = 'warning_fix_bugs_conector'
         if Warning.check(warning_name):
             raise UserWarning(warning_name, "No continue si desconoce el funcionamiento interno del asistente.")
+        # Invoice = pool.get('account.invoice')
+        # MoveLine = pool.get('account.move.line')
+        Shipment = pool.get('stock.shipment.out')
+        
+        shipments = Shipment.search([('state', '=', 'waiting')])
+        print(len(shipments))
+        with Transaction().set_context(_skip_warnings=True):
+            Shipment.pick(shipments)
+            Shipment.pack(shipments)
+            Shipment.done(shipments)
         
         # Procesar facturas que su estado = contabilizado y por pagar = 0
         # invoices = Invoice.search([('state', '=', 'posted'), ('payment_lines', '!=', None)])
@@ -37,31 +43,31 @@ class FixBugsConector(Wizard):
         #         with Transaction().set_context(_skip_warnings=True):
         #             Invoice.process([inv])
         #         Transaction().connection.commit()
-        # return 'end'
 
-        #Procesamiento devoluciones y coinciliación de facturas
-        domain_invoice = [
-            ('type', '=', 'out'),
-            ('invoice_type', '!=', '91'),
-            ('invoice_type', '!=', '92'),
-            ('state', '=', 'posted'),
-            ('original_invoice', '!=', None),
-            ('original_invoice.state', '=', 'posted')
-        ]
-        invoices = Invoice.search(domain_invoice)
-        print(len(invoices))
-        for inv in invoices:
-            for lp in inv.lines_to_pay:
-                if lp not in inv.original_invoice.payment_lines:
-                    print(inv.original_invoice)
-                    payment_lines = list(inv.original_invoice.payment_lines)
-                    payment_lines.append(lp)
-                    inv.original_invoice.payment_lines = payment_lines
-                    Invoice.reconcile_invoice(inv)
-                    with Transaction().set_context(_skip_warnings=True):
-                        Invoice.process([inv.original_invoice])
-                        Invoice.process([inv])
-            Transaction().connection.commit()
+        # Procesamiento devoluciones y coinciliación de facturas
+        # domain_invoice = [
+        #     ('type', '=', 'out'),
+        #     ('invoice_type', '!=', '91'),
+        #     ('invoice_type', '!=', '92'),
+        #     ('state', '=', 'posted'),
+        #     ('original_invoice', '!=', None),
+        #     ('original_invoice.state', '=', 'posted')
+        # ]
+        # invoices = Invoice.search(domain_invoice)
+        # print(len(invoices))
+        # for inv in invoices:
+        #     for lp in inv.lines_to_pay:
+        #         if lp not in inv.original_invoice.payment_lines:
+        #             print(inv.original_invoice)
+        #             payment_lines = list(inv.original_invoice.payment_lines)
+        #             payment_lines.append(lp)
+        #             inv.original_invoice.payment_lines = payment_lines
+        #             Invoice.reconcile_invoice(inv)
+        #             with Transaction().set_context(_skip_warnings=True):
+        #                 Invoice.process([inv.original_invoice])
+        #                 Invoice.process([inv])
+        #     Transaction().connection.commit()
+
         return 'end'
 
 class VoucherMoveUnreconcile(Wizard):
