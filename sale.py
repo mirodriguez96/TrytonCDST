@@ -94,7 +94,7 @@ class Sale(metaclass=PoolMeta):
             tbltipodocto, = Config.get_tbltipodoctos(tipo_doc)
             analytic_account = None
             if hasattr(SaleLine, 'analytic_accounts'):
-                if tbltipodocto.Encabezado != 0:
+                if tbltipodocto.Encabezado != '0':
                     AnalyticAccount = pool.get('analytic_account.account')
                     analytic_account, = AnalyticAccount.search([('code', '=', str(tbltipodocto.Encabezado))])
             #Se trae la fecha de la venta y se adapta al formato correcto para Tryton
