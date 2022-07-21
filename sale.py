@@ -60,7 +60,8 @@ class Sale(metaclass=PoolMeta):
         User = pool.get('res.user')
         Module = pool.get('ir.module')
         Config = pool.get('conector.configuration')
-        AnalyticAccount = pool.get('analytic_account.account')
+        if hasattr(SaleLine, 'analytic_accounts'):
+            AnalyticAccount = pool.get('analytic_account.account')
 
         company_operation = Module.search([('name', '=', 'company_operation'), ('state', '=', 'activated')])
         if company_operation:
