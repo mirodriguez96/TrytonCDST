@@ -60,7 +60,6 @@ class Sale(metaclass=PoolMeta):
         User = pool.get('res.user')
         Module = pool.get('ir.module')
         Config = pool.get('conector.configuration')
-        AnalyticEntry = pool.get('analytic.account.entry')
         AnalyticAccount = pool.get('analytic_account.account')
 
         company_operation = Module.search([('name', '=', 'company_operation'), ('state', '=', 'activated')])
@@ -253,6 +252,7 @@ class Sale(metaclass=PoolMeta):
                 # Se guarda la linea para la venta
                 # linea.on_change_quantity()
                 if hasattr(SaleLine, 'analytic_accounts'):
+                    AnalyticEntry = pool.get('analytic.account.entry')
                     root, = AnalyticAccount.search([('type', '=', 'root')])
                     analytic_entry = AnalyticEntry()
                     analytic_entry.root = root
