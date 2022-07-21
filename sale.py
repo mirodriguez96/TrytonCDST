@@ -60,8 +60,7 @@ class Sale(metaclass=PoolMeta):
         User = pool.get('res.user')
         Module = pool.get('ir.module')
         Config = pool.get('conector.configuration')
-        if hasattr(SaleLine, 'analytic_accounts'):
-            AnalyticAccount = pool.get('analytic_account.account')
+        
 
         company_operation = Module.search([('name', '=', 'company_operation'), ('state', '=', 'activated')])
         if company_operation:
@@ -94,8 +93,10 @@ class Sale(metaclass=PoolMeta):
             print(id_venta)
             tbltipodocto, = Config.get_tbltipodoctos(tipo_doc)
             analytic_account = None
-            if tbltipodocto.Encabezado != 0:
-                analytic_account, = AnalyticAccount.search([('code', '=', str(tbltipodocto.Encabezado))])
+            if hasattr(SaleLine, 'analytic_accounts'):
+                if tbltipodocto.Encabezado != 0:
+                    AnalyticAccount = pool.get('analytic_account.account')
+                    analytic_account, = AnalyticAccount.search([('code', '=', str(tbltipodocto.Encabezado))])
             #Se trae la fecha de la venta y se adapta al formato correcto para Tryton
             fecha = str(venta.fecha_hora).split()[0].split('-')
             fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
@@ -252,7 +253,7 @@ class Sale(metaclass=PoolMeta):
                     linea.on_change_discount_rate()
                 # Se guarda la linea para la venta
                 # linea.on_change_quantity()
-                if hasattr(SaleLine, 'analytic_accounts'):
+                if analytic_account:
                     AnalyticEntry = pool.get('analytic.account.entry')
                     root, = AnalyticAccount.search([('type', '=', 'root')])
                     analytic_entry = AnalyticEntry()
