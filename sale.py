@@ -280,7 +280,7 @@ class Sale(metaclass=PoolMeta):
         actualizacion.add_logs(actualizacion, log)
         for id_tecno in to_created:
             cls.importado(id_tecno)
-            #print('creado...', id_tecno) #TEST 
+            #print('creado...', id_tecno) #TEST
         logging.warning('FINISH VENTAS')
 
 
@@ -661,8 +661,8 @@ class Sale(metaclass=PoolMeta):
     def get_data_tecno(cls):
         Config = Pool().get('conector.configuration')(1)
         fecha = Config.date.strftime('%Y-%m-%d %H:%M:%S')
-        consult = "SELECT * FROM dbo.Documentos WHERE tipo = 145 AND Numero_documento = 32071" #TEST
-        #consult = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado != 'T' ORDER BY fecha_hora ASC"
+        #consult = "SELECT * FROM dbo.Documentos WHERE tipo = 145 AND Numero_documento = 32071" #TEST
+        consult = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado != 'T' ORDER BY fecha_hora ASC"
         result = Config.get_data(consult)
         return result
 
