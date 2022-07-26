@@ -47,7 +47,7 @@ class FixBugsConector(Wizard):
         #             Invoice.process([inv])
         #         Transaction().connection.commit()
 
-        Procesamiento devoluciones y coinciliación de facturas
+        # Procesamiento de devoluciones y coinciliación de facturas
         domain_invoice = [
             ('type', '=', 'out'),
             ('invoice_type', '!=', '91'),
