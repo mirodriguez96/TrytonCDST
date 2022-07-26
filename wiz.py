@@ -19,19 +19,19 @@ class FixBugsConector(Wizard):
         warning_name = 'warning_fix_bugs_conector'
         if Warning.check(warning_name):
             raise UserWarning(warning_name, "No continue si desconoce el funcionamiento interno del asistente.")
-        # Invoice = pool.get('account.invoice')
+        Invoice = pool.get('account.invoice')
         # MoveLine = pool.get('account.move.line')
-        Shipment = pool.get('stock.shipment.out')
-        
-        shipments = Shipment.search([('state', '=', 'waiting')])
-        print(len(shipments))
-        for shipment in shipments:
-            print(shipment)
-            with Transaction().set_context(_skip_warnings=True):
-                Shipment.pick([shipment])
-                Shipment.pack([shipment])
-                Shipment.done([shipment])
-            Transaction().connection.commit()
+
+        # Shipment = pool.get('stock.shipment.out')
+        # shipments = Shipment.search([('state', '=', 'waiting')])
+        # print(len(shipments))
+        # for shipment in shipments:
+        #     print(shipment)
+        #     with Transaction().set_context(_skip_warnings=True):
+        #         Shipment.pick([shipment])
+        #         Shipment.pack([shipment])
+        #         Shipment.done([shipment])
+        #     Transaction().connection.commit()
         
         # Procesar facturas que su estado = contabilizado y por pagar = 0
         # invoices = Invoice.search([('state', '=', 'posted'), ('payment_lines', '!=', None)])
@@ -47,29 +47,29 @@ class FixBugsConector(Wizard):
         #             Invoice.process([inv])
         #         Transaction().connection.commit()
 
-        # Procesamiento devoluciones y coinciliación de facturas
-        # domain_invoice = [
-        #     ('type', '=', 'out'),
-        #     ('invoice_type', '!=', '91'),
-        #     ('invoice_type', '!=', '92'),
-        #     ('state', '=', 'posted'),
-        #     ('original_invoice', '!=', None),
-        #     ('original_invoice.state', '=', 'posted')
-        # ]
-        # invoices = Invoice.search(domain_invoice)
-        # print(len(invoices))
-        # for inv in invoices:
-        #     for lp in inv.lines_to_pay:
-        #         if lp not in inv.original_invoice.payment_lines:
-        #             print(inv.original_invoice)
-        #             payment_lines = list(inv.original_invoice.payment_lines)
-        #             payment_lines.append(lp)
-        #             inv.original_invoice.payment_lines = payment_lines
-        #             Invoice.reconcile_invoice(inv)
-        #             with Transaction().set_context(_skip_warnings=True):
-        #                 Invoice.process([inv.original_invoice])
-        #                 Invoice.process([inv])
-        #     Transaction().connection.commit()
+        Procesamiento devoluciones y coinciliación de facturas
+        domain_invoice = [
+            ('type', '=', 'out'),
+            ('invoice_type', '!=', '91'),
+            ('invoice_type', '!=', '92'),
+            ('state', '=', 'posted'),
+            ('original_invoice', '!=', None),
+            ('original_invoice.state', '=', 'posted')
+        ]
+        invoices = Invoice.search(domain_invoice)
+        print(len(invoices))
+        for inv in invoices:
+            for lp in inv.lines_to_pay:
+                if lp not in inv.original_invoice.payment_lines:
+                    print(inv.original_invoice)
+                    payment_lines = list(inv.original_invoice.payment_lines)
+                    payment_lines.append(lp)
+                    inv.original_invoice.payment_lines = payment_lines
+                    Invoice.reconcile_invoice(inv)
+                    with Transaction().set_context(_skip_warnings=True):
+                        Invoice.process([inv.original_invoice])
+                        Invoice.process([inv])
+            Transaction().connection.commit()
 
         return 'end'
 
@@ -354,6 +354,7 @@ class CreateAdjustmentNotes(Wizard):
             raise UserWarning(warning_name, f"Cantidad de facturas a realizar el ajuste: {len(inv_adjustment)}")
         # Se procesa las facturas que cumplan con la condicion
         config = Config.get_configuration()
+        print(len(inv_adjustment))
         for inv in inv_adjustment:
             lines_to_create = []
             print(inv)
