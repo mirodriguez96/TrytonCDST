@@ -5,11 +5,6 @@ from decimal import Decimal
 import logging
 import datetime
 
-__all__ = [
-    'Production',
-    'Cron',
-    ]
-
 
 class Cron(metaclass=PoolMeta):
     'Cron'
@@ -133,8 +128,12 @@ class Production(metaclass=PoolMeta):
                         cont += 1
                 if entradas:
                     production['inputs'] = [('create', entradas)]
+                else:
+                    continue
                 if salidas:
                     production['outputs'] = [('create', salidas)]
+                else:
+                    continue
                 #Se crea y procesa las producciones
                 try:
                     producciones = Production.create([production])
@@ -196,7 +195,7 @@ class Production(metaclass=PoolMeta):
         AccountConfiguration = pool.get('account.configuration')
         AccountMove = pool.get('account.move')
         Period = pool.get('account.period')
-        period, = Period.search([('start_date', '>=', rec.planned_date), ('end_date', '<=', rec.planned_date)])
+        period = Period(Period.find(rec.company.id, date=rec.planned_date))
         account_configuration = AccountConfiguration(1)
         journal = account_configuration.get_multivalue('stock_journal', company=rec.company.id)
         account_move = AccountMove()
@@ -213,6 +212,15 @@ class Production(metaclass=PoolMeta):
             move_line = cls._get_account_stock_move(move)
             if move_line:
                 account_move_lines.append(move_line)
+        diff = 0
+        for line in account_move_lines:
+            if line.debit > 0:
+                diff += line.debit
+            else:
+                diff -= line.credit
+        move_line_adj = cls._get_account_stock_move_line(rec, diff)
+        if move_line_adj:
+            account_move_lines.append(move_line_adj)
         # Se agrega las líneas del asiento de acuerdo a las entradas y salidas de produccion
         account_move.lines=account_move_lines
         # Se crea y contabiliza el asiento
@@ -240,13 +248,37 @@ class Production(metaclass=PoolMeta):
         else:
             unit_price = smove.cost_price or smove.product.cost_price
         unit_price = Uom.compute_price(smove.product.default_uom, unit_price, smove.uom)
+        # amount = Decimal(str(smove.quantity)) * unit_price
         amount = smove.company.currency.round(Decimal(str(smove.quantity)) * unit_price)
+        # print(smove.product, amount)
         if type_.startswith('in_'):
             move_line.debit = amount
             move_line.credit = Decimal('0.0')
         else:
             move_line.debit = Decimal('0.0')
             move_line.credit = amount
+        return move_line
+
+    # 4
+    @classmethod
+    def _get_account_stock_move_line(cls, rec, amount):
+        '''
+        Return counterpart move line value for stock move
+        '''
+        pool = Pool()
+        AccountMoveLine = pool.get('account.move.line')
+        move_line = AccountMoveLine(
+            account=rec.product.account_category.account_stock,
+            party=rec.company.party
+            )
+        if not amount:
+            return
+        if amount > Decimal('0.0'):
+            move_line.debit = Decimal('0.0')
+            move_line.credit = amount
+        else:
+            move_line.debit = - amount
+            move_line.credit = Decimal('0.0')
         return move_line
 
     # 2
