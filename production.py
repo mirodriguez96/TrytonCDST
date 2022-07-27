@@ -1,6 +1,6 @@
 from trytond.model import fields
 from trytond.pool import Pool, PoolMeta
-#from trytond.exceptions import UserError
+from trytond.transaction import Transaction
 from decimal import Decimal
 import logging
 import datetime
@@ -28,7 +28,13 @@ class Production(metaclass=PoolMeta):
     'Production'
     __name__ = 'production'
     id_tecno = fields.Char('Id Tabla Sqlserver', required=False)
+    move = fields.Many2One('account.move', 'Account Move', states={'readonly': True})
 
+    @classmethod
+    def done(cls, records):
+        super(Production, cls).done(records)
+        for rec in records:
+            cls.create_account_move(rec)
 
     @classmethod
     def import_data_production(cls):
@@ -53,13 +59,15 @@ class Production(metaclass=PoolMeta):
         Product = pool.get('product.product')
         Template = pool.get('product.template')
         logs = []
-        to_create = []
+        to_created = []
+        to_exception = []
         for data in datos:
             for transformacion in data:
                 sw = transformacion.sw
                 numero_doc = transformacion.Numero_documento
                 tipo_doc = transformacion.tipo
                 id_tecno = str(sw)+'-'+tipo_doc+'-'+str(numero_doc)
+                print(id_tecno)
                 existe = Production.search([('id_tecno', '=', id_tecno)])
                 if existe:
                     #cls.importado(id_tecno)
@@ -127,25 +135,23 @@ class Production(metaclass=PoolMeta):
                     production['inputs'] = [('create', entradas)]
                 if salidas:
                     production['outputs'] = [('create', salidas)]
-                to_create.append(production)
-        #Se crean las producciones
-        #excepcion = False
-        #try:
-        producciones = Production.create(to_create)
-        Production.wait(producciones)
-        Production.assign(producciones)
-            #Production.run(producciones)
-            #Production.done(producciones)
-        #except Exception as e:
-        #    excepcion = True
-        #    logs.append(str(e))
+                #Se crea y procesa las producciones
+                try:
+                    producciones = Production.create([production])
+                    Production.wait(producciones)
+                    Production.assign(producciones)
+                    Production.run(producciones)
+                    Production.done(producciones)
+                    to_created.append(id_tecno)
+                except Exception as e:
+                    msg = f"Exception {id_tecno}: {str(e)}"
+                    logs.append(msg)
+                    to_exception.append(id_tecno)
         Actualizacion.add_logs(actualizacion, logs)
-        #if excepcion:
-        #    for prod in producciones:
-        #        Config.update_exportado(prod.id_tecno, 'E')
-        #else:
-        for prod in producciones:
-            Config.update_exportado(prod.id_tecno, 'T')
+        for idt in to_exception:
+            Config.update_exportado(idt, 'E')
+        for idt in to_created:
+            Config.update_exportado(idt, 'T')
         logging.warning('FINISH PRODUCTION')
 
 
@@ -182,3 +188,87 @@ class Production(metaclass=PoolMeta):
             to_reverse.append(production)
         #print(to_reverse)
         Production.save(to_reverse)
+
+
+    @classmethod
+    def create_account_move(cls, rec):
+        pool = Pool()
+        AccountConfiguration = pool.get('account.configuration')
+        AccountMove = pool.get('account.move')
+        Period = pool.get('account.period')
+        period, = Period.search([('start_date', '>=', rec.planned_date), ('end_date', '<=', rec.planned_date)])
+        account_configuration = AccountConfiguration(1)
+        journal = account_configuration.get_multivalue('stock_journal', company=rec.company.id)
+        account_move = AccountMove()
+        account_move.journal = journal
+        account_move.period = period
+        account_move.date = rec.planned_date
+        account_move.description = f"Production {rec.number}"
+        account_move_lines = []
+        for move in rec.inputs:
+            move_line = cls._get_account_stock_move(move)
+            if move_line:
+                account_move_lines.append(move_line)
+        for move in rec.outputs:
+            move_line = cls._get_account_stock_move(move)
+            if move_line:
+                account_move_lines.append(move_line)
+        # Se agrega las líneas del asiento de acuerdo a las entradas y salidas de produccion
+        account_move.lines=account_move_lines
+        # Se crea y contabiliza el asiento
+        AccountMove.save([account_move])
+        AccountMove.post([account_move])
+        # Se almacena el asiento en la produccion
+        rec.move = account_move
+        rec.save()
+
+    # 3
+    @classmethod
+    def _get_account_stock_move_lines(cls, smove, type_):
+        '''
+        Return move lines for stock move
+        '''
+        pool = Pool()
+        Uom = pool.get('product.uom')
+        AccountMoveLine = pool.get('account.move.line')
+        # instruccion que muestra error de tipo en caso que el movimiento de existencia no sea de entrada o salida
+        assert type_.startswith('in_') or type_.startswith('out_'), 'wrong type'
+        # se comienza a crear la línea de asiento
+        move_line = AccountMoveLine(account=smove.product.account_category.account_stock, party=smove.company.party)
+        if ((type_ in {'in_production', 'in_warehouse'}) and smove.product.cost_price_method != 'fixed'):
+            unit_price = smove.unit_price
+        else:
+            unit_price = smove.cost_price or smove.product.cost_price
+        unit_price = Uom.compute_price(smove.product.default_uom, unit_price, smove.uom)
+        amount = smove.company.currency.round(Decimal(str(smove.quantity)) * unit_price)
+        if type_.startswith('in_'):
+            move_line.debit = amount
+            move_line.credit = Decimal('0.0')
+        else:
+            move_line.debit = Decimal('0.0')
+            move_line.credit = amount
+        return move_line
+
+    # 2
+    @classmethod
+    def _get_account_stock_move_type(cls, smove):
+        '''
+        Get account move type
+        '''
+        type_ = (smove.from_location.type, smove.to_location.type)
+        if type_ == ('storage', 'production'):
+            return 'out_production'
+        elif type_ == ('production', 'storage'):
+            return 'in_production'
+
+    # 1
+    @classmethod
+    def _get_account_stock_move(cls, smove):
+        '''
+        Return account move lines for stock move
+        '''
+        type_ = cls._get_account_stock_move_type(smove)
+        if not type_:
+            return
+        account_move_lines = cls._get_account_stock_move_lines(smove, type_)
+        return account_move_lines

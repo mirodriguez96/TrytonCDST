@@ -35,9 +35,24 @@ class Party(ModelSQL, ModelView):
     @classmethod
     def update_parties(cls):
         logging.warning("RUN TERCEROS")
-        terceros_db = cls.last_update()
+        pool = Pool()
+        Config = pool.get('conector.configuration')
+        Actualizacion = pool.get('conector.actualizacion')
+        actualizacion = Actualizacion.create_or_update("TERCEROS")
+        # Se trae los terceros que cumplan con la fecha establecida
+        fecha = datetime.date(1,1,1)
+        if actualizacion.write_date:
+            fecha = actualizacion.write_date.strftime('%Y-%m-%d %H:%M:%S')
+        elif actualizacion.create_date:
+            fecha = actualizacion.create_date.strftime('%Y-%m-%d %H:%M:%S')
+        terceros_db = Config.get_tblterceros(fecha)
+
+        if not terceros_db:
+            actualizacion.save()
+            logging.warning("FINISH TERCEROS")
+            return
+        
         direcciones_db = cls.last_update_dir()
-        cls.create_or_update()
 
         pool = Pool()
         Party = pool.get('party.party')
@@ -48,84 +63,82 @@ class Party(ModelSQL, ModelView):
         Department = pool.get('party.department_code')
         City = pool.get('party.city_code')
 
-        if terceros_db:
-            columnas_terceros = cls.get_columns_db_tecno('TblTerceros')
-            #to_create = []
-            #Comenzamos a recorrer los terceros traidos por la consulta
-            for ter in terceros_db:
-                nit_cedula = ter[columnas_terceros.index('nit_cedula')].strip()
-                tipo_identificacion = cls.id_type(ter[columnas_terceros.index('tipo_identificacion')])
-                nombre = cls.delete_caracter(ter[columnas_terceros.index('nombre')].strip()).upper()
-                PrimerNombre = cls.delete_caracter(ter[columnas_terceros.index('PrimerNombre')].strip()).upper()
-                SegundoNombre = cls.delete_caracter(ter[columnas_terceros.index('SegundoNombre')].strip()).upper()
-                PrimerApellido = cls.delete_caracter(ter[columnas_terceros.index('PrimerApellido')].strip()).upper()
-                SegundoApellido = cls.delete_caracter(ter[columnas_terceros.index('SegundoApellido')].strip()).upper()
-                mail = ter[columnas_terceros.index('mail')].strip()
-                telefono = ter[columnas_terceros.index('telefono')].strip()
-                TipoPersona = cls.person_type(ter[columnas_terceros.index('TipoPersona')].strip())
-                ciiu = ter[columnas_terceros.index('IdActividadEconomica')]
-                TipoContribuyente = cls.tax_regime(ter[columnas_terceros.index('IdTipoContribuyente')])
-                exists = cls.find_party(nit_cedula)
-                #Ahora verificamos si el tercero existe en la bd de tryton
-                if exists:
-                    ultimo_cambiop = ter[columnas_terceros.index('Ultimo_Cambio_Registro')]
-                    create_date = None
-                    write_date = None
-                    #LA HORA DEL SISTEMA DE TRYTON TIENE UNA DIFERENCIA HORARIA DE 5 HORAS CON LA DE TECNO
-                    if exists.write_date:
-                        write_date = (exists.write_date - datetime.timedelta(hours=5, minutes=5))
-                    elif exists.create_date:
-                        create_date = (exists.create_date - datetime.timedelta(hours=5, minutes=5))
-                    #Ahora vamos a verificar si el cambio más reciente fue hecho en la bd sqlserver para actualizarlo
-                    if (ultimo_cambiop and write_date and ultimo_cambiop > write_date) or (ultimo_cambiop and not write_date and ultimo_cambiop > create_date):
-                        exists.type_document = tipo_identificacion
-                        exists.name = nombre
-                        exists.first_name = PrimerNombre
-                        exists.second_name = SegundoNombre
-                        exists.first_family_name = PrimerApellido
-                        exists.second_family_name = SegundoApellido
-                        exists.type_person = TipoPersona
-                        if exists.type_person == 'persona_juridica':
-                            exists.declarante = True
-                        #Verificación e inserción codigo ciiu
-                        if ciiu and ciiu != 0:
-                            exists.ciiu_code = ciiu
-                        exists.regime_tax = TipoContribuyente
-                        exists.lang = es
-                        exists.save()
-                    #Actualización de los 2 metodos de contactos principales
-                    cls.update_contact(exists, ultimo_cambiop, mail, 'email')
-                    cls.update_contact(exists, ultimo_cambiop, telefono, 'phone')
-                else:
-                    #Creando tercero junto con sus direcciones y metodos de contactos
-                    tercero = Party()
-                    tercero.type_document = tipo_identificacion
-                    tercero.id_number = nit_cedula
-                    tercero.name = nombre
-                    tercero.first_name = PrimerNombre
-                    tercero.second_name = SegundoNombre
-                    tercero.first_family_name = PrimerApellido
-                    tercero.second_family_name = SegundoApellido
-                    #Equivalencia tipo de persona y asignación True en declarante
-                    tercero.type_person = TipoPersona
-                    if tercero.type_person == 'persona_juridica':
-                        tercero.declarante = True
+        columnas_terceros = cls.get_columns_db_tecno('TblTerceros')
+        # Comenzamos a recorrer los terceros traidos por la consulta
+        for ter in terceros_db:
+            nit_cedula = ter[columnas_terceros.index('nit_cedula')].strip()
+            tipo_identificacion = cls.id_type(ter[columnas_terceros.index('tipo_identificacion')])
+            nombre = cls.delete_caracter(ter[columnas_terceros.index('nombre')].strip()).upper()
+            PrimerNombre = cls.delete_caracter(ter[columnas_terceros.index('PrimerNombre')].strip()).upper()
+            SegundoNombre = cls.delete_caracter(ter[columnas_terceros.index('SegundoNombre')].strip()).upper()
+            PrimerApellido = cls.delete_caracter(ter[columnas_terceros.index('PrimerApellido')].strip()).upper()
+            SegundoApellido = cls.delete_caracter(ter[columnas_terceros.index('SegundoApellido')].strip()).upper()
+            mail = ter[columnas_terceros.index('mail')].strip()
+            telefono = ter[columnas_terceros.index('telefono')].strip()
+            TipoPersona = cls.person_type(ter[columnas_terceros.index('TipoPersona')].strip())
+            ciiu = ter[columnas_terceros.index('IdActividadEconomica')]
+            TipoContribuyente = cls.tax_regime(ter[columnas_terceros.index('IdTipoContribuyente')])
+            exists = cls.find_party(nit_cedula)
+            #Ahora verificamos si el tercero existe en la bd de tryton
+            if exists:
+                ultimo_cambiop = ter[columnas_terceros.index('Ultimo_Cambio_Registro')]
+                create_date = None
+                write_date = None
+                #LA HORA DEL SISTEMA DE TRYTON TIENE UNA DIFERENCIA HORARIA DE 5 HORAS CON LA DE TECNO
+                if exists.write_date:
+                    write_date = (exists.write_date - datetime.timedelta(hours=5, minutes=5))
+                elif exists.create_date:
+                    create_date = (exists.create_date - datetime.timedelta(hours=5, minutes=5))
+                #Ahora vamos a verificar si el cambio más reciente fue hecho en la bd sqlserver para actualizarlo
+                if (ultimo_cambiop and write_date and ultimo_cambiop > write_date) or (ultimo_cambiop and not write_date and ultimo_cambiop > create_date):
+                    exists.type_document = tipo_identificacion
+                    exists.name = nombre
+                    exists.first_name = PrimerNombre
+                    exists.second_name = SegundoNombre
+                    exists.first_family_name = PrimerApellido
+                    exists.second_family_name = SegundoApellido
+                    exists.type_person = TipoPersona
+                    if exists.type_person == 'persona_juridica':
+                        exists.declarante = True
                     #Verificación e inserción codigo ciiu
                     if ciiu and ciiu != 0:
-                        tercero.ciiu_code = ciiu
-                    #Equivalencia regimen de impuestos
-                    tercero.regime_tax = TipoContribuyente
-                    tercero.lang = es
-                    tercero.save()
-                    #Creamos las direcciones pertenecientes al tercero
-                    direcciones_tecno = cls.get_address_db_tecno(nit_cedula)
-                    if direcciones_tecno:
-                        for direccion in direcciones_tecno:
-                            cls.create_address_new(tercero, direccion)
-                    #Metodos de contactos
-                    cls.create_contact_type(tercero, mail, 'email')
-                    cls.create_contact_type(tercero, telefono, 'phone')
-            #Party.create(to_create)
+                        exists.ciiu_code = ciiu
+                    exists.regime_tax = TipoContribuyente
+                    exists.lang = es
+                    exists.save()
+                #Actualización de los 2 metodos de contactos principales
+                cls.update_contact(exists, ultimo_cambiop, mail, 'email')
+                cls.update_contact(exists, ultimo_cambiop, telefono, 'phone')
+            else:
+                #Creando tercero junto con sus direcciones y metodos de contactos
+                tercero = Party()
+                tercero.type_document = tipo_identificacion
+                tercero.id_number = nit_cedula
+                tercero.name = nombre
+                tercero.first_name = PrimerNombre
+                tercero.second_name = SegundoNombre
+                tercero.first_family_name = PrimerApellido
+                tercero.second_family_name = SegundoApellido
+                #Equivalencia tipo de persona y asignación True en declarante
+                tercero.type_person = TipoPersona
+                if tercero.type_person == 'persona_juridica':
+                    tercero.declarante = True
+                #Verificación e inserción codigo ciiu
+                if ciiu and ciiu != 0:
+                    tercero.ciiu_code = ciiu
+                #Equivalencia regimen de impuestos
+                tercero.regime_tax = TipoContribuyente
+                tercero.lang = es
+                tercero.save()
+                #Creamos las direcciones pertenecientes al tercero
+                direcciones_tecno = cls.get_address_db_tecno(nit_cedula)
+                if direcciones_tecno:
+                    for direccion in direcciones_tecno:
+                        cls.create_address_new(tercero, direccion)
+                #Metodos de contactos
+                cls.create_contact_type(tercero, mail, 'email')
+                cls.create_contact_type(tercero, telefono, 'phone')
+        
         #Actualización de direcciones
         if direcciones_db:
             column_dir = cls.get_columns_db_tecno('Terceros_Dir')
@@ -349,14 +362,6 @@ class Party(ModelSQL, ModelView):
         data = Config.get_data(consult)
         return data
 
-    #Esta función se encarga de traer todos los datos de una tabla dada de acuerdo al rango de fecha dada de la bd TecnoCarnes
-    @classmethod
-    def get_data_tecno(cls, date):
-        Config = Pool().get('conector.configuration')
-        consult = "SET DATEFORMAT ymd SELECT * FROM dbo.TblTerceros WHERE fecha_creacion >= CAST('"+date+"' AS datetime) OR Ultimo_Cambio_Registro >= CAST('"+date+"' AS datetime)"
-        data = Config.get_data(consult)
-        return data
-
     #Función encargada de consultar las direcciones pertenecientes a un tercero en la bd TecnoCarnes
     @classmethod
     def get_address_db_tecno(cls, id):
@@ -371,24 +376,6 @@ class Party(ModelSQL, ModelView):
         Config = Pool().get('conector.configuration')
         consult = "SELECT * FROM dbo.Terceros_Contactos WHERE Nit_Cedula = '"+id+"'"
         data = Config.get_data(consult)
-        return data
-
-    #Función encargada de traer los datos de la bd TecnoCarnes con una fecha dada.
-    @classmethod
-    def last_update(cls):
-        Actualizacion = Pool().get('conector.actualizacion')
-        #Se consulta la ultima actualización realizada para los terceros
-        ultima_actualizacion = Actualizacion.search([('name', '=','TERCEROS')])
-        if ultima_actualizacion:
-            #Se calcula la fecha restando la diferencia de horas que tiene el servidor con respecto al clienete
-            if ultima_actualizacion[0].write_date:
-                fecha = (ultima_actualizacion[0].write_date - datetime.timedelta(hours=5, minutes=5))
-            else:
-                fecha = (ultima_actualizacion[0].create_date - datetime.timedelta(hours=5, minutes=5))
-        else:
-            fecha = datetime.date(1,1,1)
-        fecha = fecha.strftime('%Y-%m-%d %H:%M:%S')
-        data = cls.get_data_tecno(fecha)
         return data
 
     @classmethod
@@ -408,22 +395,6 @@ class Party(ModelSQL, ModelView):
         fecha = fecha.strftime('%Y-%m-%d %H:%M:%S')
         data = cls.get_data_dir_tecno(fecha)
         return data
-
-    #Crea o actualiza un registro de la tabla actualización en caso de ser necesario
-    @classmethod
-    def create_or_update(cls):
-        Actualizacion = Pool().get('conector.actualizacion')
-        actualizacion = Actualizacion.search([('name', '=','TERCEROS')])
-        if actualizacion:
-            #Se busca un registro con la actualización
-            actualizacion, = Actualizacion.search([('name', '=','TERCEROS')])
-            actualizacion.name = 'TERCEROS'
-            actualizacion.save()
-        else:
-            #Se crea un registro con la actualización
-            actualizar = Actualizacion()
-            actualizar.name = 'TERCEROS'
-            actualizar.save()
 
 #Herencia del party.address e insercción del campo id_tecno
 class PartyAddress(ModelSQL, ModelView):
