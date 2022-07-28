@@ -106,11 +106,17 @@ class Production(metaclass=PoolMeta):
                         transf['from_location'] = bodega.storage_location.id
                         transf['to_location'] = bodega.production_location.id
                         entradas.append(transf)
+                        if cont == 0:
+                            #Se actualiza el producto para que sea producible
+                            if not producto.template.producible:
+                                Template.write([template], {'producible': True})
+                            production['product'] = producto.id
+                            production['quantity'] = abs(cantidad)
+                        cont += 1
                     #Salida (1)
                     elif cantidad > 0:
                         transf['from_location'] = bodega.production_location.id
                         transf['to_location'] = bodega.storage_location.id
-                        #print(line.Valor_Unitario)
                         transf['unit_price'] = Decimal(line.Valor_Unitario)
                         salidas.append(transf)
                         template, = Template.search([('products', '=', producto)])
@@ -119,13 +125,6 @@ class Production(metaclass=PoolMeta):
                             'list_price': Decimal(line.Valor_Unitario)
                             }
                         Template.write([template], to_write)
-                        if cont == 0:
-                            #Se actualiza el producto para que sea producible
-                            if not producto.template.producible:
-                                
-                                Template.write([template], {'producible': True})
-                            production['product'] = producto.id
-                        cont += 1
                 if entradas:
                     production['inputs'] = [('create', entradas)]
                 else:

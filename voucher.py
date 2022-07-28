@@ -351,21 +351,20 @@ class Voucher(ModelSQL, ModelView):
         Invoice = pool.get('account.invoice')
         MoveLine = pool.get('account.move.line')
         #A continuacion se consulta las lineas a pagar de la factura (reference)
-        linea = False
-        invoice = Invoice.search([('number', '=', reference)])
+        invoice = Invoice.search([('number', '=', reference),('state', '=', 'posted')])
         if invoice:
-            invoice, = invoice
-            if invoice.state != 'posted':
-                return False
-            lines_to_pay = Invoice.get_lines_to_pay([invoice], 'None')
-            if lines_to_pay:
-                #Se selecciona la primera linea. Pero si hay más?
-                linea = lines_to_pay[invoice.id][0]
-        if linea:
-            moveline, = MoveLine.search([('id', '=', linea)])
-            return moveline
+            # Se selecciona la primera linea pendiente por pagar
+            return invoice[0].lines_to_pay[0]
+        line_domain = ['AND',
+            ('reference', '=', reference),
+            ('party', '=', party),
+            ['OR',
+                ('account.type.payable', '=', True),
+                ('account.type.receivable', '=', True),
+            ]
+        ]
         #Si no encuentra lineas a pagar... Se busca en saldos iniciales
-        moveline = MoveLine.search([('reference', '=', reference), ('party', '=', party)])
+        moveline = MoveLine.search(line_domain)
         if moveline:
             if len(moveline) > 1:
                 msg = f"Esperaba unica referencia ({reference}) en linea de movimiento (saldos iniciales) y obtuvo muchas !"
@@ -385,7 +384,7 @@ class Voucher(ModelSQL, ModelView):
         else:
             if moveline.debit > Decimal('0'):
                 amount = -amount
-
+        # Valor a pagar
         amount_to_pay = Decimal(0)
         untaxed_amount = Decimal(0)
         if moveline.move_origin and hasattr(moveline.move_origin, '__name__') and moveline.move_origin.__name__ == 'account.invoice':
@@ -600,7 +599,7 @@ class Voucher(ModelSQL, ModelView):
         Config = Pool().get('conector.configuration')
         config = Config(1)
         fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
-        #consult = "SELECT * FROM dbo.Documentos WHERE sw = 5 AND tipo = 117 AND Numero_documento = 2289" #TEST
+        #consult = "SELECT * FROM dbo.Documentos WHERE sw = 5 AND tipo = 117 AND Numero_documento = 3309" #TEST
         consult = "SET DATEFORMAT ymd SELECT TOP(10) * FROM dbo.Documentos WHERE sw = 5 AND fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado != 'T' ORDER BY fecha_hora ASC"
         data = Config.get_data(consult)
         return data
