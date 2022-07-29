@@ -20,5 +20,9 @@
         <field name="file"/>
         <button string="File Import" name="importfile" colspan="4"/>
       </page>
+      <page string="Production" id="config_production">
+        <label name="order_type_production"/>
+        <field name="order_type_production" colspan="2"/>
+      </page>
   </notebook>
 </form>

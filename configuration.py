@@ -32,6 +32,7 @@ class Configuration(ModelSQL, ModelView):
     file = fields.Binary('File', help="Enter the file to import with (;)")
     type_file = fields.Selection(TYPES_FILE, 'Type file')
     #doc_types = fields.Char('Doc types', help="Example: 101;120;103")
+    order_type_production = fields.Char('Order types', help="Example: 101;202;303")
 
 
     @classmethod
