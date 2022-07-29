@@ -338,7 +338,6 @@ class CreateAdjustmentNotes(Wizard):
         pool = Pool()
         Note = pool.get('account.note')
         Line = pool.get('account.note.line')
-        AnalyticAccount = pool.get('analytic_account.account')
         data = {
             'invoice_type': self.start.invoice_type,
             'adjustment_account': self.start.adjustment_account,
@@ -350,6 +349,7 @@ class CreateAdjustmentNotes(Wizard):
         else:
             raise UserError("msg_adjustment_amount", "has to be greater than zero")
         if hasattr(Line, 'analytic_account'):
+            AnalyticAccount = pool.get('analytic_account.account')
             if self.start.analytic_account:
                 analytic_account, = AnalyticAccount.search([('code', '=', self.start.analytic_account)])
                 data['analytic_account'] = analytic_account
