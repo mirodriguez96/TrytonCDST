@@ -1,18 +1,10 @@
 from trytond.model import ModelView, ModelSQL, fields
 from trytond.pool import Pool, PoolMeta
 from trytond.exceptions import UserError
+from trytond.transaction import Transaction
 from decimal import Decimal
 import logging
 import datetime
-
-
-__all__ = [
-    'Voucher',
-    'Cron',
-    'MultiRevenue',
-    'VoucherConfiguration',
-    'Delete Voucher Tecno'
-    ]
 
 
 class Cron(metaclass=PoolMeta):
@@ -264,20 +256,12 @@ class Voucher(ModelSQL, ModelView):
                     multingreso.lines = to_lines
                 multingreso.save()
                 if multingreso.transactions and multingreso.lines:
-                    #device = SaleDevice.search([('id_tecno', '=', doc.pc)])
-                    #if not device:
-                    #    msg = f'NO SE ENCONTRO LA TERMINAL {doc.pc}'
-                    #    logs.append(msg)
-                    #    logging.error(msg)
-                    #    continue
-                    #MultiRevenue.add_statement(multingreso, device[0])
                     MultiRevenue.create_voucher_tecno(multingreso)
                 else:
                     msg = f'REVISAR EL COMPROBANTE MULTI-INGRESO {id_tecno}'
                     logs.append(msg)
                 created.append(id_tecno)
             elif len(tipo_pago) == 1:
-                #continue
                 print('VOUCHER:', id_tecno)
                 forma_pago = tipo_pago[0].forma_pago
                 paymode = PayMode.search([('id_tecno', '=', forma_pago)])
@@ -696,6 +680,9 @@ class VoucherConfiguration(metaclass=PoolMeta):
     'Account Retention ICA for Conector TecnoCarnes', domain=[
         ('type', '!=', None),
     ])
+    adjustment_amount = fields.Numeric('Adjustment amount',
+    digits=(16, 2),
+    help="Enter the limit amount to make the adjustment of the invoices")
 
 
 class MultiRevenue(metaclass=PoolMeta):
@@ -838,3 +825,95 @@ class MultiRevenue(metaclass=PoolMeta):
         MultiRevenue.delete(multirevenue)
         for idt in ids_tecno:
             Conexion.update_exportado(idt, 'S')
+
+
+class Note(metaclass=PoolMeta):
+    __name__ = 'account.note'
+
+
+    # Metodo encargado de crear notas contables para las facturas que requieren un ajuste
+    @classmethod
+    def create_adjustment_note (cls, data):
+        pool = Pool()
+        Period = pool.get('account.period')
+        Config = pool.get('account.voucher_configuration')
+        Note = pool.get('account.note')
+        Line = pool.get('account.note.line')
+        Invoice = pool.get('account.invoice')
+        invoices = Invoice.search([('type', '=', data['invoice_type']), ('state', '=', 'posted')])
+        inv_adjustment = []
+        for inv in invoices:
+            if inv.amount_to_pay <= data['amount'] and inv.amount_to_pay > 0:
+                inv_adjustment.append(inv)
+        if not inv_adjustment:
+            return
+        # Se procede a procesar las facturas que cumplen con la condicion
+        config = Config.get_configuration()
+        print(len(inv_adjustment))
+        for inv in inv_adjustment:
+            lines_to_create = []
+            print(inv)
+            operation_center = None
+            for ml in inv.move.lines:
+                if ml.account == inv.account and (ml.account.type.payable or ml.account.type.receivable):
+                    _line = Line()
+                    _line.debit = ml.credit
+                    _line.credit = ml.debit
+                    _line.party = ml.party
+                    _line.account = ml.account
+                    _line.description = ml.description
+                    _line.move_line = ml
+                    if hasattr(ml, 'operation_center') and ml.operation_center:
+                        operation_center = ml.operation_center
+                        _line.operation_center = ml.operation_center
+                    lines_to_create.append(_line)
+            last_date = inv.invoice_date
+            for pl in inv.payment_lines:
+                _line = Line()
+                _line.debit = pl.credit
+                _line.credit = pl.debit
+                _line.party = pl.party
+                _line.account = pl.account
+                _line.description = pl.description
+                _line.move_line = pl
+                if last_date:
+                    if last_date < ml.date:
+                        last_date = ml.date
+                else:
+                    last_date = ml.date
+                if operation_center:
+                    _line.operation_center = operation_center
+                lines_to_create.append(_line)
+            amount_to_pay = inv.amount_to_pay
+            inv.payment_lines = []
+            inv.save()
+            # Se crea la línea del ajuste
+            _line = Line()
+            _line.party = inv.party
+            _line.account = data['adjustment_account']
+            _line.description = f"AJUSTE FACTURA {inv.number}"
+            if data['invoice_type'] == 'out':
+                _line.debit = amount_to_pay
+                _line.credit = 0
+            else:
+                _line.debit = 0
+                _line.credit = amount_to_pay
+            if operation_center:
+                _line.operation_center = operation_center
+            if data['analytic_account']:
+                _line.analytic_account = data['analytic_account']
+            lines_to_create.append(_line)
+            note = Note()
+            period = Period(Period.find(inv.company.id, date=last_date))
+            if period.state == 'open':
+                note.date = last_date
+            else:
+                note.date = datetime.date.today()
+            note.journal = config.default_journal_note
+            note.description = f"AJUSTE FACTURA {inv.number}"
+            note.lines = lines_to_create
+            Note.save([note])
+            Note.post([note])
+            with Transaction().set_context(_skip_warnings=True):
+                Invoice.process([inv])
+            Transaction().connection.commit()

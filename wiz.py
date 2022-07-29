@@ -321,7 +321,7 @@ class CreateAdjustmentNotesParameters(ModelView):
     __name__ = 'account.note.create_adjustment_note.parameters'
     invoice_type = fields.Selection([('in', 'Proveedor'), ('out', 'Cliente')], 'Invoice type', required=True)
     adjustment_account = fields.Many2One('account.account', 'Adjustment account', domain=[('type', '!=', None)], required=True)
-    analytic_account = fields.Many2One('analytic_account.account', 'Analytic account', required=True)
+    analytic_account = fields.Char('Analytic account')
 
 # Asistente encargado de crear las notas contables que realizaran el ajuste a las facturas con salod menor a 600 pesos
 class CreateAdjustmentNotes(Wizard):
@@ -336,92 +336,24 @@ class CreateAdjustmentNotes(Wizard):
 
     def transition_add_note(self):
         pool = Pool()
-        Period = pool.get('account.period')
-        Config = pool.get('account.voucher_configuration')
         Note = pool.get('account.note')
         Line = pool.get('account.note.line')
-        Warning = pool.get('res.user.warning')
-        Invoice = pool.get('account.invoice')
-        invoices = Invoice.search([('type', '=', self.start.invoice_type), ('state', '=', 'posted')])
-        inv_adjustment = []
-        for inv in invoices:
-            if inv.amount_to_pay < 600 and inv.amount_to_pay > 0:
-                inv_adjustment.append(inv)
-        if not inv_adjustment:
-            return 'end'
-        warning_name = 'warning_create_adjustment_note'
-        if Warning.check(warning_name):
-            raise UserWarning(warning_name, f"Cantidad de facturas a realizar el ajuste: {len(inv_adjustment)}")
-        # Se procesa las facturas que cumplan con la condicion
-        config = Config.get_configuration()
-        print(len(inv_adjustment))
-        for inv in inv_adjustment:
-            lines_to_create = []
-            print(inv)
-            operation_center = None
-            inv_account = inv.account
-            for ml in inv.move.lines:
-                if ml.account == inv_account and (ml.account.type.payable or ml.account.type.receivable):
-                    _line = Line()
-                    _line.debit = ml.credit
-                    _line.credit = ml.debit
-                    _line.party = ml.party
-                    _line.account = ml.account
-                    _line.description = ml.description
-                    _line.move_line = ml
-                    # _line.analytic_account = self.start.analytic_account
-                    if hasattr(ml, 'operation_center') and ml.operation_center:
-                        operation_center = ml.operation_center
-                        _line.operation_center = ml.operation_center
-                    lines_to_create.append(_line)
-            last_date = inv.invoice_date
-            for pl in inv.payment_lines:
-                _line = Line()
-                _line.debit = pl.credit
-                _line.credit = pl.debit
-                _line.party = pl.party
-                _line.account = pl.account
-                _line.description = pl.description
-                _line.move_line = pl
-                # _line.analytic_account = self.start.analytic_account
-                if last_date:
-                    if last_date < ml.date:
-                        last_date = ml.date
-                else:
-                    last_date = ml.date
-                if operation_center:
-                    _line.operation_center = operation_center
-                lines_to_create.append(_line)
-            amount_to_pay = inv.amount_to_pay
-            inv.payment_lines = []
-            inv.save()
-            # Se crea la línea del ajuste
-            _line = Line()
-            _line.party = inv.party
-            _line.account = self.start.adjustment_account
-            _line.description = f"AJUSTE FACTURA {inv.number}"
-            if self.start.invoice_type == 'out':
-                _line.debit = amount_to_pay
-                _line.credit = 0
+        AnalyticAccount = pool.get('analytic_account.account')
+        data = {
+            'invoice_type': self.start.invoice_type,
+            'adjustment_account': self.start.adjustment_account,
+            'analytic_account': None
+        }
+        config = pool.get('account.voucher_configuration')(1)
+        if config.adjustment_amount and config.adjustment_amount > 0:
+            data['amount'] = config.adjustment_amount
+        else:
+            raise UserError("msg_adjustment_amount", "has to be greater than zero")
+        if hasattr(Line, 'analytic_account'):
+            if self.start.analytic_account:
+                analytic_account, = AnalyticAccount.search([('code', '=', self.start.analytic_account)])
+                data['analytic_account'] = analytic_account
             else:
-                _line.debit = 0
-                _line.credit = amount_to_pay
-            if operation_center:
-                _line.operation_center = operation_center
-            _line.analytic_account = self.start.analytic_account
-            lines_to_create.append(_line)
-            note = Note()
-            period = Period.search([('state', '=', 'open'), ('start_date', '>=', last_date), ('end_date', '<=', last_date)])
-            if period:
-                note.date = last_date
-            else:
-                note.date = datetime.date.today()
-            note.journal = config.default_journal_note
-            note.description = f"AJUSTE FACTURA {inv.number}"
-            note.lines = lines_to_create
-            Note.save([note])
-            Note.post([note])
-            with Transaction().set_context(_skip_warnings=True):
-                Invoice.process([inv])
-            Transaction().connection.commit()
+                raise UserError("msg_analytic_account_missing")
+        Note.create_adjustment_note(data)
         return 'end'

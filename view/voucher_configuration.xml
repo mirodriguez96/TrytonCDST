@@ -11,5 +11,7 @@ The COPYRIGHT file at the top level of this repository contains the full copyrig
         <field name="account_retiva_tecno"/>
         <label name="account_retica_tecno"/>
         <field name="account_retica_tecno"/>
+        <label name="adjustment_amount"/>
+        <field name="adjustment_amount"/>
     </xpath>
 </data>

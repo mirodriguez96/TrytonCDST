@@ -43,6 +43,7 @@ def register():
         voucher.Cron,
         voucher.Voucher,
         voucher.MultiRevenue,
+        voucher.Note,
         pay_mode.Cron,
         pay_mode.VoucherPayMode,
         payment_term.PaymentTerm,
