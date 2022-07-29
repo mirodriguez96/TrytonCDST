@@ -877,10 +877,10 @@ class Note(metaclass=PoolMeta):
                 _line.description = pl.description
                 _line.move_line = pl
                 if last_date:
-                    if last_date < ml.date:
-                        last_date = ml.date
+                    if last_date < pl.date:
+                        last_date = pl.date
                 else:
-                    last_date = ml.date
+                    last_date = pl.date
                 if operation_center:
                     _line.operation_center = operation_center
                 lines_to_create.append(_line)
@@ -904,8 +904,10 @@ class Note(metaclass=PoolMeta):
                 _line.analytic_account = data['analytic_account']
             lines_to_create.append(_line)
             note = Note()
-            period = Period(Period.find(inv.company.id, date=last_date))
-            if period.state == 'open':
+            # period = Period(Period.find(inv.company.id, date=last_date))
+            period = Period.search([('state', '=', 'open'),('start_date', '>=', last_date),('end_date', '<=', last_date)])
+            print(period)
+            if period:
                 note.date = last_date
             else:
                 note.date = datetime.date.today()
