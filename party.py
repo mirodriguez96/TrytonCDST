@@ -30,8 +30,7 @@ class Party(ModelSQL, ModelView):
     'Party'
     __name__ = 'party.party'
 
-    #Función encargada de crear o actualizar los terceros de db TecnoCarnes,
-    #teniendo en cuenta la ultima fecha de actualizacion y si existe o no.
+    # Función encargada de crear o actualizar los terceros de db TecnoCarnes teniendo en cuenta la ultima fecha de actualizacion y si existe.
     @classmethod
     def update_parties(cls):
         logging.warning("RUN TERCEROS")
@@ -52,7 +51,7 @@ class Party(ModelSQL, ModelView):
             logging.warning("FINISH TERCEROS")
             return
         
-        direcciones_db = cls.last_update_dir()
+        direcciones_db = Config.get_tercerosdir(fecha)
 
         pool = Pool()
         Party = pool.get('party.party')
@@ -354,14 +353,6 @@ class Party(ModelSQL, ModelView):
             raise UserError(f"ERROR QUERY {table}: {e}")
         return columns
 
-    #Esta función se encarga de traer todos los datos de una tabla dada de la bd TecnoCarnes
-    @classmethod
-    def get_data_dir_tecno(cls, date):
-        Config = Pool().get('conector.configuration')
-        consult = "SET DATEFORMAT ymd SELECT * FROM dbo.Terceros_Dir WHERE Ultimo_Cambio_Registro >= CAST('"+date+"' AS datetime)"
-        data = Config.get_data(consult)
-        return data
-
     #Función encargada de consultar las direcciones pertenecientes a un tercero en la bd TecnoCarnes
     @classmethod
     def get_address_db_tecno(cls, id):
@@ -376,24 +367,6 @@ class Party(ModelSQL, ModelView):
         Config = Pool().get('conector.configuration')
         consult = "SELECT * FROM dbo.Terceros_Contactos WHERE Nit_Cedula = '"+id+"'"
         data = Config.get_data(consult)
-        return data
-
-    @classmethod
-    def last_update_dir(cls):
-        Actualizacion = Pool().get('conector.actualizacion')
-        #Se consulta la ultima actualización realizada para los terceros
-        ultima_actualizacion = Actualizacion.search([('name', '=','TERCEROS')])
-        #fecha = datetime.date(1,1,1)
-        if ultima_actualizacion:
-            #Se calcula la fecha restando la diferencia de horas que tiene el servidor con respecto al clienete
-            if ultima_actualizacion[0].write_date:
-                fecha = (ultima_actualizacion[0].write_date - datetime.timedelta(hours=5, minutes=5))
-            else:
-                fecha = (ultima_actualizacion[0].create_date - datetime.timedelta(hours=5, minutes=5))
-        else:
-            return None
-        fecha = fecha.strftime('%Y-%m-%d %H:%M:%S')
-        data = cls.get_data_dir_tecno(fecha)
         return data
 
 #Herencia del party.address e insercción del campo id_tecno

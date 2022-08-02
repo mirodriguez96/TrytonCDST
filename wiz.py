@@ -20,7 +20,7 @@ class FixBugsConector(Wizard):
         if Warning.check(warning_name):
             raise UserWarning(warning_name, "No continue si desconoce el funcionamiento interno del asistente.")
         Invoice = pool.get('account.invoice')
-        # MoveLine = pool.get('account.move.line')
+        MoveLine = pool.get('account.move.line')
 
         # Shipment = pool.get('stock.shipment.out')
         # shipments = Shipment.search([('state', '=', 'waiting')])
@@ -65,10 +65,14 @@ class FixBugsConector(Wizard):
                     payment_lines = list(inv.original_invoice.payment_lines)
                     payment_lines.append(lp)
                     inv.original_invoice.payment_lines = payment_lines
-                    Invoice.reconcile_invoice(inv)
+                    # Invoice.reconcile_invoice(inv)
+                    reconcile_invoice = [l for l in inv.original_invoice.payment_lines if not l.reconciliation] 
+                    reconcile_invoice.extend([l for l in inv.original_invoice.lines_to_pay if not l.reconciliation])
+                    if reconcile_invoice:
+                        MoveLine.reconcile(reconcile_invoice)
                     with Transaction().set_context(_skip_warnings=True):
-                        Invoice.process([inv.original_invoice])
                         Invoice.process([inv])
+                        Invoice.process([inv.original_invoice])
             Transaction().connection.commit()
 
         return 'end'

@@ -106,10 +106,14 @@ class Configuration(ModelSQL, ModelView):
         return data
 
     @classmethod
+    def get_tercerosdir(cls, fecha):
+        query = "SET DATEFORMAT ymd SELECT * FROM dbo.Terceros_Dir WHERE Ultimo_Cambio_Registro >= CAST('"+fecha+"' AS datetime)"
+        data = cls.get_data(query)
+        return data
+
+    @classmethod
     def get_documentos_tecno(cls, sw):
         Config = Pool().get('conector.configuration')(1)
-        fecha = Config.date.strftime('%Y-%m-%d %H:%M:%S')
-        #query = "SELECT TOP(10) * FROM dbo.Documentos WHERE sw=12 AND tipo = 110 and Numero_Documento >= 126854" #TEST
         query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND sw = "+sw+" AND exportado != 'T' AND exportado != 'E' ORDER BY fecha_hora ASC"
         data = cls.get_data(query)
         return data

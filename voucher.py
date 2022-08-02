@@ -863,9 +863,13 @@ class Note(metaclass=PoolMeta):
                     _line.account = ml.account
                     _line.description = ml.description
                     _line.move_line = ml
-                    if hasattr(ml, 'operation_center') and ml.operation_center:
-                        operation_center = ml.operation_center
-                        _line.operation_center = ml.operation_center
+                    if hasattr(ml, 'operation_center'):
+                        if ml.operation_center:
+                            operation_center = ml.operation_center
+                            _line.operation_center = operation_center
+                        else:
+                            operation_center = pool.get('company.operation_center')(1)
+                            _line.operation_center = operation_center
                     lines_to_create.append(_line)
             last_date = inv.invoice_date
             for pl in inv.payment_lines:
