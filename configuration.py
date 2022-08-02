@@ -102,7 +102,7 @@ class Configuration(ModelSQL, ModelView):
     @classmethod
     def get_tblterceros(cls, fecha):
         fecha = fecha.strftime('%Y-%m-%d %H:%M:%S')
-        query = f"SET DATEFORMAT ymd SELECT * FROM dbo.TblTerceros WHERE fecha_creacion >= CAST('"+fecha+"' AS datetime) OR Ultimo_Cambio_Registro >= CAST('"+fecha+"' AS datetime)"
+        query = "SET DATEFORMAT ymd SELECT * FROM dbo.TblTerceros WHERE fecha_creacion >= CAST('"+fecha+"' AS datetime) OR Ultimo_Cambio_Registro >= CAST('"+fecha+"' AS datetime)"
         data = cls.get_data(query)
         return data
 
@@ -115,7 +115,7 @@ class Configuration(ModelSQL, ModelView):
 
     @classmethod
     def get_tercerosdir_nit(cls, nit):
-        query = f"SELECT * FROM dbo.Terceros_Dir WHERE nit = {nit}"
+        query = "SELECT * FROM dbo.Terceros_Dir WHERE nit = "+nit
         data = cls.get_data(query)
         return data
 
