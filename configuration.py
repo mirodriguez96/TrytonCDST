@@ -115,7 +115,7 @@ class Configuration(ModelSQL, ModelView):
 
     @classmethod
     def get_tercerosdir_nit(cls, nit):
-        query = "SELECT * FROM dbo.Terceros_Dir WHERE nit = "+nit
+        query = "SELECT * FROM dbo.Terceros_Dir WHERE nit = '"+nit+"'"
         data = cls.get_data(query)
         return data
 
