@@ -45,14 +45,10 @@ class Party(ModelSQL, ModelView):
         elif actualizacion.create_date:
             fecha = actualizacion.create_date.strftime('%Y-%m-%d %H:%M:%S')
         terceros_db = Config.get_tblterceros(fecha)
-
         if not terceros_db:
             actualizacion.save()
             logging.warning("FINISH TERCEROS")
             return
-        
-        direcciones_db = Config.get_tercerosdir(fecha)
-
         pool = Pool()
         Party = pool.get('party.party')
         Address = pool.get('party.address')
@@ -62,25 +58,24 @@ class Party(ModelSQL, ModelView):
         Department = pool.get('party.department_code')
         City = pool.get('party.city_code')
 
-        columnas_terceros = cls.get_columns_db_tecno('TblTerceros')
         # Comenzamos a recorrer los terceros traidos por la consulta
         for ter in terceros_db:
-            nit_cedula = ter[columnas_terceros.index('nit_cedula')].strip()
-            tipo_identificacion = cls.id_type(ter[columnas_terceros.index('tipo_identificacion')])
-            nombre = cls.delete_caracter(ter[columnas_terceros.index('nombre')].strip()).upper()
-            PrimerNombre = cls.delete_caracter(ter[columnas_terceros.index('PrimerNombre')].strip()).upper()
-            SegundoNombre = cls.delete_caracter(ter[columnas_terceros.index('SegundoNombre')].strip()).upper()
-            PrimerApellido = cls.delete_caracter(ter[columnas_terceros.index('PrimerApellido')].strip()).upper()
-            SegundoApellido = cls.delete_caracter(ter[columnas_terceros.index('SegundoApellido')].strip()).upper()
-            mail = ter[columnas_terceros.index('mail')].strip()
-            telefono = ter[columnas_terceros.index('telefono')].strip()
-            TipoPersona = cls.person_type(ter[columnas_terceros.index('TipoPersona')].strip())
-            ciiu = ter[columnas_terceros.index('IdActividadEconomica')]
-            TipoContribuyente = cls.tax_regime(ter[columnas_terceros.index('IdTipoContribuyente')])
+            nit_cedula = ter.nit_cedula
+            tipo_identificacion = cls.id_type(ter.tipo_identificacion)
+            nombre = cls.delete_caracter(ter.nombre.strip()).upper()
+            PrimerNombre = cls.delete_caracter(ter.PrimerNombre.strip()).upper()
+            SegundoNombre = cls.delete_caracter(ter.SegundoNombre.strip()).upper()
+            PrimerApellido = cls.delete_caracter(ter.PrimerApellido.strip()).upper()
+            SegundoApellido = cls.delete_caracter(ter.SegundoApellido.strip()).upper()
+            mail = ter.mail.strip()
+            telefono = ter.telefono.strip()
+            TipoPersona = cls.person_type(ter.TipoPersona.strip())
+            ciiu = ter.IdActividadEconomica
+            TipoContribuyente = cls.tax_regime(ter.IdTipoContribuyente)
             exists = cls.find_party(nit_cedula)
             #Ahora verificamos si el tercero existe en la bd de tryton
             if exists:
-                ultimo_cambiop = ter[columnas_terceros.index('Ultimo_Cambio_Registro')]
+                ultimo_cambiop = ter.Ultimo_Cambio_Registro
                 create_date = None
                 write_date = None
                 #LA HORA DEL SISTEMA DE TRYTON TIENE UNA DIFERENCIA HORARIA DE 5 HORAS CON LA DE TECNO
@@ -130,62 +125,59 @@ class Party(ModelSQL, ModelView):
                 tercero.lang = es
                 tercero.save()
                 #Creamos las direcciones pertenecientes al tercero
-                direcciones_tecno = cls.get_address_db_tecno(nit_cedula)
-                if direcciones_tecno:
-                    for direccion in direcciones_tecno:
-                        cls.create_address_new(tercero, direccion)
+                direcciones_tecno = Config.get_tercerosdir_nit(nit_cedula)
+                for direccion in direcciones_tecno:
+                    cls.create_address_new(tercero, direccion)
                 #Metodos de contactos
                 cls.create_contact_type(tercero, mail, 'email')
                 cls.create_contact_type(tercero, telefono, 'phone')
-        
-        #Actualización de direcciones
-        if direcciones_db:
-            column_dir = cls.get_columns_db_tecno('Terceros_Dir')
-            for dir in direcciones_db:
-                nit = dir[column_dir.index('nit')].strip()
-                try:
-                    tercero, = Party.search([('id_number', '=', nit)])
-                except Exception as e:
-                    raise UserError("ERROR PARTY", f"Error: {e}")
-                id_t = nit+'-'+str(dir[column_dir.index('codigo_direccion')])
-                address = Address.search([('id_tecno', '=', id_t)])
-                if address:
-                    address = address[0]
-                    ultimo_cambiod = dir[column_dir.index('Ultimo_Cambio_Registro')]
-                    create_date = None
-                    write_date = None
-                    if address.write_date:
-                        write_date = (address.write_date - datetime.timedelta(hours=5, minutes=5))
-                    elif address.create_date:
-                        create_date = (address.create_date - datetime.timedelta(hours=5, minutes=5))
-                    if (ultimo_cambiod and write_date and ultimo_cambiod > write_date) or (ultimo_cambiod and not write_date and ultimo_cambiod > create_date):
-                        region = list(dir[column_dir.index('CodigoSucursal')].strip())
-                        try:
-                            country_code, = Country.search([('code', '=', '169')])
-                            if len(region) > 4:
-                                department_code = Department.search([('code', '=', region[0]+region[1])])
-                                if department_code:
-                                    address.department_code = department_code[0]
-                                    city_code = City.search([
-                                        ('code', '=', region[2]+region[3]+region[4]),
-                                        ('department', '=', department_code[0])
-                                        ])
-                                    if city_code:
-                                        address.city_code = city_code[0]
-                        except Exception as e:
-                            print(e)
-                            raise UserError("ERROR REGION", f"Error: {e}")
-                        address.country_code = country_code
-                        barrio = dir[column_dir.index('Barrio')].strip()
-                        if barrio and len(barrio) > 2:
-                            address.name = barrio
-                        address.party_name = tercero.name
-                        street = dir[column_dir.index('direccion')].strip()
-                        if len(street) > 2:
-                            address.street = street
-                        address.save()
-                else:
-                    cls.create_address_new(tercero, dir)
+
+        # Actualización de direcciones
+        direcciones_db = Config.get_tercerosdir(fecha)
+        for dir in direcciones_db:
+            nit = dir.nit
+            tercero = Party.search([('id_number', '=', nit)])
+            if not tercero:
+                continue
+            id_tecno = nit+'-'+str(dir.codigo_direccion)
+            address = Address.search([('id_tecno', '=', id_tecno)])
+            if address:
+                address = address[0]
+                ultimo_cambiod = dir.Ultimo_Cambio_Registro
+                create_date = None
+                write_date = None
+                if address.write_date:
+                    write_date = (address.write_date - datetime.timedelta(hours=5, minutes=5))
+                elif address.create_date:
+                    create_date = (address.create_date - datetime.timedelta(hours=5, minutes=5))
+                if (ultimo_cambiod and write_date and ultimo_cambiod > write_date) or (ultimo_cambiod and not write_date and ultimo_cambiod > create_date):
+                    region = list(dir.CodigoSucursal.strip())
+                    try:
+                        country_code, = Country.search([('code', '=', '169')])
+                        if len(region) > 4:
+                            department_code = Department.search([('code', '=', region[0]+region[1])])
+                            if department_code:
+                                address.department_code = department_code[0]
+                                city_code = City.search([
+                                    ('code', '=', region[2]+region[3]+region[4]),
+                                    ('department', '=', department_code[0])
+                                    ])
+                                if city_code:
+                                    address.city_code = city_code[0]
+                    except Exception as e:
+                        print(e)
+                        raise UserError("ERROR REGION", f"Error: {e}")
+                    address.country_code = country_code
+                    barrio = dir.Barrio.strip()
+                    if barrio and len(barrio) > 2:
+                        address.name = barrio
+                    address.party_name = tercero[0].name
+                    street = dir.direccion.strip()
+                    if len(street) > 2:
+                        address.street = street
+                    address.save()
+            else:
+                cls.create_address_new(tercero[0], dir)
         logging.warning("FINISH TERCEROS")
 
 
@@ -195,14 +187,13 @@ class Party(ModelSQL, ModelView):
         Country = Pool().get('party.country_code')
         Department = Pool().get('party.department_code')
         City = Pool().get('party.city_code')
-        column_dir = cls.get_columns_db_tecno('Terceros_Dir')
-        if data[column_dir.index('codigo_direccion')] == 1:
-            comercial_name = cls.delete_caracter(data[column_dir.index('NombreSucursal')].strip()).upper()
+        if data.codigo_direccion == 1:
+            comercial_name = cls.delete_caracter(data.NombreSucursal.strip()).upper()
             if len(comercial_name) > 2:
                 party.commercial_name = comercial_name
         direccion = Address()
-        direccion.id_tecno = data[column_dir.index('nit')].strip()+'-'+str(data[column_dir.index('codigo_direccion')])
-        region = list(data[column_dir.index('CodigoSucursal')].strip())
+        direccion.id_tecno = data.nit+'-'+str(data.codigo_direccion)
+        region = list(data.CodigoSucursal.strip())
         try:
             country_code, = Country.search([('code', '=', '169')])
             if len(region) > 4:
@@ -219,12 +210,12 @@ class Party(ModelSQL, ModelView):
             print(e)
             raise UserError("ERROR REGION", f"Error: {e}")
         direccion.country_code = country_code
-        barrio = data[column_dir.index('Barrio')].strip()
+        barrio = data.Barrio.strip()
         if barrio and len(barrio) > 2:
             direccion.name = barrio
         direccion.party = party
         direccion.party_name = party.name
-        street = data[column_dir.index('direccion')].strip()
+        street = data.direccion.strip()
         if len(street) > 2:
             direccion.street = street
         direccion.save()
@@ -336,38 +327,6 @@ class Party(ModelSQL, ModelView):
             return'regimen_no_responsable'
         else:
             return None
-
-    #Función encargada de consultar las columnas pertenecientes a 'x' tabla de la bd de TecnoCarnes
-    @classmethod
-    def get_columns_db_tecno(cls, table):
-        columns = []
-        try:
-            Config = Pool().get('conector.configuration')
-            conexion = Config.conexion()
-            with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = '"+table+"' ORDER BY ORDINAL_POSITION")
-                for q in query.fetchall():
-                    columns.append(q[0])
-        except Exception as e:
-            print("ERROR QUERY "+table+": ", e)
-            raise UserError(f"ERROR QUERY {table}: {e}")
-        return columns
-
-    #Función encargada de consultar las direcciones pertenecientes a un tercero en la bd TecnoCarnes
-    @classmethod
-    def get_address_db_tecno(cls, id):
-        Config = Pool().get('conector.configuration')
-        consult = "SELECT * FROM dbo.Terceros_Dir WHERE nit = '"+id+"'"
-        data = Config.get_data(consult)
-        return data
-
-    #Función encargada de consultar los metodos de contactos pertenecientes a un tercero en la bd TecnoCarnes
-    @classmethod
-    def get_contacts_db_tecno(cls, id):
-        Config = Pool().get('conector.configuration')
-        consult = "SELECT * FROM dbo.Terceros_Contactos WHERE Nit_Cedula = '"+id+"'"
-        data = Config.get_data(consult)
-        return data
 
 #Herencia del party.address e insercción del campo id_tecno
 class PartyAddress(ModelSQL, ModelView):
