@@ -41,13 +41,15 @@ class Party(ModelSQL, ModelView):
         # Se trae los terceros que cumplan con la fecha establecida
         fecha = datetime.date(1,1,1)
         if actualizacion.write_date:
+            print("write_date")
             fecha = actualizacion.write_date.strftime('%Y-%m-%d %H:%M:%S')
         elif actualizacion.create_date:
             Date = Pool().get('ir.date')
-            create_date = actualizacion.create_date.strftime('%Y-%m-%d')
+            create_date = actualizacion.create_date.date()
             print(create_date, Date.today())
             if create_date != Date.today():
-                fecha = actualizacion.create_date.strftime('%Y-%m-%d %H:%M:%S')
+                print("create_date")
+                fecha = create_date
         terceros_db = Config.get_tblterceros(fecha)
         if not terceros_db:
             actualizacion.save()
