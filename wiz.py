@@ -62,10 +62,10 @@ class FixBugsConector(Wizard):
             for lp in inv.lines_to_pay:
                 if lp not in inv.original_invoice.payment_lines:
                     with Transaction().set_context(_skip_warnings=True):
-                        print(inv.original_invoice)
-                        if lp.credit > inv.original_invoice.amount_to_pay:
+                        if abs(lp.credit) > inv.original_invoice.amount_to_pay:
                             print(f"Revisar devolucion {inv}")
-                            continue
+                            break
+                        print(inv.original_invoice)
                         if inv.original_invoice.payment_lines:
                             payment_lines = list(inv.original_invoice.payment_lines)
                             payment_lines.append(lp)
