@@ -79,8 +79,8 @@ class FixBugsConector(Wizard):
                             reconcile_invoice.extend([l for l in inv.original_invoice.lines_to_pay if not l.reconciliation])
                             if reconcile_invoice:
                                 MoveLine.reconcile(reconcile_invoice)
-                        Invoice.process([inv.original_invoice])
-                        Invoice.process([inv])
+                            Invoice.process([inv.original_invoice])
+                            Invoice.process([inv])
             Transaction().connection.commit()
 
         return 'end'
