@@ -61,19 +61,26 @@ class FixBugsConector(Wizard):
         for inv in invoices:
             for lp in inv.lines_to_pay:
                 if lp not in inv.original_invoice.payment_lines:
-                    print(inv.original_invoice)
-                    payment_lines = list(inv.original_invoice.payment_lines)
-                    payment_lines.append(lp)
-                    inv.original_invoice.payment_lines = payment_lines
-                    # Invoice.reconcile_invoice(inv)
                     with Transaction().set_context(_skip_warnings=True):
-                        Invoice.process([inv])
+                        print(inv.original_invoice)
+                        if inv.original_invoice.payment_lines:
+                            payment_lines = list(inv.original_invoice.payment_lines)
+                            if lp.credit <= inv.original_invoice.amount_to_pay:
+                                payment_lines.append(lp)
+                            else:
+                                print(f"Revisar devolucion {inv}")
+                                continue
+                        else:
+                            payment_lines = [lp]
+                        inv.original_invoice.payment_lines = payment_lines
+                        Invoice.save([inv.original_invoice])
+                        if inv.original_invoice.amount_to_pay == 0:
+                            reconcile_invoice = [l for l in inv.original_invoice.payment_lines if not l.reconciliation] 
+                            reconcile_invoice.extend([l for l in inv.original_invoice.lines_to_pay if not l.reconciliation])
+                            if reconcile_invoice:
+                                MoveLine.reconcile(reconcile_invoice)
                         Invoice.process([inv.original_invoice])
-                    if inv.original_invoice.amount_to_pay == 0:
-                        reconcile_invoice = [l for l in inv.original_invoice.payment_lines if not l.reconciliation] 
-                        reconcile_invoice.extend([l for l in inv.original_invoice.lines_to_pay if not l.reconciliation])
-                        if reconcile_invoice:
-                            MoveLine.reconcile(reconcile_invoice)
+                        Invoice.process([inv])
             Transaction().connection.commit()
 
         return 'end'
