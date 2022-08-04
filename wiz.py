@@ -4,7 +4,6 @@ from trytond.pool import Pool
 from trytond.transaction import Transaction
 from trytond.exceptions import UserError, UserWarning
 from sql import Table
-import datetime
 
 
 class FixBugsConector(Wizard):
@@ -48,6 +47,9 @@ class FixBugsConector(Wizard):
         #         Transaction().connection.commit()
 
         # Procesamiento de devoluciones y coinciliación de facturas
+        Actualizacion = pool.get('conector.actualizacion')
+        actualizacion = Actualizacion.create_or_update("VENTAS")
+        logs = []
         domain_invoice = [
             ('type', '=', 'out'),
             ('invoice_type', '!=', '91'),
@@ -66,21 +68,26 @@ class FixBugsConector(Wizard):
                             print(f"Revisar devolucion {inv}")
                             break
                         print(inv.original_invoice)
-                        if inv.original_invoice.payment_lines:
-                            payment_lines = list(inv.original_invoice.payment_lines)
-                            payment_lines.append(lp)
-                        else:
-                            payment_lines = [lp]
-                        inv.original_invoice.payment_lines = payment_lines
-                        Invoice.save([inv.original_invoice])
-                        if inv.original_invoice.amount_to_pay == 0:
-                            reconcile_invoice = [l for l in inv.original_invoice.payment_lines if not l.reconciliation] 
-                            reconcile_invoice.extend([l for l in inv.original_invoice.lines_to_pay if not l.reconciliation])
-                            if reconcile_invoice:
-                                MoveLine.reconcile(reconcile_invoice)
-                            Invoice.process([inv.original_invoice])
-                            Invoice.process([inv])
+                        try:
+                            if inv.original_invoice.payment_lines:
+                                payment_lines = list(inv.original_invoice.payment_lines)
+                                payment_lines.append(lp)
+                            else:
+                                payment_lines = [lp]
+                            inv.original_invoice.payment_lines = payment_lines
+                            Invoice.save([inv.original_invoice])
+                            if inv.original_invoice.amount_to_pay == 0:
+                                reconcile_invoice = [l for l in inv.original_invoice.payment_lines if not l.reconciliation] 
+                                reconcile_invoice.extend([l for l in inv.original_invoice.lines_to_pay if not l.reconciliation])
+                                if reconcile_invoice:
+                                    MoveLine.reconcile(reconcile_invoice)
+                                Invoice.process([inv.original_invoice])
+                                Invoice.process([inv])
+                        except Exception as e:
+                            msg = f"EXCEPTION DEV {inv} - {e}"
+                            logs.append(msg)
             Transaction().connection.commit()
+        Actualizacion.add_logs(actualizacion, logs)
 
         return 'end'
 
