@@ -47,47 +47,75 @@ class FixBugsConector(Wizard):
         #         Transaction().connection.commit()
 
         # Procesamiento de devoluciones y coinciliación de facturas
-        Actualizacion = pool.get('conector.actualizacion')
-        actualizacion = Actualizacion.create_or_update("VENTAS")
-        logs = []
-        domain_invoice = [
-            ('type', '=', 'out'),
-            ('invoice_type', '!=', '91'),
-            ('invoice_type', '!=', '92'),
-            ('state', '=', 'posted'),
-            ('original_invoice', '!=', None),
-            ('original_invoice.state', '=', 'posted')
+        # Actualizacion = pool.get('conector.actualizacion')
+        # actualizacion = Actualizacion.create_or_update("VENTAS")
+        # logs = []
+        # domain_invoice = [
+        #     ('type', '=', 'out'),
+        #     ('invoice_type', '!=', '91'),
+        #     ('invoice_type', '!=', '92'),
+        #     ('state', '=', 'posted'),
+        #     ('original_invoice', '!=', None),
+        #     ('original_invoice.state', '=', 'posted')
+        # ]
+        # invoices = Invoice.search(domain_invoice)
+        # print(len(invoices))
+        # for inv in invoices:
+        #     for lp in inv.lines_to_pay:
+        #         if lp not in inv.original_invoice.payment_lines:
+        #             with Transaction().set_context(_skip_warnings=True):
+        #                 if abs(lp.credit) > inv.original_invoice.amount_to_pay:
+        #                     print(f"Revisar devolucion {inv}")
+        #                     break
+        #                 print(inv.original_invoice)
+        #                 try:
+        #                     if inv.original_invoice.payment_lines:
+        #                         payment_lines = list(inv.original_invoice.payment_lines)
+        #                         payment_lines.append(lp)
+        #                     else:
+        #                         payment_lines = [lp]
+        #                     inv.original_invoice.payment_lines = payment_lines
+        #                     Invoice.save([inv.original_invoice])
+        #                     if inv.original_invoice.amount_to_pay == 0:
+        #                         reconcile_invoice = [l for l in inv.original_invoice.payment_lines if not l.reconciliation] 
+        #                         reconcile_invoice.extend([l for l in inv.original_invoice.lines_to_pay if not l.reconciliation])
+        #                         if reconcile_invoice:
+        #                             MoveLine.reconcile(reconcile_invoice)
+        #                         Invoice.process([inv.original_invoice])
+        #                         Invoice.process([inv])
+        #                 except Exception as e:
+        #                     msg = f"EXCEPTION DEV {inv} - {e}"
+        #                     logs.append(msg)
+        #     Transaction().connection.commit()
+        # Actualizacion.add_logs(actualizacion, logs)
+
+        cursor = Transaction().connection.cursor()
+        MoveLine = pool.get('account.move.line')
+        Line = pool.get('account.note.line')
+        domain = [
+            ('move_line', '=', None),
+            ('note.state', '=', 'posted'),
+            ('account', '=', 1072),
         ]
-        invoices = Invoice.search(domain_invoice)
-        print(len(invoices))
-        for inv in invoices:
-            for lp in inv.lines_to_pay:
-                if lp not in inv.original_invoice.payment_lines:
-                    with Transaction().set_context(_skip_warnings=True):
-                        if abs(lp.credit) > inv.original_invoice.amount_to_pay:
-                            print(f"Revisar devolucion {inv}")
-                            break
-                        print(inv.original_invoice)
-                        try:
-                            if inv.original_invoice.payment_lines:
-                                payment_lines = list(inv.original_invoice.payment_lines)
-                                payment_lines.append(lp)
-                            else:
-                                payment_lines = [lp]
-                            inv.original_invoice.payment_lines = payment_lines
-                            Invoice.save([inv.original_invoice])
-                            if inv.original_invoice.amount_to_pay == 0:
-                                reconcile_invoice = [l for l in inv.original_invoice.payment_lines if not l.reconciliation] 
-                                reconcile_invoice.extend([l for l in inv.original_invoice.lines_to_pay if not l.reconciliation])
-                                if reconcile_invoice:
-                                    MoveLine.reconcile(reconcile_invoice)
-                                Invoice.process([inv.original_invoice])
-                                Invoice.process([inv])
-                        except Exception as e:
-                            msg = f"EXCEPTION DEV {inv} - {e}"
-                            logs.append(msg)
-            Transaction().connection.commit()
-        Actualizacion.add_logs(actualizacion, logs)
+        lines = Line.search(domain)
+        print(len(lines))
+        for line in lines:
+            domain_movel = [
+                ('party', '=', line.party),
+                ('description', '=', line.description),
+                ('account', '=', line.account),
+                ('debit', '=', line.credit),
+                ('credit', '=', line.debit),
+                ('move.state', '=', 'posted'),
+                ('state', '=', 'valid'),
+            ]
+            try:
+                move_line, = MoveLine.search(domain_movel)
+                print(line.note)
+                cursor.execute("UPDATE account_note_line SET move_line = "+str(move_line.id)+" WHERE id = "+str(line.id)+"")
+            except Exception as e:
+                print(f"EXCEPTION {e}")
+                continue
 
         return 'end'
 
