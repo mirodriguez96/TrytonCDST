@@ -167,9 +167,8 @@ class Configuration(ModelSQL, ModelView):
     @classmethod
     def get_tipos_pago(cls, id):
         lista = id.split('-')
-        Config = Pool().get('conector.configuration')
         consult = "SELECT * FROM dbo.Documentos_Che WHERE sw="+lista[0]+" AND tipo="+lista[1]+" AND numero="+lista[2]
-        data = Config.get_data(consult)
+        data = cls.get_data(consult)
         return data
 
 

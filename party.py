@@ -18,7 +18,7 @@ class Cron(metaclass=PoolMeta):
 
 
 #Herencia del party.party e insercción de la función actualizar terceros
-class Party(ModelSQL, ModelView):
+class Party(metaclass=PoolMeta):
     'Party'
     __name__ = 'party.party'
 
@@ -305,14 +305,14 @@ class Party(ModelSQL, ModelView):
             return None
 
 #Herencia del party.address e insercción del campo id_tecno
-class PartyAddress(ModelSQL, ModelView):
+class PartyAddress(metaclass=PoolMeta):
     'PartyAddress'
     __name__ = 'party.address'
     id_tecno = fields.Char('Id TecnoCarnes', required=False)
 
 
 #Herencia del party.contact_mechanism e insercción del campo id_tecno
-class ContactMechanism(ModelSQL, ModelView):
+class ContactMechanism(metaclass=PoolMeta):
     'ContactMechanism'
     __name__ = 'party.contact_mechanism'
     id_tecno = fields.Char('Id TecnoCarnes', required=False)
