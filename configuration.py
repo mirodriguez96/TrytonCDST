@@ -123,7 +123,7 @@ class Configuration(ModelSQL, ModelView):
     def get_documentos_tecno(cls, sw):
         Config = Pool().get('conector.configuration')(1)
         fecha = Config.date.strftime('%Y-%m-%d %H:%M:%S')
-        query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND sw = "+sw+" AND exportado != 'T' AND exportado != 'E' ORDER BY fecha_hora ASC"
+        query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND sw = "+sw+" AND exportado != 'T' AND exportado != 'E' AND exportado != 'X' ORDER BY fecha_hora ASC"
         data = cls.get_data(query)
         return data
 
@@ -132,7 +132,7 @@ class Configuration(ModelSQL, ModelView):
         Config = Pool().get('conector.configuration')(1)
         fecha = Config.date.strftime('%Y-%m-%d %H:%M:%S')
         #query = "SELECT TOP(10) * FROM dbo.Documentos WHERE sw=12 AND tipo = 110 AND fecha_hora >= '2022-01-06' AND fecha_hora < '2022-01-07'" #TEST
-        query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND sw = "+sw+" AND tipo = "+tipo+" AND exportado != 'T' AND exportado != 'E' ORDER BY fecha_hora ASC"
+        query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND sw = "+sw+" AND tipo = "+tipo+" AND exportado != 'T' AND exportado != 'E' AND exportado != 'X' ORDER BY fecha_hora ASC"
         data = cls.get_data(query)
         return data
 
@@ -154,6 +154,24 @@ class Configuration(ModelSQL, ModelView):
         query = "SELECT * FROM dbo.TblTipoDoctos WHERE idTipoDoctos = "+id
         data = cls.get_data(query)
         return data
+
+    #Metodo encargado de obtener los recibos pagados de un documento dado
+    @classmethod
+    def get_dctos_cruce(cls, id):
+        lista = id.split('-')
+        query = "SELECT * FROM dbo.Documentos_Cruce WHERE sw="+lista[0]+" AND tipo="+lista[1]+" AND numero="+lista[2]
+        data = cls.get_data(query)
+        return data
+
+    #Metodo encargado de obtener la forma en que se pago el comprobante (recibos)
+    @classmethod
+    def get_tipos_pago(cls, id):
+        lista = id.split('-')
+        Config = Pool().get('conector.configuration')
+        consult = "SELECT * FROM dbo.Documentos_Che WHERE sw="+lista[0]+" AND tipo="+lista[1]+" AND numero="+lista[2]
+        data = Config.get_data(consult)
+        return data
+
 
     #
     @classmethod

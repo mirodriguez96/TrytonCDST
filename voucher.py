@@ -33,107 +33,111 @@ class Voucher(ModelSQL, ModelView):
     def import_voucher_payment(cls):
         logging.warning("RUN COMPROBANTES DE EGRESO")
         pool = Pool()
+        Config = pool.get('conector.configuration')
         Actualizacion = pool.get('conector.actualizacion')
-        actualizacion = Actualizacion.create_or_update('COMPROBANTES DE EGRESO')
-        # Obtenemos los comprobantes de egreso de TecnoCarnes
-        documentos = cls.get_data_tecno_out()
-        if not documentos:
-            actualizacion.save()
-            logging.warning("FINISH COMPROBANTES DE EGRESO")
-            return
         Voucher = pool.get('account.voucher')
         Line = pool.get('account.voucher.line')
         Party = pool.get('party.party')
         PayMode = pool.get('account.voucher.paymode')
-        Module = pool.get('ir.module')
+        actualizacion = Actualizacion.create_or_update('COMPROBANTES DE EGRESO')
         logs = []
         created = []
+        exceptions = []
+        # Obtenemos los comprobantes de egreso de TecnoCarnes
+        documentos = Config.get_documentos_tecno('6')
         # Comenzamos a recorrer los documentos a procesar y almacenamos los registros y creados en una lista
         for doc in documentos:
-            sw = str(doc.sw)
-            nro = str(doc.Numero_documento)
-            tipo_numero = doc.tipo+'-'+nro
-            id_tecno = sw+'-'+tipo_numero
-            # Buscamos si ya existe el comprobante
-            comprobante = Voucher.search([('id_tecno', '=', id_tecno)])
-            if comprobante:
-                msg = f"EL DOCUMENTO {id_tecno} YA EXISTIA EN TRYTON"
-                logs.append(msg)
-                created.append(id_tecno)
-                continue
-            facturas = cls.get_dcto_cruce("sw="+sw+" and tipo="+doc.tipo+" and numero="+nro)
-            if not facturas:
-                msg1 = f"NO HAY FACTURAS EN TECNOCARNES PARA EL RECIBO {id_tecno}"
-                logging.warning(msg1)
-                logs.append(msg1)
-                continue
-            nit_cedula = doc.nit_Cedula
-            party = Party.search([('id_number', '=', nit_cedula)])
-            if not party:
-                msg = f"EL TERCERO {nit_cedula} NO EXISTE EN TRYTON"
-                logs.append(msg)
-                logging.error(msg)
-                continue
-            party, = party
-            tipo_pago = cls.get_tipo_pago(sw, doc.tipo, nro)
-            if not tipo_pago:
-                msg = f"NO SE ENCONTRO FORMA(S) DE PAGO EN TECNOCARNES (DOCUMENTOS_CHE) PARA EL DOCUMENTO {id_tecno}"
-                logs.append(msg)
-                logging.error(msg)
-                continue
-            #for pago in tipo_pago: 
-            paymode = PayMode.search([('id_tecno', '=', tipo_pago[0].forma_pago)]) # REVISAR CRITICO ¿CUANDO HAY MAS DE 1 FORMA DE PAGO?
-            if not paymode:
-                msg = f"NO SE ENCONTRO LA FORMA DE PAGO {tipo_pago[0].forma_pago}"
-                logs.append(msg)
-                logging.error(msg)
-                continue
-            print('VOUCHER EGRESO:', id_tecno)
-            fecha_date = cls.convert_fecha_tecno(doc.fecha_hora)
-            voucher = Voucher()
-            voucher.id_tecno = id_tecno
-            voucher.number = tipo_numero
-            voucher.reference = tipo_numero
-            voucher.party = party
-            voucher.payment_mode = paymode[0]
-            voucher.on_change_payment_mode()
-            voucher.voucher_type = 'payment'
-            voucher.date = fecha_date
-            nota = (doc.notas).replace('\n', ' ').replace('\r', '')
-            if nota:
-                voucher.description = nota
-            if hasattr(voucher, 'operation_center'):
-                operation_center = pool.get('company.operation_center')(1)
-                voucher.operation_center = operation_center
-            valor_aplicado = Decimal(doc.valor_aplicado)
-            lines = cls.get_lines_vtecno(facturas, voucher, logs)
-            if lines:
-                voucher.lines = lines
-                voucher.on_change_lines()
-            #Se verifica que el comprobante tenga lineas para ser procesado y contabilizado (doble verificación por error)
-            if voucher.lines and voucher.amount_to_pay > 0:
-                Voucher.process([voucher])
-                diferencia = abs(voucher.amount_to_pay - valor_aplicado)
-                if voucher.amount_to_pay == valor_aplicado:
-                    Voucher.post([voucher])
-                elif diferencia < Decimal(60):
-                    config_voucher = pool.get('account.voucher_configuration')(1)
-                    line_ajuste = Line()
-                    line_ajuste.voucher = voucher
-                    line_ajuste.detail = 'AJUSTE'
-                    line_ajuste.account = config_voucher.account_adjust_expense
-                    line_ajuste.amount = diferencia
-                    if hasattr(line_ajuste, 'operation_center'):
-                        operation_center = pool.get('company.operation_center')(1)
-                        line_ajuste.operation_center = operation_center
-                    line_ajuste.save()
+            try:
+                sw = str(doc.sw)
+                nro = str(doc.Numero_documento)
+                tipo_numero = doc.tipo+'-'+nro
+                id_tecno = sw+'-'+tipo_numero
+                # Buscamos si ya existe el comprobante
+                comprobante = Voucher.search([('id_tecno', '=', id_tecno)])
+                if comprobante:
+                    msg = f"EL DOCUMENTO {id_tecno} YA EXISTE EN TRYTON"
+                    logs.append(msg)
+                    created.append(id_tecno)
+                    continue
+                facturas = Config.get_dctos_cruce(id_tecno)
+                if not facturas:
+                    msg1 = f"NO HAY FACTURAS EN TECNOCARNES PARA EL RECIBO {id_tecno}"
+                    logging.warning(msg1)
+                    logs.append(msg1)
+                    continue
+                nit_cedula = doc.nit_Cedula
+                party = Party.search([('id_number', '=', nit_cedula)])
+                if not party:
+                    msg = f"EL TERCERO {nit_cedula} NO EXISTE EN TRYTON"
+                    logs.append(msg)
+                    logging.error(msg)
+                    continue
+                party, = party
+                tipo_pago = Config.get_tipos_pago(id_tecno)
+                if not tipo_pago:
+                    msg = f"NO SE ENCONTRO FORMA(S) DE PAGO EN TECNOCARNES (DOCUMENTOS_CHE) PARA EL DOCUMENTO {id_tecno}"
+                    logs.append(msg)
+                    logging.error(msg)
+                    continue
+                #for pago in tipo_pago: 
+                paymode = PayMode.search([('id_tecno', '=', tipo_pago[0].forma_pago)]) # REVISAR CRITICO ¿CUANDO HAY MAS DE 1 FORMA DE PAGO?
+                if not paymode:
+                    msg = f"NO SE ENCONTRO LA FORMA DE PAGO {tipo_pago[0].forma_pago}"
+                    logs.append(msg)
+                    logging.error(msg)
+                    continue
+                print('VOUCHER EGRESO:', id_tecno)
+                fecha_date = cls.convert_fecha_tecno(doc.fecha_hora)
+                voucher = Voucher()
+                voucher.id_tecno = id_tecno
+                voucher.number = tipo_numero
+                voucher.reference = tipo_numero
+                voucher.party = party
+                voucher.payment_mode = paymode[0]
+                voucher.on_change_payment_mode()
+                voucher.voucher_type = 'payment'
+                voucher.date = fecha_date
+                nota = (doc.notas).replace('\n', ' ').replace('\r', '')
+                if nota:
+                    voucher.description = nota
+                if hasattr(voucher, 'operation_center'):
+                    operation_center = pool.get('company.operation_center')(1)
+                    voucher.operation_center = operation_center
+                valor_aplicado = Decimal(doc.valor_aplicado)
+                lines = cls.get_lines_vtecno(facturas, voucher, logs)
+                if lines:
+                    voucher.lines = lines
                     voucher.on_change_lines()
-                    Voucher.post([voucher])
-            voucher.save()
-            created.append(id_tecno)
+                #Se verifica que el comprobante tenga lineas para ser procesado y contabilizado (doble verificación por error)
+                if voucher.lines and voucher.amount_to_pay > 0:
+                    Voucher.process([voucher])
+                    diferencia = abs(voucher.amount_to_pay - valor_aplicado)
+                    if voucher.amount_to_pay == valor_aplicado:
+                        Voucher.post([voucher])
+                    elif diferencia < Decimal(60):
+                        config_voucher = pool.get('account.voucher_configuration')(1)
+                        line_ajuste = Line()
+                        line_ajuste.voucher = voucher
+                        line_ajuste.detail = 'AJUSTE'
+                        line_ajuste.account = config_voucher.account_adjust_expense
+                        line_ajuste.amount = diferencia
+                        if hasattr(line_ajuste, 'operation_center'):
+                            operation_center = pool.get('company.operation_center')(1)
+                            line_ajuste.operation_center = operation_center
+                        line_ajuste.save()
+                        voucher.on_change_lines()
+                        Voucher.post([voucher])
+                voucher.save()
+                created.append(id_tecno)
+            except Exception as e:
+                msg = f"EXCEPCION RECIBO {id_tecno} : {str(e)}"
+                logs.append(msg)
+                exceptions.append(id_tecno)
         Actualizacion.add_logs(actualizacion, logs)
-        for id in created:
-            cls.importado(id)
+        for idt in exceptions:
+            Config.update_exportado(idt, 'E')
+        for idt in created:
+            Config.update_exportado(idt, 'T')
             #print(id)
         logging.warning("FINISH COMPROBANTES DE EGRESO")
 
@@ -143,13 +147,8 @@ class Voucher(ModelSQL, ModelView):
     def import_voucher(cls):
         logging.warning("RUN COMPROBANTES DE INGRESO")
         pool = Pool()
+        Config = pool.get('conector.configuration')
         Actualizacion = pool.get('conector.actualizacion')
-        actualizacion = Actualizacion.create_or_update('COMPROBANTES DE INGRESO')
-        documentos_db = cls.get_data_tecno()
-        if not documentos_db:
-            actualizacion.save()
-            logging.warning("FINISH COMPROBANTES DE INGRESO")
-            return
         Module = pool.get('ir.module')
         Voucher = pool.get('account.voucher')
         Line = pool.get('account.voucher.line')
@@ -160,170 +159,181 @@ class Voucher(ModelSQL, ModelView):
         Transaction = pool.get('account.multirevenue.transaction')
         logs = []
         created = []
+        exceptions = []
+        actualizacion = Actualizacion.create_or_update('COMPROBANTES DE INGRESO')
+        documentos_db = Config.get_documentos_tecno('5')
         for doc in documentos_db:
-            sw = str(doc.sw)
-            tipo = doc.tipo
-            nro = str(doc.Numero_documento)
-            id_tecno = sw+'-'+tipo+'-'+nro
-            comprobante = cls.find_voucher(sw+'-'+tipo+'-'+nro)
-            if comprobante:
-                msg = f"EL DOCUMENTO {id_tecno} YA EXISTIA EN TRYTON"
-                logs.append(msg)
-                created.append(id_tecno)
-                continue
-            facturas = cls.get_dcto_cruce("sw="+sw+" and tipo="+doc.tipo+" and numero="+nro)
-            if not facturas:
-                msg1 = f"NO HAY FACTURAS EN TECNOCARNES PARA EL RECIBO {id_tecno}"
-                logging.warning(msg1)
-                logs.append(msg1)
-                continue
-            tercero = Party.search([('id_number', '=', doc.nit_Cedula)])
-            if not tercero:
-                msg = f"EL TERCERO {doc.nit_Cedula} NO EXISTE EN TRYTON"
-                logs.append(msg)
-                logging.error(msg)
-                continue
-            tercero, = tercero
-            #Se obtiene la forma de pago, según la tabla Documentos_Che de TecnoCarnes
-            tipo_pago = cls.get_tipo_pago(sw, doc.tipo, nro)
-            if not tipo_pago:
-                msg = f"NO SE ENCONTRO FORMA(S) DE PAGO EN TECNOCARNES (DOCUMENTOS_CHE) PARA EL DOCUMENTO {id_tecno}"
-                logs.append(msg)
-                logging.error(msg)
-                continue            
-            fecha_date = cls.convert_fecha_tecno(doc.fecha_hora)
-            if len(tipo_pago) > 1:
-                print('MULTI-INGRESO:', id_tecno)
-                multingreso = MultiRevenue()
-                multingreso.code = tipo+'-'+nro
-                multingreso.party = tercero
-                multingreso.date = fecha_date
-                multingreso.id_tecno = id_tecno
-                #Se ingresa las formas de pago (transacciones)
-                to_transactions = []
-                doble_fp = False
-                for pago in tipo_pago:
-                    paymode = PayMode.search([('id_tecno', '=', pago.forma_pago)])
-                    if not paymode:
-                        msg = f"NO SE ENCONTRO LA FORMA DE PAGO {pago.forma_pago}"
-                        logs.append(msg)
-                        logging.error(msg)
-                        continue
-                    for existr in to_transactions:
-                        if existr.payment_mode == paymode[0]:
-                            existr.amount += Decimal(pago.valor)
-                            doble_fp = True
-                            continue
-                    if doble_fp:
-                        doble_fp = False
-                        continue
-                    transaction = Transaction()
-                    transaction.description = 'IMPORTACION TECNO'
-                    transaction.amount = Decimal(pago.valor)
-                    transaction.date = fecha_date
-                    transaction.payment_mode = paymode[0]
-                    to_transactions.append(transaction)
-                if to_transactions:
-                    multingreso.transactions = to_transactions
-                #Se ingresa las lineas a pagar
-                to_lines = []
-                for rec in facturas:
-                    ref = rec.tipo_aplica+'-'+str(rec.numero_aplica)
-                    move_line = cls.get_moveline(ref, tercero, logs)
-                    if move_line and rec.valor:
-                        valor_pagado = Decimal(rec.valor + rec.descuento + rec.retencion + (rec.ajuste*-1) + rec.retencion_iva + rec.retencion_ica)
-                        line = MultiRevenueLine()
-                        line.move_line = move_line
-                        amount_to_pay = Decimal(move_line.move.origin.amount_to_pay)
-                        if valor_pagado > amount_to_pay:
-                            valor_pagado = amount_to_pay
-                        line.amount = valor_pagado
-                        line.original_amount = amount_to_pay
-                        line.is_prepayment = False
-                        line.reference_document = ref
-                        line.others_concepts = cls.get_others_tecno(rec, amount_to_pay)
-                        to_lines.append(line)
-                    else:
-                        if doc.anulado == 'S':
-                            msg = f'MULTI-INGRESO {id_tecno} ANULADO EN TECNOCARNES'
-                            logging.warning(msg)
-                            logs.append(msg)
-                        else:
-                            msg = f'NO SE ENCONTRO LA FACTURA {ref} EN TRYTON O REVISA SU VALOR {str(rec.valor)}. MULTI-INGRESO {id_tecno}'
-                            logging.warning(msg)
-                            logs.append(msg)
-                if to_lines:
-                    multingreso.lines = to_lines
-                multingreso.save()
-                if multingreso.transactions and multingreso.lines:
-                    MultiRevenue.create_voucher_tecno(multingreso)
-                else:
-                    msg = f'REVISAR EL COMPROBANTE MULTI-INGRESO {id_tecno}'
+            try:
+                sw = str(doc.sw)
+                tipo = doc.tipo
+                nro = str(doc.Numero_documento)
+                id_tecno = sw+'-'+tipo+'-'+nro
+                comprobante = cls.find_voucher(sw+'-'+tipo+'-'+nro)
+                if comprobante:
+                    msg = f"EL DOCUMENTO {id_tecno} YA EXISTE EN TRYTON"
                     logs.append(msg)
-                created.append(id_tecno)
-            elif len(tipo_pago) == 1:
-                print('VOUCHER:', id_tecno)
-                forma_pago = tipo_pago[0].forma_pago
-                paymode = PayMode.search([('id_tecno', '=', forma_pago)])
-                if not paymode:
-                    msg = f"NO SE ENCONTRO LA FORMA DE PAGO {forma_pago}"
+                    created.append(id_tecno)
+                    continue
+                facturas = Config.get_dctos_cruce(id_tecno)
+                if not facturas:
+                    msg1 = f"NO HAY FACTURAS EN TECNOCARNES PARA EL RECIBO {id_tecno}"
+                    logging.warning(msg1)
+                    logs.append(msg1)
+                    continue
+                tercero = Party.search([('id_number', '=', doc.nit_Cedula)])
+                if not tercero:
+                    msg = f"EL TERCERO {doc.nit_Cedula} NO EXISTE EN TRYTON"
                     logs.append(msg)
                     logging.error(msg)
                     continue
-                voucher = Voucher()
-                voucher.id_tecno = id_tecno
-                voucher.number = tipo+'-'+nro
-                voucher.reference = tipo+'-'+nro
-                voucher.party = tercero
-                voucher.payment_mode = paymode[0]
-                voucher.on_change_payment_mode()
-                voucher.voucher_type = 'receipt'
-                voucher.date = fecha_date
-                nota = (doc.notas).replace('\n', ' ').replace('\r', '')
-                if nota:
-                    voucher.description = nota
-                company_operation = Module.search([('name', '=', 'company_operation'), ('state', '=', 'activated')])
-                if company_operation:
-                    operation_center = pool.get('company.operation_center')(1)
-                    voucher.operation_center = operation_center
-                valor_aplicado = Decimal(doc.valor_aplicado)
-                lines = cls.get_lines_vtecno(facturas, voucher, logs)
-                if lines:
-                    voucher.lines = lines
-                    voucher.on_change_lines()
-                    #if company_operation:
-                    #    voucher.on_change_operation_center()
-                voucher.save()
-                #Se verifica que el comprobante tenga lineas para ser procesado y contabilizado (doble verificación por error)
-                if voucher.lines and voucher.amount_to_pay > 0:
-                    Voucher.process([voucher])
-                    diferencia = abs(voucher.amount_to_pay - valor_aplicado)
-                    #print(diferencia, (diferencia < Decimal(6.0)))
-                    if voucher.amount_to_pay == valor_aplicado:
-                        Voucher.post([voucher])
-                    elif diferencia < Decimal(60):
-                        config_voucher = pool.get('account.voucher_configuration')(1)
-                        line_ajuste = Line()
-                        line_ajuste.voucher = voucher
-                        line_ajuste.detail = 'AJUSTE'
-                        line_ajuste.account = config_voucher.account_adjust_income
-                        line_ajuste.amount = diferencia
-                        if company_operation:
-                            operation_center = pool.get('company.operation_center')(1)
-                            line_ajuste.operation_center = operation_center
-                        line_ajuste.save()
+                tercero, = tercero
+                #Se obtiene la forma de pago, según la tabla Documentos_Che de TecnoCarnes
+                tipo_pago = Config.get_tipos_pago(id_tecno)
+                if not tipo_pago:
+                    msg = f"NO SE ENCONTRO FORMA(S) DE PAGO EN TECNOCARNES (DOCUMENTOS_CHE) PARA EL DOCUMENTO {id_tecno}"
+                    logs.append(msg)
+                    logging.error(msg)
+                    continue            
+                fecha_date = cls.convert_fecha_tecno(doc.fecha_hora)
+                if len(tipo_pago) > 1:
+                    print('MULTI-INGRESO:', id_tecno)
+                    multingreso = MultiRevenue()
+                    multingreso.code = tipo+'-'+nro
+                    multingreso.party = tercero
+                    multingreso.date = fecha_date
+                    multingreso.id_tecno = id_tecno
+                    #Se ingresa las formas de pago (transacciones)
+                    to_transactions = []
+                    doble_fp = False
+                    for pago in tipo_pago:
+                        paymode = PayMode.search([('id_tecno', '=', pago.forma_pago)])
+                        if not paymode:
+                            msg = f"NO SE ENCONTRO LA FORMA DE PAGO {pago.forma_pago}"
+                            logs.append(msg)
+                            logging.error(msg)
+                            continue
+                        for existr in to_transactions:
+                            if existr.payment_mode == paymode[0]:
+                                existr.amount += Decimal(pago.valor)
+                                doble_fp = True
+                                continue
+                        if doble_fp:
+                            doble_fp = False
+                            continue
+                        transaction = Transaction()
+                        transaction.description = 'IMPORTACION TECNO'
+                        transaction.amount = Decimal(pago.valor)
+                        transaction.date = fecha_date
+                        transaction.payment_mode = paymode[0]
+                        to_transactions.append(transaction)
+                    if to_transactions:
+                        multingreso.transactions = to_transactions
+                    #Se ingresa las lineas a pagar
+                    to_lines = []
+                    for rec in facturas:
+                        ref = rec.tipo_aplica+'-'+str(rec.numero_aplica)
+                        move_line = cls.get_moveline(ref, tercero, logs)
+                        if move_line and rec.valor:
+                            print(move_line, move_line.move)
+                            valor_pagado = Decimal(rec.valor + rec.descuento + rec.retencion + (rec.ajuste*-1) + rec.retencion_iva + rec.retencion_ica)
+                            line = MultiRevenueLine()
+                            line.move_line = move_line
+                            amount_to_pay = Decimal(move_line.move.origin.amount_to_pay)
+                            if valor_pagado > amount_to_pay:
+                                valor_pagado = amount_to_pay
+                            line.amount = valor_pagado
+                            line.original_amount = amount_to_pay
+                            line.is_prepayment = False
+                            line.reference_document = ref
+                            line.others_concepts = cls.get_others_tecno(rec, amount_to_pay)
+                            to_lines.append(line)
+                        else:
+                            if doc.anulado == 'S':
+                                msg = f'MULTI-INGRESO {id_tecno} ANULADO EN TECNOCARNES'
+                                logging.warning(msg)
+                                logs.append(msg)
+                            else:
+                                msg = f'NO SE ENCONTRO LA FACTURA {ref} EN TRYTON O REVISA SU VALOR {str(rec.valor)}. MULTI-INGRESO {id_tecno}'
+                                logging.warning(msg)
+                                logs.append(msg)
+                    if to_lines:
+                        multingreso.lines = to_lines
+                    multingreso.save()
+                    if multingreso.transactions and multingreso.lines:
+                        MultiRevenue.create_voucher_tecno(multingreso)
+                    else:
+                        msg = f'REVISAR EL COMPROBANTE MULTI-INGRESO {id_tecno}'
+                        logs.append(msg)
+                    created.append(id_tecno)
+                elif len(tipo_pago) == 1:
+                    print('VOUCHER:', id_tecno)
+                    forma_pago = tipo_pago[0].forma_pago
+                    paymode = PayMode.search([('id_tecno', '=', forma_pago)])
+                    if not paymode:
+                        msg = f"NO SE ENCONTRO LA FORMA DE PAGO {forma_pago}"
+                        logs.append(msg)
+                        logging.error(msg)
+                        continue
+                    voucher = Voucher()
+                    voucher.id_tecno = id_tecno
+                    voucher.number = tipo+'-'+nro
+                    voucher.reference = tipo+'-'+nro
+                    voucher.party = tercero
+                    voucher.payment_mode = paymode[0]
+                    voucher.on_change_payment_mode()
+                    voucher.voucher_type = 'receipt'
+                    voucher.date = fecha_date
+                    nota = (doc.notas).replace('\n', ' ').replace('\r', '')
+                    if nota:
+                        voucher.description = nota
+                    company_operation = Module.search([('name', '=', 'company_operation'), ('state', '=', 'activated')])
+                    if company_operation:
+                        operation_center = pool.get('company.operation_center')(1)
+                        voucher.operation_center = operation_center
+                    valor_aplicado = Decimal(doc.valor_aplicado)
+                    lines = cls.get_lines_vtecno(facturas, voucher, logs)
+                    if lines:
+                        voucher.lines = lines
                         voucher.on_change_lines()
-                        Voucher.post([voucher])
+                        #if company_operation:
+                        #    voucher.on_change_operation_center()
                     voucher.save()
-                created.append(id_tecno)
-            else:
-                msg1 = f"EL DOCUMENTO {id_tecno} NO ENCONTRO FORMA DE PAGO EN TECNOCARNES"
-                logging.warning(msg1)
-                logs.append(msg1)
-                continue
+                    #Se verifica que el comprobante tenga lineas para ser procesado y contabilizado (doble verificación por error)
+                    if voucher.lines and voucher.amount_to_pay > 0:
+                        Voucher.process([voucher])
+                        diferencia = abs(voucher.amount_to_pay - valor_aplicado)
+                        #print(diferencia, (diferencia < Decimal(6.0)))
+                        if voucher.amount_to_pay == valor_aplicado:
+                            Voucher.post([voucher])
+                        elif diferencia < Decimal(60):
+                            config_voucher = pool.get('account.voucher_configuration')(1)
+                            line_ajuste = Line()
+                            line_ajuste.voucher = voucher
+                            line_ajuste.detail = 'AJUSTE'
+                            line_ajuste.account = config_voucher.account_adjust_income
+                            line_ajuste.amount = diferencia
+                            if company_operation:
+                                operation_center = pool.get('company.operation_center')(1)
+                                line_ajuste.operation_center = operation_center
+                            line_ajuste.save()
+                            voucher.on_change_lines()
+                            Voucher.post([voucher])
+                        voucher.save()
+                    created.append(id_tecno)
+                else:
+                    msg1 = f"EL DOCUMENTO {id_tecno} NO ENCONTRO FORMA DE PAGO EN TECNOCARNES"
+                    logging.warning(msg1)
+                    logs.append(msg1)
+                    continue
+            except Exception as e:
+                msg = f"EXCEPCION RECIBO {id_tecno} : {str(e)}"
+                logs.append(msg)
+                exceptions.append(id_tecno)
         Actualizacion.add_logs(actualizacion, logs)
-        for id in created:
-            cls.importado(id)
+        for idt in exceptions:
+            Config.update_exportado(idt, 'E')
+        for idt in created:
+            Config.update_exportado(idt, 'T')
             #print('CREADO...', id) #TEST
         logging.warning("FINISH COMPROBANTES DE INGRESO")
 
@@ -354,6 +364,10 @@ class Voucher(ModelSQL, ModelView):
                 msg = f"Esperaba unica referencia ({reference}) en linea de movimiento (saldos iniciales) y obtuvo muchas !"
                 logs.append(msg)
                 return False
+            if moveline[0].reconciliation:
+                msg = f"REVISAR FACTURA ({reference}) CONCILIADA"
+                logs.append(msg)
+                return False
             #print("SALDOS INICIALES")
             return moveline[0]
         else:
@@ -380,11 +394,6 @@ class Voucher(ModelSQL, ModelView):
 
         return amount, amount_to_pay, untaxed_amount
 
-    #Se marca como importado
-    @classmethod
-    def importado(cls, id):
-        Config = Pool().get('conector.configuration')
-        Config.mark_imported(id)
 
     #Metodo encargado de consultar y verificar si existe un voucher con la id de la BD
     @classmethod
@@ -404,14 +413,14 @@ class Voucher(ModelSQL, ModelView):
 
 
     @classmethod
-    def get_lines_vtecno(cls, facturas, voucher, logs):
+    def get_lines_vtecno(cls, invoices, voucher, logs):
         pool = Pool()
         Module = pool.get('ir.module')
         Line = pool.get('account.voucher.line')
         config_voucher = pool.get('account.voucher_configuration')(1)
         to_lines = []
-        for rec in facturas:
-            ref = rec.tipo_aplica+'-'+str(rec.numero_aplica)
+        for inv in invoices:
+            ref = inv.tipo_aplica+'-'+str(inv.numero_aplica)
             move_line = cls.get_moveline(ref, voucher.party, logs)
             if not move_line:
                 msg = f'NO SE ENCONTRO LA FACTURA {ref} EN TRYTON'
@@ -430,12 +439,12 @@ class Voucher(ModelSQL, ModelView):
             if company_operation:
                 operation_center = pool.get('company.operation_center')(1)
                 line.operation_center = operation_center
-            valor = Decimal(rec.valor)
-            descuento = Decimal(rec.descuento)
-            retencion = Decimal(rec.retencion)
-            ajuste = Decimal(rec.ajuste)
-            retencion_iva = Decimal(rec.retencion_iva)
-            retencion_ica = Decimal(rec.retencion_ica)
+            valor = Decimal(inv.valor)
+            descuento = Decimal(inv.descuento)
+            retencion = Decimal(inv.retencion)
+            ajuste = Decimal(inv.ajuste)
+            retencion_iva = Decimal(inv.retencion_iva)
+            retencion_ica = Decimal(inv.retencion_ica)
             valor_pagado = valor + descuento + retencion + (ajuste*-1) + retencion_iva + retencion_ica
             valor_pagado = round(valor_pagado, 2)
             if valor_pagado > amount_to_pay:
@@ -576,44 +585,6 @@ class Voucher(ModelSQL, ModelView):
         fecha = str(fecha_tecno).split()[0].split('-')
         fecha = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
         return fecha
-
-    #Esta función se encarga de traer todos los datos de una tabla dada de acuerdo al rango de fecha dada de la bd TecnoCarnes
-    @classmethod
-    def get_data_tecno(cls):
-        Config = Pool().get('conector.configuration')
-        config = Config(1)
-        fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
-        #consult = "SELECT * FROM dbo.Documentos WHERE sw = 5 AND tipo = 117 AND Numero_documento = 3309" #TEST
-        consult = "SET DATEFORMAT ymd SELECT TOP(10) * FROM dbo.Documentos WHERE sw = 5 AND fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado != 'T' ORDER BY fecha_hora ASC"
-        data = Config.get_data(consult)
-        return data
-
-    #Esta función se encarga de traer todos los datos de una tabla dada de acuerdo al rango de fecha dada de la bd TecnoCarnes
-    @classmethod
-    def get_data_tecno_out(cls):
-        Config = Pool().get('conector.configuration')
-        config = Config(1)
-        fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
-        #consult = "SET DATEFORMAT ymd SELECT * FROM dbo.Documentos WHERE sw = 6 AND fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado != 'T' AND tipo = 149" #TEST
-        consult = "SET DATEFORMAT ymd SELECT TOP(10) * FROM dbo.Documentos WHERE sw = 6 AND fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado != 'T' ORDER BY fecha_hora ASC"
-        data = Config.get_data(consult)
-        return data
-
-    #Metodo encargado de obtener los recibos pagados de un documento dado
-    @classmethod
-    def get_dcto_cruce(cls, consult):
-        Config = Pool().get('conector.configuration')
-        query = "SELECT * FROM dbo.Documentos_Cruce WHERE "+consult
-        data = Config.get_data(query)
-        return data
-
-    #Metodo encargado de obtener la forma en que se pago el comprobante (recibos)
-    @classmethod
-    def get_tipo_pago(cls, sw, tipo, nro):
-        Config = Pool().get('conector.configuration')
-        consult = "SELECT * FROM dbo.Documentos_Che WHERE sw="+sw+" AND tipo="+tipo+" AND numero="+nro
-        data = Config.get_data(consult)
-        return data
 
     
     @classmethod
