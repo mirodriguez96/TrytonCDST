@@ -87,13 +87,6 @@ class Configuration(ModelSQL, ModelView):
 
     #Se marca en la tabla dbo.Documentos como exportado a Tryton
     @classmethod
-    def mark_imported(cls, id):
-        lista = id.split('-')
-        query = "UPDATE dbo.Documentos SET exportado = 'T' WHERE sw ="+lista[0]+" and tipo = "+lista[1]+" and Numero_documento = "+lista[2]
-        cls.set_data(query)
-
-    #Se marca en la tabla dbo.Documentos como exportado a Tryton
-    @classmethod
     def update_exportado(cls, id, e):
         lista = id.split('-')
         query = "UPDATE dbo.Documentos SET exportado = '"+e+"' WHERE sw ="+lista[0]+" and tipo = "+lista[1]+" and Numero_documento = "+lista[2]

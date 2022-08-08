@@ -62,7 +62,7 @@ class Voucher(ModelSQL, ModelView):
                 facturas = Config.get_dctos_cruce(id_tecno)
                 if not facturas:
                     msg1 = f"NO HAY FACTURAS EN TECNOCARNES PARA EL RECIBO {id_tecno}"
-                    logging.warning(msg1)
+                    exceptions.append(id_tecno)
                     logs.append(msg1)
                     continue
                 nit_cedula = doc.nit_Cedula
@@ -70,21 +70,21 @@ class Voucher(ModelSQL, ModelView):
                 if not party:
                     msg = f"EL TERCERO {nit_cedula} NO EXISTE EN TRYTON"
                     logs.append(msg)
-                    logging.error(msg)
+                    exceptions.append(id_tecno)
                     continue
                 party, = party
                 tipo_pago = Config.get_tipos_pago(id_tecno)
                 if not tipo_pago:
                     msg = f"NO SE ENCONTRO FORMA(S) DE PAGO EN TECNOCARNES (DOCUMENTOS_CHE) PARA EL DOCUMENTO {id_tecno}"
                     logs.append(msg)
-                    logging.error(msg)
+                    exceptions.append(id_tecno)
                     continue
                 #for pago in tipo_pago: 
                 paymode = PayMode.search([('id_tecno', '=', tipo_pago[0].forma_pago)]) # REVISAR CRITICO ¿CUANDO HAY MAS DE 1 FORMA DE PAGO?
                 if not paymode:
                     msg = f"NO SE ENCONTRO LA FORMA DE PAGO {tipo_pago[0].forma_pago}"
                     logs.append(msg)
-                    logging.error(msg)
+                    exceptions.append(id_tecno)
                     continue
                 print('VOUCHER EGRESO:', id_tecno)
                 fecha_date = cls.convert_fecha_tecno(doc.fecha_hora)
@@ -177,14 +177,14 @@ class Voucher(ModelSQL, ModelView):
                 facturas = Config.get_dctos_cruce(id_tecno)
                 if not facturas:
                     msg1 = f"NO HAY FACTURAS EN TECNOCARNES PARA EL RECIBO {id_tecno}"
-                    logging.warning(msg1)
                     logs.append(msg1)
+                    exceptions.append(id_tecno)
                     continue
                 tercero = Party.search([('id_number', '=', doc.nit_Cedula)])
                 if not tercero:
                     msg = f"EL TERCERO {doc.nit_Cedula} NO EXISTE EN TRYTON"
                     logs.append(msg)
-                    logging.error(msg)
+                    exceptions.append(id_tecno)
                     continue
                 tercero, = tercero
                 #Se obtiene la forma de pago, según la tabla Documentos_Che de TecnoCarnes
@@ -192,7 +192,7 @@ class Voucher(ModelSQL, ModelView):
                 if not tipo_pago:
                     msg = f"NO SE ENCONTRO FORMA(S) DE PAGO EN TECNOCARNES (DOCUMENTOS_CHE) PARA EL DOCUMENTO {id_tecno}"
                     logs.append(msg)
-                    logging.error(msg)
+                    exceptions.append(id_tecno)
                     continue            
                 fecha_date = cls.convert_fecha_tecno(doc.fecha_hora)
                 if len(tipo_pago) > 1:
@@ -210,7 +210,7 @@ class Voucher(ModelSQL, ModelView):
                         if not paymode:
                             msg = f"NO SE ENCONTRO LA FORMA DE PAGO {pago.forma_pago}"
                             logs.append(msg)
-                            logging.error(msg)
+                            exceptions.append(id_tecno)
                             continue
                         for existr in to_transactions:
                             if existr.payment_mode == paymode[0]:
@@ -234,7 +234,6 @@ class Voucher(ModelSQL, ModelView):
                         ref = rec.tipo_aplica+'-'+str(rec.numero_aplica)
                         move_line = cls.get_moveline(ref, tercero, logs)
                         if move_line and rec.valor:
-                            print(move_line, move_line.move)
                             valor_pagado = Decimal(rec.valor + rec.descuento + rec.retencion + (rec.ajuste*-1) + rec.retencion_iva + rec.retencion_ica)
                             line = MultiRevenueLine()
                             line.move_line = move_line
@@ -250,11 +249,11 @@ class Voucher(ModelSQL, ModelView):
                         else:
                             if doc.anulado == 'S':
                                 msg = f'MULTI-INGRESO {id_tecno} ANULADO EN TECNOCARNES'
-                                logging.warning(msg)
+                                exceptions.append(id_tecno)
                                 logs.append(msg)
                             else:
                                 msg = f'NO SE ENCONTRO LA FACTURA {ref} EN TRYTON O REVISA SU VALOR {str(rec.valor)}. MULTI-INGRESO {id_tecno}'
-                                logging.warning(msg)
+                                exceptions.append(id_tecno)
                                 logs.append(msg)
                     if to_lines:
                         multingreso.lines = to_lines
@@ -264,6 +263,7 @@ class Voucher(ModelSQL, ModelView):
                     else:
                         msg = f'REVISAR EL COMPROBANTE MULTI-INGRESO {id_tecno}'
                         logs.append(msg)
+                        exceptions.append(id_tecno)
                     created.append(id_tecno)
                 elif len(tipo_pago) == 1:
                     print('VOUCHER:', id_tecno)
@@ -272,7 +272,7 @@ class Voucher(ModelSQL, ModelView):
                     if not paymode:
                         msg = f"NO SE ENCONTRO LA FORMA DE PAGO {forma_pago}"
                         logs.append(msg)
-                        logging.error(msg)
+                        exceptions.append(id_tecno)
                         continue
                     voucher = Voucher()
                     voucher.id_tecno = id_tecno
@@ -322,7 +322,7 @@ class Voucher(ModelSQL, ModelView):
                     created.append(id_tecno)
                 else:
                     msg1 = f"EL DOCUMENTO {id_tecno} NO ENCONTRO FORMA DE PAGO EN TECNOCARNES"
-                    logging.warning(msg1)
+                    exceptions.append(id_tecno)
                     logs.append(msg1)
                     continue
             except Exception as e:
