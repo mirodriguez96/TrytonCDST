@@ -56,7 +56,7 @@ class Party(metaclass=PoolMeta):
                 ciiu = ter.IdActividadEconomica
                 TipoContribuyente = cls.tax_regime(ter.IdTipoContribuyente)
                 es, = Lang.search([('code', '=', 'es_419')])
-                exists = Party.search([('id_number', '=', id)])
+                exists = Party.search([('id_number', '=', nit_cedula)])
                 #Ahora verificamos si el tercero existe en la bd de tryton
                 if exists:
                     exists, = exists
