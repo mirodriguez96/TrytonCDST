@@ -1,6 +1,7 @@
 from trytond.model import ModelSQL, ModelView, fields
 from trytond.pool import Pool
 from trytond.exceptions import UserError
+from trytond.transaction import Transaction
 from decimal import Decimal
 import datetime
 
@@ -116,7 +117,8 @@ class Configuration(ModelSQL, ModelView):
     def get_documentos_tecno(cls, sw):
         Config = Pool().get('conector.configuration')(1)
         fecha = Config.date.strftime('%Y-%m-%d %H:%M:%S')
-        query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND sw = "+sw+" AND exportado != 'T' AND exportado != 'E' AND exportado != 'X' ORDER BY fecha_hora ASC"
+        query = "SELECT * FROM dbo.Documentos WHERE tipo = 142 AND Numero_documento = 62" #TEST
+        #query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND sw = "+sw+" AND exportado != 'T' AND exportado != 'E' AND exportado != 'X' ORDER BY fecha_hora ASC"
         data = cls.get_data(query)
         return data
 
@@ -207,70 +209,67 @@ class Configuration(ModelSQL, ModelView):
         City = pool.get('party.city_code')
         Department = pool.get('party.department_code')
         Country = pool.get('party.country_code')
-        parties = []
         for linea in lineas:
-            linea = linea.strip()
-            if linea:
-                linea = linea.split(';')
-                if len(linea) != 13:
-                    raise UserError('Error de plantilla',
-                    'type_document | id_number | name | address/party_name | address/name | address/street | address/country_code | address/department_code | address/city_code | address/phone | address/email | regime_tax | type_person')
-                id_number = linea[1].strip()
-                party = Party.search([('id_number', '=', id_number)])
-                if party:
-                    continue
-                to_save = {
-                    'type_document': linea[0].strip(),
-                    'id_number': id_number,
-                    'name': linea[2].strip().upper(),
-                    'regime_tax': linea[11].strip(),
-                    'type_person': linea[12].strip()
+            linea = linea.split(';')
+            if len(linea) != 13:
+                raise UserError('Error de plantilla',
+                'type_document | id_number | name | address/party_name | address/name | address/street | address/country_code | address/department_code | address/city_code | address/phone | address/email | regime_tax | type_person')
+            id_number = linea[1].strip()
+            print(id_number)
+            party = Party.search([('id_number', '=', id_number)])
+            if party:
+                continue
+            to_save = {
+                'type_document': linea[0].strip(),
+                'id_number': id_number,
+                'name': linea[2].strip().upper(),
+                'regime_tax': linea[11].strip(),
+                'type_person': linea[12].strip()
+            }
+            adress = {
+                'party_name': linea[3].strip().upper(),
+                'name': linea[4].strip(),
+                'street': linea[5].strip()
+            }
+            country_code = linea[6].strip()
+            country = Country.search([
+                ('code', '=', country_code),
+            ])
+            department_code = linea[7].strip()
+            department = Department.search([
+                ('code',  '=', department_code),
+            ])
+            city_code = linea[8].strip()
+            city = City.search([
+                ('code', '=', city_code),
+                ('department.code',  '=', department_code),
+            ])
+            if country:
+                adress['country_code'] = country[0].id
+            if department:
+                adress['department_code'] = department[0].id
+            if city:
+                adress['city_code'] = city[0].id
+            to_save['addresses'] = [('create', [adress])]
+            contacts = []
+            phone = linea[9].strip()
+            if phone:
+                phone = {
+                    'type': 'phone',
+                    'value': phone
                 }
-                adress = {
-                    'party_name': linea[3].strip().upper(),
-                    'name': linea[4].strip(),
-                    'street': linea[5].strip()
+                contacts.append(phone)
+            email = linea[10].strip()
+            if email:
+                email = {
+                    'type': 'email',
+                    'value': email
                 }
-                country_code = linea[6].strip()
-                country = Country.search([
-                    ('code', '=', country_code),
-                ])
-                department_code = linea[7].strip()
-                department = Department.search([
-                    ('code',  '=', department_code),
-                ])
-                city_code = linea[8].strip()
-                city = City.search([
-                    ('code', '=', city_code),
-                    ('department.code',  '=', department_code),
-                ])
-                if country:
-                    adress['country_code'] = country[0].id
-                if department:
-                    adress['department_code'] = department[0].id
-                if city:
-                    adress['city_code'] = city[0].id
-                to_save['addresses'] = [('create', [adress])]
-                contacts = []
-                phone = linea[9].strip()
-                if phone:
-                    phone = {
-                        'type': 'phone',
-                        'value': phone
-                    }
-                    contacts.append(phone)
-                email = linea[10].strip()
-                if email:
-                    email = {
-                        'type': 'email',
-                        'value': email
-                    }
-                    contacts.append(email)
-                if contacts:
-                    to_save['contact_mechanisms'] = [('create', contacts)]
-                parties.append(to_save)
-        print(len(parties))
-        Party.create(parties)
+                contacts.append(email)
+            if contacts:
+                to_save['contact_mechanisms'] = [('create', contacts)]
+            Party.create([to_save])
+            Transaction().connection.commit()
 
     #Importar productos
     @classmethod

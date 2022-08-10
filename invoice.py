@@ -138,8 +138,10 @@ class Invoice(metaclass=PoolMeta):
                 invoice.type = 'out'
                 if nota_tecno == "CREDITO":
                     invoice.invoice_type = '91'
+                    invoice.operation_type = '22'
                 else:
                     invoice.invoice_type = '92'
+                    invoice.operation_type = '32'
                 if party.account_receivable:
                     invoice.account = party.account_receivable
                 elif Configuration.default_account_receivable:
