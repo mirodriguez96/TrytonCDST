@@ -8,11 +8,6 @@ import logging
 from sql import Table
 
 
-__all__ = [
-    'Sale',
-    'Cron',
-    ]
-
 
 class Cron(metaclass=PoolMeta):
     'Cron'
@@ -37,6 +32,7 @@ class Sale(metaclass=PoolMeta):
         logging.warning('RUN VENTAS')
         pool = Pool()
         Config = pool.get('conector.configuration')
+        Actualizacion = pool.get('conector.actualizacion')
         data = ()
         ventas_tecno = Config.get_documentos_tecno('1')
         if ventas_tecno:
@@ -46,16 +42,16 @@ class Sale(metaclass=PoolMeta):
             data += devoluciones_tecno
         data = ventas_tecno + devoluciones_tecno
         #Se crea o actualiza la fecha de importación
-        actualizacion = cls.create_or_update()
-        logs = []
+        actualizacion = Actualizacion.create_or_update('VENTAS')
         if not data:
-            actualizacion.add_logs(actualizacion, logs)
+            actualizacion.save()
             logging.warning('FINISH VENTAS')
             return
         Sale = pool.get('sale.sale')
         SaleLine = pool.get('sale.line')
+        Product = pool.get('product.product')
         SaleDevice = pool.get('sale.device')
-        location = pool.get('stock.location')
+        Location = pool.get('stock.location')
         payment_term = pool.get('account.invoice.payment_term')
         Party = pool.get('party.party')
         Address = pool.get('party.address')
@@ -81,17 +77,18 @@ class Sale(metaclass=PoolMeta):
         venta_electronica = Config.get_data_parametros('9')
         if venta_electronica:
             venta_electronica = (venta_electronica[0].Valor).strip().split(',')
+        logs = []
         to_created = []
-        to_process = []
+        to_exception = []
         #Procedemos a realizar una venta
         for venta in data:
             sw = venta.sw
             numero_doc = venta.Numero_documento
             tipo_doc = venta.tipo
             id_venta = str(sw)+'-'+tipo_doc+'-'+str(numero_doc)
-            existe = cls.buscar_venta(id_venta)
+            existe = Sale.search([('id_tecno', '=', id_venta)])
             if existe:
-                Config.update_exportado(id_venta, 'T')
+                to_created.append(id_venta)
                 continue
             print(id_venta)
             tbltipodocto, = Config.get_tbltipodoctos(tipo_doc)
@@ -106,35 +103,39 @@ class Sale(metaclass=PoolMeta):
             nit_cedula = venta.nit_Cedula
             party = Party.search([('id_number', '=', nit_cedula)])
             if not party:
-                msg2 = f' No se encontro el tercero {nit_cedula} de la venta {id_venta}'
+                msg2 = f'EXCEPCION {id_venta} - No se encontro el tercero {nit_cedula}'
                 logging.error(msg2)
                 logs.append(msg2)
                 actualizacion.reset_writedate('TERCEROS')
+                to_exception.append(id_venta)
                 continue
             party = party[0]
             #Se indica a que bodega pertenece
             id_tecno_bodega = venta.bodega
-            bodega = location.search([('id_tecno', '=', id_tecno_bodega)])
+            bodega = Location.search([('id_tecno', '=', id_tecno_bodega)])
             if not bodega:
-                msg2 = f'Bodega {id_tecno_bodega} no existe de la venta {id_venta}'
+                msg2 = f'EXCEPCION {id_venta} - Bodega {id_tecno_bodega} no existe'
                 logging.error(msg2)
                 logs.append(msg2)
+                to_exception.append(id_venta)
                 continue
             bodega = bodega[0]
             shop = Shop.search([('warehouse', '=', bodega.id)])
             if not shop:
-                msg2 = f'Bodega (shop) {id_tecno_bodega} no existe de la venta {id_venta}'
+                msg2 = f'EXCEPCION {id_venta} - Tienda (bodega) {id_tecno_bodega} no existe'
                 logging.error(msg2)
                 logs.append(msg2)
+                to_exception.append(id_venta)
                 continue
             shop = shop[0]
             #Se le asigna el plazo de pago correspondiente
             condicion = venta.condicion
             plazo_pago = payment_term.search([('id_tecno', '=', condicion)])
             if not plazo_pago:
-                msg2 = f'Plazo de pago {condicion} no existe de la venta {id_venta}'
+                msg2 = f'EXCEPCION {id_venta} - Plazo de pago {condicion} no existe'
                 logging.error(msg2)
                 logs.append(msg2)
+                to_exception.append(id_venta)
                 continue
             plazo_pago = plazo_pago[0]
             with Transaction().set_user(1):
@@ -191,12 +192,10 @@ class Sale(metaclass=PoolMeta):
             
             #Ahora traemos las lineas de producto para la venta a procesar
             documentos_linea = Config.get_lineasd_tecno(id_venta)
-            #col_line = cls.get_columns_db_tecno('Documentos_Lin')
-            #create_line = []
+            #_lines = []
             for lin in documentos_linea:
+                producto, = Product.search(['OR', ('id_tecno', '=', str(lin.IdProducto)), ('code', '=', str(lin.IdProducto))])
                 linea = SaleLine()
-                id_producto = str(lin.IdProducto)
-                producto = cls.buscar_producto(id_producto)
                 linea.sale = sale
                 linea.product = producto
                 linea.type = 'line'
@@ -263,133 +262,127 @@ class Sale(metaclass=PoolMeta):
                     analytic_entry.root = root
                     analytic_entry.account = analytic_account
                     linea.analytic_accounts = [analytic_entry]
+                # _lines.append(linea)
                 linea.save()
-            if sale.invoice_type == 'P':
-                with Transaction().set_user(1):
-                    context = User.get_preferences()
-                with Transaction().set_context(context, shop=shop.id, _skip_warnings=True):
-                    cls.venta_mostrador(sale)
-                    cls.finish_shipment_process([sale])
-            else:
-                #Se almacena en una lista las ventas creadas para ser procesadas
-                to_process.append(sale)
+            #Se procesa los registros creados
+            with Transaction().set_user(1):
+                context = User.get_preferences()
+            with Transaction().set_context(context, _skip_warnings=True):
+                Sale.quote([sale])
+                Sale.confirm([sale])
+                Sale.process([sale])
+                cls.finish_shipment_process(sale)
+                if sale.invoice_type == 'P':
+                    Sale.post_invoices(sale)
+                    if sale.payment_term.id_tecno == '0':
+                        cls.set_payment_pos(sale, logs, to_exception)
+                        Sale.update_state([sale])
+                else:
+                    cls.finish_invoice_process(sale, venta, logs, to_exception)
             to_created.append(id_venta)
-        #Se procesa los registros creados
-        with Transaction().set_user(1):
-            context = User.get_preferences()
-        with Transaction().set_context(context, _skip_warnings=True):
-            Sale.quote(to_process)
-            Sale.confirm(to_process)
-            Sale.process(to_process)
-        cls.update_invoices_shipments(to_process, data, logs)
-        actualizacion.add_logs(actualizacion, logs)
+        Actualizacion.add_logs(actualizacion, logs)
         for idt in to_created:
-            Config.update_exportado(idt, 'T')
-            #print('creado...', id_tecno) #TEST
+            if idt not in to_exception:
+                Config.update_exportado(idt, 'T')
+                # print('creado...', idt) #TEST
+        for idt in to_exception:
+            Config.update_exportado(idt, 'E')
+            # print('excepcion...', idt) #TEST
         logging.warning('FINISH VENTAS')
 
 
     # Funcion encargada de finalizar el proceso de envío de la venta
     @classmethod
-    def finish_shipment_process(cls, sales):
-        for sale in sales:
-            for shipment in sale.shipments:
-                shipment.number = sale.number
-                shipment.reference = sale.reference
-                shipment.effective_date = sale.sale_date
-                shipment.wait([shipment])
-                shipment.pick([shipment])
-                shipment.pack([shipment])
-                shipment.done([shipment])
+    def finish_shipment_process(cls, sale):
+        for shipment in sale.shipments:
+            shipment.number = sale.number
+            shipment.reference = sale.reference
+            shipment.effective_date = sale.sale_date
+            shipment.wait([shipment])
+            shipment.pick([shipment])
+            shipment.pack([shipment])
+            shipment.done([shipment])
 
     #Se actualiza las facturas y envios con la información de la venta
     @classmethod
-    def update_invoices_shipments(cls, sales, ventas_tecno, logs):
-        Invoice = Pool().get('account.invoice')
-        PaymentLine = Pool().get('account.invoice-account.move.line')
-        cls.finish_shipment_process(sales)
+    def finish_invoice_process(cls, sale, venta, logs, to_exception):
+        pool = Pool()
+        Invoice = pool.get('account.invoice')
+        PaymentLine = pool.get('account.invoice-account.move.line')
+        Config = pool.get('conector.configuration')
         #Procesamos la venta para generar la factura y procedemos a rellenar los campos de la factura
-        for sale in sales:
-            if not sale.invoices:
-                msg1 = f'Venta sin factura: {sale.id_tecno}'
-                logging.error(msg1)
-                logs.append(msg1)
-            for invoice in sale.invoices:
-                invoice.accounting_date = sale.sale_date
-                invoice.number = sale.number
-                invoice.reference = sale.reference
-                invoice.invoice_date = sale.sale_date
-                invoice.invoice_type = 'C'
-                tipo_numero = sale.number.split('-')
-                #Se agrega en la descripcion el nombre del tipo de documento de la tabla en sqlserver
-                desc = cls.get_tipo_dcto(tipo_numero[0])
-                if desc:
-                    invoice.description = desc[0].TipoDoctos.replace('\n', ' ').replace('\r', '')
-                invoice.save()
-                Invoice.validate_invoice([invoice])
-                total_tryton = abs(invoice.untaxed_amount)
-                #Se almacena el total de la venta traida de TecnoCarnes
-                total_tecno = 0
-                devolucion = False
-                dcto_base = None
-                for venta in ventas_tecno:
-                    tipo_numero_tecno = venta.tipo.strip()+'-'+str(venta.Numero_documento)
-                    if tipo_numero_tecno == sale.number:
-                        if venta.sw == 2:
-                            devolucion = True
-                            dcto_base = str(venta.Tipo_Docto_Base)+'-'+str(venta.Numero_Docto_Base)
-                        valor_total = Decimal(abs(venta.valor_total))
-                        valor_impuesto = Decimal(abs(venta.Valor_impuesto) + abs(venta.Impuesto_Consumo))
-                        if valor_impuesto > 0:
-                            total_tecno = valor_total - valor_impuesto
-                        else:
-                            total_tecno = valor_total
-                diferencia_total = abs(total_tryton - total_tecno)
-                if devolucion:
-                    original_invoice = Invoice.search([('number', '=', dcto_base)])
-                    if original_invoice:
-                        invoice.original_invoice = original_invoice[0]
-                    else:
-                        msg = f"NO SE ENCONTRO LA FACTURA {dcto_base} PARA CRUZAR CON LA DEVOLUCION {invoice.number}"
-                        logs.append(msg)
-                        logging.error(msg)
-                if diferencia_total < Decimal(6.0):
-                    Invoice.post_batch([invoice])
-                    Invoice.post([invoice])
-                    if invoice.original_invoice:
-                        if invoice.original_invoice.amount_to_pay + invoice.amount_to_pay != 0:
-                            paymentline = PaymentLine()
-                            paymentline.invoice = invoice.original_invoice
-                            paymentline.invoice_account = invoice.account
-                            paymentline.invoice_party = invoice.party
-                            for ml in invoice.move.lines:
-                                if ml.account.type.receivable:
-                                    paymentline.line = ml
-                            paymentline.save()
-                        Invoice.reconcile_invoice(invoice)
+        if not sale.invoices:
+            msg1 = f"EXCEPTION {sale.id_tecno} VENTA SIN FACTURA"
+            logging.error(msg1)
+            logs.append(msg1)
+            to_exception.append(sale.id_tecno)
+        for invoice in sale.invoices:
+            invoice.accounting_date = sale.sale_date
+            invoice.number = sale.number
+            invoice.reference = sale.reference
+            invoice.invoice_date = sale.sale_date
+            invoice.invoice_type = 'C'
+            tipo_numero = sale.number.split('-')
+            #Se agrega en la descripcion el nombre del tipo de documento de la tabla en sqlserver
+            desc = Config.get_tbltipodoctos(tipo_numero[0])
+            if desc:
+                invoice.description = desc[0].TipoDoctos.replace('\n', ' ').replace('\r', '')
+            invoice.save()
+            Invoice.validate_invoice([invoice])
+            total_tryton = abs(invoice.untaxed_amount)
+            #Se almacena el total de la venta traida de TecnoCarnes
+            total_tecno = 0
+            valor_total = Decimal(abs(venta.valor_total))
+            valor_impuesto = Decimal(abs(venta.Valor_impuesto) + abs(venta.Impuesto_Consumo))
+            if valor_impuesto > 0:
+                total_tecno = valor_total - valor_impuesto
+            else:
+                total_tecno = valor_total
+            diferencia_total = abs(total_tryton - total_tecno)
+            if venta.sw == 2:
+                dcto_base = str(venta.Tipo_Docto_Base)+'-'+str(venta.Numero_Docto_Base)
+                original_invoice = Invoice.search([('number', '=', dcto_base)])
+                if original_invoice:
+                    invoice.original_invoice = original_invoice[0]
                 else:
-                    msg1 = f'FACTURA {sale.id_tecno}'
-                    msg2 = f'No contabilizada diferencia total mayor al rango permitido'
-                    full_msg = ' - '.join([msg1, msg2])
-                    logging.error(full_msg)
-                    logs.append(full_msg)
-                    invoice.comment = msg2
-                    invoice.save()
+                    msg = f"NO SE ENCONTRO LA FACTURA {dcto_base} PARA CRUZAR CON LA DEVOLUCION {invoice.number}"
+                    logs.append(msg)
+                    logging.error(msg)
+                    to_exception.append(sale.id_tecno)
+            if diferencia_total < Decimal(6.0):
+                Invoice.post_batch([invoice])
+                Invoice.post([invoice])
+                if invoice.original_invoice:
+                    if invoice.original_invoice.amount_to_pay + invoice.amount_to_pay != 0:
+                        paymentline = PaymentLine()
+                        paymentline.invoice = invoice.original_invoice
+                        paymentline.invoice_account = invoice.account
+                        paymentline.invoice_party = invoice.party
+                        for ml in invoice.move.lines:
+                            if ml.account.type.receivable:
+                                paymentline.line = ml
+                        paymentline.save()
+                    Invoice.reconcile_invoice(invoice)
+            else:
+                msg1 = f'FACTURA {sale.id_tecno}'
+                msg2 = f'No contabilizada diferencia total mayor al rango permitido'
+                full_msg = ' - '.join([msg1, msg2])
+                logging.error(full_msg)
+                logs.append(full_msg)
+                invoice.comment = msg2
+                invoice.save()
 
     #Función encargada de buscar recibos de caja pagados en TecnoCarnes y pagarlos en Tryton
     @classmethod
-    def set_payment_pos(cls, sale):
-        tipo_numero = sale.number.split('-')
-        tipo = tipo_numero[0]
-        nro = tipo_numero[1]
-        pagos = cls.get_payment_tecno(tipo, nro)
+    def set_payment_pos(cls, sale, logs, to_exception):
+        Config = Pool().get('conector.configuration')
+        pagos = Config.get_tipos_pago(sale.id_tecno)
         if not pagos:
             return
         #si existe pagos pos...
         pool = Pool()
         Journal = pool.get('account.statement.journal')
         #Statement = pool.get('account.statement')
-        Actualizacion = pool.get('conector.actualizacion')
         for pago in pagos:
             fecha = str(pago.fecha).split()[0].split('-')
             fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
@@ -400,20 +393,18 @@ class Sale(metaclass=PoolMeta):
                 'journal': journal,
             }
             statement, = cls.search_or_create_statement(args_statement)
-            valor_pagado = pago.valor
             data_payment = {
                 'sales': {
-                    sale: valor_pagado
+                    sale: pago.valor
                 },
                 'statement': statement.id,
                 'date': fecha_date
             }
-            result_payment = cls.multipayment_invoices_statement(data_payment)
+            result_payment = cls.multipayment_invoices_statement(data_payment, logs, to_exception)
             if result_payment != 'ok':
-                msg = 'ERROR AL PROCESAR EL PAGO DE LA VENTA POS {tipo_numero}'
-                actualizacion, = Actualizacion.search([('name', '=','VENTAS')])
-                Actualizacion.add_logs(actualizacion, [msg])
+                msg = f"ERROR AL PROCESAR EL PAGO DE LA VENTA POS {sale.number}"
                 logging.error(msg)
+                logs.append(msg)
         #sale.workflow_to_end([sale]) #REVISAR
 
     
@@ -455,7 +446,7 @@ class Sale(metaclass=PoolMeta):
 
     # Metodo encargado de pagar multiples facturas con multiples formas de pago
     @classmethod
-    def multipayment_invoices_statement(cls, args, context=None):
+    def multipayment_invoices_statement(cls, args, logs, to_exception):
         pool = Pool()
         Date = pool.get('ir.date')
         Sale = pool.get('sale.sale')
@@ -469,8 +460,7 @@ class Sale(metaclass=PoolMeta):
         statement_id = args.get('statement', None)
         if not statement_id:
             journal_id = args.get('journal_id', None)
-            user_id = context.get('user')
-            user = User(user_id)
+            user = User(1)
             statements = cls.search([
                 ('journal', '=', journal_id),
                 ('state', '=', 'draft'),
@@ -485,14 +475,16 @@ class Sale(metaclass=PoolMeta):
             date = Date.today()
 
         for sale in sales.keys():
-            if not sale.number:
-                continue
             total_paid = Decimal(0.0)
             if sale.payments:
                 total_paid = sum([p.amount for p in sale.payments])
                 if total_paid >= sale.total_amount:
                     if total_paid == sale.total_amount:
                         Sale.do_reconcile([sale])
+                    else:
+                        msg = f"sale_pos.msg_total_paid_>_total_amount"
+                        logs.append(msg)
+                        to_exception.append(sale.id_tecno)
                     continue
             total_pay = args.get('sales')[sale]
             if not total_pay:
@@ -512,7 +504,10 @@ class Sale(metaclass=PoolMeta):
                         'account_receivable': config.default_account_receivable.id
                     })
                 else:
-                    raise UserError('sale_pos.msg_party_without_account_receivable', sale.party.name)
+                    msg = f"sale_pos.msg_party_without_account_receivable"
+                    logs.append(msg)
+                    to_exception.append(sale.id_tecno)
+                    continue
             account_id = sale.party.account_receivable.id
             to_create = {
                 'sale': sale.id,
@@ -534,102 +529,6 @@ class Sale(metaclass=PoolMeta):
                 Sale.do_reconcile([sale])
         return 'ok'
 
-
-    @classmethod
-    def venta_mostrador(cls, sale):
-        pool = Pool()
-        Sale = pool.get('sale.sale')
-        #Procesar ventas pos
-        Sale.quote([sale])
-        Sale.confirm([sale])
-        Sale.process([sale])
-        Sale.post_invoices(sale)
-        Sale.do_stock_moves([sale])
-        if sale.payment_term.id_tecno == '0':
-            cls.set_payment_pos(sale)
-            Sale.update_state([sale])
-
-    
-    #Metodo encargado de obtener el pago de una venta cuando es POS
-    @classmethod
-    def get_payment_tecno(cls, tipo, nro):
-        Config = Pool().get('conector.configuration')
-        consult = "SELECT * FROM dbo.Documentos_Che WHERE sw = 1 AND tipo = "+tipo+" AND numero ="+nro
-        data = Config.get_data(consult)
-        return data
-
-
-    #Metodo encargado de traer el tipo de documento de la bd
-    @classmethod
-    def get_tipo_dcto(cls, id):
-        data = []
-        try:
-            Config = Pool().get('conector.configuration')
-            conexion = Config.conexion()
-            with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT * FROM dbo.TblTipoDoctos WHERE idTipoDoctos = '"+id+"'")
-                data = list(query.fetchall())
-        except Exception as e:
-            print("ERROR QUERY TblTipoDoctos: ", e)
-        return data
-
-    #Función encargada de consultar si existe un producto y es vendible
-    @classmethod
-    def buscar_producto(cls, id_producto):
-        Product = Pool().get('product.product')
-        producto = Product.search(['OR', ('id_tecno', '=', id_producto), ('code', '=', id_producto)])
-        #conector_actualizacion = Table('conector_actualizacion')
-        #cursor = Transaction().connection.cursor()
-        
-        if producto:
-            producto, = producto
-            if not producto.salable:
-                producto.salable = True
-                producto.sale_uom = producto.default_uom
-                producto.save()
-                msg1 = f'Error el producto con id: {id_producto} aparecia NO vendible'
-                logging.error(msg1)
-                raise UserError('Error product', msg1)
-                return False
-            return producto
-        else:
-            #cursor.execute(*conector_actualizacion.update(
-            #    columns=[conector_actualizacion.write_date],
-            #    values=[None],
-            #    where=conector_actualizacion.name == 'PRODUCTOS')
-            #)
-            msg1 = f'Error al buscar el producto con id: {id_producto}'
-            logging.error(msg1)
-            #Product.update_products()
-            raise UserError('Error product', msg1)
-            return False
-            
-
-    #Crea o actualiza un registro de la tabla actualización en caso de ser necesario
-    @classmethod
-    def create_or_update(cls):
-        Actualizacion = Pool().get('conector.actualizacion')
-        actualizacion = Actualizacion.search([('name', '=','VENTAS')])
-        if actualizacion:
-            #Se busca un registro con la actualización
-            actualizacion, = actualizacion
-        else:
-            #Se crea un registro con la actualización
-            actualizacion = Actualizacion()
-            actualizacion.name = 'VENTAS'
-            actualizacion.logs = 'logs...'
-            actualizacion.save()
-        return actualizacion
-
-    #Metodo encargado de buscar si exste una venta
-    @classmethod
-    def buscar_venta(cls, id):
-        Sale = Pool().get('sale.sale')
-        sale = Sale.search([('id_tecno', '=', id)])
-        if sale:
-            return sale[0]
-        else:
-            return False
 
     @classmethod
     def force_draft(cls, sales):
