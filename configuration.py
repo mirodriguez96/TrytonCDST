@@ -117,8 +117,8 @@ class Configuration(ModelSQL, ModelView):
     def get_documentos_tecno(cls, sw):
         Config = Pool().get('conector.configuration')(1)
         fecha = Config.date.strftime('%Y-%m-%d %H:%M:%S')
-        query = "SELECT * FROM dbo.Documentos WHERE tipo = 142 AND Numero_documento = 62" #TEST
-        #query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND sw = "+sw+" AND exportado != 'T' AND exportado != 'E' AND exportado != 'X' ORDER BY fecha_hora ASC"
+        #query = "SELECT * FROM dbo.Documentos WHERE tipo = 142 AND Numero_documento = 62" #TEST
+        query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND sw = "+sw+" AND exportado != 'T' AND exportado != 'E' AND exportado != 'X' ORDER BY fecha_hora ASC"
         data = cls.get_data(query)
         return data
 

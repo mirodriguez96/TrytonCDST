@@ -16,6 +16,8 @@ class Actualizacion(ModelSQL, ModelView):
     name = fields.Char('Update', required=True, readonly=True)
     quantity = fields.Function(fields.Integer('Quantity'), 'getter_quantity')
     imported = fields.Function(fields.Integer('Imported'), 'getter_imported')
+    exceptions = fields.Function(fields.Integer('Exceptions'), 'getter_exceptions')
+    cancelled = fields.Function(fields.Integer('Cancelled'), 'getter_cancelled')
     not_imported = fields.Function(fields.Integer('Not imported'), 'getter_not_imported')
     logs = fields.Text("Logs", readonly=True)
 
@@ -107,6 +109,7 @@ class Actualizacion(ModelSQL, ModelView):
         
     #@classmethod
     def getter_imported(self, name):
+        quantity = None
         cursor = Transaction().connection.cursor()
         if self.name == 'VENTAS':
             cursor.execute("SELECT COUNT(*) FROM sale_sale WHERE id_tecno LIKE '%-%'")
@@ -118,17 +121,56 @@ class Actualizacion(ModelSQL, ModelView):
             cursor.execute("SELECT COUNT(*) FROM account_multirevenue WHERE id_tecno LIKE '5-%'")
             quantity2 = int(cursor.fetchone()[0])
             quantity += quantity2
-            return quantity
         elif self.name == 'COMPROBANTES DE EGRESO':
             cursor.execute("SELECT COUNT(*) FROM account_voucher WHERE id_tecno LIKE '6-%'")
         else:
-            return None
-        result = cursor.fetchone()[0]
+            return quantity
+        result = cursor.fetchone()
         if result:
-            return result
-        return None
+            quantity = int(result[0])
+        return quantity
 
-    #@classmethod
+
+    def getter_exceptions(self, name):
+        Config = Pool().get('conector.configuration')
+        conexion = Config(1)
+        fecha = conexion.date.strftime('%Y-%m-%d %H:%M:%S')
+        consult = "SET DATEFORMAT ymd SELECT COUNT(*) FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime)"
+        if self.name == 'VENTAS':
+            consult += " AND (sw = 1 or sw = 2) AND exportado = 'E'"
+        elif self.name == 'COMPRAS':
+            consult += " AND (sw = 3 or sw = 4) AND exportado = 'E'"
+        elif self.name == 'COMPROBANTES DE INGRESO':
+            consult += " AND sw = 5 AND exportado = 'E'"
+        elif self.name == 'COMPROBANTES DE EGRESO':
+            consult += " AND sw = 6 AND exportado = 'E'"
+        else:
+            return None
+        result = conexion.get_data(consult)
+        result = int(result[0][0])
+        return result
+
+
+    def getter_cancelled(self, name):
+        Config = Pool().get('conector.configuration')
+        conexion = Config(1)
+        fecha = conexion.date.strftime('%Y-%m-%d %H:%M:%S')
+        consult = "SET DATEFORMAT ymd SELECT COUNT(*) FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime)"
+        if self.name == 'VENTAS':
+            consult += " AND (sw = 1 or sw = 2) AND exportado = 'X'"
+        elif self.name == 'COMPRAS':
+            consult += " AND (sw = 3 or sw = 4) AND exportado = 'X'"
+        elif self.name == 'COMPROBANTES DE INGRESO':
+            consult += " AND sw = 5 AND exportado = 'X'"
+        elif self.name == 'COMPROBANTES DE EGRESO':
+            consult += " AND sw = 6 AND exportado = 'X'"
+        else:
+            return None
+        result = conexion.get_data(consult)
+        result = int(result[0][0])
+        return result
+
+
     def getter_not_imported(self, name):
         Config = Pool().get('conector.configuration')
         conexion = Config.search([], order=[('id', 'DESC')], limit=1)
@@ -136,7 +178,7 @@ class Actualizacion(ModelSQL, ModelView):
             conexion, = conexion
         fecha = conexion.date
         fecha = fecha.strftime('%Y-%m-%d %H:%M:%S')
-        consult = "SET DATEFORMAT ymd SELECT COUNT(*) FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado != 'T'"
+        consult = "SET DATEFORMAT ymd SELECT COUNT(*) FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado != 'T' AND exportado != 'E' AND exportado != 'X'"
         if self.name == 'VENTAS':
             consult += " AND (sw = 1 or sw = 2)"
         elif self.name == 'COMPRAS':

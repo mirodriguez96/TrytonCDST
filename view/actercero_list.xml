@@ -7,5 +7,7 @@
     <field name="write_date" widget="time"/>
     <field name="quantity"/>
     <field name="imported"/>
+    <field name="exceptions"/>
+    <field name="cancelled"/>
     <field name="not_imported"/>
 </tree>

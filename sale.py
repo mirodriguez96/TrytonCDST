@@ -35,19 +35,23 @@ class Sale(metaclass=PoolMeta):
     @classmethod
     def import_data_sale(cls):
         logging.warning('RUN VENTAS')
-        data = cls.get_data_tecno()
-        cls.add_sale(data)
-
-    @classmethod
-    def add_sale(cls, ventas_tecno):
+        pool = Pool()
+        Config = pool.get('conector.configuration')
+        data = ()
+        ventas_tecno = Config.get_documentos_tecno('1')
+        if ventas_tecno:
+            data = ventas_tecno
+        devoluciones_tecno = Config.get_documentos_tecno('2')
+        if devoluciones_tecno:
+            data += devoluciones_tecno
+        data = ventas_tecno + devoluciones_tecno
         #Se crea o actualiza la fecha de importación
         actualizacion = cls.create_or_update()
         logs = []
-        if not ventas_tecno:
+        if not data:
             actualizacion.add_logs(actualizacion, logs)
             logging.warning('FINISH VENTAS')
             return
-        pool = Pool()
         Sale = pool.get('sale.sale')
         SaleLine = pool.get('sale.line')
         SaleDevice = pool.get('sale.device')
@@ -59,36 +63,35 @@ class Sale(metaclass=PoolMeta):
         Tax = pool.get('account.tax')
         User = pool.get('res.user')
         Module = pool.get('ir.module')
-        Config = pool.get('conector.configuration')
         
-
+        # Se consulta si el módulo company_operation esta activado
         company_operation = Module.search([('name', '=', 'company_operation'), ('state', '=', 'activated')])
         if company_operation:
             CompanyOperation = pool.get('company.operation_center')
             company_operation = CompanyOperation(1)
         venta_pos = []
-        pdevoluciones_pos = cls.get_data_parametros('10')
+        pdevoluciones_pos = Config.get_data_parametros('10')
         if pdevoluciones_pos:
             pdevoluciones_pos = (pdevoluciones_pos[0].Valor).strip().split(',')
             venta_pos += pdevoluciones_pos
-        pventa_pos = cls.get_data_parametros('8')
+        pventa_pos = Config.get_data_parametros('8')
         if pventa_pos:
             pventa_pos = (pventa_pos[0].Valor).strip().split(',')
             venta_pos += pventa_pos
-        venta_electronica = cls.get_data_parametros('9')
+        venta_electronica = Config.get_data_parametros('9')
         if venta_electronica:
             venta_electronica = (venta_electronica[0].Valor).strip().split(',')
         to_created = []
         to_process = []
         #Procedemos a realizar una venta
-        for venta in ventas_tecno:
+        for venta in data:
             sw = venta.sw
             numero_doc = venta.Numero_documento
             tipo_doc = venta.tipo
             id_venta = str(sw)+'-'+tipo_doc+'-'+str(numero_doc)
             existe = cls.buscar_venta(id_venta)
             if existe:
-                cls.importado(id_venta)
+                Config.update_exportado(id_venta, 'T')
                 continue
             print(id_venta)
             tbltipodocto, = Config.get_tbltipodoctos(tipo_doc)
@@ -187,7 +190,7 @@ class Sale(metaclass=PoolMeta):
                     retencion_rete = True
             
             #Ahora traemos las lineas de producto para la venta a procesar
-            documentos_linea = cls.get_line_where(str(sw), str(numero_doc), str(tipo_doc))
+            documentos_linea = Config.get_lineasd_tecno(id_venta)
             #col_line = cls.get_columns_db_tecno('Documentos_Lin')
             #create_line = []
             for lin in documentos_linea:
@@ -270,7 +273,7 @@ class Sale(metaclass=PoolMeta):
             else:
                 #Se almacena en una lista las ventas creadas para ser procesadas
                 to_process.append(sale)
-            to_created.append(sale.id_tecno)
+            to_created.append(id_venta)
         #Se procesa los registros creados
         with Transaction().set_user(1):
             context = User.get_preferences()
@@ -278,10 +281,10 @@ class Sale(metaclass=PoolMeta):
             Sale.quote(to_process)
             Sale.confirm(to_process)
             Sale.process(to_process)
-        log = cls.update_invoices_shipments(to_process, ventas_tecno, logs)
-        actualizacion.add_logs(actualizacion, log)
-        for id_tecno in to_created:
-            cls.importado(id_tecno)
+        cls.update_invoices_shipments(to_process, data, logs)
+        actualizacion.add_logs(actualizacion, logs)
+        for idt in to_created:
+            Config.update_exportado(idt, 'T')
             #print('creado...', id_tecno) #TEST
         logging.warning('FINISH VENTAS')
 
@@ -307,6 +310,10 @@ class Sale(metaclass=PoolMeta):
         cls.finish_shipment_process(sales)
         #Procesamos la venta para generar la factura y procedemos a rellenar los campos de la factura
         for sale in sales:
+            if not sale.invoices:
+                msg1 = f'Venta sin factura: {sale.id_tecno}'
+                logging.error(msg1)
+                logs.append(msg1)
             for invoice in sale.invoices:
                 invoice.accounting_date = sale.sale_date
                 invoice.number = sale.number
@@ -361,18 +368,13 @@ class Sale(metaclass=PoolMeta):
                             paymentline.save()
                         Invoice.reconcile_invoice(invoice)
                 else:
-                    msg1 = f'Factura: {sale.id_tecno}'
+                    msg1 = f'FACTURA {sale.id_tecno}'
                     msg2 = f'No contabilizada diferencia total mayor al rango permitido'
                     full_msg = ' - '.join([msg1, msg2])
                     logging.error(full_msg)
                     logs.append(full_msg)
                     invoice.comment = msg2
                     invoice.save()
-            else:
-                msg1 = f'Venta sin factura: {sale.id_tecno}'
-                logging.error(msg1)
-                logs.append(msg1)
-        return logs
 
     #Función encargada de buscar recibos de caja pagados en TecnoCarnes y pagarlos en Tryton
     @classmethod
@@ -547,58 +549,6 @@ class Sale(metaclass=PoolMeta):
             cls.set_payment_pos(sale)
             Sale.update_state([sale])
 
-    @classmethod
-    def process_payment_pos(cls):
-        logging.warning('RUN PROCESS POS')
-        pool = Pool()
-        User = pool.get('res.user')
-        Sale = pool.get('sale.sale')
-        cursor = Transaction().connection.cursor()
-        cursor.execute("SELECT id, id_tecno FROM sale_sale WHERE (number LIKE '152-%' or number LIKE '145-%') and state != 'done' and state != 'draft'")
-        result = cursor.fetchall()
-        if not result:
-            return
-        for sale_id in result:
-            print(sale_id[0])
-            sale = Sale(sale_id[0])
-            if not sale.sale_device:
-                print(sale_id[0], 'NO SALE_DEVICE')
-                continue
-            with Transaction().set_user(1):
-                context = User.get_preferences()
-            with Transaction().set_context(context, shop=sale.shop.id, _skip_warnings=True):
-                cls.set_payment_pos(sale)
-                Sale.update_state([sale])
-        logging.warning('FINISH PROCESS POS')
-    
-    @classmethod
-    def update_pos_tecno(cls):
-        logging.warning('RUN UPDATE POS')
-        pool = Pool()
-        Sale = pool.get('sale.sale')
-        cursor = Transaction().connection.cursor()
-        cursor.execute("SELECT id, id_tecno FROM sale_sale WHERE (number LIKE '152-%' or number LIKE '145-%') and sale_device is null")
-        result = cursor.fetchall()
-        if not result:
-            return
-        for sale_id in result:
-            print(sale_id[0])
-            sale = Sale(sale_id[0])
-            if not sale.sale_device:
-                doc = cls.get_datapos_tecno(sale_id[1])
-                cursor.execute("SELECT id FROM sale_device WHERE id_tecno = '"+doc[0].pc+"'")
-                resultd = cursor.fetchone()
-                print(resultd[0])
-                cursor.execute("UPDATE sale_sale SET sale_device = "+str(resultd[0])+" WHERE id = "+str(sale_id[0]))
-        logging.warning('FINISH UPDATE POS')
-
-    #Metodo encargado de obtener la forma en que se pago el comprobante (recibos)
-    @classmethod
-    def get_tipo_pago(cls, tipo, nro):
-        Config = Pool().get('conector.configuration')
-        consult = "SELECT * FROM dbo.Documentos_Che WHERE sw = 5 AND tipo = "+tipo+" AND numero ="+nro
-        result = Config.get_data(consult)
-        return result
     
     #Metodo encargado de obtener el pago de una venta cuando es POS
     @classmethod
@@ -608,33 +558,6 @@ class Sale(metaclass=PoolMeta):
         data = Config.get_data(consult)
         return data
 
-    @classmethod
-    def get_data_table(cls, table):
-        data = []
-        try:
-            Config = Pool().get('conector.configuration')
-            conexion = Config.conexion()
-            with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT * FROM dbo."+table+"")
-                data = list(query.fetchall())
-        except Exception as e:
-            print("ERROR QUERY get_data_table: ", e)
-            raise UserError('ERROR QUERY get_data_table: ', str(e))
-        return data
-
-    @classmethod
-    def get_data_parametros(cls, id):
-        data = []
-        try:
-            Config = Pool().get('conector.configuration')
-            conexion = Config.conexion()
-            with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT * FROM dbo.TblParametro WHERE IdParametro = "+id+"")
-                data = list(query.fetchall())
-        except Exception as e:
-            print("ERROR QUERY get_data_parametros: ", e)
-            raise UserError('ERROR QUERY get_data_parametros: ', str(e))
-        return data
 
     #Metodo encargado de traer el tipo de documento de la bd
     @classmethod
@@ -649,40 +572,6 @@ class Sale(metaclass=PoolMeta):
         except Exception as e:
             print("ERROR QUERY TblTipoDoctos: ", e)
         return data
-
-    #Esta función se encarga de traer todos los datos de una tabla dada de la bd
-    @classmethod
-    def get_line_where(cls, sw, nro, tipo):
-        Config = Pool().get('conector.configuration')(1)
-        consult = "SELECT * FROM dbo.Documentos_Lin WHERE sw = "+sw+" AND Numero_Documento = "+nro+" AND tipo = "+tipo+" order by seq"
-        result = Config.get_data(consult)
-        return result
-
-    #Esta función se encarga de traer todos los datos de una tabla dada de acuerdo al rango de fecha dada de la bd
-    @classmethod
-    def get_data_tecno(cls):
-        Config = Pool().get('conector.configuration')(1)
-        fecha = Config.date.strftime('%Y-%m-%d %H:%M:%S')
-        #consult = "SELECT * FROM dbo.Documentos WHERE tipo = 145 AND Numero_documento = 32071" #TEST
-        consult = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND (sw = 1 OR sw = 2) AND exportado != 'T' ORDER BY fecha_hora ASC"
-        result = Config.get_data(consult)
-        return result
-
-    @classmethod
-    def importado(cls, id):
-        lista = id.split('-')
-        Config = Pool().get('conector.configuration')
-        query = "UPDATE dbo.Documentos SET exportado = 'T' WHERE sw ="+lista[0]+" and tipo = "+lista[1]+" and Numero_documento = "+lista[2]
-        Config.set_data(query)
-    
-    @classmethod
-    def get_datapos_tecno(cls, id):
-        Config = Pool().get('conector.configuration')
-        lista = id.split('-')
-        consult = "SELECT pc FROM dbo.Documentos WHERE sw ="+lista[0]+" and tipo = "+lista[1]+" and Numero_documento = "+lista[2]
-        result = Config.get_data(consult)
-        return result
-
 
     #Función encargada de consultar si existe un producto y es vendible
     @classmethod
