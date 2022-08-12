@@ -482,13 +482,14 @@ class Configuration(ModelSQL, ModelView):
                     not_account.append(code_parent)
                     continue
                 account.parent = parent_account[0]
-            if account.id:
-                account.save()
-            else:
-                to_save.append(account)
+            account.save()
+            # if account.id:
+            #     account.save()
+            # else:
+            #     to_save.append(account)
         if not_account:
             raise UserError('Importación de archivo: ', f'Error: Faltan las cuentas padres {not_account}')
-        Account.save(to_save)
+        #Account.save(to_save)
 
     
     @classmethod
