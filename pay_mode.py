@@ -44,43 +44,48 @@ class VoucherPayMode(ModelSQL, ModelView):
     #Funcion encargada de crear o actualizar las formas de pago de TecnoCarnes
     @classmethod
     def update_paymode(cls):
-        print('-----RUN FORMAS DE PAGO-----')
-        columns_fp = cls.get_columns_db('TblFormaPago')
-        forma_pago = cls.get_formapago()
-        cls.create_or_update()
-        PayMode = Pool().get('account.voucher.paymode')
-        Journal = Pool().get('account.journal')
-        
-        for fp in forma_pago:
-            idt = str(fp[columns_fp.index('IdFormaPago')])
+        print('RUN FORMAS DE PAGO')
+        pool = Pool()
+        Config = pool.get('conector.configuration')
+        Actualizacion = pool.get('conector.actualizacion')
+        PayMode = pool.get('account.voucher.paymode')
+        Journal = pool.get('account.journal')
+        actualizacion = Actualizacion.create_or_update('FORMAS DE PAGO')
+        formas_pago = Config.get_data_table('TblFormaPago')
+        to_save = []
+        for fp in formas_pago:
+            idt = str(fp.IdFormaPago)
+            nombre = fp.FormaPago.strip()
+            cuenta = fp.Cuenta
             paym = PayMode.search([('id_tecno', '=', idt)])
-            nombre = fp[columns_fp.index('FormaPago')].strip()
-            cuenta = fp[columns_fp.index('Cuenta')]
             if paym:
-                for pm in paym:
-                    pm.name = nombre
-                    cls.add_account(pm, cuenta)
-                    PayMode.save(paym)
+                paym, = paym
+                paym.name = nombre
+                cls.add_account(paym, cuenta)
+                paym.save()
             else:
                 #Diario por defecto del plan contable
                 journal, = Journal.search([('code', '=', 'CASH')])
-                paym = PayMode()
-                paym.id_tecno = idt
-                paym.name = nombre
-                paym.payment_type = 'cash'
-                paym.kind = 'both'
-                paym.journal = journal
+                paymode = PayMode()
+                paymode.id_tecno = idt
+                paymode.name = nombre
+                paymode.payment_type = 'cash'
+                paymode.kind = 'both'
+                paymode.journal = journal
                 sequence_payment = cls.find_seq('Voucher Payment')
                 sequence_multipayment = cls.find_seq('Voucher Multipayment')
                 sequence_receipt = cls.find_seq('Voucher Receipt')
-                paym.sequence_payment = sequence_payment[0]
-                paym.sequence_multipayment = sequence_multipayment[0]
-                paym.sequence_receipt = sequence_receipt[0]
+                paymode.sequence_payment = sequence_payment[0]
+                paymode.sequence_multipayment = sequence_multipayment[0]
+                paymode.sequence_receipt = sequence_receipt[0]
                 cls.add_account(paym, cuenta)
                 #Codigo clasificacion tipo de pago ('10' => 'Efectivo')
                 paym.payment_means_code = 10
-                paym.save()
-        print('-----FINISH FORMAS DE PAGO-----')
+                to_save.append(paymode)
+                #paym.save()
+        PayMode.save(to_save)
+        actualizacion.save()
+        print('FINISH FORMAS DE PAGO')
 
 
     #Se busca la cuenta del modo de pago y se asigna en caso de existir
@@ -91,35 +96,6 @@ class VoucherPayMode(ModelSQL, ModelView):
         if account:
             paymode.account = account[0]
 
-     #Función encargada de consultar las columnas pertenecientes a 'x' tabla de la bd de TecnoCarnes
-    @classmethod
-    def get_columns_db(cls, table):
-        columns = []
-        try:
-            Config = Pool().get('conector.configuration')
-            conexion = Config.conexion()
-            with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = '"+table+"' ORDER BY ORDINAL_POSITION")
-                for q in query.fetchall():
-                    columns.append(q[0])
-        except Exception as e:
-            print("ERROR QUERY "+table+": ", e)
-        return columns
-
-
-    #Función encargada de traer las formas de pago de TecnoCarnes
-    @classmethod
-    def get_formapago(cls):
-        data = []
-        try:
-            Config = Pool().get('conector.configuration')
-            conexion = Config.conexion()
-            with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT * FROM dbo.TblFormaPago")
-                data = list(query.fetchall())
-        except Exception as e:
-            print("ERROR QUERY get_formapago: ", e)
-        return data
 
     #Función encargada de consultar la secuencia de un voucher dado
     @classmethod
@@ -130,20 +106,3 @@ class VoucherPayMode(ModelSQL, ModelView):
         cursor.execute(*seq.select(where=(seq.name == name)))
         result = cursor.fetchall()
         return result[0]
-
-
-    #Crea o actualiza un registro de la tabla actualización en caso de ser necesario
-    @classmethod
-    def create_or_update(cls):
-        Actualizacion = Pool().get('conector.actualizacion')
-        actualizacion = Actualizacion.search([('name', '=','FORMAS DE PAGO')])
-        if actualizacion:
-            #Se busca un registro con la actualización
-            actualizacion, = Actualizacion.search([('name', '=','FORMAS DE PAGO')])
-            actualizacion.name = 'FORMAS DE PAGO'
-            actualizacion.save()
-        else:
-            #Se crea un registro con la actualización
-            actualizar = Actualizacion()
-            actualizar.name = 'FORMAS DE PAGO'
-            actualizar.save()

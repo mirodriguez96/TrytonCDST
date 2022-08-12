@@ -1,12 +1,5 @@
 from trytond.model import fields
 from trytond.pool import Pool, PoolMeta
-from trytond.exceptions import UserError
-
-
-__all__ = [
-    'Cron',
-    "Location"
-    ]
 
 
 class Cron(metaclass=PoolMeta):
@@ -30,86 +23,69 @@ class Location(metaclass=PoolMeta):
 
     @classmethod
     def import_warehouse(cls):
-        location = Pool().get('stock.location')
-        bodegas = cls.get_data_table('TblBodega')
-        columns = cls.get_columns_db_tecno('TblBodega')
-
+        print('RUN BODEGAS')
+        pool = Pool()
+        Config = pool.get('conector.configuration')
+        Location = pool.get('stock.location')
+        bodegas = Config.get_data_table('TblBodega')
+        Actualizacion = pool.get('conector.actualizacion')
+        actualizacion = Actualizacion.create_or_update('BODEGAS')
+        _zones = []
+        _warehouses = []
         for bodega in bodegas:
-            id_tecno = bodega[columns.index('IdBodega')]
-            nombre = bodega[columns.index('Bodega')].strip()
+            id_tecno = bodega.IdBodega
+            nombre = bodega.Bodega.strip()
 
-            existe = location.search([('id_tecno', '=', id_tecno)])
-
+            existe = Location.search([('id_tecno', '=', id_tecno)])
             if existe:
                 existe[0].name = nombre
-                existe[0].save()
-            else:
-                #zona de entrada
-                ze = location()
-                ze.id_tecno = 'ze-'+str(id_tecno)
-                ze.name = 'ZE '+nombre
-                ze.type = 'storage'
-                ze.save()
+                _warehouses.append(existe[0])
+                continue
 
-                #zona de salida
-                zs = location()
-                zs.id_tecno = 'zs-'+str(id_tecno)
-                zs.name = 'ZS '+nombre
-                zs.type = 'storage'
-                zs.save()
-                
-                #zona de almacenamiento
-                za = location()
-                za.id_tecno = 'za-'+str(id_tecno)
-                za.name = 'ZA '+nombre
-                za.type = 'storage'
-                za.save()
+            #zona de entrada
+            ze = Location()
+            ze.id_tecno = 'ze-'+str(id_tecno)
+            ze.name = 'ZE '+nombre
+            ze.type = 'storage'
+            _zones.append(ze)
+            #ze.save()
 
-                #zona de producción
-                prod = location()
-                prod.id_tecno = 'prod-'+str(id_tecno)
-                prod.name = 'PROD '+nombre
-                prod.type = 'production'
-                prod.save()
+            #zona de salida
+            zs = Location()
+            zs.id_tecno = 'zs-'+str(id_tecno)
+            zs.name = 'ZS '+nombre
+            zs.type = 'storage'
+            _zones.append(zs)
+            #zs.save()
+            
+            #zona de almacenamiento
+            za = Location()
+            za.id_tecno = 'za-'+str(id_tecno)
+            za.name = 'ZA '+nombre
+            za.type = 'storage'
+            _zones.append(za)
+            #za.save()
 
-                almacen = location()
-                almacen.id_tecno = id_tecno
-                almacen.name = nombre
-                almacen.type = 'warehouse'
-                almacen.input_location = ze
-                almacen.output_location = zs
-                almacen.storage_location = za
-                almacen.production_location = prod
-                
-                almacen.save()
+            #zona de producción
+            prod = Location()
+            prod.id_tecno = 'prod-'+str(id_tecno)
+            prod.name = 'PROD '+nombre
+            prod.type = 'production'
+            _zones.append(prod)
+            #prod.save()
 
+            almacen = Location()
+            almacen.id_tecno = id_tecno
+            almacen.name = nombre
+            almacen.type = 'warehouse'
+            almacen.input_location = ze
+            almacen.output_location = zs
+            almacen.storage_location = za
+            almacen.production_location = prod
+            _warehouses.append(almacen)
+            #almacen.save()
 
-    @classmethod
-    def get_data_table(cls, table):
-        data = []
-        try:
-            Config = Pool().get('conector.configuration')
-            conexion = Config.conexion()
-            with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT * FROM dbo."+table+"")
-                data = list(query.fetchall())
-        except Exception as e:
-            print(e)
-            raise UserError('ERROR QUERY get_data_table: ', str(e))
-        return data
-
-    #Función encargada de consultar las columnas pertenecientes a 'x' tabla de la bd
-    @classmethod
-    def get_columns_db_tecno(cls, table):
-        columns = []
-        try:
-            Config = Pool().get('conector.configuration')
-            conexion = Config.conexion()
-            with conexion.cursor() as cursor:
-                query = cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = '"+table+"' ORDER BY ORDINAL_POSITION")
-                for q in query.fetchall():
-                    columns.append(q[0])
-        except Exception as e:
-            print(e)
-            raise UserError('ERROR QUERY get_data_table: ', str(e))
-        return columns
+        Location.save(_zones)
+        Location.save(_warehouses)
+        actualizacion.save()
+        print('FINISH BODEGAS')
