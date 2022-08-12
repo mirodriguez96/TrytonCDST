@@ -478,10 +478,8 @@ class Configuration(ModelSQL, ModelView):
             code_parent = cls.get_parent_account(code)
             if code_parent:
                 parent_account = Account.search([('code', '=', code_parent)])
-                if not parent_account:
-                    #not_account.append(code_parent)
-                    continue
-                account.parent = parent_account[0]
+                if parent_account:
+                    account.parent = parent_account[0]
             to_save.append(account)
         if not_account:
             raise UserError('Importación de archivo: ', f'Error: Faltan las cuentas padres {not_account}')
