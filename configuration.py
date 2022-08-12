@@ -469,6 +469,7 @@ class Configuration(ModelSQL, ModelView):
             account.name = name
             account.reconcile = reconcile
             account.party_required = party_required
+            account.type = None
             if type:
                 type = Type.search([('sequence', '=', type)])
                 if not type:
