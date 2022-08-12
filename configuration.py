@@ -479,7 +479,7 @@ class Configuration(ModelSQL, ModelView):
             if code_parent:
                 parent_account = Account.search([('code', '=', code_parent)])
                 if not parent_account:
-                    not_account.append(code_parent)
+                    #not_account.append(code_parent)
                     continue
                 account.parent = parent_account[0]
             to_save.append(account)
