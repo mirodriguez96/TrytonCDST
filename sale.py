@@ -82,204 +82,209 @@ class Sale(metaclass=PoolMeta):
         to_exception = []
         #Procedemos a realizar una venta
         for venta in data:
-            sw = venta.sw
-            numero_doc = venta.Numero_documento
-            tipo_doc = venta.tipo
-            id_venta = str(sw)+'-'+tipo_doc+'-'+str(numero_doc)
-            existe = Sale.search([('id_tecno', '=', id_venta)])
-            if existe:
+            try:
+                sw = venta.sw
+                numero_doc = venta.Numero_documento
+                tipo_doc = venta.tipo
+                id_venta = str(sw)+'-'+tipo_doc+'-'+str(numero_doc)
+                existe = Sale.search([('id_tecno', '=', id_venta)])
+                if existe:
+                    to_created.append(id_venta)
+                    continue
+                print(id_venta)
+                tbltipodocto, = Config.get_tbltipodoctos(tipo_doc)
+                analytic_account = None
+                if hasattr(SaleLine, 'analytic_accounts'):
+                    if tbltipodocto.Encabezado != '0':
+                        AnalyticAccount = pool.get('analytic_account.account')
+                        analytic_account, = AnalyticAccount.search([('code', '=', str(tbltipodocto.Encabezado))])
+                #Se trae la fecha de la venta y se adapta al formato correcto para Tryton
+                fecha = str(venta.fecha_hora).split()[0].split('-')
+                fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
+                nit_cedula = venta.nit_Cedula
+                party = Party.search([('id_number', '=', nit_cedula)])
+                if not party:
+                    msg2 = f'EXCEPCION {id_venta} - No se encontro el tercero {nit_cedula}'
+                    logging.error(msg2)
+                    logs.append(msg2)
+                    actualizacion.reset_writedate('TERCEROS')
+                    to_exception.append(id_venta)
+                    continue
+                party = party[0]
+                #Se indica a que bodega pertenece
+                id_tecno_bodega = venta.bodega
+                bodega = Location.search([('id_tecno', '=', id_tecno_bodega)])
+                if not bodega:
+                    msg2 = f'EXCEPCION {id_venta} - Bodega {id_tecno_bodega} no existe'
+                    logging.error(msg2)
+                    logs.append(msg2)
+                    to_exception.append(id_venta)
+                    continue
+                bodega = bodega[0]
+                shop = Shop.search([('warehouse', '=', bodega.id)])
+                if not shop:
+                    msg2 = f'EXCEPCION {id_venta} - Tienda (bodega) {id_tecno_bodega} no existe'
+                    logging.error(msg2)
+                    logs.append(msg2)
+                    to_exception.append(id_venta)
+                    continue
+                shop = shop[0]
+                #Se le asigna el plazo de pago correspondiente
+                condicion = venta.condicion
+                plazo_pago = payment_term.search([('id_tecno', '=', condicion)])
+                if not plazo_pago:
+                    msg2 = f'EXCEPCION {id_venta} - Plazo de pago {condicion} no existe'
+                    logging.error(msg2)
+                    logs.append(msg2)
+                    to_exception.append(id_venta)
+                    continue
+                plazo_pago = plazo_pago[0]
+                with Transaction().set_user(1):
+                    context = User.get_preferences()
+                with Transaction().set_context(context, shop=shop.id, _skip_warnings=True):
+                    sale = Sale()
+                sale.number = tipo_doc+'-'+str(numero_doc)
+                sale.reference = tipo_doc+'-'+str(numero_doc)
+                sale.id_tecno = id_venta
+                sale.description = (venta.notas).replace('\n', ' ').replace('\r', '')
+                sale.invoice_type = 'C'
+                sale.sale_date = fecha_date
+                sale.party = party.id
+                sale.invoice_party = party.id
+                sale.shipment_party = party.id
+                sale.warehouse = bodega
+                sale.shop = shop
+                sale.payment_term = plazo_pago
+                sale.self_pick_up = False
+                #Se revisa si la venta es clasificada como electronica o pos y se cambia el tipo
+                if tipo_doc in venta_electronica:
+                    #continue #TEST
+                    sale.invoice_type = '1'
+                elif tipo_doc in venta_pos:
+                    sale.invoice_type = 'P'
+                    sale.invoice_date = fecha_date
+                    sale.pos_create_date = fecha_date
+                    #sale.self_pick_up = True
+                    #Busco la terminal y se la asigno
+                    sale_device, = SaleDevice.search([('id_tecno', '=', venta.pc)])
+                    sale.sale_device = sale_device
+                    sale.invoice_number = sale.number
+                #Se busca una dirección del tercero para agregar en la factura y envio
+                address = Address.search([('party', '=', party.id)], limit=1)
+                if address:
+                    sale.invoice_address = address[0].id
+                    sale.shipment_address = address[0].id
+                
+                #SE CREA LA VENTA
+                sale.save()
+                #Se revisa si se aplico alguno de los 3 impuestos en la venta
+                retencion_iva = False
+                if venta.retencion_iva > 0:
+                    retencion_iva = True
+                retencion_ica = False
+                if venta.retencion_ica > 0:
+                    retencion_ica = True
+                retencion_rete = False
+                if venta.retencion_causada > 0:
+                    if not retencion_iva and not retencion_ica:
+                        retencion_rete = True
+                    elif (venta.retencion_iva + venta.retencion_ica) != venta.retencion_causada:
+                        retencion_rete = True
+                
+                #Ahora traemos las lineas de producto para la venta a procesar
+                documentos_linea = Config.get_lineasd_tecno(id_venta)
+                #_lines = []
+                for lin in documentos_linea:
+                    producto, = Product.search(['OR', ('id_tecno', '=', str(lin.IdProducto)), ('code', '=', str(lin.IdProducto))])
+                    linea = SaleLine()
+                    linea.sale = sale
+                    linea.product = producto
+                    linea.type = 'line'
+                    linea.unit = producto.template.default_uom
+                    #Se verifica si es una devolución
+                    cant = float(lin.Cantidad_Facturada)
+                    cantidad_facturada = abs(round(cant, 3))
+                    if linea.unit.id == 1:
+                        cantidad_facturada = int(cantidad_facturada)
+                    #print(cant, cantidad_facturada)
+                    if sw == 2:
+                        linea.quantity = cantidad_facturada * -1
+                        dcto_base = str(venta.Tipo_Docto_Base)+'-'+str(venta.Numero_Docto_Base)
+                        #Se indica a que documento hace referencia la devolucion
+                        sale.reference = dcto_base
+                        sale.comment = f"DEVOLUCIÓN DE LA FACTURA {dcto_base}"
+                    else:
+                        linea.quantity = cantidad_facturada
+                    #Se verifica si tiene activo el módulo centro de operaciones y se añade 1 por defecto
+                    if company_operation:
+                        linea.operation_center = company_operation
+                    #Comprueba los cambios y trae los impuestos del producto
+                    linea.on_change_product()
+                    #Se verifica si el impuesto al consumo fue aplicado
+                    impuesto_consumo = lin.Impuesto_Consumo
+                    #A continuación se verifica las retenciones e impuesto al consumo
+                    impuestos_linea = []
+                    for impuestol in linea.taxes:
+                        clase_impuesto = impuestol.classification_tax
+                        if clase_impuesto == '05' and retencion_iva:
+                            if impuestol not in impuestos_linea:
+                                impuestos_linea.append(impuestol)
+                        elif clase_impuesto == '06' and retencion_rete:
+                            if impuestol not in impuestos_linea:
+                                impuestos_linea.append(impuestol)
+                        elif clase_impuesto == '07' and retencion_ica:
+                            if impuestol not in impuestos_linea:
+                                impuestos_linea.append(impuestol)
+                        elif impuestol.consumo and impuesto_consumo > 0:
+                            #Se busca el impuesto al consumo con el mismo valor para aplicarlo
+                            tax = Tax.search([('consumo', '=', True), ('type', '=', 'fixed'), ('amount', '=', impuesto_consumo)])
+                            if tax:
+                                tax, = tax
+                                impuestos_linea.append(tax)
+                            else:
+                                raise UserError('ERROR IMPUESTO', 'No se encontró el impuesto al consumo: '+id_venta)
+                        elif clase_impuesto != '05' and clase_impuesto != '06' and clase_impuesto != '07' and not impuestol.consumo:
+                            if impuestol not in impuestos_linea:
+                                impuestos_linea.append(impuestol)
+                    linea.taxes = impuestos_linea
+                    linea.unit_price = lin.Valor_Unitario
+                    #Verificamos si hay descuento para la linea de producto y se agrega su respectivo descuento
+                    if lin.Porcentaje_Descuento_1 > 0:
+                        porcentaje = lin.Porcentaje_Descuento_1/100
+                        linea.base_price = lin.Valor_Unitario
+                        linea.discount_rate = Decimal(str(porcentaje))
+                        linea.on_change_discount_rate()
+                    # Se guarda la linea para la venta
+                    # linea.on_change_quantity()
+                    if analytic_account:
+                        AnalyticEntry = pool.get('analytic.account.entry')
+                        root, = AnalyticAccount.search([('type', '=', 'root')])
+                        analytic_entry = AnalyticEntry()
+                        analytic_entry.root = root
+                        analytic_entry.account = analytic_account
+                        linea.analytic_accounts = [analytic_entry]
+                    # _lines.append(linea)
+                    linea.save()
+                #Se procesa los registros creados
+                with Transaction().set_user(1):
+                    context = User.get_preferences()
+                with Transaction().set_context(context, _skip_warnings=True):
+                    Sale.quote([sale])
+                    Sale.confirm([sale])
+                    Sale.process([sale])
+                    cls.finish_shipment_process(sale)
+                    if sale.invoice_type == 'P':
+                        Sale.post_invoices(sale)
+                        if sale.payment_term.id_tecno == '0':
+                            cls.set_payment_pos(sale, logs, to_exception)
+                            Sale.update_state([sale])
+                    else:
+                        cls.finish_invoice_process(sale, venta, logs, to_exception)
                 to_created.append(id_venta)
-                continue
-            print(id_venta)
-            tbltipodocto, = Config.get_tbltipodoctos(tipo_doc)
-            analytic_account = None
-            if hasattr(SaleLine, 'analytic_accounts'):
-                if tbltipodocto.Encabezado != '0':
-                    AnalyticAccount = pool.get('analytic_account.account')
-                    analytic_account, = AnalyticAccount.search([('code', '=', str(tbltipodocto.Encabezado))])
-            #Se trae la fecha de la venta y se adapta al formato correcto para Tryton
-            fecha = str(venta.fecha_hora).split()[0].split('-')
-            fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
-            nit_cedula = venta.nit_Cedula
-            party = Party.search([('id_number', '=', nit_cedula)])
-            if not party:
-                msg2 = f'EXCEPCION {id_venta} - No se encontro el tercero {nit_cedula}'
-                logging.error(msg2)
-                logs.append(msg2)
-                actualizacion.reset_writedate('TERCEROS')
+            except Exception as e:
+                msg = f"EXCEPCION {id_venta} - {str(e)}"
+                logs.append(msg)
                 to_exception.append(id_venta)
-                continue
-            party = party[0]
-            #Se indica a que bodega pertenece
-            id_tecno_bodega = venta.bodega
-            bodega = Location.search([('id_tecno', '=', id_tecno_bodega)])
-            if not bodega:
-                msg2 = f'EXCEPCION {id_venta} - Bodega {id_tecno_bodega} no existe'
-                logging.error(msg2)
-                logs.append(msg2)
-                to_exception.append(id_venta)
-                continue
-            bodega = bodega[0]
-            shop = Shop.search([('warehouse', '=', bodega.id)])
-            if not shop:
-                msg2 = f'EXCEPCION {id_venta} - Tienda (bodega) {id_tecno_bodega} no existe'
-                logging.error(msg2)
-                logs.append(msg2)
-                to_exception.append(id_venta)
-                continue
-            shop = shop[0]
-            #Se le asigna el plazo de pago correspondiente
-            condicion = venta.condicion
-            plazo_pago = payment_term.search([('id_tecno', '=', condicion)])
-            if not plazo_pago:
-                msg2 = f'EXCEPCION {id_venta} - Plazo de pago {condicion} no existe'
-                logging.error(msg2)
-                logs.append(msg2)
-                to_exception.append(id_venta)
-                continue
-            plazo_pago = plazo_pago[0]
-            with Transaction().set_user(1):
-                context = User.get_preferences()
-            with Transaction().set_context(context, shop=shop.id, _skip_warnings=True):
-                sale = Sale()
-            sale.number = tipo_doc+'-'+str(numero_doc)
-            sale.reference = tipo_doc+'-'+str(numero_doc)
-            sale.id_tecno = id_venta
-            sale.description = (venta.notas).replace('\n', ' ').replace('\r', '')
-            sale.invoice_type = 'C'
-            sale.sale_date = fecha_date
-            sale.party = party.id
-            sale.invoice_party = party.id
-            sale.shipment_party = party.id
-            sale.warehouse = bodega
-            sale.shop = shop
-            sale.payment_term = plazo_pago
-            sale.self_pick_up = False
-            #Se revisa si la venta es clasificada como electronica o pos y se cambia el tipo
-            if tipo_doc in venta_electronica:
-                #continue #TEST
-                sale.invoice_type = '1'
-            elif tipo_doc in venta_pos:
-                sale.invoice_type = 'P'
-                sale.invoice_date = fecha_date
-                sale.pos_create_date = fecha_date
-                #sale.self_pick_up = True
-                #Busco la terminal y se la asigno
-                sale_device, = SaleDevice.search([('id_tecno', '=', venta.pc)])
-                sale.sale_device = sale_device
-                sale.invoice_number = sale.number
-            #Se busca una dirección del tercero para agregar en la factura y envio
-            address = Address.search([('party', '=', party.id)], limit=1)
-            if address:
-                sale.invoice_address = address[0].id
-                sale.shipment_address = address[0].id
-            
-            #SE CREA LA VENTA
-            sale.save()
-            #Se revisa si se aplico alguno de los 3 impuestos en la venta
-            retencion_iva = False
-            if venta.retencion_iva > 0:
-                retencion_iva = True
-            retencion_ica = False
-            if venta.retencion_ica > 0:
-                retencion_ica = True
-            retencion_rete = False
-            if venta.retencion_causada > 0:
-                if not retencion_iva and not retencion_ica:
-                    retencion_rete = True
-                elif (venta.retencion_iva + venta.retencion_ica) != venta.retencion_causada:
-                    retencion_rete = True
-            
-            #Ahora traemos las lineas de producto para la venta a procesar
-            documentos_linea = Config.get_lineasd_tecno(id_venta)
-            #_lines = []
-            for lin in documentos_linea:
-                producto, = Product.search(['OR', ('id_tecno', '=', str(lin.IdProducto)), ('code', '=', str(lin.IdProducto))])
-                linea = SaleLine()
-                linea.sale = sale
-                linea.product = producto
-                linea.type = 'line'
-                linea.unit = producto.template.default_uom
-                #Se verifica si es una devolución
-                cant = float(lin.Cantidad_Facturada)
-                cantidad_facturada = abs(round(cant, 3))
-                if linea.unit.id == 1:
-                    cantidad_facturada = int(cantidad_facturada)
-                #print(cant, cantidad_facturada)
-                if sw == 2:
-                    linea.quantity = cantidad_facturada * -1
-                    dcto_base = str(venta.Tipo_Docto_Base)+'-'+str(venta.Numero_Docto_Base)
-                    #Se indica a que documento hace referencia la devolucion
-                    sale.reference = dcto_base
-                    sale.comment = f"DEVOLUCIÓN DE LA FACTURA {dcto_base}"
-                else:
-                    linea.quantity = cantidad_facturada
-                #Se verifica si tiene activo el módulo centro de operaciones y se añade 1 por defecto
-                if company_operation:
-                    linea.operation_center = company_operation
-                #Comprueba los cambios y trae los impuestos del producto
-                linea.on_change_product()
-                #Se verifica si el impuesto al consumo fue aplicado
-                impuesto_consumo = lin.Impuesto_Consumo
-                #A continuación se verifica las retenciones e impuesto al consumo
-                impuestos_linea = []
-                for impuestol in linea.taxes:
-                    clase_impuesto = impuestol.classification_tax
-                    if clase_impuesto == '05' and retencion_iva:
-                        if impuestol not in impuestos_linea:
-                            impuestos_linea.append(impuestol)
-                    elif clase_impuesto == '06' and retencion_rete:
-                        if impuestol not in impuestos_linea:
-                            impuestos_linea.append(impuestol)
-                    elif clase_impuesto == '07' and retencion_ica:
-                        if impuestol not in impuestos_linea:
-                            impuestos_linea.append(impuestol)
-                    elif impuestol.consumo and impuesto_consumo > 0:
-                        #Se busca el impuesto al consumo con el mismo valor para aplicarlo
-                        tax = Tax.search([('consumo', '=', True), ('type', '=', 'fixed'), ('amount', '=', impuesto_consumo)])
-                        if tax:
-                            tax, = tax
-                            impuestos_linea.append(tax)
-                        else:
-                            raise UserError('ERROR IMPUESTO', 'No se encontró el impuesto al consumo: '+id_venta)
-                    elif clase_impuesto != '05' and clase_impuesto != '06' and clase_impuesto != '07' and not impuestol.consumo:
-                        if impuestol not in impuestos_linea:
-                            impuestos_linea.append(impuestol)
-                linea.taxes = impuestos_linea
-                linea.unit_price = lin.Valor_Unitario
-                #Verificamos si hay descuento para la linea de producto y se agrega su respectivo descuento
-                if lin.Porcentaje_Descuento_1 > 0:
-                    porcentaje = lin.Porcentaje_Descuento_1/100
-                    linea.base_price = lin.Valor_Unitario
-                    linea.discount_rate = Decimal(str(porcentaje))
-                    linea.on_change_discount_rate()
-                # Se guarda la linea para la venta
-                # linea.on_change_quantity()
-                if analytic_account:
-                    AnalyticEntry = pool.get('analytic.account.entry')
-                    root, = AnalyticAccount.search([('type', '=', 'root')])
-                    analytic_entry = AnalyticEntry()
-                    analytic_entry.root = root
-                    analytic_entry.account = analytic_account
-                    linea.analytic_accounts = [analytic_entry]
-                # _lines.append(linea)
-                linea.save()
-            #Se procesa los registros creados
-            with Transaction().set_user(1):
-                context = User.get_preferences()
-            with Transaction().set_context(context, _skip_warnings=True):
-                Sale.quote([sale])
-                Sale.confirm([sale])
-                Sale.process([sale])
-                cls.finish_shipment_process(sale)
-                if sale.invoice_type == 'P':
-                    Sale.post_invoices(sale)
-                    if sale.payment_term.id_tecno == '0':
-                        cls.set_payment_pos(sale, logs, to_exception)
-                        Sale.update_state([sale])
-                else:
-                    cls.finish_invoice_process(sale, venta, logs, to_exception)
-            to_created.append(id_venta)
         Actualizacion.add_logs(actualizacion, logs)
         for idt in to_created:
             if idt not in to_exception:
