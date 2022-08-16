@@ -527,10 +527,10 @@ class Configuration(ModelSQL, ModelView):
                     account.party_required = False
             type = linea[2].strip()
             if type:
-                type, = Type.search([('sequence', '=', type)])
+                type = Type.search([('sequence', '=', type)])
                 if not type:
                     raise UserError('Importación de archivo: ', f'Error en la búsqueda del tipo de cuenta, para la cuenta {code} - {name}')
-                account['type'] = type[0].id
+                account.type = type[0]
             Account.save([account])
 
     
