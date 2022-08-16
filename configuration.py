@@ -17,6 +17,7 @@ TYPES_FILE = [
     ('products', 'Products'),
     ('balances', 'Balances'),
     ('accounts', 'Accounts'),
+    ('update_accounts', 'Update Accounts'),
     ('product_costs', 'Product costs'),
     ('inventory', "Inventory"),
 ]
@@ -199,6 +200,8 @@ class Configuration(ModelSQL, ModelView):
                     cls.import_csv_balances(lineas)
                 elif config.type_file == "accounts":
                     cls.import_csv_accounts(lineas)
+                elif config.type_file == "update_accounts":
+                    cls.update_csv_accounts(lineas)
                 elif config.type_file == "product_costs":
                     cls.import_csv_product_costs(lineas)
                 elif config.type_file == "inventory":
@@ -444,10 +447,12 @@ class Configuration(ModelSQL, ModelView):
                 raise UserError('Error plantilla', 'account | name | type | reconcile | party_required')
             ordered.append(linea)
         ordered = sorted(ordered, key=lambda item:len(item[0]))
-        to_save = []
         not_account = []
         for linea in ordered:
             code = linea[0].strip()
+            account = Account.search([('code', '=', code)])
+            if account:
+                continue
             name = linea[1].strip().upper()
             type = linea[2].strip()
             reconcile = linea[3].strip().upper()
@@ -460,30 +465,73 @@ class Configuration(ModelSQL, ModelView):
                 party_required = True
             else:
                 party_required = False
-            account = Account.search([('code', '=', code)])
-            if account:
-                account, = account
-            else:
-                account = Account()
-                account.code = code
-            account.name = name
-            account.reconcile = reconcile
-            account.party_required = party_required
+            account = {
+                'code': code,
+                'name': name,
+                'reconcile': reconcile,
+                'party_required': party_required,
+                'type': None
+            }
             if type:
                 type = Type.search([('sequence', '=', type)])
                 if not type:
                     raise UserError('Importación de archivo: ', f'Error en la búsqueda del tipo de cuenta de la cuenta {code} - {name}')
-                type, = type
-                account.type = type
+                account['type'] = type[0].id
             code_parent = cls.get_parent_account(code)
             if code_parent:
                 parent_account = Account.search([('code', '=', code_parent)])
-                if parent_account:
-                    account.parent = parent_account[0]
-            to_save.append(account)
+                if not parent_account:
+                    not_account.append(code_parent)
+                    continue
+                account['parent'] = parent_account[0].id
+            Account.create([account])
         if not_account:
             raise UserError('Importación de archivo: ', f'Error: Faltan las cuentas padres {not_account}')
-        Account.save(to_save)
+
+
+    #Función encargada de verificar las cuentas nuevas a importar
+    @classmethod
+    def update_csv_accounts(cls, lineas):
+        pool = Pool()
+        Account = pool.get('account.account')
+        Type = pool.get('account.account.type')
+        for linea in lineas:
+            linea = linea.strip()
+            if not linea:
+                continue            
+            linea = linea.split(';')
+            if linea[0] == 'code':
+                continue
+            if len(linea) != 5:
+                raise UserError('Error plantilla', 'account | name | type | reconcile | party_required')
+            # Se consulta y procesa la cuenta
+            code = linea[0].strip()
+            account = Account.search([('code', '=', code)])
+            if not account:
+                continue
+            account, = account
+            name = linea[1].strip().upper()
+            if name:
+                account.name = name
+            reconcile = linea[3].strip().upper()
+            if reconcile:
+                if reconcile == 'TRUE':
+                    account.reconcile = True
+                if reconcile == 'FALSE':
+                    account.reconcile = False
+            party_required = linea[4].strip().upper()
+            if party_required:
+                if party_required == 'TRUE':
+                    account.party_required = True
+                if party_required == 'FALSE':
+                    account.party_required = False
+            type = linea[2].strip()
+            if type:
+                type, = Type.search([('sequence', '=', type)])
+                if not type:
+                    raise UserError('Importación de archivo: ', f'Error en la búsqueda del tipo de cuenta, para la cuenta {code} - {name}')
+                account['type'] = type[0].id
+            Account.save([account])
 
     
     @classmethod
