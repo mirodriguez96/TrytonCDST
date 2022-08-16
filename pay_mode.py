@@ -80,7 +80,7 @@ class VoucherPayMode(ModelSQL, ModelView):
                 paymode.sequence_receipt = sequence_receipt[0]
                 cls.add_account(paym, cuenta)
                 #Codigo clasificacion tipo de pago ('10' => 'Efectivo')
-                paym.payment_means_code = 10
+                paym.payment_means_code = '10'
                 to_save.append(paymode)
                 #paym.save()
         PayMode.save(to_save)
