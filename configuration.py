@@ -530,7 +530,8 @@ class Configuration(ModelSQL, ModelView):
                 type = Type.search([('sequence', '=', type)])
                 if not type:
                     raise UserError('Importación de archivo: ', f'Error en la búsqueda del tipo de cuenta, para la cuenta {code} - {name}')
-                account.type = type[0]
+                type, = type
+                account.type = type
             Account.save([account])
 
     
