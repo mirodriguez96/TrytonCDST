@@ -20,6 +20,7 @@ TYPES_FILE = [
     ('update_accounts', 'Update Accounts'),
     ('product_costs', 'Product costs'),
     ('inventory', "Inventory"),
+    ('bank_account', 'Bank Account'),
 ]
 
 class Configuration(ModelSQL, ModelView):
@@ -94,6 +95,14 @@ class Configuration(ModelSQL, ModelView):
         query = "UPDATE dbo.Documentos SET exportado = '"+e+"' WHERE sw ="+lista[0]+" and tipo = "+lista[1]+" and Numero_documento = "+lista[2]
         cls.set_data(query)
 
+
+    @classmethod
+    def get_tblproducto(cls, fecha):
+        fecha = fecha.strftime('%Y-%m-%d %H:%M:%S')
+        query = "SET DATEFORMAT ymd SELECT * FROM dbo.TblProducto WHERE fecha_creacion >= CAST('"+fecha+"' AS datetime) OR Ultimo_Cambio_Registro >= CAST('"+fecha+"' AS datetime)"
+        data = cls.get_data(query)
+        return data
+
     @classmethod
     def get_tblterceros(cls, fecha):
         fecha = fecha.strftime('%Y-%m-%d %H:%M:%S')
@@ -148,6 +157,12 @@ class Configuration(ModelSQL, ModelView):
     @classmethod
     def get_tbltipodoctos(cls, id):
         query = "SELECT * FROM dbo.TblTipoDoctos WHERE idTipoDoctos = "+id
+        data = cls.get_data(query)
+        return data
+
+    @classmethod
+    def get_tbltipoproducto(cls, id):
+        query = "SELECT * FROM dbo.TblTipoProducto WHERE IdTipoProducto = "+id
         data = cls.get_data(query)
         return data
 
@@ -206,6 +221,8 @@ class Configuration(ModelSQL, ModelView):
                     cls.import_csv_product_costs(lineas)
                 elif config.type_file == "inventory":
                     cls.import_csv_inventory(lineas)
+                elif config.type_file == "bank_account":
+                    cls.import_csv_bank_account(lineas)
                 else:
                     raise UserError('Importar archivo: ', 'Seleccione el tipo de importación')
             else:
@@ -633,4 +650,58 @@ class Configuration(ModelSQL, ModelView):
         if to_lines:
             inventory.lines = to_lines
             inventory.save()
+        print('FIN')
+
+
+    @classmethod
+    def import_csv_bank_account(cls, lineas):
+        pool = Pool()
+        BankAccount = pool.get('bank.account')
+        Bank = pool.get('bank')
+        Account = pool.get('account.account')
+        Party = pool.get('party.party')
+        Number = pool.get('bank.account.number')
+        BankAccountParty = pool.get('bank.account-party.party')
+        to_save = []
+        first = True
+        for linea in lineas:
+            linea = linea.strip()
+            if not linea:
+                continue            
+            linea = linea.split(';')
+            if len(linea) != 5:
+                raise UserError('Error plantilla', 'bank;account;parties;number;type')
+            # Se verifica que es la primera linea (encabezado) para omitirla
+            if first:
+                first = False
+                continue
+            bank = linea[0].strip()
+            bank, = Bank.search([('party.id_number', '=', bank)])
+            account = linea[1].strip()
+            account, = Account.search([('code', '=', account)])
+            party = linea[2].strip()
+            party, = Party.search([('id_number', '=', party)])
+            number = linea[3].strip()
+            type = linea[4].strip()
+            bparty = BankAccountParty.search([('owner', '=', party)])
+            domain = [
+                ('bank', '=', bank),
+                ('account', '=', account)
+            ]
+            if bparty:
+                domain.append(('owners', '=', bparty))
+            exist = BankAccount.search(domain)
+            if exist and bparty:
+                continue
+            print("crear")
+            baccount = BankAccount()
+            baccount.bank = bank
+            baccount.account = account
+            baccount.owners = [party]
+            numbers = Number()
+            numbers.number = number
+            numbers.type = type
+            baccount.numbers = [numbers]
+            to_save.append(baccount)
+        BankAccount.save(to_save)
         print('FIN')
