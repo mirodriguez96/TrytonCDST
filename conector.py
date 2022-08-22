@@ -5,10 +5,6 @@ from sql import Table
 import datetime
 
 
-__all__ = [
-    'Actualizacion',
-    ]
-
 class Actualizacion(ModelSQL, ModelView):
     'Actualizacion'
     __name__ = 'conector.actualizacion'
@@ -87,9 +83,7 @@ class Actualizacion(ModelSQL, ModelView):
     #Se consulta en la base de datos de SQLSERVER
     def getter_quantity(self, name):
         Config = Pool().get('conector.configuration')
-        conexion = Config.search([], order=[('id', 'DESC')], limit=1)
-        if conexion:
-            conexion, = conexion
+        conexion, = Config.search([], order=[('id', 'DESC')], limit=1)
         fecha = conexion.date
         fecha = fecha.strftime('%Y-%m-%d %H:%M:%S')
         consult = "SET DATEFORMAT ymd SELECT COUNT(*) FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime)"
@@ -133,7 +127,7 @@ class Actualizacion(ModelSQL, ModelView):
 
     def getter_exceptions(self, name):
         Config = Pool().get('conector.configuration')
-        conexion = Config.search([], order=[('id', 'DESC')], limit=1)
+        conexion, = Config.search([], order=[('id', 'DESC')], limit=1)
         fecha = conexion.date.strftime('%Y-%m-%d %H:%M:%S')
         consult = "SET DATEFORMAT ymd SELECT COUNT(*) FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime)"
         if self.name == 'VENTAS':
@@ -153,7 +147,7 @@ class Actualizacion(ModelSQL, ModelView):
 
     def getter_cancelled(self, name):
         Config = Pool().get('conector.configuration')
-        conexion = Config.search([], order=[('id', 'DESC')], limit=1)
+        conexion, = Config.search([], order=[('id', 'DESC')], limit=1)
         fecha = conexion.date.strftime('%Y-%m-%d %H:%M:%S')
         consult = "SET DATEFORMAT ymd SELECT COUNT(*) FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime)"
         if self.name == 'VENTAS':
@@ -173,9 +167,7 @@ class Actualizacion(ModelSQL, ModelView):
 
     def getter_not_imported(self, name):
         Config = Pool().get('conector.configuration')
-        conexion = Config.search([], order=[('id', 'DESC')], limit=1)
-        if conexion:
-            conexion, = conexion
+        conexion, = Config.search([], order=[('id', 'DESC')], limit=1)
         fecha = conexion.date
         fecha = fecha.strftime('%Y-%m-%d %H:%M:%S')
         consult = "SET DATEFORMAT ymd SELECT COUNT(*) FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado != 'T' AND exportado != 'E' AND exportado != 'X'"
@@ -195,6 +187,9 @@ class Actualizacion(ModelSQL, ModelView):
 
     @classmethod
     def revisa_secuencia_imp(cls, table, l_sw, name_a):
+        pool = Pool()
+        Config = pool.get('conector.configuration')
+        Actualizacion = pool.get('conector.actualizacion')
         cursor = Transaction().connection.cursor()
         consult = "SELECT number FROM "+table+" WHERE "
         for sw in l_sw:
@@ -206,8 +201,8 @@ class Actualizacion(ModelSQL, ModelView):
         if not result:
             return
         result = [r[0] for r in result]
-        Config = Pool().get('conector.configuration')(1)
-        fecha = Config.date
+        config, = Config.search([], order=[('id', 'DESC')], limit=1)
+        fecha = config.date
         fecha = fecha.strftime('%Y-%m-%d %H:%M:%S')
         consult2 = "SELECT CONCAT(tipo,'-',numero_documento) FROM Documentos WHERE ("
         for sw in l_sw:
@@ -223,6 +218,5 @@ class Actualizacion(ModelSQL, ModelView):
             lid = falt.split('-')
             Config.set_data(f"UPDATE dbo.Documentos SET exportado = 'S' WHERE tipo = {lid[0]} AND Numero_documento = {lid[1]}")
             logs.append(f"DOCUMENTO FALTANTE: {falt}")
-        Actualizacion = Pool().get('conector.actualizacion')
         actualizacion, = Actualizacion.search([('name', '=', name_a)])
         cls.add_logs(actualizacion, logs)
