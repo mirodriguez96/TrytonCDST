@@ -367,12 +367,26 @@ class Configuration(ModelSQL, ModelView):
         Journal = pool.get('account.journal')
         Period = pool.get('account.period')
         Move = pool.get('account.move')
+        Line = pool.get('account.move.line')
         Party = pool.get('party.party')
+        
+        parties = Party.search([()])
+        partiesd = {}
+        for party in parties:
+            partiesd[party.id_number] = party.id
+
+        accounts = Account.search([()])
+        accountsd = {}
+        for account in accounts:
+            accountsd[account.code] = {
+                1: account.id,
+                2: account.party_required
+            }
         cont = 0
-        move = {}
-        lines = []
+        vlist = []
         not_party = []
         for linea in lineas:
+            print(linea)
             linea = linea.strip()
             if not linea:
                 continue
@@ -393,14 +407,13 @@ class Configuration(ModelSQL, ModelView):
                 if not period:
                     raise UserError('Error periodo', f'No se encontró el diario {name_period}')
                 period, = period
-                move = {
-                    'journal': journal.id,
-                    'period': period.id,
-                    'date': efective_date,
-                    'description': description_move,
-                }
-            cont += 1
-            
+                move = Move()
+                move.journal = journal
+                move.period = period
+                move.date = efective_date
+                move.description = description_move
+                move.save()
+                cont += 1
             account_line = linea[4].strip()
             debit_line = linea[5].strip()
             if debit_line:
@@ -416,12 +429,9 @@ class Configuration(ModelSQL, ModelView):
             description_line = linea[8].strip()
             maturity_date = linea[9].strip()
             reference_line = linea[10].strip()
-            account = Account.search([('code', '=', account_line)])
-            if not account:
-                raise UserError("Error de cuenta", f"No se encontro la cuenta: {account_line}")
-            account, = account
             line = {
-                'account': account.id,
+                'move': move.id,
+                'account': accountsd[account_line][1],
                 'reference': reference_line,
                 'debit': debit_line,
                 'credit': credit_line,
@@ -429,21 +439,23 @@ class Configuration(ModelSQL, ModelView):
             }
             if maturity_date:
                 line['maturity_date'] = cls.convert_str_date(maturity_date)
-            if account.party_required:
-                party = Party.search([('id_number', '=', party_line)])
-                if not party:
-                    msg = f"No se encontro el tercero: {party_line} requerido para la cuenta {account_line}"
-                    not_party.append(msg)
+            if accountsd[account_line][2]:
+                if not party_line in partiesd.keys():
+                    if party_line not in not_party:
+                        not_party.append(party_line)
                     continue
-                line['party'] = party[0].id
-            lines.append(line)
+                line['party'] = partiesd[party_line]
+            #lines.append(line)
+            vlist.append(line)
+            if len(vlist) > 1000:
+                Line.create(vlist)
+                vlist.clear()
         if not_party:
-            result = "\n".join(not_party)
-            raise UserError("Error terceros", result)
+            raise UserError("Falta terceros", f"{not_party}")
         #Se verifica si hay lineas por crear
-        if lines:
-            move['lines'] = [('create', lines)]
-        Move.create([move])
+        if vlist:
+            Line.create(vlist)
+        print('FIN import_csv_balances')
 
 
     #Función encargada de verificar las cuentas nuevas a importar
