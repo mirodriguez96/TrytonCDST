@@ -1,14 +1,6 @@
 from trytond.model import fields
 from trytond.pool import Pool, PoolMeta
 from trytond.transaction import Transaction
-from trytond.exceptions import UserError
-import logging
-
-__all__ = [
-    'SaleDevice',
-    'Journal'
-    'Cron',
-    ]
 
 
 class Cron(metaclass=PoolMeta):
@@ -19,7 +11,7 @@ class Cron(metaclass=PoolMeta):
     def __setup__(cls):
         super().__setup__()
         cls.method.selection.append(
-            ('sale.device|import_data_pos', "Importar Pos"),
+            ('sale.device|import_data_pos', "Importar Config Pos"),
             )
 
 
@@ -31,35 +23,41 @@ class SaleDevice(metaclass=PoolMeta):
 
     @classmethod
     def import_data_pos(cls):
+        print("RUN CONFIG POS")
         #Se requiere previamente haber creado el diario para ventas POS con código VM
         #Posterior a la importación. revisar las configuraciones
-        logging.warning("RUN CONFIG POS")
-        cls.create_or_update()
-        cls.import_sale_shop()
-        cls.import_sale_device()
-        cls.import_statement_sale()
-        #Transaction().connection.commit()
-        #msg1 = f'Recordatorio: Revisar las configuraciones de Tiendas, Terminales de venta y Libros diarios (formas de pago) de las terminales...'
-        #logging.warning(msg1)
-        logging.warning("FINISH CONFIG POS")
-        #raise UserError("RECORDATORIO: ", "Revisa las configuraciones de las tiendas, terminales de venta y libros diarios (formas de pago) de las terminales...")
+        pool = Pool()
+        Actualizacion = pool.get('conector.actualizacion')
+        actualizacion = Actualizacion.create_or_update("CONFIG_POS")
+        logs = []
+        try:
+            cls.import_sale_shop(logs)
+            cls.import_sale_device(logs)
+            cls.import_statement_sale(logs)
+        except Exception as e:
+            msg = f"EXCEPCION {str(e)}"
+            logs.append(msg)
+        Actualizacion.add_logs(actualizacion, logs)
+        print("FINISH CONFIG POS")
 
     @classmethod
-    def import_sale_shop(cls):
-        bodegas = cls.get_data_table('TblBodega')
+    def import_sale_shop(cls, logs):
         pool = Pool()
+        Config = pool.get('conector.configuration')
         Shop = pool.get('sale.shop')
-        location = pool.get('stock.location')
-        payment_term = Pool().get('account.invoice.payment_term')
+        Location = pool.get('stock.location')
+        payment_term = pool.get('account.invoice.payment_term')
         payment_term, = payment_term.search([], order=[('id', 'DESC')], limit=1)
         currency = pool.get('currency.currency')
         moneda, = currency.search([('code', '=', 'COP')])
+        bodegas = Config.get_data_table('TblBodega')
         to_create = []
         for bodega in bodegas:
             id_tecno = bodega.IdBodega
-            location = location.search([('id_tecno', '=', id_tecno)])
+            location = Location.search([('id_tecno', '=', id_tecno)])
             if not location:
-                raise UserError("Error de bodega", "LA BODEGA DE TECNOCARNES CON ID {id_tecno} NO EXISTE")
+                msg = f"LA BODEGA DE TECNOCARNES CON ID {id_tecno} NO EXISTE"
+                logs.append(msg)
             nombre = bodega.Bodega
             location = location[0]
             existe = Shop.search([('warehouse', '=', location)])
@@ -67,7 +65,7 @@ class SaleDevice(metaclass=PoolMeta):
             if not existe:
                 shop = {
                     'name': nombre,
-                    'warehouse': location,
+                    'warehouse': location.id,
                     'currency': moneda,
                     'company': company,
                     'payment_term': payment_term,
@@ -134,98 +132,72 @@ class SaleDevice(metaclass=PoolMeta):
 
     #CREAR TERMINALES DE VENTA
     @classmethod
-    def import_sale_device(cls):
+    def import_sale_device(cls, logs):
         pool = Pool()
-        SaleD = pool.get('sale.device')
-        Location = pool.get('stock.location')
-        #obtengo la tienda actual
+        Config = pool.get('conector.configuration')
+        SaleDevice = pool.get('sale.device')
         Shop = pool.get('sale.shop')
-        equipos = cls.get_data_table('TblEquipo')
+        equipos = Config.get_data_table('TblEquipo')
         
         to_create = []
         for equipo in equipos:
             id_equipo = equipo.IdEquipo
             nombre = equipo.Equipo
-            ubicacion = equipo.Ubicacion
-            location = Location.search([('id_tecno', '=', ubicacion)])
-            if location:
-                shop = Shop.search([('warehouse', '=', location[0])])
-                if shop:
-                    shop = shop[0]
-                else:
-                    shop, = Shop.search([], order=[('id', 'DESC')], limit=1)
-            else:
-                shop, = Shop.search([], order=[('id', 'DESC')], limit=1)
+            shop = Shop.search([('warehouse.id_tecno', '=', equipo.Ubicacion)])
+            if not shop:
+                shop = Shop.search([], order=[('id', 'DESC')], limit=1)
             #En caso de ser un nombre vacio se continua con el siguiente
             if len(nombre) == 0 or nombre == ' ':
+                msg = f"EL NOMBRE DEL EQUIPO ESTA VACIO {id_equipo}"
+                logs.append(msg)
                 continue
             
-            device = SaleD.search([('id_tecno', '=', id_equipo)])
+            device = SaleDevice.search([('id_tecno', '=', id_equipo)])
             if not device:
                 sale_data = {
                     'id_tecno': id_equipo,
                     'name': nombre,
                     'code': id_equipo,
-                    'shop': shop,
+                    'shop': shop[0].id,
                     'environment': 'retail'
                 }
                 to_create.append(sale_data)
-        SaleD.create(to_create)
+        SaleDevice.create(to_create)
 
 
     #Libro de Ventas Pos
     @classmethod
-    def import_statement_sale(cls):
-        forma_pago = cls.get_data_table('TblFormaPago')
+    def import_statement_sale(cls, logs):
         pool = Pool()
-        Account = pool.get('account.account')
-        Journal = pool.get('account.statement.journal')
-        Ajournal = pool.get('account.journal')
-        #currency = pool.get('currency.currency')
-        #moneda, = currency.search([('code', '=', 'COP')])
-        #company = Transaction().context.get('company')
+        Config = pool.get('conector.configuration')
+        StatementJournal = pool.get('account.statement.journal')
+        PayMode = pool.get('account.voucher.paymode')
+        forma_pago = Config.get_data_table('TblFormaPago')
         to_create = []
         for fp in forma_pago:
-            idt = str(fp.IdFormaPago)
-            journal = Journal.search([('id_tecno', '=', idt)])
-            if not journal:
-                nombre = fp.FormaPago
-                cuenta, = Account.search([('code', '=', '110505')])
-                diario, = Ajournal.search([('code', '=', 'VM')])
+            id_tecno = str(fp.IdFormaPago)
+            exists = StatementJournal.search([('id_tecno', '=', id_tecno)])
+            if not exists:
+                paymode = PayMode.search([('id_tecno', '=', id_tecno)])
+                if not paymode:
+                    msg = f"NO SE ENCONTRO EN TRYTON EL MODO DE PAGO {id_tecno}"
+                    logs.append(msg)
+                    continue
+                paymode, = paymode
                 statement_journal = {
-                    'id_tecno': idt,
-                    'name': nombre,
-                    'journal': diario,
-                    'account': cuenta,
-                    'payment_means_code': '1',
+                    'id_tecno': id_tecno,
+                    'name': fp.FormaPago,
+                    'journal': paymode.journal.id,
+                    'account': paymode.account.id,
+                    'payment_means_code': paymode.payment_means_code,
                     'kind': 'other',
                 }
                 to_create.append(statement_journal)
-        Journal.create(to_create)
+            else:
+                msg = f"YA EXISTE EL LIBRO DIARIO POS {id_tecno}"
+                logs.append(msg)
+        StatementJournal.create(to_create)
 
-    #Crea o actualiza un registro de la tabla actualización en caso de ser necesario
-    @classmethod
-    def create_or_update(cls):
-        Actualizacion = Pool().get('conector.actualizacion')
-        actualizacion = Actualizacion.search([('name', '=','CONFIG_POS')])
-        if actualizacion:
-            #Se busca un registro con la actualización
-            actualizacion, = Actualizacion.search([('name', '=','CONFIG_POS')])
-            actualizacion.name = 'CONFIG_POS'
-            actualizacion.save()
-        else:
-            #Se crea un registro con la actualización
-            actualizar = Actualizacion()
-            actualizar.name = 'CONFIG_POS'
-            actualizar.save()
-
-
-    @classmethod
-    def get_data_table(cls, table):
-        Config = Pool().get('conector.configuration')
-        consult = "SELECT * FROM dbo."+table+""
-        result = Config.get_data(consult)
-        return result
 
 #Heredar para agregar el campo id_tecno
 class Journal(metaclass=PoolMeta):

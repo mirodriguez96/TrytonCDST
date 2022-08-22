@@ -133,7 +133,7 @@ class Actualizacion(ModelSQL, ModelView):
 
     def getter_exceptions(self, name):
         Config = Pool().get('conector.configuration')
-        conexion = Config(1)
+        conexion = Config.search([], order=[('id', 'DESC')], limit=1)
         fecha = conexion.date.strftime('%Y-%m-%d %H:%M:%S')
         consult = "SET DATEFORMAT ymd SELECT COUNT(*) FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime)"
         if self.name == 'VENTAS':
@@ -153,7 +153,7 @@ class Actualizacion(ModelSQL, ModelView):
 
     def getter_cancelled(self, name):
         Config = Pool().get('conector.configuration')
-        conexion = Config(1)
+        conexion = Config.search([], order=[('id', 'DESC')], limit=1)
         fecha = conexion.date.strftime('%Y-%m-%d %H:%M:%S')
         consult = "SET DATEFORMAT ymd SELECT COUNT(*) FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime)"
         if self.name == 'VENTAS':

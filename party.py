@@ -1,8 +1,6 @@
 import datetime
-from trytond.model import ModelSQL, ModelView, fields
+from trytond.model import fields
 from trytond.pool import Pool, PoolMeta
-from trytond.exceptions import UserError
-import logging
 
 
 class Cron(metaclass=PoolMeta):
@@ -13,7 +11,10 @@ class Cron(metaclass=PoolMeta):
     def __setup__(cls):
         super().__setup__()
         cls.method.selection.append(
-            ('party.party|update_parties', "Importar terceros"),
+            ('party.party|import_parties_tecno', "Importar terceros"),
+            )
+        cls.method.selection.append(
+            ('party.party|import_addresses_tecno', "Importar direcciones de terceros"),
             )
 
 
@@ -24,50 +25,48 @@ class Party(metaclass=PoolMeta):
 
     # Función encargada de crear o actualizar los terceros de db TecnoCarnes teniendo en cuenta la ultima fecha de actualizacion y si existe.
     @classmethod
-    def update_parties(cls):
-        logging.warning("RUN TERCEROS")
+    def import_parties_tecno(cls):
+        print("RUN TERCEROS")
         pool = Pool()
         Config = pool.get('conector.configuration')
         Actualizacion = pool.get('conector.actualizacion')
         Party = pool.get('party.party')
-        Address = pool.get('party.address')
-        Lang = pool.get('ir.lang')
-        Country = pool.get('party.country_code')
-        Department = pool.get('party.department_code')
-        City = pool.get('party.city_code')
+        Mcontact = Pool().get('party.contact_mechanism')
         actualizacion = Actualizacion.create_or_update("TERCEROS")
         # Se trae los terceros que cumplan con la fecha establecida
         fecha_actualizacion = Actualizacion.get_fecha_actualizacion(actualizacion)
         terceros_db = Config.get_tblterceros(fecha_actualizacion)
-        logs = []
+        values = {
+            'to_create': [],
+            'logs': [],
+        }
         # Comenzamos a recorrer los terceros traidos por la consulta
-        for ter in terceros_db:
+        for tercero in terceros_db:
             try:
-                nit_cedula = ter.nit_cedula
-                tipo_identificacion = cls.id_type(ter.tipo_identificacion)
-                nombre = cls.delete_caracter(ter.nombre.strip()).upper()
-                PrimerNombre = cls.delete_caracter(ter.PrimerNombre.strip()).upper()
-                SegundoNombre = cls.delete_caracter(ter.SegundoNombre.strip()).upper()
-                PrimerApellido = cls.delete_caracter(ter.PrimerApellido.strip()).upper()
-                SegundoApellido = cls.delete_caracter(ter.SegundoApellido.strip()).upper()
-                mail = ter.mail.strip()
-                telefono = ter.telefono.strip()
-                TipoPersona = cls.person_type(ter.TipoPersona.strip())
-                ciiu = ter.IdActividadEconomica
-                TipoContribuyente = cls.tax_regime(ter.IdTipoContribuyente)
-                es, = Lang.search([('code', '=', 'es_419')])
+                nit_cedula = tercero.nit_cedula
+                tipo_identificacion = cls.id_type(tercero.tipo_identificacion)
+                nombre = cls.delete_caracter(tercero.nombre.strip()).upper()
+                PrimerNombre = cls.delete_caracter(tercero.PrimerNombre.strip()).upper()
+                SegundoNombre = cls.delete_caracter(tercero.SegundoNombre.strip()).upper()
+                PrimerApellido = cls.delete_caracter(tercero.PrimerApellido.strip()).upper()
+                SegundoApellido = cls.delete_caracter(tercero.SegundoApellido.strip()).upper()
+                mail = tercero.mail.strip()
+                telefono = tercero.telefono.strip()
+                TipoPersona = cls.person_type(tercero.TipoPersona.strip())
+                ciiu = tercero.IdActividadEconomica
+                TipoContribuyente = cls.tax_regime(tercero.IdTipoContribuyente)
                 exists = Party.search([('id_number', '=', nit_cedula)])
-                #Ahora verificamos si el tercero existe en la bd de tryton
+                #Ahora verificamos si el tercero existe en tryton
                 if exists:
                     exists, = exists
-                    ultimo_cambiop = ter.Ultimo_Cambio_Registro
+                    ultimo_cambiop = tercero.Ultimo_Cambio_Registro
                     create_date = None
                     write_date = None
                     #LA HORA DEL SISTEMA DE TRYTON TIENE UNA DIFERENCIA HORARIA DE 5 HORAS CON LA DE TECNO
                     if exists.write_date:
-                        write_date = (exists.write_date - datetime.timedelta(hours=5, minutes=5))
+                        write_date = (exists.write_date - datetime.timedelta(hours=5))
                     elif exists.create_date:
-                        create_date = (exists.create_date - datetime.timedelta(hours=5, minutes=5))
+                        create_date = (exists.create_date - datetime.timedelta(hours=5))
                     #Ahora vamos a verificar si el cambio más reciente fue hecho en la bd sqlserver para actualizarlo
                     if (ultimo_cambiop and write_date and ultimo_cambiop > write_date) or (ultimo_cambiop and not write_date and ultimo_cambiop > create_date):
                         exists.type_document = tipo_identificacion
@@ -83,50 +82,138 @@ class Party(metaclass=PoolMeta):
                         if ciiu and ciiu != 0:
                             exists.ciiu_code = ciiu
                         exists.regime_tax = TipoContribuyente
-                        exists.lang = es
+                        # contact_list = list(exists.contact_mechanism)
+                        # if not contact_list:
+                        #     if len(mail) > 4:
+                        #         print('contact_mail_new', exists)
+                        #         contact_mail = Mcontact()
+                        #         contact_mail.type = 'email'
+                        #         contact_mail.value = mail
+                        #         contact_list.append(contact_mail)
+                        #     if len(telefono) > 4:
+                        #         print('contact_tel_new', exists)
+                        #         contact_tel = Mcontact()
+                        #         contact_tel.type = 'phone'
+                        #         contact_tel.value = telefono
+                        #         contact_list.append(contact_tel)
+                        # else:
+                        #     for contact in contact_list:
+                        #         print('contact_mail_', exists)
+                        #         if contact.type == 'email' and len(mail) > 4:
+                        #             contact.value = mail
+                        #         elif contact.type == 'phone' and len(telefono) > 4:
+                        #             print('contact_tel_', exists)
+                        #             contact.value = telefono
+                        # exists.contact_mechanism = contact_list
+                        contact_mail = Mcontact.search([('id_tecno', '=', nit_cedula+'-mail')])
+                        if contact_mail:
+                            contact_mail, = contact_mail
+                            contact_mail.value = mail
+                            contact_mail.save()
+                        elif len(mail) > 4:
+                            contact_mail = Mcontact()
+                            contact_mail.type = 'email'
+                            contact_mail.value = mail
+                            contact_mail.party = exists
+                            contact_mail.save()
+                        contact_tel = Mcontact.search([('id_tecno', '=', nit_cedula+'-tel')])
+                        if contact_tel:
+                            contact_tel, = contact_tel
+                            contact_tel.value = telefono
+                            contact_tel.save()
+                        elif len(telefono) > 4:
+                            contact_tel = Mcontact()
+                            contact_tel.type = 'phone'
+                            contact_tel.value = telefono
+                            contact_tel.party = exists
+                            contact_tel.save()
                         exists.save()
-                    #Actualización de los 2 metodos de contactos principales
-                    cls.update_contact(exists, ultimo_cambiop, mail, 'email')
-                    cls.update_contact(exists, ultimo_cambiop, telefono, 'phone')
                 else:
-                    #Creando tercero junto con sus direcciones y metodos de contactos
-                    tercero = Party()
-                    tercero.type_document = tipo_identificacion
-                    tercero.id_number = nit_cedula
-                    tercero.name = nombre
-                    tercero.first_name = PrimerNombre
-                    tercero.second_name = SegundoNombre
-                    tercero.first_family_name = PrimerApellido
-                    tercero.second_family_name = SegundoApellido
-                    #Equivalencia tipo de persona y asignación True en declarante
-                    tercero.type_person = TipoPersona
-                    if tercero.type_person == 'persona_juridica':
-                        tercero.declarante = True
-                    #Verificación e inserción codigo ciiu
+                    # Creando tercero junto con sus direcciones y metodos de contactos
+                    party = {
+                        'type_document': tipo_identificacion,
+                        'id_number': nit_cedula,
+                        'name': nombre,
+                        'first_name': PrimerNombre,
+                        'second_name': SegundoNombre,
+                        'first_family_name': PrimerApellido,
+                        'second_family_name': SegundoApellido,
+                        'regime_tax': TipoContribuyente,
+                        'type_person': TipoPersona,
+                    }
+                    # Equivalencia tipo de persona y asignación True en declarante
+                    if TipoPersona== 'persona_juridica':
+                        party['declarante'] = True
+                    # Verificación e inserción codigo ciiu
                     if ciiu and ciiu != 0:
-                        tercero.ciiu_code = ciiu
-                    #Equivalencia regimen de impuestos
-                    tercero.regime_tax = TipoContribuyente
-                    tercero.lang = es
-                    tercero.save()
+                        party['ciiu_code'] = ciiu
                     #Creamos las direcciones pertenecientes al tercero
                     direcciones_tecno = Config.get_tercerosdir_nit(nit_cedula)
+                    addresses = []
                     for direccion in direcciones_tecno:
-                        cls.create_address_new(tercero, direccion)
-                    #Metodos de contactos
-                    cls.create_contact_type(tercero, mail, 'email')
-                    cls.create_contact_type(tercero, telefono, 'phone')
+                        address = cls.create_address_new(party, direccion)
+                        addresses.append(address)
+                    party['addresses'] = [('create', addresses)]
+                    # Metodos de contactos
+                    contacts = []
+                    if len(telefono) > 4:
+                        phone = {
+                            'id_tecno': nit_cedula+'-tel',
+                            'type': 'phone',
+                            'value': telefono
+                        }
+                        contacts.append(phone)
+                    if len(mail) > 4:
+                        email = {
+                            'id_tecno': nit_cedula+'-mail',
+                            'type': 'email',
+                            'value': mail
+                        }
+                        contacts.append(email)
+                    if contacts:
+                        party['contact_mechanisms'] = [('create', contacts)]
+                    values['to_create'].append(party)
             except Exception as e:
                 msg = f"EXCEPCION TERCERO {nit_cedula} : {str(e)}"
-                logs.append(msg)
+                values['logs'].append(msg)
+        Party.create(values['to_create'])
+        #Se almacena los registros y finaliza el importe
+        Actualizacion.add_logs(actualizacion, values['logs'])
+        print("FINISH TERCEROS")
 
+
+    @classmethod
+    def import_addresses_tecno(cls):
+        print("RUN DIRECCION TERCEROS")
+        pool = Pool()
+        Config = pool.get('conector.configuration')
+        Actualizacion = pool.get('conector.actualizacion')
+        Party = pool.get('party.party')
+        Address = pool.get('party.address')
+        Country = pool.get('party.country_code')
+        Department = pool.get('party.department_code')
+        City = pool.get('party.city_code')
+        actualizacion = Actualizacion.create_or_update("DIRECCION TERCEROS")
+        # Se trae los terceros que cumplan con la fecha establecida
+        fecha_actualizacion = Actualizacion.get_fecha_actualizacion(actualizacion)
         # Actualización de direcciones
         direcciones_db = Config.get_tercerosdir(fecha_actualizacion)
+        if not direcciones_db:
+            actualizacion.save()
+            print("FINISH DIRECCION TERCEROS")
+            return
+        values = {
+            'to_create': [],
+            'logs': [],
+        }
+        country_code, = Country.search([('code', '=', '169')])
         for dir in direcciones_db:
             try:
                 nit = dir.nit
-                tercero = Party.search([('id_number', '=', nit)])
-                if not tercero:
+                party = Party.search([('id_number', '=', nit)])
+                if not party:
+                    msg = f"NO SE ENCONTRO EL TERCERO {nit}"
+                    values['logs'].append(msg)
                     continue
                 id_tecno = nit+'-'+str(dir.codigo_direccion)
                 address = Address.search([('id_tecno', '=', id_tecno)])
@@ -136,12 +223,11 @@ class Party(metaclass=PoolMeta):
                     create_date = None
                     write_date = None
                     if address.write_date:
-                        write_date = (address.write_date - datetime.timedelta(hours=5, minutes=5))
+                        write_date = (address.write_date - datetime.timedelta(hours=5))
                     elif address.create_date:
-                        create_date = (address.create_date - datetime.timedelta(hours=5, minutes=5))
+                        create_date = (address.create_date - datetime.timedelta(hours=5))
                     if (ultimo_cambiod and write_date and ultimo_cambiod > write_date) or (ultimo_cambiod and not write_date and ultimo_cambiod > create_date):
                         region = list(dir.CodigoSucursal.strip())
-                        country_code, = Country.search([('code', '=', '169')])
                         if len(region) > 4:
                             department_code = Department.search([('code', '=', region[0]+region[1])])
                             if department_code:
@@ -156,98 +242,61 @@ class Party(metaclass=PoolMeta):
                         barrio = dir.Barrio.strip()
                         if barrio and len(barrio) > 2:
                             address.name = barrio
-                        address.party_name = tercero[0].name
+                        address.party_name = party[0].name
                         street = dir.direccion.strip()
                         if len(street) > 2:
                             address.street = street
                         address.save()
                 else:
-                    cls.create_address_new(tercero[0], dir)
+                    tercero = {
+                        'name': party[0].name,
+                    }
+                    addressn = cls.create_address_new(tercero, dir)
+                    addressn['party'] = party[0].id
+                    values['to_create'].append(addressn)
             except Exception as e:
-                msg = f"EXCEPCION DIRECCION {nit} : {str(e)}"
-                logs.append(msg)
-        #Se almacena los registros y finaliza el importe
-        Actualizacion.add_logs(actualizacion, logs)
-        logging.warning("FINISH TERCEROS")
+                msg = f"EXCEPCION {nit} : {str(e)}"
+                values['logs'].append(msg)
+        Address.create(values['to_create'])
+        # Se almacena los registros y finaliza el importe
+        Actualizacion.add_logs(actualizacion, values['logs'])
+        print("FINISH DIRECCION TERCEROS")
 
 
     @classmethod
     def create_address_new(cls, party, data):
-        Address = Pool().get('party.address')
         Country = Pool().get('party.country_code')
         Department = Pool().get('party.department_code')
         City = Pool().get('party.city_code')
         if data.codigo_direccion == 1:
             comercial_name = cls.delete_caracter(data.NombreSucursal.strip()).upper()
             if len(comercial_name) > 2:
-                party.commercial_name = comercial_name
-        direccion = Address()
-        direccion.id_tecno = data.nit+'-'+str(data.codigo_direccion)
-        region = list(data.CodigoSucursal.strip())
+                party['commercial_name'] = comercial_name
         country_code, = Country.search([('code', '=', '169')])
+        adress = {
+            'id_tecno': data.nit+'-'+str(data.codigo_direccion),
+            'country_code': country_code,
+            'party_name': party['name'],
+        }
+        region = list(data.CodigoSucursal.strip())
         if len(region) > 4:
             department_code = Department.search([('code', '=', region[0]+region[1])])
             if department_code:
-                direccion.department_code = department_code[0]
+                adress['department_code'] = department_code[0].id
                 city_code = City.search([
                     ('code', '=', region[2]+region[3]+region[4]),
                     ('department', '=', department_code[0])
                     ])
                 if city_code:
-                    direccion.city_code = city_code[0]
-        direccion.country_code = country_code
+                    adress['city_code'] = city_code[0].id
         barrio = data.Barrio.strip()
         if barrio and len(barrio) > 2:
-            direccion.name = barrio
-        direccion.party = party
-        direccion.party_name = party.name
+            adress['name'] = barrio
         street = data.direccion.strip()
         if len(street) > 2:
-            direccion.street = street
-        direccion.save()
+            adress['street'] = street
+        return adress
 
-    #Función encargada de verificar, actualizar e insertar los metodos de contacto pertenecientes a un tercero dado
-    @classmethod
-    def update_contact(cls, party, ultimo_cambio, value, type):
-        if len(value) > 4:
-            Mcontact = Pool().get('party.contact_mechanism')
-            #Buscamos y validamos el contacto
-            id_t = party.id_number+'-tel'
-            if type == 'email':
-                id_t = party.id_number+'-mail'
-            contact = Mcontact.search([('id_tecno', '=', id_t)])
-            if contact:
-                contact = contact[0]
-                create_date = None
-                write_date = None
-                if contact.write_date:
-                    write_date = (contact.write_date - datetime.timedelta(hours=5, minutes=5))
-                else:
-                    create_date = (contact.create_date - datetime.timedelta(hours=5, minutes=5))
-                if (ultimo_cambio and write_date and ultimo_cambio > write_date) or (ultimo_cambio and not write_date and ultimo_cambio > create_date):
-                    contact.value = value
-                    contact.save()
-            else:
-                cls.create_contact_type(party, value, type)
-
-    @classmethod
-    def create_contact_type(cls, party, value, type):
-        Mcontact = Pool().get('party.contact_mechanism')
-        Lang = Pool().get('ir.lang')
-        es, = Lang.search([('code', '=', 'es_419')])
-        if len(value) > 4:
-            contacto = Mcontact()
-            if type == 'phone':
-                contacto.id_tecno = party.id_number+'-tel'
-                contacto.name = 'telefono'
-            elif type == 'email':
-                contacto.id_tecno = party.id_number+'-mail'
-                contacto.name = 'correo'
-            contacto.type = type
-            contacto.value = value
-            contacto.language = es
-            contacto.party = party
-            contacto.save()
 
     #Función encargada de eliminar caracteres especiales y convertir string en alfanumerico
     @classmethod

@@ -18,8 +18,8 @@ class FixBugsConector(Wizard):
         warning_name = 'warning_fix_bugs_conector'
         if Warning.check(warning_name):
             raise UserWarning(warning_name, "No continue si desconoce el funcionamiento interno del asistente.")
-        Invoice = pool.get('account.invoice')
-        MoveLine = pool.get('account.move.line')
+        # Invoice = pool.get('account.invoice')
+        # MoveLine = pool.get('account.move.line')
 
         # Shipment = pool.get('stock.shipment.out')
         # shipments = Shipment.search([('state', '=', 'waiting')])
@@ -89,33 +89,33 @@ class FixBugsConector(Wizard):
         #     Transaction().connection.commit()
         # Actualizacion.add_logs(actualizacion, logs)
 
-        cursor = Transaction().connection.cursor()
-        MoveLine = pool.get('account.move.line')
-        Line = pool.get('account.note.line')
-        domain = [
-            ('move_line', '=', None),
-            ('note.state', '=', 'posted'),
-            ('account', '=', 1072),
-        ]
-        lines = Line.search(domain)
-        print(len(lines))
-        for line in lines:
-            domain_movel = [
-                ('party', '=', line.party),
-                ('description', '=', line.description),
-                ('account', '=', line.account),
-                ('debit', '=', line.credit),
-                ('credit', '=', line.debit),
-                ('move.state', '=', 'posted'),
-                ('state', '=', 'valid'),
-            ]
-            try:
-                move_line, = MoveLine.search(domain_movel)
-                print(line.note)
-                cursor.execute("UPDATE account_note_line SET move_line = "+str(move_line.id)+" WHERE id = "+str(line.id)+"")
-            except Exception as e:
-                print(f"EXCEPTION {e}")
-                continue
+        # cursor = Transaction().connection.cursor()
+        # MoveLine = pool.get('account.move.line')
+        # Line = pool.get('account.note.line')
+        # domain = [
+        #     ('move_line', '=', None),
+        #     ('note.state', '=', 'posted'),
+        #     ('account', '=', 1072),
+        # ]
+        # lines = Line.search(domain)
+        # print(len(lines))
+        # for line in lines:
+        #     domain_movel = [
+        #         ('party', '=', line.party),
+        #         ('description', '=', line.description),
+        #         ('account', '=', line.account),
+        #         ('debit', '=', line.credit),
+        #         ('credit', '=', line.debit),
+        #         ('move.state', '=', 'posted'),
+        #         ('state', '=', 'valid'),
+        #     ]
+        #     try:
+        #         move_line, = MoveLine.search(domain_movel)
+        #         print(line.note)
+        #         cursor.execute("UPDATE account_note_line SET move_line = "+str(move_line.id)+" WHERE id = "+str(line.id)+"")
+        #     except Exception as e:
+        #         print(f"EXCEPTION {e}")
+        #         continue
 
         return 'end'
 

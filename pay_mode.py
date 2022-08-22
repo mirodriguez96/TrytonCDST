@@ -54,10 +54,10 @@ class VoucherPayMode(ModelSQL, ModelView):
         formas_pago = Config.get_data_table('TblFormaPago')
         to_save = []
         for fp in formas_pago:
-            idt = str(fp.IdFormaPago)
+            id_tecno = str(fp.IdFormaPago)
             nombre = fp.FormaPago.strip()
             cuenta = fp.Cuenta
-            paym = PayMode.search([('id_tecno', '=', idt)])
+            paym = PayMode.search([('id_tecno', '=', id_tecno)])
             if paym:
                 paym, = paym
                 paym.name = nombre
@@ -67,7 +67,7 @@ class VoucherPayMode(ModelSQL, ModelView):
                 #Diario por defecto del plan contable
                 journal, = Journal.search([('code', '=', 'CASH')])
                 paymode = PayMode()
-                paymode.id_tecno = idt
+                paymode.id_tecno = id_tecno
                 paymode.name = nombre
                 paymode.payment_type = 'cash'
                 paymode.kind = 'both'

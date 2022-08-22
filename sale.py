@@ -487,7 +487,7 @@ class Sale(metaclass=PoolMeta):
                     if total_paid == sale.total_amount:
                         Sale.do_reconcile([sale])
                     else:
-                        msg = f"sale_pos.msg_total_paid_>_total_amount"
+                        msg = f"{sale.id_tecno} sale_pos.msg_total_paid_>_total_amount"
                         logs.append(msg)
                         to_exception.append(sale.id_tecno)
                     continue
