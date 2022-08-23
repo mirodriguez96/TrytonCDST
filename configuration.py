@@ -125,8 +125,9 @@ class Configuration(ModelSQL, ModelView):
 
     @classmethod
     def get_documentos_tecno(cls, sw):
-        Config = Pool().get('conector.configuration')(1)
-        fecha = Config.date.strftime('%Y-%m-%d %H:%M:%S')
+        Config = Pool().get('conector.configuration')
+        config, = Config.search([], order=[('id', 'DESC')], limit=1)
+        fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
         # query = "SELECT TOP (10) * FROM dbo.Documentos WHERE (sw = 1 OR sw = 2) AND tipo = 145 AND fecha_hora >= '2022-08-10'" #TEST
         query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND sw = "+sw+" AND exportado != 'T' AND exportado != 'E' AND exportado != 'X' ORDER BY fecha_hora ASC"
         data = cls.get_data(query)
@@ -134,8 +135,9 @@ class Configuration(ModelSQL, ModelView):
 
     @classmethod
     def get_documentos_tipo(cls, sw, tipo):
-        Config = Pool().get('conector.configuration')(1)
-        fecha = Config.date.strftime('%Y-%m-%d %H:%M:%S')
+        Config = Pool().get('conector.configuration')
+        config, = Config.search([], order=[('id', 'DESC')], limit=1)
+        fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
         #query = "SELECT TOP(10) * FROM dbo.Documentos WHERE sw=12 AND tipo = 110 AND fecha_hora >= '2022-01-06' AND fecha_hora < '2022-01-07'" #TEST
         query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND sw = "+sw+" AND tipo = "+tipo+" AND exportado != 'T' AND exportado != 'E' AND exportado != 'X' ORDER BY fecha_hora ASC"
         data = cls.get_data(query)

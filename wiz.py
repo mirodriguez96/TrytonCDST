@@ -18,6 +18,7 @@ class FixBugsConector(Wizard):
         warning_name = 'warning_fix_bugs_conector'
         if Warning.check(warning_name):
             raise UserWarning(warning_name, "No continue si desconoce el funcionamiento interno del asistente.")
+        
         # Move = pool.get('account.move')
         # Reconciliation = pool.get('account.move.reconciliation')
 
