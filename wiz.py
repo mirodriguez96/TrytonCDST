@@ -18,24 +18,24 @@ class FixBugsConector(Wizard):
         warning_name = 'warning_fix_bugs_conector'
         if Warning.check(warning_name):
             raise UserWarning(warning_name, "No continue si desconoce el funcionamiento interno del asistente.")
-        Move = pool.get('account.move')
+        # Move = pool.get('account.move')
         # Reconciliation = pool.get('account.move.reconciliation')
 
-        ranges = [(20314, 20547),(20575, 21107)]
+        # ranges = [(20314, 20547),(20575, 21107)]
         # records_ids = []
-        moves = []
-        for i, f in ranges:
-            for n in range(i, f):
-                # print(n)
-                move = Move.search([('number', '=', n)])
-                # records_ids.append(move[1].id)
-                # reconciliations = [l.reconciliation for l in move[1].lines if l.reconciliation]
-                # if reconciliations:
-                #     Reconciliation.delete(reconciliations)
-                moves.append(move[1])
+        # moves = []
+        # for i, f in ranges:
+        #     for n in range(i, f):
+        #         print(n)
+        #         move = Move.search([('number', '=', n)])
+        #         records_ids.append(move[1].id)
+        #         reconciliations = [l.reconciliation for l in move[1].lines if l.reconciliation]
+        #         if reconciliations:
+        #             Reconciliation.delete(reconciliations)
+        #         moves.append(move[1])
         # Move.draft(records_ids)
-        print(moves)
-        Move.delete(moves)
+        # print(moves)
+        # Move.delete(moves)
 
         return 'end'
 
