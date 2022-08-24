@@ -57,6 +57,7 @@ def register():
         production.Cron,
         voucher.VoucherConfiguration,
         wiz.CreateAdjustmentNotesParameters,
+        wiz.AddCenterOperationLineP,
         #report.PortfolioStatusStart,
         report.PayrollExportStart,
         module='conector', type_='model')
@@ -78,6 +79,7 @@ def register():
         wiz.FixBugsConector,
         wiz.UnreconcilieMulti,
         wiz.CreateAdjustmentNotes,
+        wiz.AddCenterOperationLine,
         #report.PortfolioStatus,
         report.PayrollExport,
         module='conector', type_='wizard')

@@ -148,6 +148,22 @@
             <field name="model">account.note,-1</field>
             <field name="action" ref="act_create_adjustment_note"/>
         </record>
+        <!--Asistente encargado de añadir centro de operaciones a las líneas de la nota-->
+        <record model="ir.action.wizard" id="act_add_operation_center">
+            <field name="name">Add Operation Center</field>
+            <field name="wiz_name">account.note.add_operation_center</field>
+            <field name="model">account.note</field>
+        </record>
+        <record model="ir.ui.view" id="view_add_operation_center_form">
+            <field name="model">account.note.add_operation_center.parameters</field>
+            <field name="type">form</field>
+            <field name="name">add_operation_center_form</field>
+        </record>
+        <record model="ir.action.keyword" id="act_add_operation_center_keyword">
+            <field name="keyword">form_action</field>
+            <field name="model">account.note,-1</field>
+            <field name="action" ref="act_add_operation_center"/>
+        </record>
     </data>
 
 </tryton>

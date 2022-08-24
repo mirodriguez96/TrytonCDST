@@ -28,73 +28,73 @@ class FixBugsConector(Wizard):
         #for d in datos:
         #    print(d)
         
-        Invoice = pool.get('account.invoice')
-        Note = pool.get('account.note')
-        Line = pool.get('account.note.line')
-        Journal = pool.get('account.journal')
-        Account = pool.get('account.account')
-        OperationC = pool.get('company.operation_center')
+        # Invoice = pool.get('account.invoice')
+        # Note = pool.get('account.note')
+        # Line = pool.get('account.note.line')
+        # Journal = pool.get('account.journal')
+        # Account = pool.get('account.account')
+        # OperationCenter = pool.get('company.operation_center')
 
-        account, = Account.search([('code', '=', '110505')])
-        l_date = [
-            (datetime.date(2021, 12, 31), datetime.date(2022, 1, 31)),
-            (datetime.date(2022, 1, 31), datetime.date(2022, 2, 28)),
-            (datetime.date(2022, 2, 28), datetime.date(2022, 3, 31)),
-            (datetime.date(2022, 3, 31), datetime.date(2022, 4, 29)),
-            (datetime.date(2022, 4, 29), datetime.date(2022, 5, 31)),
-            (datetime.date(2022, 5, 31), datetime.date(2022, 6, 30)),
-            (datetime.date(2022, 6, 30), datetime.date(2022, 7, 31)),
-            (datetime.date(2022, 7, 31), datetime.date(2022, 8, 11)),
-        ]
-        operation_center = OperationC(1)
-        _notes = []
-        for inicio, fin in l_date:
-            ammount = Decimal('0.0')
-            _domain = [
-                'AND',
-                ('state', '=', 'posted'),
-                ('invoice_date', '>', inicio),
-                ('invoice_date', '<=', fin),
-                [
-                   'OR',
-                   ('number', 'like', '146-%'),
-                   ('number', 'like', '155-%'),
-                ]
-            ]
-            invoices = Invoice.search(_domain)
-            #print(invoices)
-            #return 'end'
-            note = Note()
-            note.date = fin
-            note.journal = Journal(7)
-            note.description = f"DEVOLUCIONES POS {fin}"
-            _lines = []
-            for inv in invoices:
-                for lp in inv.lines_to_pay:
-                    print(inv)
-                    ammount += lp.credit
-                    _line = Line()
-                    _line.debit = lp.credit
-                    _line.credit = lp.debit
-                    _line.party = lp.party
-                    _line.account = lp.account
-                    _line.description = f"{inv.number} {lp.description}"
-                    _line.move_line = lp
-                    _line.operation_center = operation_center
-                    _lines.append(_line)
-            # linea que paga el total de las devoluciones
-            if ammount > 0:
-                _line = Line()
-                _line.debit = 0
-                _line.credit = ammount
-                _line.account = account
-                _line.description = f"PAGO DEVOLUCIONES POS {fin}"
-                _line.operation_center = operation_center
-                _lines.append(_line)
-            note.lines = _lines
-            _notes.append(note)
+        # account, = Account.search([('code', '=', '110505')])
+        # l_date = [
+        #     (datetime.date(2021, 12, 31), datetime.date(2022, 1, 31)),
+        #     (datetime.date(2022, 1, 31), datetime.date(2022, 2, 28)),
+        #     (datetime.date(2022, 2, 28), datetime.date(2022, 3, 31)),
+        #     (datetime.date(2022, 3, 31), datetime.date(2022, 4, 29)),
+        #     (datetime.date(2022, 4, 29), datetime.date(2022, 5, 31)),
+        #     (datetime.date(2022, 5, 31), datetime.date(2022, 6, 30)),
+        #     (datetime.date(2022, 6, 30), datetime.date(2022, 7, 31)),
+        #     (datetime.date(2022, 7, 31), datetime.date(2022, 8, 11)),
+        # ]
+        # operation_center = OperationCenter(1)
+        # _notes = []
+        # for inicio, fin in l_date:
+        #     ammount = Decimal('0.0')
+        #     _domain = [
+        #         'AND',
+        #         ('state', '=', 'posted'),
+        #         ('invoice_date', '>', inicio),
+        #         ('invoice_date', '<=', fin),
+        #         [
+        #            'OR',
+        #            ('number', 'like', '146-%'),
+        #            ('number', 'like', '155-%'),
+        #         ]
+        #     ]
+        #     invoices = Invoice.search(_domain)
+        #     #print(invoices)
+        #     #return 'end'
+        #     note = Note()
+        #     note.date = fin
+        #     note.journal = Journal(7)
+        #     note.description = f"DEVOLUCIONES POS {fin}"
+        #     _lines = []
+        #     for inv in invoices:
+        #         for lp in inv.lines_to_pay:
+        #             print(inv)
+        #             ammount += lp.credit
+        #             _line = Line()
+        #             _line.debit = lp.credit
+        #             _line.credit = lp.debit
+        #             _line.party = lp.party
+        #             _line.account = lp.account
+        #             _line.description = f"{inv.number} {lp.description}"
+        #             _line.move_line = lp
+        #             _line.operation_center = operation_center
+        #             _lines.append(_line)
+        #     # linea que paga el total de las devoluciones
+        #     if ammount > 0:
+        #         _line = Line()
+        #         _line.debit = 0
+        #         _line.credit = ammount
+        #         _line.account = account
+        #         _line.description = f"PAGO DEVOLUCIONES POS {fin}"
+        #         _line.operation_center = operation_center
+        #         _lines.append(_line)
+        #     note.lines = _lines
+        #     _notes.append(note)
         
-        Note.save(_notes)
+        # Note.save(_notes)
 
         return 'end'
 
@@ -381,4 +381,40 @@ class CreateAdjustmentNotes(Wizard):
             else:
                 raise UserError("msg_analytic_account_missing")
         Note.create_adjustment_note(data)
+        return 'end'
+
+
+class AddCenterOperationLineP(ModelView):
+    'Add Operation Center Parameters'
+    __name__ = 'account.note.add_operation_center.parameters'
+    code = fields.Char('Operation center code')
+
+
+class AddCenterOperationLine(Wizard):
+    'Add Operation Center'
+    __name__ = 'account.note.add_operation_center'
+    start = StateView('account.note.add_operation_center.parameters',
+            'conector.view_add_operation_center_form', [
+                Button('Cancel', 'end', 'tryton-cancel'),
+                Button('Add', 'operation_center', 'tryton-ok', default=True),
+            ])
+    operation_center = StateTransition()
+
+    def transition_operation_center(self):
+        pool = Pool()
+        Note = pool.get('account.note')
+        Line = pool.get('account.note.line')
+        OperationCenter = pool.get('company.operation_center')
+        operation_center = OperationCenter.search([('code', '=', self.start.code)])
+        if not operation_center:
+            raise UserError("msg_operation_center_not_found")
+        operation_center, = operation_center
+        ids_ = Transaction().context['active_ids']
+        for note in Note.browse(ids_):
+            _lines = []
+            for line in note.lines:
+                if not line.operation_center:
+                    line.operation_center = operation_center
+                _lines.append(line)
+            Line.save(_lines)
         return 'end'
