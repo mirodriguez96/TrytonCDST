@@ -139,7 +139,7 @@ class Product(metaclass=PoolMeta):
         Config = Pool().get('conector.configuration')
         tipoproducto = Config.get_tbltipoproducto(str(tipo))
         #Se verifica que el tipo de producto exista y el valor SI es vendible o NO
-        if tipoproducto and tipoproducto.ProductoParaVender == 'S':
+        if tipoproducto and tipoproducto[0].ProductoParaVender == 'S':
             return True
         else:
             return False

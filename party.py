@@ -43,7 +43,7 @@ class Party(metaclass=PoolMeta):
         # Comenzamos a recorrer los terceros traidos por la consulta
         for tercero in terceros_db:
             try:
-                nit_cedula = tercero.nit_cedula
+                nit_cedula = tercero.nit_cedula.replace('\n',"")
                 tipo_identificacion = cls.id_type(tercero.tipo_identificacion)
                 nombre = cls.delete_caracter(tercero.nombre.strip()).upper()
                 PrimerNombre = cls.delete_caracter(tercero.PrimerNombre.strip()).upper()
@@ -82,29 +82,6 @@ class Party(metaclass=PoolMeta):
                         if ciiu and ciiu != 0:
                             exists.ciiu_code = ciiu
                         exists.regime_tax = TipoContribuyente
-                        # contact_list = list(exists.contact_mechanism)
-                        # if not contact_list:
-                        #     if len(mail) > 4:
-                        #         print('contact_mail_new', exists)
-                        #         contact_mail = Mcontact()
-                        #         contact_mail.type = 'email'
-                        #         contact_mail.value = mail
-                        #         contact_list.append(contact_mail)
-                        #     if len(telefono) > 4:
-                        #         print('contact_tel_new', exists)
-                        #         contact_tel = Mcontact()
-                        #         contact_tel.type = 'phone'
-                        #         contact_tel.value = telefono
-                        #         contact_list.append(contact_tel)
-                        # else:
-                        #     for contact in contact_list:
-                        #         print('contact_mail_', exists)
-                        #         if contact.type == 'email' and len(mail) > 4:
-                        #             contact.value = mail
-                        #         elif contact.type == 'phone' and len(telefono) > 4:
-                        #             print('contact_tel_', exists)
-                        #             contact.value = telefono
-                        # exists.contact_mechanism = contact_list
                         contact_mail = Mcontact.search([('id_tecno', '=', nit_cedula+'-mail')])
                         if contact_mail:
                             contact_mail, = contact_mail

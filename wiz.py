@@ -37,7 +37,7 @@ class FixBugsConector(Wizard):
         # Move.draft(records_ids)
         # print(moves)
         # Move.delete(moves)
-
+        
         return 'end'
 
 class VoucherMoveUnreconcile(Wizard):
