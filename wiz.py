@@ -1,9 +1,11 @@
+from decimal import Decimal
 from trytond.model import ModelView, fields
 from trytond.wizard import Wizard, StateTransition, StateView, Button
 from trytond.pool import Pool
 from trytond.transaction import Transaction
 from trytond.exceptions import UserError, UserWarning
 from sql import Table
+import datetime
 
 
 class FixBugsConector(Wizard):
@@ -18,26 +20,82 @@ class FixBugsConector(Wizard):
         warning_name = 'warning_fix_bugs_conector'
         if Warning.check(warning_name):
             raise UserWarning(warning_name, "No continue si desconoce el funcionamiento interno del asistente.")
-        
-        # Move = pool.get('account.move')
-        # Reconciliation = pool.get('account.move.reconciliation')
 
-        # ranges = [(20314, 20547),(20575, 21107)]
-        # records_ids = []
-        # moves = []
-        # for i, f in ranges:
-        #     for n in range(i, f):
-        #         print(n)
-        #         move = Move.search([('number', '=', n)])
-        #         records_ids.append(move[1].id)
-        #         reconciliations = [l.reconciliation for l in move[1].lines if l.reconciliation]
-        #         if reconciliations:
-        #             Reconciliation.delete(reconciliations)
-        #         moves.append(move[1])
-        # Move.draft(records_ids)
-        # print(moves)
-        # Move.delete(moves)
+        #Conexion = pool.get('conector.configuration')
+        #res = Conexion.set_data("UPDATE documentos SET exportado = 'X' WHERE Fecha_Hora_Factura >= '2022-01-01' AND Fecha_Hora_Factura <= '2022-07-31' AND sw = 12 ")
+        #print(res)
+        #datos = Conexion.get_data("SELECT sw, tipo, exportado, Fecha_Hora_Factura FROM documentos WHERE Fecha_Hora_Factura >= '2022-01-01' AND Fecha_Hora_Factura <= '2022-07-31' AND sw = 12")
+        #for d in datos:
+        #    print(d)
         
+        Invoice = pool.get('account.invoice')
+        Note = pool.get('account.note')
+        Line = pool.get('account.note.line')
+        Journal = pool.get('account.journal')
+        Account = pool.get('account.account')
+        OperationC = pool.get('company.operation_center')
+
+        account, = Account.search([('code', '=', '110505')])
+        l_date = [
+            (datetime.date(2021, 12, 31), datetime.date(2022, 1, 31)),
+            (datetime.date(2022, 1, 31), datetime.date(2022, 2, 28)),
+            (datetime.date(2022, 2, 28), datetime.date(2022, 3, 31)),
+            (datetime.date(2022, 3, 31), datetime.date(2022, 4, 29)),
+            (datetime.date(2022, 4, 29), datetime.date(2022, 5, 31)),
+            (datetime.date(2022, 5, 31), datetime.date(2022, 6, 30)),
+            (datetime.date(2022, 6, 30), datetime.date(2022, 7, 31)),
+            (datetime.date(2022, 7, 31), datetime.date(2022, 8, 11)),
+        ]
+        operation_center = OperationC(1)
+        _notes = []
+        for inicio, fin in l_date:
+            ammount = Decimal('0.0')
+            _domain = [
+                'AND',
+                ('state', '=', 'posted'),
+                ('invoice_date', '>', inicio),
+                ('invoice_date', '<=', fin),
+                [
+                   'OR',
+                   ('number', 'like', '146-%'),
+                   ('number', 'like', '155-%'),
+                ]
+            ]
+            invoices = Invoice.search(_domain)
+            #print(invoices)
+            #return 'end'
+            note = Note()
+            note.date = fin
+            note.journal = Journal(7)
+            note.description = f"DEVOLUCIONES POS {fin}"
+            _lines = []
+            for inv in invoices:
+                for lp in inv.lines_to_pay:
+                    print(inv)
+                    ammount += lp.credit
+                    _line = Line()
+                    _line.debit = lp.credit
+                    _line.credit = lp.debit
+                    _line.party = lp.party
+                    _line.account = lp.account
+                    _line.description = f"{inv.number} {lp.description}"
+                    _line.move_line = lp
+                    _line.operation_center = operation_center
+                    _lines.append(_line)
+            # linea que paga el total de las devoluciones
+            if ammount > 0:
+                _line = Line()
+                _line.debit = 0
+                _line.credit = ammount
+                _line.account = account
+                _line.description = f"PAGO DEVOLUCIONES POS {fin}"
+                _line.operation_center = operation_center
+                _lines.append(_line)
+            note.lines = _lines
+            _notes.append(note)
+        
+        Note.save(_notes)
+
         return 'end'
 
 class VoucherMoveUnreconcile(Wizard):
