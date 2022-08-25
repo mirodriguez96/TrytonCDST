@@ -4,7 +4,7 @@
     <data>
         <!--Asistente para reparar errores encontrados o generados en Tryton-->
         <record model="ir.action.wizard" id="act_fix_bugs_conector">
-            <field name="name">Fix Bugs Conector</field>
+            <field name="name">Fix bugs conector</field>
             <field name="wiz_name">conector.configuration.fix_bugs_conector</field>
         </record>
         <record model="ir.action.keyword" id="act_fix_bugs_conector_keyword">
@@ -14,7 +14,7 @@
         </record>
         <!--Asistente para eliminar las facturas importados de TecnoCarnes-->
         <record model="ir.action.wizard" id="act_update_invoice_tecno">
-            <field name="name">Update Invoice Tecno</field>
+            <field name="name">Reimport invoice</field>
             <field name="wiz_name">account.invoice.update_invoice_tecno</field>
         </record>
         <record model="ir.action.keyword" id="act_update_invoice_tecno_keyword">
@@ -24,7 +24,7 @@
         </record>
         <!--Asistente para eliminar los voucher importados de TecnoCarnes-->
         <record model="ir.action.wizard" id="act_delete_voucher_tecno">
-            <field name="name">Delete Voucher Tecno</field>
+            <field name="name">Delete voucher imported</field>
             <field name="wiz_name">account.voucher.delete_voucher_tecno</field>
         </record>
         <record model="ir.action.keyword" id="act_delete_voucher_tecno_keyword">
@@ -34,7 +34,7 @@
         </record>
         <!--Asistente para forzar los voucher a borrador-->
         <record model="ir.action.wizard" id="act_force_draft_voucher">
-            <field name="name">Force Draft Voucher</field>
+            <field name="name">Force draft voucher</field>
             <field name="wiz_name">account.voucher.force_draft_voucher</field>
         </record>
         <record model="ir.action.keyword" id="act_force_draft_voucher_keyword">
@@ -44,7 +44,7 @@
         </record>
         <!--Asistente para desconciliar el asiento del comprobante-->
         <record model="ir.action.wizard" id="act_voucher_move_unreconcile">
-            <field name="name">Desconciliar Asiento del Comprobante</field>
+            <field name="name">Voucher move unreconcile</field>
             <field name="wiz_name">account.move.voucher_unreconcile</field>
         </record>
         <record model="ir.action.keyword" id="act_voucher_move_unreconcile_keyword">
@@ -54,7 +54,7 @@
         </record>
         <!--Asistente para reparar los asientos donde se requiere tercero-->
         <record model="ir.action.wizard" id="act_move_fix_party_account">
-            <field name="name">fix_party_account</field>
+            <field name="name">Add missing party to invoice moves</field>
             <field name="wiz_name">account.move.fix_party_account</field>
         </record>
         <record model="ir.action.keyword" id="act_move_fix_party_account_keyword">
@@ -64,7 +64,7 @@
         </record>
         <!-- Asistente para revertir la producción -->
         <record model="ir.action.wizard" id="act_reverse_production">
-            <field name="name">Revertir Producción</field>
+            <field name="name">Reverse production</field>
             <field name="wiz_name">production.reverse_production</field>
         </record>
         <record model="ir.action.keyword" id="act_reverse_production_keyword">
@@ -74,7 +74,7 @@
         </record>
         <!--Asistente para actualizar las fechas de las notas contables-->
         <record model="ir.action.wizard" id="act_update_note_date">
-            <field name="name">Update Accounting Note Date</field>
+            <field name="name">Update accounting note date</field>
             <field name="wiz_name">account.invoice.update_note_date</field>
         </record>
         <record model="ir.action.keyword" id="act_update_note_date_keyword">
@@ -84,7 +84,7 @@
         </record>
         <!--Asistente para eliminar los registros de la importación de TecnoCarnes-->
         <record model="ir.action.wizard" id="act_delete_import_records">
-            <field name="name">Delete Import Logs</field>
+            <field name="name">Delete import log</field>
             <field name="wiz_name">conector.actualizacion.delete_import_records</field>
         </record>
         <record model="ir.action.keyword" id="act_delete_import_records_keyword">
@@ -94,7 +94,7 @@
         </record>
         <!--Asistente para revisar los documentos importados de TecnoCarnes-->
         <record model="ir.action.wizard" id="act_check_imported">
-            <field name="name">Check Imported Docs</field>
+            <field name="name">Check imported docs</field>
             <field name="wiz_name">conector.actualizacion.check_imported</field>
         </record>
         <record model="ir.action.keyword" id="act_check_imported_keyword">
@@ -104,7 +104,7 @@
         </record>
         <!--Asistente para eliminar los tipos en cuentas padres-->
         <record model="ir.action.wizard" id="act_delete_account_type">
-            <field name="name">Remove Type to Parent Account</field>
+            <field name="name">Remove type to parent account</field>
             <field name="wiz_name">account.delete_account_type</field>
         </record>
         <record model="ir.action.keyword" id="act_delete_account_keyword">
@@ -114,7 +114,7 @@
         </record>
         <!--Asistente que marca para reimportar los multi-ingresos-->
         <record model="ir.action.wizard" id="act_multirevenue_mark_rimport">
-            <field name="name">Reimportar Multi-ingreso</field>
+            <field name="name">Multirevenue reimport</field>
             <field name="wiz_name">account.multirevenue.mark_rimport</field>
         </record>
         <record model="ir.action.keyword" id="act_multirevenue_mark_rimport_keyword">
@@ -124,7 +124,7 @@
         </record>
         <!--Asistente para desconciliar los asientos creados por los comprobantes creados del multi-ingresos-->
         <record model="ir.action.wizard" id="act_unreconcilie_multi">
-            <field name="name">Desconciliar Asientos Multi-ingreso</field>
+            <field name="name">Unreconcile multirevenue move</field>
             <field name="wiz_name">account.multirevenue.unreconcilie_multi</field>
         </record>
         <record model="ir.action.keyword" id="act_unreconcilie_multi_keyword">
@@ -134,7 +134,7 @@
         </record>
         <!--Asistente encargado de crear nota de ajuste a las facturas-->
         <record model="ir.action.wizard" id="act_create_adjustment_note">
-            <field name="name">Create Adjustment Notes</field>
+            <field name="name">Create adjustment notes</field>
             <field name="wiz_name">account.note.create_adjustment_note</field>
             <field name="model">account.note</field>
         </record>
@@ -150,7 +150,7 @@
         </record>
         <!--Asistente encargado de añadir centro de operaciones a las líneas de la nota-->
         <record model="ir.action.wizard" id="act_add_operation_center">
-            <field name="name">Add Operation Center</field>
+            <field name="name">Add operation center</field>
             <field name="wiz_name">account.note.add_operation_center</field>
             <field name="model">account.note</field>
         </record>

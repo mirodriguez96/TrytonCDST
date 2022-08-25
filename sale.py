@@ -39,7 +39,7 @@ class Sale(metaclass=PoolMeta):
             data = ventas_tecno
         devoluciones_tecno = Config.get_documentos_tecno('2')
         if devoluciones_tecno:
-            data += devoluciones_tecno
+            data += devoluciones_tecno #FIX TUPLE + LIST
         data = ventas_tecno + devoluciones_tecno
         #Se crea o actualiza la fecha de importación
         actualizacion = Actualizacion.create_or_update('VENTAS')
