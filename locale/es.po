@@ -104,11 +104,11 @@ msgstr "Forzar a borrador"
 
 msgctxt "model:ir.action,name:act_delete_voucher_tecno"
 msgid "Delete voucher imported"
-msgstr "Eliminar comprobante importado"
+msgstr "Eliminar y reimportar tecnocarnes"
 
 msgctxt "model:ir.action,name:act_update_invoice_tecno"
 msgid "Reimport invoice"
-msgstr "Reimportar factura"
+msgstr "Eliminar y reimportar tecnocarnes"
 
 msgctxt "model:ir.ui.menu,name:act_config"
 msgid "Configuration"
@@ -116,15 +116,7 @@ msgstr "Configuración"
 
 msgctxt "field:account.tax,consumo:"
 msgid "Tax consumption"
-msgstr "Consumo"
-
-msgctxt "model:ir.action,name:act_update_invoice_tecno"
-msgid "Update Invoice Tecno"
-msgstr "Marcar Re-importar TecnoCarnes"
-
-msgctxt "model:ir.action,name:act_delete_voucher_tecno"
-msgid "Delete Voucher Tecno"
-msgstr "Marcar Re-importar TecnoCarnes"
+msgstr "Impuesto consumo"
 
 msgctxt "field:account.voucher_configuration,account_discount_tecno:"
 msgid "Account Discount for Conector TecnoCarnes"
