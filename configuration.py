@@ -684,13 +684,13 @@ class Configuration(ModelSQL, ModelView):
                 continue            
             linea = linea.split(';')
             if len(linea) != 5:
-                raise UserError('Error plantilla', 'bank;account;parties;number;type')
+                raise UserError('Error plantilla', 'id_bank;account;parties;number;type')
             # Se verifica que es la primera linea (encabezado) para omitirla
             if first:
                 first = False
                 continue
             bank = linea[0].strip()
-            bank, = Bank.search([('party.id_number', '=', bank)])
+            bank = Bank(int(bank))
             account = linea[1].strip()
             account, = Account.search([('code', '=', account)])
             party = linea[2].strip()
