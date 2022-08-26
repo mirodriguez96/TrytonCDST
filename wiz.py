@@ -21,20 +21,20 @@ class FixBugsConector(Wizard):
         if Warning.check(warning_name):
             raise UserWarning(warning_name, "No continue si desconoce el funcionamiento interno del asistente.")
         
-        Invoice = pool.get('account.invoice')
+        Sale = pool.get('sale.sale')
 
         _domain = [
             'AND',
-            ('state', '=', 'posted'),
+            ('state', '=', 'processing'),
             [
                'OR',
                ('number', 'like', '145-%'),
                ('number', 'like', '152-%'),
             ]
         ]
-        invoices = Invoice.search(_domain)
+        sales = Sale.search(_domain)
         with Transaction().set_context(_skip_warnings=True):
-            Invoice.process(invoices)
+            Sale.process(sales)
 
         return 'end'
 
