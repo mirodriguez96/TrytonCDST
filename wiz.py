@@ -20,20 +20,25 @@ class FixBugsConector(Wizard):
         warning_name = 'warning_fix_bugs_conector'
         if Warning.check(warning_name):
             raise UserWarning(warning_name, "No continue si desconoce el funcionamiento interno del asistente.")
-        
-        Sale = pool.get('sale.sale')
 
-        _domain = [
-            'AND',
-            ('state', '=', 'processing'),
-            [
-               'OR',
-               ('number', 'like', '145-%'),
-               ('number', 'like', '152-%'),
-            ]
-        ]
-        sales = Sale.search(_domain, limit=500)
-        Sale.process(sales)
+        # ShipmentReturn = pool.get('stock.shipment.out.return')
+        # # Sale = pool.get('sale.sale')
+
+        # # _domain = [
+        # #     'AND',
+        # #     ('state', '=', 'processing'),
+        # #     [
+        # #        'OR',
+        # #        ('number', 'like', '145-%'),
+        # #        ('number', 'like', '152-%'),
+        # #     ]
+        # # ]
+        # # sales = Sale.search(_domain, limit=100)
+        # # Sale.process(sales)
+
+        # shipments = ShipmentReturn.search([('state', '=', 'draft')])
+        # ShipmentReturn.receive(shipments)
+        # ShipmentReturn.done(shipments)
 
         return 'end'
 

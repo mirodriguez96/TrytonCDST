@@ -199,6 +199,13 @@ class Purchase(metaclass=PoolMeta):
                     shipment.effective_date = fecha_date
                     shipment.receive([shipment])
                     shipment.done([shipment])
+                for shipment in purchase.shipment_returns:
+                    shipment.number = tipo_doc+'-'+str(numero_doc)
+                    shipment.reference = tipo_doc+'-'+str(numero_doc)
+                    shipment.effective_date = fecha_date
+                    shipment.wait([shipment])
+                    shipment.assign([shipment])
+                    shipment.done([shipment])
                 if not purchase.invoices:
                     msg = f"EXCEPCION {id_compra} sin factura"
                     logs.append(msg)

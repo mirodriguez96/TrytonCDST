@@ -307,6 +307,12 @@ class Sale(metaclass=PoolMeta):
             shipment.pick([shipment])
             shipment.pack([shipment])
             shipment.done([shipment])
+        for shipment in sale.shipment_returns:
+            shipment.number = sale.number
+            shipment.reference = sale.reference
+            shipment.effective_date = sale.sale_date
+            shipment.receive([shipment])
+            shipment.done([shipment])
 
     #Se actualiza las facturas y envios con la información de la venta
     @classmethod

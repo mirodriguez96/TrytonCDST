@@ -38,7 +38,7 @@ class Production(metaclass=PoolMeta):
         Config = pool.get('conector.configuration')
         Actualizacion = pool.get('conector.actualizacion')
         actualizacion = Actualizacion.create_or_update('PRODUCCION')
-        parametro = Config.get_data_parametros('37')
+        parametro = Config.get_data_parametros('177')
         valor_parametro = parametro[0].Valor.split(',')
         datos = []
         for tipo in valor_parametro:
