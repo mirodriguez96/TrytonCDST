@@ -32,9 +32,8 @@ class FixBugsConector(Wizard):
                ('number', 'like', '152-%'),
             ]
         ]
-        sales = Sale.search(_domain)
-        with Transaction().set_context(_skip_warnings=True):
-            Sale.process(sales)
+        sales = Sale.search(_domain, limit=500)
+        Sale.process(sales)
 
         return 'end'
 
