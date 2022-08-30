@@ -29,7 +29,7 @@ class Purchase(metaclass=PoolMeta):
 
 
     @classmethod
-    def import_data_purchase(cls, compras_tecno):
+    def import_data_purchase(cls):
         logging.warning('RUN COMPRAS')
         pool = Pool()
         Config = pool.get('conector.configuration')
