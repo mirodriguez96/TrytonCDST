@@ -117,6 +117,12 @@ class Purchase(metaclass=PoolMeta):
                     to_exception.append(id_compra)
                     continue
                 purchase.payment_term = plazo_pago[0]
+                lineas_tecno = Config.get_lineasd_tecno(id_compra)
+                if not lineas_tecno:
+                    msg = f"EXCEPCION {id_compra} - No se encontraron líneas para la compra"
+                    logs.append(msg)
+                    to_exception.append(id_compra)
+                    continue
                 retencion_iva = False
                 if compra.retencion_iva and compra.retencion_iva > 0:
                     retencion_iva = True
@@ -130,8 +136,7 @@ class Purchase(metaclass=PoolMeta):
                     elif (compra.retencion_iva + compra.retencion_ica) != compra.retencion_causada:
                         retencion_rete = True
                 #Ahora traemos las lineas de producto para la compra a procesar
-                _lines = []
-                lineas_tecno = Config.get_lineasd_tecno(id_compra)
+                #_lines = []
                 for lin in lineas_tecno:
                     #print(id_producto)
                     producto, = Product.search([('id_tecno', '=', str(lin.IdProducto))])
