@@ -139,6 +139,13 @@ class Sale(metaclass=PoolMeta):
                     to_exception.append(id_venta)
                     continue
                 plazo_pago = plazo_pago[0]
+                #Ahora traemos las lineas (productos) para la venta
+                documentos_linea = Config.get_lineasd_tecno(id_venta)
+                if not documentos_linea:
+                    msg = f"EXCEPCION {id_venta} - No se encontraron líneas para la venta"
+                    logs.append(msg)
+                    to_exception.append(id_venta)
+                    continue
                 with Transaction().set_user(1):
                     context = User.get_preferences()
                 with Transaction().set_context(context, shop=shop.id, _skip_warnings=True):
@@ -174,7 +181,6 @@ class Sale(metaclass=PoolMeta):
                 if address:
                     sale.invoice_address = address[0].id
                     sale.shipment_address = address[0].id
-                
                 #SE CREA LA VENTA
                 sale.save()
                 #Se revisa si se aplico alguno de los 3 impuestos en la venta
@@ -190,9 +196,7 @@ class Sale(metaclass=PoolMeta):
                         retencion_rete = True
                     elif (venta.retencion_iva + venta.retencion_ica) != venta.retencion_causada:
                         retencion_rete = True
-                
-                #Ahora traemos las lineas de producto para la venta a procesar
-                documentos_linea = Config.get_lineasd_tecno(id_venta)
+                #Ahora se procede a crear las líneas para la venta
                 #_lines = []
                 for lin in documentos_linea:
                     producto, = Product.search(['OR', ('id_tecno', '=', str(lin.IdProducto)), ('code', '=', str(lin.IdProducto))])
@@ -389,11 +393,13 @@ class Sale(metaclass=PoolMeta):
         Config = Pool().get('conector.configuration')
         pagos = Config.get_tipos_pago(sale.id_tecno)
         if not pagos:
+            msg = f"EXCEPCION {sale.id_tecno} - No se encontraron pagos asociados en tecnocarnes (documentos_che)"
+            logs.append(msg)
+            to_exception.append(sale.id_tecno)
             return
         #si existe pagos pos...
         pool = Pool()
         Journal = pool.get('account.statement.journal')
-        #Statement = pool.get('account.statement')
         for pago in pagos:
             fecha = str(pago.fecha).split()[0].split('-')
             fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
@@ -404,9 +410,12 @@ class Sale(metaclass=PoolMeta):
                 'journal': journal,
             }
             statement, = cls.search_or_create_statement(args_statement)
+            valor = pago.valor
+            if pago.sw == 2 and valor > 0:
+                valor = valor*-1
             data_payment = {
                 'sales': {
-                    sale: pago.valor
+                    sale: valor
                 },
                 'statement': statement.id,
                 'date': fecha_date
@@ -416,7 +425,6 @@ class Sale(metaclass=PoolMeta):
                 msg = f"ERROR AL PROCESAR EL PAGO DE LA VENTA POS {sale.number}"
                 logging.error(msg)
                 logs.append(msg)
-        #sale.workflow_to_end([sale]) #REVISAR
 
     
     #Metodo encargado de buscar el estado de cuenta de una terminal y en caso de no existir, se crea.
