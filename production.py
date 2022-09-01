@@ -104,7 +104,6 @@ class Production(metaclass=PoolMeta):
                     if cantidad < 0:
                         transf['from_location'] = bodega.storage_location.id
                         transf['to_location'] = bodega.production_location.id
-                        entradas.append(transf)
                         if first:
                             first = False
                             #Se actualiza el producto para que sea producible
@@ -116,6 +115,7 @@ class Production(metaclass=PoolMeta):
                                 continue
                             production['product'] = producto.id
                             production['quantity'] = abs(cantidad)
+                        entradas.append(transf)
                     #Salida (+1)
                     elif cantidad > 0:
                         transf['from_location'] = bodega.production_location.id
