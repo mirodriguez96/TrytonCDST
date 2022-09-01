@@ -70,7 +70,6 @@ class Production(metaclass=PoolMeta):
                     existe.save()
                     cls.reverse_production([existe])
                     continue
-                #tipo_doc = transformacion.tipo
                 fecha = str(transformacion.Fecha_Hora_Factura).split()[0].split('-')
                 fecha = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
                 reference = tipo_doc+'-'+str(numero_doc)
@@ -108,11 +107,7 @@ class Production(metaclass=PoolMeta):
                             first = False
                             #Se actualiza el producto para que sea producible
                             if not producto.template.producible:
-                                msg = f"EXCEPCION {id_tecno} - El producto {producto} no esta marcado como producible"
-                                logs.append(msg)
-                                to_exception(id_tecno)
-                                #Template.write([template], {'producible': True})
-                                continue
+                                Template.write([producto.template], {'producible': True})
                             production['product'] = producto.id
                             production['quantity'] = abs(cantidad)
                         entradas.append(transf)
@@ -122,25 +117,24 @@ class Production(metaclass=PoolMeta):
                         transf['to_location'] = bodega.storage_location.id
                         transf['unit_price'] = Decimal(line.Valor_Unitario)
                         salidas.append(transf)
-                        template, = Template.search([('products', '=', producto)])
                         to_write = {
                             'sale_price_w_tax': Decimal(line.Valor_Unitario),
                             'list_price': Decimal(line.Valor_Unitario)
                             }
-                        Template.write([template], to_write)
+                        Template.write([producto.template], to_write)
                 if entradas:
                     production['inputs'] = [('create', entradas)]
                 else:
                     msg = f"EXCEPCION {id_tecno} - No se encontraron líneas de entrada para la producción"
                     logs.append(msg)
-                    to_exception(id_tecno)
+                    to_exception.append(id_tecno)
                     continue
                 if salidas:
                     production['outputs'] = [('create', salidas)]
                 else:
                     msg = f"EXCEPCION {id_tecno} - No se encontraron líneas de salida para la producción"
                     logs.append(msg)
-                    to_exception(id_tecno)
+                    to_exception.append(id_tecno)
                     continue
                 #Se crea y procesa las producciones
                 try:
