@@ -52,18 +52,18 @@ class Actualizacion(ModelSQL, ModelView):
     def add_logs(cls, actualizacion, logs):
         now = datetime.datetime.now() - datetime.timedelta(hours=5)
         logs_result = []
-        registros = actualizacion.logs
-        if registros:
+        registros = ""
+        if actualizacion.logs:
+            registros = actualizacion.logs
             for lr in registros.split('\n'):
                 res = lr.split(' - ')
                 res.pop(0)
                 res = " - ".join(res)
                 logs_result.append(res)
         for log in logs:
-            if log in logs_result:
-                continue
-            log = f"\n{now} - {log}"
-            registros += log
+            if log not in logs_result:
+                log = f"\n{now} - {log}"
+                registros += log
         actualizacion.logs = registros
         actualizacion.save()
 
