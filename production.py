@@ -65,7 +65,6 @@ class Production(metaclass=PoolMeta):
                 print(id_tecno)
                 existe = Production.search([('id_tecno', '=', id_tecno)])
                 if existe:
-                    #cls.importado(id_tecno)
                     existe, = existe
                     existe.id_tecno = None
                     existe.save()
@@ -89,7 +88,7 @@ class Production(metaclass=PoolMeta):
                 lines = Config.get_lineasd_tecno(id_tecno)
                 entradas = []
                 salidas = []
-                cont = 0
+                first = True
                 for line in lines:
                     cantidad = float(line.Cantidad_Facturada)
                     id_tecno_bodega = line.IdBodega
@@ -106,14 +105,18 @@ class Production(metaclass=PoolMeta):
                         transf['from_location'] = bodega.storage_location.id
                         transf['to_location'] = bodega.production_location.id
                         entradas.append(transf)
-                        if cont == 0:
+                        if first:
+                            first = False
                             #Se actualiza el producto para que sea producible
                             if not producto.template.producible:
-                                Template.write([template], {'producible': True})
+                                msg = f"EXCEPCION {id_tecno} - El producto {producto} no esta marcado como producible"
+                                logs.append(msg)
+                                to_exception(id_tecno)
+                                #Template.write([template], {'producible': True})
+                                continue
                             production['product'] = producto.id
                             production['quantity'] = abs(cantidad)
-                        cont += 1
-                    #Salida (1)
+                    #Salida (+1)
                     elif cantidad > 0:
                         transf['from_location'] = bodega.production_location.id
                         transf['to_location'] = bodega.storage_location.id
@@ -128,10 +131,16 @@ class Production(metaclass=PoolMeta):
                 if entradas:
                     production['inputs'] = [('create', entradas)]
                 else:
+                    msg = f"EXCEPCION {id_tecno} - No se encontraron líneas de entrada para la producción"
+                    logs.append(msg)
+                    to_exception(id_tecno)
                     continue
                 if salidas:
                     production['outputs'] = [('create', salidas)]
                 else:
+                    msg = f"EXCEPCION {id_tecno} - No se encontraron líneas de salida para la producción"
+                    logs.append(msg)
+                    to_exception(id_tecno)
                     continue
                 #Se crea y procesa las producciones
                 try:
