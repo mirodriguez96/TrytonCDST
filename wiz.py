@@ -21,23 +21,7 @@ class FixBugsConector(Wizard):
         if Warning.check(warning_name):
             raise UserWarning(warning_name, "No continue si desconoce el funcionamiento interno del asistente.")
 
-        Production = pool.get('production')
-        cursor = Transaction().connection.cursor()
-
-        date_i = datetime.date(2022, 8, 1)
-        date_f = datetime.date(2022, 9, 1)
-        _domain = [
-            ('effective_date', '>=', date_i),
-            ('effective_date', '<', date_f),
-        ]
-        production = Production.find(_domain)
-        print(len(production))
-        for prod in production:
-            print(prod)
-            prod.effective_start_date = prod.effective_date
-            prod.save()
-            for lin in prod.inputs:
-                cursor.execute("UPDATE stock_move SET effective_date = planned_date WHERE id ="+str(lin.id))
+        
 
         return 'end'
 
