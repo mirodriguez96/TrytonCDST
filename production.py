@@ -81,6 +81,7 @@ class Production(metaclass=PoolMeta):
                     'planned_date': fecha,
                     'planned_start_date': fecha,
                     'effective_date': fecha,
+                    'effective_start_date': fecha,
                     'warehouse': bodega.id,
                     'location': bodega.production_location.id,
                 }
@@ -98,6 +99,8 @@ class Production(metaclass=PoolMeta):
                         'product': producto.id,
                         'quantity': abs(cantidad),
                         'uom': producto.default_uom.id,
+                        'planned_date': fecha,
+                        'effective_date': fecha,
                     }
                     #Entrada (-1)
                     if cantidad < 0:
