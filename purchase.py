@@ -41,7 +41,6 @@ class Purchase(metaclass=PoolMeta):
         devoluciones_compras = Config.get_documentos_tecno('4')
         if devoluciones_compras:
             data += devoluciones_compras
-        data = compras_tecno + devoluciones_compras
         #Se crea o actualiza la fecha de importación
         actualizacion = Actualizacion.create_or_update('COMPRAS')
         if not data:
@@ -62,7 +61,7 @@ class Purchase(metaclass=PoolMeta):
             CompanyOperation = pool.get('company.operation_center')
             company_operation = CompanyOperation(1)
         logs = []
-        to_save = []
+        #to_save = []
         to_created = []
         to_exception = []
         #Procedemos a realizar la compra
@@ -189,7 +188,6 @@ class Purchase(metaclass=PoolMeta):
                     line.taxes = impuestos_linea
                     line.unit_price = lin.Valor_Unitario
                     line.save()
-        
                 #Procesamos la compra para generar la factura y procedemos a rellenar los campos de la factura
                 purchase.quote([purchase])
                 purchase.confirm([purchase])
@@ -212,10 +210,12 @@ class Purchase(metaclass=PoolMeta):
                     shipment.assign([shipment])
                     shipment.done([shipment])
                 if not purchase.invoices:
-                    msg = f"EXCEPCION {id_compra} sin factura"
-                    logs.append(msg)
-                    to_exception.append(id_compra)
-                    continue
+                    purchase.create_invoice()
+                    if not purchase.invoices:
+                        msg = f"EXCEPCION {id_compra} sin factura"
+                        logs.append(msg)
+                        to_exception.append(id_compra)
+                        continue
                 for invoice in purchase.invoices:
                     invoice.number = tipo_doc+'-'+str(numero_doc)
                     invoice.reference = tipo_doc+'-'+str(numero_doc)
@@ -236,7 +236,6 @@ class Purchase(metaclass=PoolMeta):
                             invoice.post_batch([invoice])
                             invoice.post([invoice])
                     invoice.save()
-                purchase.save()
                 to_created.append(id_compra)
             except Exception as e:
                 msg = f"EXCEPCION {id_compra} - {str(e)}"

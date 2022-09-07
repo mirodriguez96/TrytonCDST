@@ -40,7 +40,6 @@ class Sale(metaclass=PoolMeta):
         devoluciones_tecno = Config.get_documentos_tecno('2')
         if devoluciones_tecno:
             data += devoluciones_tecno #FIX TUPLE + LIST
-        data = ventas_tecno + devoluciones_tecno
         #Se crea o actualiza la fecha de importación
         actualizacion = Actualizacion.create_or_update('VENTAS')
         if not data:
@@ -327,10 +326,12 @@ class Sale(metaclass=PoolMeta):
         Config = pool.get('conector.configuration')
         #Procesamos la venta para generar la factura y procedemos a rellenar los campos de la factura
         if not sale.invoices:
-            msg1 = f"EXCEPTION {sale.id_tecno} VENTA SIN FACTURA"
-            logging.error(msg1)
-            logs.append(msg1)
-            to_exception.append(sale.id_tecno)
+            sale._process_invoice([sale])
+            if not sale.invoices:
+                msg1 = f"EXCEPTION {sale.id_tecno} VENTA SIN FACTURA"
+                logging.error(msg1)
+                logs.append(msg1)
+                to_exception.append(sale.id_tecno)
         for invoice in sale.invoices:
             invoice.accounting_date = sale.sale_date
             invoice.number = sale.number
