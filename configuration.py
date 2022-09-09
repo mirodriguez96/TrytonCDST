@@ -3,6 +3,7 @@ from trytond.pool import Pool
 from trytond.exceptions import UserError
 from trytond.transaction import Transaction
 from decimal import Decimal
+import math
 import datetime
 
 try:
@@ -21,6 +22,7 @@ TYPES_FILE = [
     ('product_costs', 'Product costs'),
     ('inventory', "Inventory"),
     ('bank_account', 'Bank Account'),
+    ('loans', 'Loans')
 ]
 
 class Configuration(ModelSQL, ModelView):
@@ -128,7 +130,7 @@ class Configuration(ModelSQL, ModelView):
         Config = Pool().get('conector.configuration')
         config, = Config.search([], order=[('id', 'DESC')], limit=1)
         fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
-        #query = "SELECT * FROM dbo.Documentos WHERE tipo = 120 AND Numero_documento = 4090" #TEST
+        #query = "SELECT * FROM dbo.Documentos WHERE tipo = 117 AND Numero_documento = 3694" #TEST
         query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND sw = "+sw+" AND exportado != 'T' AND exportado != 'E' AND exportado != 'X' ORDER BY fecha_hora ASC"
         data = cls.get_data(query)
         return data
@@ -225,6 +227,8 @@ class Configuration(ModelSQL, ModelView):
                     cls.import_csv_inventory(lineas)
                 elif config.type_file == "bank_account":
                     cls.import_csv_bank_account(lineas)
+                elif config.type_file == "loans":
+                    cls.import_csv_loans(lineas)
                 else:
                     raise UserError('Importar archivo: ', 'Seleccione el tipo de importación')
             else:
@@ -718,4 +722,85 @@ class Configuration(ModelSQL, ModelView):
             baccount.numbers = [numbers]
             to_save.append(baccount)
         BankAccount.save(to_save)
+        print('FIN')
+
+
+    @classmethod
+    def import_csv_loans(cls, lineas):
+        pool = Pool()
+        Loan = pool.get('staff.loan')
+        Party = pool.get('party.party')
+        PayMode = pool.get('account.voucher.paymode')
+        PaymentTerm  = pool.get('staff.loan.payment_term')
+        PaymentTermLine  = pool.get('staff.loan.payment_term.line')
+        Delta = pool.get('staff.loan.payment_term.line.delta')
+        to_save = []
+        first = True
+        for linea in lineas:
+            linea = linea.strip()
+            if not linea:
+                continue            
+            linea = linea.split(';')
+            if len(linea) != 7:
+                raise UserError('Error plantilla', 'party;date_effective;type;payment_mode;amount;amount_fee')
+            # Se verifica que es la primera linea (encabezado) para omitirla
+            if first:
+                first = False
+                continue
+            party = linea[0].strip()
+            date = cls.convert_str_date(linea[1].strip())
+            party, = Party.search([('id_number', '=', party)])
+            paymode = linea[3].strip()
+            paymode, = PayMode.search([('name', '=', paymode)])
+            amount = Decimal(linea[4].strip())
+            amount_fee = Decimal(linea[5].strip())
+            days = (linea[6].strip()).split('-')
+            if not days:
+                days = [linea[6].strip()]
+            loan = Loan()
+            loan.party = party
+            loan.date_effective = date
+            loan.type = linea[2].strip()
+            loan.payment_mode = paymode
+            loan.amount = amount
+            #se procede a conocer y/o crear el plazo de pago
+            cant = math.ceil(amount/amount_fee)
+            ratio = round(((amount_fee*100)/amount), 10)
+            name_payment_term  = f"{cant} CUOTAS DE {len(days)} VEZ/VECES AL MES DEL {ratio}%"
+            print(amount, name_payment_term)
+            payment_term = PaymentTerm.search([('name', '=', name_payment_term)])
+            if not payment_term:
+                payment_term = PaymentTerm()
+                payment_term.name = name_payment_term
+                fee = (days*cant)
+                print(fee)
+                months = 0
+                cont = 0
+                _lines = []
+                for i in fee:
+                    cont+=1
+                    line = PaymentTermLine()
+                    delta = Delta()
+                    delta.months = months
+                    delta.days = int(i)
+                    line.relativedeltas = [delta]
+                    print(len(_lines))
+                    if len(_lines) == cant-1:
+                        line.type = 'remainder'
+                        _lines.append(line)
+                        break
+                    line.type = 'percent_on_total'
+                    line.ratio = ratio
+                    line.on_change_ratio()
+                    #line.divisor = Decimal('0.0')
+                    _lines.append(line)
+                    if cont == len(days):
+                        cont = 0
+                        months += 1
+                payment_term.lines = _lines
+            else:
+                payment_term = payment_term[0]
+            loan.payment_term = payment_term
+            to_save.append(loan)
+        Loan.save(to_save)
         print('FIN')
