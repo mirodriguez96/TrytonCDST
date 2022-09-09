@@ -331,10 +331,11 @@ class Voucher(ModelSQL, ModelView):
                 exceptions.append(id_tecno)
         Actualizacion.add_logs(actualizacion, logs)
         for idt in exceptions:
+            #print('EXCEPCIONES...', idt) #TEST
             Config.update_exportado(idt, 'E')
         for idt in created:
             Config.update_exportado(idt, 'T')
-            #print('CREADO...', id) #TEST
+            #print('CREADO...', idt) #TEST
         logging.warning("FINISH COMPROBANTES DE INGRESO")
 
 
@@ -561,7 +562,7 @@ class Voucher(ModelSQL, ModelView):
             line_retica.description = 'RETICA'
             line_retica.account = config_voucher.account_adjust_income #se añade cualquier cuenta
             line_retica.amount = round((retencion_ica*-1), 2)
-            to_others.append(retencion_ica)
+            to_others.append(line_retica)
             valor_pagado += line_retica.amount
         if ajuste > 0:
             line_ajuste = OthersConcepts()
