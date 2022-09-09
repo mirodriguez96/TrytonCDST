@@ -734,6 +734,7 @@ class Configuration(ModelSQL, ModelView):
         PaymentTerm  = pool.get('staff.loan.payment_term')
         PaymentTermLine  = pool.get('staff.loan.payment_term.line')
         Delta = pool.get('staff.loan.payment_term.line.delta')
+        Currency = pool.get('currency.currency')
         to_save = []
         first = True
         for linea in lineas:
@@ -763,17 +764,14 @@ class Configuration(ModelSQL, ModelView):
             loan.type = linea[2].strip()
             loan.payment_mode = paymode
             loan.amount = amount
-            #se procede a conocer y/o crear el plazo de pago
+            #se procede a buscar y/o crear el plazo de pago
             cant = math.ceil(amount/amount_fee)
-            ratio = round(((amount_fee*100)/amount), 10)
-            name_payment_term  = f"{cant} CUOTAS DE {len(days)} VEZ/VECES AL MES DEL {ratio}%"
-            print(amount, name_payment_term)
+            name_payment_term  = f"{cant} CUOTAS DE {len(days)} VEZ/VECES AL MES DE ${amount_fee}"
             payment_term = PaymentTerm.search([('name', '=', name_payment_term)])
             if not payment_term:
                 payment_term = PaymentTerm()
                 payment_term.name = name_payment_term
                 fee = (days*cant)
-                print(fee)
                 months = 0
                 cont = 0
                 _lines = []
@@ -782,17 +780,15 @@ class Configuration(ModelSQL, ModelView):
                     line = PaymentTermLine()
                     delta = Delta()
                     delta.months = months
-                    delta.days = int(i)
+                    delta.day = int(i)
                     line.relativedeltas = [delta]
-                    print(len(_lines))
                     if len(_lines) == cant-1:
                         line.type = 'remainder'
                         _lines.append(line)
                         break
-                    line.type = 'percent_on_total'
-                    line.ratio = ratio
-                    line.on_change_ratio()
-                    #line.divisor = Decimal('0.0')
+                    line.type = 'fixed'
+                    line.amount = amount_fee
+                    line.currency = Currency(1)
                     _lines.append(line)
                     if cont == len(days):
                         cont = 0
@@ -803,4 +799,5 @@ class Configuration(ModelSQL, ModelView):
             loan.payment_term = payment_term
             to_save.append(loan)
         Loan.save(to_save)
+        Loan.calculate(to_save)
         print('FIN')
