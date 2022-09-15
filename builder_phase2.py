@@ -354,11 +354,15 @@ class ElectronicInvoice_2(object):
         for line in self.invoice.lines:
             unit_price = str(line.unit_price)
             amount = str(line.amount)
+            if line.unit.symbol.upper() == 'KG':
+                unit = 'KGM'
+            else:
+                unit = '94'
             detail = {
                 "Nvfac_dcop": sequence,
                 "Nvpro_codi": line.product.template.code,
                 "Nvpro_nomb": line.product.template.name,
-                "Nvuni_desc": line.unit.symbol,
+                "Nvuni_desc": unit,
                 "Nvfac_cant": line.quantity,
                 "Nvfac_valo": unit_price,
                 "Nvfac_pdes": "0.00", # Fix porcentaje descuento

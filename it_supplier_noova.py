@@ -67,7 +67,7 @@ class ElectronicPayrollCdst(object):
             if res['ErrorList']:
                 self.payroll.rules_fail = res['ErrorList']
             self.payroll.save()
-            print("ENVIO EXITOSO DE NOMINA")
+            print("ENVIO EXITOSO !")
         else:
             self.payroll.get_message(response.text)
 
@@ -129,6 +129,6 @@ class SendElectronicInvoice(object):
             if res['ErrorList']:
                 self.invoice.rules_fail = res['ErrorList']
             self.invoice.save()
-            print("ENVIO EXITOSO DE NOMINA")
+            print("ENVIO EXITOSO !")
         else:
             self.invoice.get_message(response.text)
