@@ -4,11 +4,19 @@ from trytond.pool import PoolMeta
 
 class Company(metaclass=PoolMeta):
     __name__ = 'company.company'
-    url_supplier_test = fields.Char('Url test', help='https://{instancia}/{instancia}/api/{metodo}')
+    # Campos para la configuración del proveedor tecnologico para el envío de nómina
     url_supplier = fields.Char('Url prod', help='https://{instancia}/{instancia}/api/{metodo}')
-    #auth_supplier_test = fields.Char('Auth', help='user:password')
     auth_supplier = fields.Char('Auth', help='user:password')
-    #host_supplier_test = fields.Char('Host', help='Example: dev.dominio.com.co')
     host_supplier = fields.Char('Host', help='Example: dev.dominio.com.co')
-    #supplier_code_test = fields.Char('Code', help='Branch code configured in the supplier it')
     supplier_code = fields.Char('Code', help='Branch code configured in the supplier it')
+
+    # Campos para la configuración del proveedor tecnologico para el envío de documentos soporte
+    url_ds_itsupplier = fields.Char('Url prod', help='https://{instancia}/{instancia}/api/{metodo}')
+    auth_ds_itsupplier = fields.Char('Auth', help='user:password')
+    host_ds_itsupplier = fields.Char('Host', help='Example: dev.dominio.com.co')
+    itsupplier_code_ds = fields.Char('Code', help='Branch code configured in the supplier it')
+    itsupplier_billing_resolution = fields.Char('Billing Resolution Number', help='Number configured in the supplier it')
+    itsupplier_print_format = fields.Char('Print Format Number', help='Number configured in the supplier it')
+    itsupplier_email_ds = fields.Char('Email support document', help='Email to send a copy of the supporting document')
+
+    

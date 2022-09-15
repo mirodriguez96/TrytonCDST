@@ -2,16 +2,30 @@
 <data>
     <xpath expr="/form/notebook/page[@id='reports']" position="after">
         <page string="Supplier it" id="supplier_it">
-            <label name="url_supplier_test"/>
-            <field name="url_supplier_test"/>
+            <separator id="payroll" string="Payroll" colspan="4"/>
             <label name="url_supplier"/>
             <field name="url_supplier"/>
-            <label name="auth_supplier"/>
-            <field name="auth_supplier"/>
             <label name="host_supplier"/>
             <field name="host_supplier"/>
+            <label name="auth_supplier"/>
+            <field name="auth_supplier"/>
             <label name="supplier_code"/>
             <field name="supplier_code"/>
+            <separator id="suppot_document" string="Support document" colspan="4"/>
+            <label name="url_ds_itsupplier"/>
+            <field name="url_ds_itsupplier"/>
+            <label name="host_ds_itsupplier"/>
+            <field name="host_ds_itsupplier"/>
+            <label name="auth_ds_itsupplier"/>
+            <field name="auth_ds_itsupplier"/>
+            <label name="itsupplier_code_ds"/>
+            <field name="itsupplier_code_ds"/>
+            <label name="itsupplier_billing_resolution"/>
+            <field name="itsupplier_billing_resolution"/>
+            <label name="itsupplier_print_format"/>
+            <field name="itsupplier_print_format"/>
+            <label name="itsupplier_email_ds"/>
+            <field name="itsupplier_email_ds"/>
         </page>
     </xpath>
 </data>

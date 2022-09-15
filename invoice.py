@@ -1,13 +1,16 @@
 from decimal import Decimal
 from trytond.pool import PoolMeta, Pool
-from trytond.model import fields
-from trytond.pyson import Eval, Not, And
+from trytond.model import fields, ModelView
+from trytond.pyson import Eval, Or, And
 from trytond.wizard import Wizard, StateTransition
 from trytond.transaction import Transaction
 from trytond.exceptions import UserError, UserWarning
 from sql import Table
 import logging
 import datetime
+
+from .it_supplier_noova import SendElectronicInvoice
+
 
 
 ELECTRONIC_STATES = [
@@ -241,6 +244,32 @@ class Invoice(metaclass=PoolMeta):
     @classmethod
     def import_debit_note(cls):
         cls.import_notas_tecno('DEBITO')
+
+
+    @classmethod
+    def __setup__(cls):
+        super(Invoice, cls).__setup__()
+        cls._buttons.update({
+            'send_support_document': {
+                'invisible': Or(
+                    And(Eval('type') != 'out', ~Eval('equivalent_invoice')),
+                    Eval('electronic_state') == 'authorized',
+                    Eval('number', None) == None,
+                    Eval('authorization', None) == None,
+                    Eval('state') != 'validated',
+                )}
+            },)
+
+    @classmethod
+    @ModelView.button
+    def send_support_document(cls, records):
+        for invoice in records:
+            if invoice.invoice_type not in ('05', '95'):
+                continue
+            if invoice.authorization and not invoice.event:
+                _ = SendElectronicInvoice(invoice, invoice.authorization)
+            else:
+                invoice.get_message('El campo proveedor de autorización no ha sido seleccionado')
 
 
 class UpdateInvoiceTecno(Wizard):
