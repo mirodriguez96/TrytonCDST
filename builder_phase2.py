@@ -83,7 +83,7 @@ MESSAGES = {
     'operation_type': 'El campo Tipo de Operación de factura esta vacio',
     'invoice_type_code': 'El campo Tipo de Factura de factura esta vacio',
     'payment_type': 'Falta el tipo de concepto en el plazo de pago de la factura',
-    'company_tributes': 'Falta definir el grupo de tributos de impuesto al que es responsable la compañía',
+    #'company_tributes': 'Falta definir el grupo de tributos de impuesto al que es responsable la compañía',
 }
 
 
