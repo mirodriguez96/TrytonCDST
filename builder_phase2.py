@@ -47,9 +47,9 @@ INVOICE_CODES = {
 MESSAGES = {
     'software_id': 'Falta ID del software Facturador',
     'company_id': 'Falta numero NIT de la empresa',
-    'company_registration': 'Falta la matricula mercantil de la empresa',
+    #'company_registration': 'Falta la matricula mercantil de la empresa',
     'company_name': 'Falta el nombre de la empresa',
-    'company_email': 'Falta el email de la empresa',
+    #'company_email': 'Falta el email de la empresa',
     'company_phone': 'Falta el teléfono o celular de la empresa',
     'company_city': 'Falta la ciudad de la empresa',
     'company_city_code': 'Falta la ciudad de la empresa',
@@ -134,9 +134,9 @@ class ElectronicInvoice_2(object):
         self.company_postal_zone = [address.postal_code for address in invoice.company.party.addresses]
         self.company_ciiu_code = invoice.company.party.ciiu_code
         self.company_tributes = invoice.company.party.party_tributes or []
-        self.company_party_obligations = self.invoice.company.party.party_obligation_tax
-        if not self.company_party_obligations:
-            MESSAGES['company_party_obligations'] = 'Falta definir la obligaciones fiscales de la compañía'
+        #self.company_party_obligations = self.invoice.company.party.party_obligation_tax
+        #if not self.company_party_obligations:
+        #    MESSAGES['company_party_obligations'] = 'Falta definir la obligaciones fiscales de la compañía'
 
         if TYPE_PERSON.get(invoice.company.party.type_person):
             self.company_tax_level_code = TYPE_PERSON[invoice.company.party.type_person]
@@ -144,10 +144,10 @@ class ElectronicInvoice_2(object):
         self.company_email = invoice.company.party.email
         self.fiscal_regimen_company = invoice.company.party.fiscal_regimen
         self.shop_address = None
-        if hasattr(self.invoice, 'shop') and self.invoice.shop:
-            self.shop_address = self.invoice.shop.address or self.invoice.company.party.street
-            if not self.shop_address:
-                MESSAGES['shop_address'] = 'Falta la dirección de la tienda'
+        #if hasattr(self.invoice, 'shop') and self.invoice.shop:
+        #    self.shop_address = self.invoice.shop.address or self.invoice.company.party.street
+        #    if not self.shop_address:
+        #        MESSAGES['shop_address'] = 'Falta la dirección de la tienda'
         
         self.company_resolution_number = self.invoice.company.itsupplier_billing_resolution or ''
         self.company_branch_code = self.invoice.company.itsupplier_code_ds or ''
