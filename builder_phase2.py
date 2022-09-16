@@ -333,11 +333,11 @@ class ElectronicInvoice_2(object):
             "Nvven_nomb": "",
             "Nvfac_fpag": self.payment_means_code,
             "Nvfac_obse": self.concept,
-            "Nvfac_stot": self.total_amount, # Se omite el subtotal (total - impuestos) para el envío
+            "Nvfac_stot": self.untaxed_amount, # Se omite el total con impuestos para el envío
             "Nvdes_codi": "",
             "Nvfac_desc": "0.00",
-            "Nvfac_tota": self.total_amount, # Campo con el mismo valor de Nvfac_stot
-            "Nvfac_totp": self.total_amount,
+            "Nvfac_tota": self.untaxed_amount, # Campo con el mismo valor de Nvfac_stot
+            "Nvfac_totp": self.untaxed_amount, # Valor total sin impuestos
             "Nvfac_roun": "0.00",
             "Nvcon_codi": "", # Fix concepto de la nota de ajuste
             "Nvcon_desc": "", # Fix nombre concepto de la nota de ajuste
