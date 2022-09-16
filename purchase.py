@@ -136,9 +136,16 @@ class Purchase(metaclass=PoolMeta):
                         retencion_rete = True
                 #Ahora traemos las lineas de producto para la compra a procesar
                 #_lines = []
+                not_product = False
                 for lin in lineas_tecno:
                     #print(id_producto)
-                    producto, = Product.search([('id_tecno', '=', str(lin.IdProducto))])
+                    producto = Product.search([('id_tecno', '=', str(lin.IdProducto))])
+                    if not producto:
+                        msg = f"{id_compra} No se encontro el producto {str(lin.IdProducto)}"
+                        logs.append(msg)
+                        not_product = True
+                        break
+                    producto, = producto
                     line = PurchaseLine()
                     line.product = producto
                     line.purchase = purchase
@@ -162,6 +169,7 @@ class Purchase(metaclass=PoolMeta):
                     #Se verifica si el impuesto al consumo fue aplicado
                     impuesto_consumo = lin.Impuesto_Consumo
                     #A continuación se verifica las retenciones e impuesto al consumo
+                    not_impoconsumo = False
                     impuestos_linea = []
                     for impuestol in line.taxes:
                         clase_impuesto = impuestol.classification_tax
@@ -181,13 +189,22 @@ class Purchase(metaclass=PoolMeta):
                                 tax, = tax
                                 impuestos_linea.append(tax)
                             else:
-                                raise UserError('ERROR IMPUESTO', 'No se encontró el impuesto al consumo: '+id_compra)
+                                msg = f"{id_compra} No se encontró el impuesto fijo al consumo con valor {str(impuesto_consumo)}"
+                                logs.append(msg)
+                                not_impoconsumo = True
+                                break
                         elif clase_impuesto != '05' and clase_impuesto != '06' and clase_impuesto != '07' and not impuestol.consumo:
                             if impuestol not in impuestos_linea:
                                 impuestos_linea.append(impuestol)
+                    if not_impoconsumo:
+                        not_product = True
+                        break
                     line.taxes = impuestos_linea
                     line.unit_price = lin.Valor_Unitario
                     line.save()
+                if not_product:
+                    to_exception.append(id_compra)
+                    continue
                 #Procesamos la compra para generar la factura y procedemos a rellenar los campos de la factura
                 purchase.quote([purchase])
                 purchase.confirm([purchase])
