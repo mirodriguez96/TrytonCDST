@@ -59,7 +59,9 @@ class Party(metaclass=PoolMeta):
                 #Ahora verificamos si el tercero existe en tryton
                 if exists:
                     exists, = exists
-                    ultimo_cambiop = tercero.Ultimo_Cambio_Registro
+                    ultimo_cambio = tercero.Ultimo_Cambio_Registro
+                    if not ultimo_cambio:
+                        continue
                     create_date = None
                     write_date = None
                     #LA HORA DEL SISTEMA DE TRYTON TIENE UNA DIFERENCIA HORARIA DE 5 HORAS CON LA DE TECNO
@@ -68,7 +70,7 @@ class Party(metaclass=PoolMeta):
                     elif exists.create_date:
                         create_date = (exists.create_date - datetime.timedelta(hours=5))
                     #Ahora vamos a verificar si el cambio más reciente fue hecho en la bd sqlserver para actualizarlo
-                    if (ultimo_cambiop and write_date and ultimo_cambiop > write_date) or (ultimo_cambiop and not write_date and ultimo_cambiop > create_date):
+                    if (write_date and ultimo_cambio > write_date) or (not write_date and ultimo_cambio > create_date):
                         exists.type_document = tipo_identificacion
                         exists.name = nombre
                         exists.first_name = PrimerNombre

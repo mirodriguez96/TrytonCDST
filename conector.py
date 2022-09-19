@@ -39,12 +39,12 @@ class Actualizacion(ModelSQL, ModelView):
     def get_fecha_actualizacion(cls, actualizacion):
         fecha = datetime.date(1,1,1)
         if actualizacion.write_date:
-            fecha = actualizacion.write_date
+            fecha = (actualizacion.write_date - datetime.timedelta(hours=5))
         elif actualizacion.create_date:
             Date = Pool().get('ir.date')
             create_date = actualizacion.create_date.date()
             if create_date != Date.today():
-                fecha = actualizacion.create_date
+                fecha = (actualizacion.create_date - datetime.timedelta(hours=5))
         return fecha
 
 
