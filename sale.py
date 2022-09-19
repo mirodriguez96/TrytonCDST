@@ -1,7 +1,7 @@
 import datetime
 from trytond.model import fields
 from trytond.pool import Pool, PoolMeta
-from trytond.exceptions import UserError, UserWarning
+from trytond.exceptions import UserError
 from trytond.transaction import Transaction
 from decimal import Decimal
 import logging
@@ -63,7 +63,7 @@ class Sale(metaclass=PoolMeta):
         company_operation = Module.search([('name', '=', 'company_operation'), ('state', '=', 'activated')])
         if company_operation:
             CompanyOperation = pool.get('company.operation_center')
-            company_operation = CompanyOperation(1)
+            operation_center = CompanyOperation.search([], order=[('id', 'DESC')], limit=1)
         venta_pos = []
         pdevoluciones_pos = Config.get_data_parametros('10')
         if pdevoluciones_pos:
@@ -91,6 +91,11 @@ class Sale(metaclass=PoolMeta):
                     to_created.append(id_venta)
                     continue
                 print(id_venta)
+                if company_operation and not operation_center:
+                    msg = f"{id_venta} Falta el centro de operación"
+                    logs.append(msg)
+                    to_exception.append(id_venta)
+                    continue
                 tbltipodocto, = Config.get_tbltipodoctos(tipo_doc)
                 analytic_account = None
                 if hasattr(SaleLine, 'analytic_accounts'):
@@ -220,7 +225,7 @@ class Sale(metaclass=PoolMeta):
                         linea.quantity = cantidad_facturada
                     #Se verifica si tiene activo el módulo centro de operaciones y se añade 1 por defecto
                     if company_operation:
-                        linea.operation_center = company_operation
+                        linea.operation_center = operation_center[0]
                     #Comprueba los cambios y trae los impuestos del producto
                     linea.on_change_product()
                     #Se verifica si el impuesto al consumo fue aplicado

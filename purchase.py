@@ -59,7 +59,7 @@ class Purchase(metaclass=PoolMeta):
         company_operation = Module.search([('name', '=', 'company_operation'), ('state', '=', 'activated')])
         if company_operation:
             CompanyOperation = pool.get('company.operation_center')
-            company_operation = CompanyOperation(1)
+            operation_center = CompanyOperation.search([], order=[('id', 'DESC')], limit=1)
         logs = []
         #to_save = []
         to_created = []
@@ -76,6 +76,11 @@ class Purchase(metaclass=PoolMeta):
                     to_created.append(id_compra)
                     continue
                 print(id_compra)
+                if company_operation and not operation_center:
+                    msg = f"{id_compra} Falta el centro de operación"
+                    logs.append(msg)
+                    to_exception.append(id_compra)
+                    continue
                 purchase = Purchase()
                 purchase.number = tipo_doc+'-'+str(numero_doc)
                 purchase.id_tecno = id_compra
@@ -163,7 +168,7 @@ class Purchase(metaclass=PoolMeta):
                         line.quantity = cantidad_facturada
                         purchase.reference = tipo_doc+'-'+str(numero_doc)
                     if company_operation:
-                        line.operation_center = company_operation
+                        line.operation_center = operation_center[0]
                     #Comprueba los cambios y trae los impuestos del producto
                     line.on_change_product()
                     #Se verifica si el impuesto al consumo fue aplicado
