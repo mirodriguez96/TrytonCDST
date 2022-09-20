@@ -1,6 +1,6 @@
 from trytond.model import fields
 from trytond.pool import Pool, PoolMeta
-from trytond.transaction import Transaction
+#from trytond.transaction import Transaction
 from decimal import Decimal
 import logging
 import datetime
@@ -56,6 +56,7 @@ class Production(metaclass=PoolMeta):
         logs = []
         to_created = []
         to_exception = []
+        not_import = []
         for data in datos:
             for transformacion in data:
                 sw = transformacion.sw
@@ -63,6 +64,11 @@ class Production(metaclass=PoolMeta):
                 tipo_doc = transformacion.tipo
                 id_tecno = str(sw)+'-'+tipo_doc+'-'+str(numero_doc)
                 print(id_tecno)
+                if data.anulado == 'S':
+                    msg = f"{id_tecno} Documento anulado en TecnoCarnes"
+                    logs.append(msg)
+                    not_import.append(id_tecno)
+                    continue
                 existe = Production.search([('id_tecno', '=', id_tecno)])
                 if existe:
                     existe, = existe
@@ -152,6 +158,8 @@ class Production(metaclass=PoolMeta):
                     logs.append(msg)
                     to_exception.append(id_tecno)
         Actualizacion.add_logs(actualizacion, logs)
+        for idt in not_import:
+            Config.update_exportado(idt, 'X')
         for idt in to_exception:
             Config.update_exportado(idt, 'E')
         for idt in to_created:
