@@ -64,7 +64,7 @@ class Production(metaclass=PoolMeta):
                 tipo_doc = transformacion.tipo
                 id_tecno = str(sw)+'-'+tipo_doc+'-'+str(numero_doc)
                 print(id_tecno)
-                if data.anulado == 'S':
+                if transformacion.anulado == 'S':
                     msg = f"{id_tecno} Documento anulado en TecnoCarnes"
                     logs.append(msg)
                     not_import.append(id_tecno)
