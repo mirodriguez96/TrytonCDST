@@ -1,8 +1,6 @@
 from trytond.model import fields
 from trytond.pool import Pool, PoolMeta
-#from trytond.transaction import Transaction
 from decimal import Decimal
-import logging
 import datetime
 
 
@@ -33,7 +31,7 @@ class Production(metaclass=PoolMeta):
 
     @classmethod
     def import_data_production(cls):
-        logging.warning('RUN PRODUCTION')
+        print('RUN PRODUCTION')
         pool = Pool()
         Config = pool.get('conector.configuration')
         Actualizacion = pool.get('conector.actualizacion')
@@ -47,7 +45,7 @@ class Production(metaclass=PoolMeta):
                 datos.append(result)
         if not datos:
             actualizacion.save()
-            logging.warning("FINISH PRODUCTION")
+            print("FINISH PRODUCTION")
             return
         Production = pool.get('production')
         Location = pool.get('stock.location')
@@ -71,10 +69,13 @@ class Production(metaclass=PoolMeta):
                     continue
                 existe = Production.search([('id_tecno', '=', id_tecno)])
                 if existe:
-                    existe, = existe
-                    existe.id_tecno = None
-                    existe.save()
-                    cls.reverse_production([existe])
+                    # existe, = existe
+                    # existe.id_tecno = None
+                    # existe.save()
+                    # cls.reverse_production([existe])
+                    msg = f"La producción {id_tecno} ya existe en Tryton"
+                    logs.append(msg)
+                    to_created.append(id_tecno)
                     continue
                 fecha = str(transformacion.Fecha_Hora_Factura).split()[0].split('-')
                 fecha = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
@@ -126,11 +127,18 @@ class Production(metaclass=PoolMeta):
                         transf['to_location'] = bodega.storage_location.id
                         transf['unit_price'] = Decimal(line.Valor_Unitario)
                         salidas.append(transf)
-                        to_write = {
-                            'sale_price_w_tax': Decimal(line.Valor_Unitario),
-                            'list_price': Decimal(line.Valor_Unitario)
-                            }
-                        Template.write([producto.template], to_write)
+                        # Se valida que el precio de venta sea diferente de 0
+                        if producto.list_price == 0:
+                            if line.Valor_Unitario == 0:
+                                msg = f"EXCEPCION {id_tecno} - Valor de venta en 0 en Tryton y TecnoCarnes (line.Valor_Unitario) del producto {line.IdProducto}"
+                                logs.append(msg)
+                                to_exception.append(id_tecno)
+                                continue
+                            to_write = {
+                                'sale_price_w_tax': Decimal(),
+                                'list_price': Decimal(line.Valor_Unitario)
+                                }
+                            Template.write([producto.template], to_write)
                 if entradas:
                     production['inputs'] = [('create', entradas)]
                 else:
@@ -164,7 +172,7 @@ class Production(metaclass=PoolMeta):
             Config.update_exportado(idt, 'E')
         for idt in to_created:
             Config.update_exportado(idt, 'T')
-        logging.warning('FINISH PRODUCTION')
+        print('FINISH PRODUCTION')
 
 
     #Función encargada de revertir las producciones hechas
