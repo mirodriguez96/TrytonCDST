@@ -80,6 +80,7 @@ def register():
         wiz.UnreconcilieMulti,
         wiz.CreateAdjustmentNotes,
         wiz.AddCenterOperationLine,
+        wiz.ReimportExcepcionDocument,
         #report.PortfolioStatus,
         report.PayrollExport,
         module='conector', type_='wizard')

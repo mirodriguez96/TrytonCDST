@@ -334,3 +334,36 @@ class AddCenterOperationLine(Wizard):
                 _lines.append(line)
             Line.save(_lines)
         return 'end'
+
+
+class ReimportExcepcionDocument(Wizard):
+    __name__ = 'conector.actualizacion.reimport_excepcion'
+    start_state = 'run'
+    run = StateTransition()
+
+    def transition_run(self):
+        pool = Pool()
+        Warning = pool.get('res.user.warning')
+        warning_name = 'warning_fix_bugs_conector'
+        if Warning.check(warning_name):
+            raise UserWarning(warning_name, "Se van a marcar los documentos con excepción para ser importados de nuevo")
+
+        Actualizacion = pool.get('conector.actualizacion')
+        Config = pool.get('conector.configuration')
+        ids_ = Transaction().context['active_ids']
+        cond = ""
+        for actualizacion in Actualizacion.browse(ids_):
+            if actualizacion.name == 'VENTAS':
+                cond += "AND (sw = 1 or sw = 2) "
+            elif actualizacion.name == 'COMPRAS':
+                cond += "AND (sw = 3 or sw = 4) "
+            elif actualizacion.name == 'COMPROBANTES DE INGRESO':
+                cond += "AND sw = 5 "
+            elif actualizacion.name == 'COMPROBANTES DE EGRESO':
+                cond += "AND sw = 6 "
+            elif actualizacion.name == 'PRODUCCION':
+                cond += "AND sw = 12 "
+        if cond:
+            query = "UPDATE dbo.Documentos SET exportado = 'N' WHERE exportado = 'E' "+cond
+            Config.set_data(query)
+        return 'end'

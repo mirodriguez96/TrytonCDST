@@ -164,6 +164,16 @@
             <field name="model">account.note,-1</field>
             <field name="action" ref="act_add_operation_center"/>
         </record>
+        <!--Asistente para marcar los documentos marcados con excepción para ser reimportados-->
+        <record model="ir.action.wizard" id="act_reimport_documents">
+            <field name="name">Reimport documents with exception</field>
+            <field name="wiz_name">conector.actualizacion.reimport_excepcion</field>
+        </record>
+        <record model="ir.action.keyword" id="act_reimport_documents_keyword">
+            <field name="keyword">form_action</field>
+            <field name="model">conector.actualizacion,-1</field>
+            <field name="action" ref="act_reimport_documents"/>
+        </record>
     </data>
 
 </tryton>

@@ -110,6 +110,10 @@ msgctxt "model:ir.action,name:act_update_invoice_tecno"
 msgid "Reimport invoice"
 msgstr "Eliminar y reimportar de tecnocarnes"
 
+msgctxt "model:ir.action,name:act_reimport_documents"
+msgid "Reimport documents with exception"
+msgstr "Reimportar documentos con excepción"
+
 msgctxt "model:ir.ui.menu,name:act_config"
 msgid "Configuration"
 msgstr "Configuración"
