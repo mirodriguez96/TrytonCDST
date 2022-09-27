@@ -38,7 +38,7 @@ class Production(metaclass=PoolMeta):
         actualizacion = Actualizacion.create_or_update('PRODUCCION')
         parametro = Config.get_data_parametros('177')
         valor_parametro = parametro[0].Valor.split(',')
-        data = ()
+        data = []
         for tipo in valor_parametro:
             result = Config.get_documentos_tipo('12', tipo)
             if result:

@@ -33,13 +33,13 @@ class Sale(metaclass=PoolMeta):
         pool = Pool()
         Config = pool.get('conector.configuration')
         Actualizacion = pool.get('conector.actualizacion')
-        data = ()
+        data = []
         ventas_tecno = Config.get_documentos_tecno('1')
         if ventas_tecno:
             data = ventas_tecno
         devoluciones_tecno = Config.get_documentos_tecno('2')
         if devoluciones_tecno:
-            data += devoluciones_tecno #FIX TUPLE + LIST
+            data += devoluciones_tecno
         #Se crea o actualiza la fecha de importación
         actualizacion = Actualizacion.create_or_update('VENTAS')
         if not data:
