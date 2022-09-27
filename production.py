@@ -38,12 +38,12 @@ class Production(metaclass=PoolMeta):
         actualizacion = Actualizacion.create_or_update('PRODUCCION')
         parametro = Config.get_data_parametros('177')
         valor_parametro = parametro[0].Valor.split(',')
-        datos = []
+        data = ()
         for tipo in valor_parametro:
             result = Config.get_documentos_tipo('12', tipo)
             if result:
-                datos.append(result)
-        if not datos:
+                data += result
+        if not data:
             actualizacion.save()
             print("FINISH PRODUCTION")
             return
@@ -55,116 +55,115 @@ class Production(metaclass=PoolMeta):
         to_created = []
         to_exception = []
         not_import = []
-        for data in datos:
-            for transformacion in data:
-                sw = transformacion.sw
-                numero_doc = transformacion.Numero_documento
-                tipo_doc = transformacion.tipo
-                id_tecno = str(sw)+'-'+tipo_doc+'-'+str(numero_doc)
-                print(id_tecno)
-                if transformacion.anulado == 'S':
-                    msg = f"{id_tecno} Documento anulado en TecnoCarnes"
-                    logs.append(msg)
-                    not_import.append(id_tecno)
-                    continue
-                existe = Production.search([('id_tecno', '=', id_tecno)])
-                if existe:
-                    # existe, = existe
-                    # existe.id_tecno = None
-                    # existe.save()
-                    # cls.reverse_production([existe])
-                    msg = f"La producción {id_tecno} ya existe en Tryton"
-                    logs.append(msg)
-                    to_created.append(id_tecno)
-                    continue
-                fecha = str(transformacion.Fecha_Hora_Factura).split()[0].split('-')
-                fecha = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
-                reference = tipo_doc+'-'+str(numero_doc)
-                id_bodega = transformacion.bodega
-                bodega, = Location.search([('id_tecno', '=', id_bodega)])
-                production = {
-                    'id_tecno': id_tecno,
-                    'reference': reference,
+        for transformacion in data:
+            sw = transformacion.sw
+            numero_doc = transformacion.Numero_documento
+            tipo_doc = transformacion.tipo
+            id_tecno = str(sw)+'-'+tipo_doc+'-'+str(numero_doc)
+            print(id_tecno)
+            if transformacion.anulado == 'S':
+                msg = f"{id_tecno} Documento anulado en TecnoCarnes"
+                logs.append(msg)
+                not_import.append(id_tecno)
+                continue
+            existe = Production.search([('id_tecno', '=', id_tecno)])
+            if existe:
+                # existe, = existe
+                # existe.id_tecno = None
+                # existe.save()
+                # cls.reverse_production([existe])
+                msg = f"La producción {id_tecno} ya existe en Tryton"
+                logs.append(msg)
+                to_created.append(id_tecno)
+                continue
+            fecha = str(transformacion.Fecha_Hora_Factura).split()[0].split('-')
+            fecha = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
+            reference = tipo_doc+'-'+str(numero_doc)
+            id_bodega = transformacion.bodega
+            bodega, = Location.search([('id_tecno', '=', id_bodega)])
+            production = {
+                'id_tecno': id_tecno,
+                'reference': reference,
+                'planned_date': fecha,
+                'planned_start_date': fecha,
+                'effective_date': fecha,
+                'effective_start_date': fecha,
+                'warehouse': bodega.id,
+                'location': bodega.production_location.id,
+            }
+            lines = Config.get_lineasd_tecno(id_tecno)
+            entradas = []
+            salidas = []
+            first = True
+            for line in lines:
+                cantidad = float(line.Cantidad_Facturada)
+                id_tecno_bodega = line.IdBodega
+                bodega, = Location.search([('id_tecno', '=', id_tecno_bodega)])
+                producto, = Product.search([('id_tecno', '=', line.IdProducto)])
+                #print(producto)
+                transf = {
+                    'product': producto.id,
+                    'quantity': abs(cantidad),
+                    'uom': producto.default_uom.id,
                     'planned_date': fecha,
-                    'planned_start_date': fecha,
                     'effective_date': fecha,
-                    'effective_start_date': fecha,
-                    'warehouse': bodega.id,
-                    'location': bodega.production_location.id,
                 }
-                lines = Config.get_lineasd_tecno(id_tecno)
-                entradas = []
-                salidas = []
-                first = True
-                for line in lines:
-                    cantidad = float(line.Cantidad_Facturada)
-                    id_tecno_bodega = line.IdBodega
-                    bodega, = Location.search([('id_tecno', '=', id_tecno_bodega)])
-                    producto, = Product.search([('id_tecno', '=', line.IdProducto)])
-                    #print(producto)
-                    transf = {
-                        'product': producto.id,
-                        'quantity': abs(cantidad),
-                        'uom': producto.default_uom.id,
-                        'planned_date': fecha,
-                        'effective_date': fecha,
-                    }
-                    #Entrada (-1)
-                    if cantidad < 0:
-                        transf['from_location'] = bodega.storage_location.id
-                        transf['to_location'] = bodega.production_location.id
-                        if first:
-                            first = False
-                            #Se actualiza el producto para que sea producible
-                            if not producto.template.producible:
-                                Template.write([producto.template], {'producible': True})
-                            production['product'] = producto.id
-                            production['quantity'] = abs(cantidad)
-                        entradas.append(transf)
-                    #Salida (+1)
-                    elif cantidad > 0:
-                        transf['from_location'] = bodega.production_location.id
-                        transf['to_location'] = bodega.storage_location.id
-                        transf['unit_price'] = Decimal(line.Valor_Unitario)
-                        salidas.append(transf)
-                        # Se valida que el precio de venta sea diferente de 0
-                        if producto.list_price == 0:
-                            if line.Valor_Unitario == 0:
-                                msg = f"EXCEPCION {id_tecno} - Valor de venta en 0 en Tryton y TecnoCarnes (line.Valor_Unitario) del producto {line.IdProducto}"
-                                logs.append(msg)
-                                to_exception.append(id_tecno)
-                                continue
-                            to_write = {
-                                'sale_price_w_tax': Decimal(),
-                                'list_price': Decimal(line.Valor_Unitario)
-                                }
-                            Template.write([producto.template], to_write)
-                if entradas:
-                    production['inputs'] = [('create', entradas)]
-                else:
-                    msg = f"EXCEPCION {id_tecno} - No se encontraron líneas de entrada para la producción"
-                    logs.append(msg)
-                    to_exception.append(id_tecno)
-                    continue
-                if salidas:
-                    production['outputs'] = [('create', salidas)]
-                else:
-                    msg = f"EXCEPCION {id_tecno} - No se encontraron líneas de salida para la producción"
-                    logs.append(msg)
-                    to_exception.append(id_tecno)
-                    continue
-                #Se crea y procesa las producciones
-                try:
-                    producciones = Production.create([production])
-                    Production.wait(producciones)
-                    Production.assign(producciones)
-                    Production.run(producciones)
-                    Production.done(producciones)
-                    to_created.append(id_tecno)
-                except Exception as e:
-                    msg = f"Exception {id_tecno}: {str(e)}"
-                    logs.append(msg)
-                    to_exception.append(id_tecno)
+                #Entrada (-1)
+                if cantidad < 0:
+                    transf['from_location'] = bodega.storage_location.id
+                    transf['to_location'] = bodega.production_location.id
+                    if first:
+                        first = False
+                        #Se actualiza el producto para que sea producible
+                        if not producto.template.producible:
+                            Template.write([producto.template], {'producible': True})
+                        production['product'] = producto.id
+                        production['quantity'] = abs(cantidad)
+                    entradas.append(transf)
+                #Salida (+1)
+                elif cantidad > 0:
+                    transf['from_location'] = bodega.production_location.id
+                    transf['to_location'] = bodega.storage_location.id
+                    transf['unit_price'] = Decimal(line.Valor_Unitario)
+                    salidas.append(transf)
+                    # Se valida que el precio de venta sea diferente de 0
+                    if producto.list_price == 0:
+                        if line.Valor_Unitario == 0:
+                            msg = f"EXCEPCION {id_tecno} - Valor de venta en 0 en Tryton y TecnoCarnes (line.Valor_Unitario) del producto {line.IdProducto}"
+                            logs.append(msg)
+                            to_exception.append(id_tecno)
+                            continue
+                        to_write = {
+                            'sale_price_w_tax': Decimal(),
+                            'list_price': Decimal(line.Valor_Unitario)
+                            }
+                        Template.write([producto.template], to_write)
+            if entradas:
+                production['inputs'] = [('create', entradas)]
+            else:
+                msg = f"EXCEPCION {id_tecno} - No se encontraron líneas de entrada para la producción"
+                logs.append(msg)
+                to_exception.append(id_tecno)
+                continue
+            if salidas:
+                production['outputs'] = [('create', salidas)]
+            else:
+                msg = f"EXCEPCION {id_tecno} - No se encontraron líneas de salida para la producción"
+                logs.append(msg)
+                to_exception.append(id_tecno)
+                continue
+            #Se crea y procesa las producciones
+            try:
+                producciones = Production.create([production])
+                Production.wait(producciones)
+                Production.assign(producciones)
+                Production.run(producciones)
+                Production.done(producciones)
+                to_created.append(id_tecno)
+            except Exception as e:
+                msg = f"Exception {id_tecno}: {str(e)}"
+                logs.append(msg)
+                to_exception.append(id_tecno)
         Actualizacion.add_logs(actualizacion, logs)
         for idt in not_import:
             Config.update_exportado(idt, 'X')
