@@ -164,7 +164,6 @@ class Sale(metaclass=PoolMeta):
                 sale.invoice_party = party.id
                 sale.shipment_party = party.id
                 sale.warehouse = bodega
-                sale.shop = shop
                 sale.payment_term = plazo_pago
                 sale.self_pick_up = False
                 #Se revisa si la venta es clasificada como electronica o pos y se cambia el tipo
@@ -172,6 +171,7 @@ class Sale(metaclass=PoolMeta):
                     #continue #TEST
                     sale.invoice_type = '1'
                 elif tipo_doc in venta_pos:
+                    sale.shop = shop
                     sale.invoice_type = 'P'
                     sale.invoice_date = fecha_date
                     sale.pos_create_date = fecha_date
