@@ -18,6 +18,7 @@ from . import production
 from . import wiz
 from . import report
 from . import account
+from . import payroll
 
 def register():
     Pool.register(
@@ -60,6 +61,8 @@ def register():
         wiz.AddCenterOperationLineP,
         #report.PortfolioStatusStart,
         report.PayrollExportStart,
+        payroll.Bank,
+        payroll.PayrollPaymentStartBcl,
         module='conector', type_='model')
 
     Pool.register(
@@ -83,9 +86,11 @@ def register():
         wiz.ReimportExcepcionDocument,
         #report.PortfolioStatus,
         report.PayrollExport,
+        payroll.PayrollPaymentBcl,
         module='conector', type_='wizard')
 
     Pool.register(
         #report.PortfolioStatusReport,
         report.PayrollExportReport,
+        payroll.PayrollPaymentReportBcl,
         module='conector', type_='report')
