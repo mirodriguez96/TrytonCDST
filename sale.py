@@ -4,7 +4,6 @@ from trytond.pool import Pool, PoolMeta
 from trytond.exceptions import UserError
 from trytond.transaction import Transaction
 from decimal import Decimal
-import logging
 from sql import Table
 
 
@@ -29,7 +28,7 @@ class Sale(metaclass=PoolMeta):
 
     @classmethod
     def import_data_sale(cls):
-        logging.warning('RUN VENTAS')
+        print('RUN VENTAS')
         pool = Pool()
         Config = pool.get('conector.configuration')
         Actualizacion = pool.get('conector.actualizacion')
@@ -40,11 +39,12 @@ class Sale(metaclass=PoolMeta):
         devoluciones_tecno = Config.get_documentos_tecno('2')
         if devoluciones_tecno:
             data += devoluciones_tecno
+
         #Se crea o actualiza la fecha de importación
         actualizacion = Actualizacion.create_or_update('VENTAS')
         if not data:
             actualizacion.save()
-            logging.warning('FINISH VENTAS')
+            print('FINISH VENTAS')
             return
         Sale = pool.get('sale.sale')
         SaleLine = pool.get('sale.line')
@@ -101,7 +101,13 @@ class Sale(metaclass=PoolMeta):
                     tbltipodocto = Config.get_tbltipodoctos(tipo_doc)
                     if tbltipodocto and tbltipodocto[0].Encabezado != '0':
                         AnalyticAccount = pool.get('analytic_account.account')
-                        analytic_account, = AnalyticAccount.search([('code', '=', str(tbltipodocto[0].Encabezado))])
+                        analytic_account = AnalyticAccount.search([('code', '=', str(tbltipodocto[0].Encabezado))])
+                        if not analytic_account:
+                            msg = f'EXCEPCION {id_venta} - No se encontro la asignacion de la cuenta analitica en TecnoCarnes {str(tbltipodocto[0].Encabezado)}'
+                            logs.append(msg)
+                            to_exception.append(id_venta)
+                            continue
+                        analytic_account = analytic_account[0]
                 #Se trae la fecha de la venta y se adapta al formato correcto para Tryton
                 fecha = str(venta.fecha_hora).split()[0].split('-')
                 fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
@@ -109,7 +115,6 @@ class Sale(metaclass=PoolMeta):
                 party = Party.search([('id_number', '=', nit_cedula)])
                 if not party:
                     msg2 = f'EXCEPCION {id_venta} - No se encontro el tercero {nit_cedula}'
-                    logging.error(msg2)
                     logs.append(msg2)
                     actualizacion.reset_writedate('TERCEROS')
                     to_exception.append(id_venta)
@@ -120,7 +125,6 @@ class Sale(metaclass=PoolMeta):
                 bodega = Location.search([('id_tecno', '=', id_tecno_bodega)])
                 if not bodega:
                     msg2 = f'EXCEPCION {id_venta} - Bodega {id_tecno_bodega} no existe'
-                    logging.error(msg2)
                     logs.append(msg2)
                     to_exception.append(id_venta)
                     continue
@@ -128,7 +132,6 @@ class Sale(metaclass=PoolMeta):
                 shop = Shop.search([('warehouse', '=', bodega.id)])
                 if not shop:
                     msg2 = f'EXCEPCION {id_venta} - Tienda (bodega) {id_tecno_bodega} no existe'
-                    logging.error(msg2)
                     logs.append(msg2)
                     to_exception.append(id_venta)
                     continue
@@ -138,7 +141,6 @@ class Sale(metaclass=PoolMeta):
                 plazo_pago = payment_term.search([('id_tecno', '=', condicion)])
                 if not plazo_pago:
                     msg2 = f'EXCEPCION {id_venta} - Plazo de pago {condicion} no existe'
-                    logging.error(msg2)
                     logs.append(msg2)
                     to_exception.append(id_venta)
                     continue
@@ -151,6 +153,7 @@ class Sale(metaclass=PoolMeta):
                     to_exception.append(id_venta)
                     continue
                 with Transaction().set_user(1):
+                    User.shop = shop
                     context = User.get_preferences()
                 with Transaction().set_context(context, shop=shop.id, _skip_warnings=True):
                     sale = Sale()
@@ -311,7 +314,7 @@ class Sale(metaclass=PoolMeta):
         for idt in to_exception:
             Config.update_exportado(idt, 'E')
             # print('excepcion...', idt) #TEST
-        logging.warning('FINISH VENTAS')
+        print('FINISH VENTAS')
 
 
     # Funcion encargada de finalizar el proceso de envío de la venta
@@ -344,7 +347,6 @@ class Sale(metaclass=PoolMeta):
             sale._process_invoice([sale])
             if not sale.invoices:
                 msg1 = f"EXCEPTION {sale.id_tecno} VENTA SIN FACTURA"
-                logging.error(msg1)
                 logs.append(msg1)
                 to_exception.append(sale.id_tecno)
         for invoice in sale.invoices:
@@ -355,9 +357,9 @@ class Sale(metaclass=PoolMeta):
             invoice.invoice_type = 'C'
             tipo_numero = sale.number.split('-')
             #Se agrega en la descripcion el nombre del tipo de documento de la tabla en sqlserver
-            desc = Config.get_tbltipodoctos(tipo_numero[0])
-            if desc:
-                invoice.description = desc[0].TipoDoctos.replace('\n', ' ').replace('\r', '')
+            tbltipodocto = Config.get_tbltipodoctos(tipo_numero[0])
+            if tbltipodocto:
+                invoice.description = tbltipodocto[0].TipoDoctos.replace('\n', ' ').replace('\r', '')
             invoice.save()
             Invoice.validate_invoice([invoice])
             total_tryton = abs(invoice.untaxed_amount)
@@ -378,7 +380,6 @@ class Sale(metaclass=PoolMeta):
                 else:
                     msg = f"NO SE ENCONTRO LA FACTURA {dcto_base} PARA CRUZAR CON LA DEVOLUCION {invoice.number}"
                     logs.append(msg)
-                    logging.error(msg)
                     to_exception.append(sale.id_tecno)
             if diferencia_total < Decimal(6.0):
                 Invoice.post_batch([invoice])
@@ -398,7 +399,6 @@ class Sale(metaclass=PoolMeta):
                 msg1 = f'FACTURA {sale.id_tecno}'
                 msg2 = f'No contabilizada diferencia total mayor al rango permitido'
                 full_msg = ' - '.join([msg1, msg2])
-                logging.error(full_msg)
                 logs.append(full_msg)
                 invoice.comment = msg2
                 invoice.save()
@@ -439,7 +439,6 @@ class Sale(metaclass=PoolMeta):
             result_payment = cls.multipayment_invoices_statement(data_payment, logs, to_exception)
             if result_payment != 'ok':
                 msg = f"ERROR AL PROCESAR EL PAGO DE LA VENTA POS {sale.number}"
-                logging.error(msg)
                 logs.append(msg)
 
     
