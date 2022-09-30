@@ -65,6 +65,7 @@ class Product(metaclass=PoolMeta):
                 valor_unitario = producto.valor_unitario
                 #En caso de existir el producto se procede a verificar su ultimo cambio y a modificar
                 if existe:
+                    existe, = existe
                     ultimo_cambio = producto.Ultimo_Cambio_Registro
                     create_date = None
                     write_date = None
