@@ -56,7 +56,7 @@ class PayrollPaymentStartBcl(ModelView):
     payment_type = fields.Selection(_TYPES_PAYMENT, 'Type payment', required=True)
     send_sequence = fields.Char('Send sequence', size=1)
     type_bank_account = fields.Selection(_TYPES_BANK_ACCOUNT, 'Type of account to be debited', required=True)
-    reference = fields.Char('Reference', required=True)
+    reference = fields.Char('Reference', required=True, size=9)
     type_transaction = fields.Selection(_TYPE_TRANSACTION, 'Type of transaction', required=True)
 
     @staticmethod

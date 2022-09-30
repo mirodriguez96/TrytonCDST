@@ -96,12 +96,12 @@ class Sale(metaclass=PoolMeta):
                     logs.append(msg)
                     to_exception.append(id_venta)
                     continue
-                tbltipodocto, = Config.get_tbltipodoctos(tipo_doc)
                 analytic_account = None
                 if hasattr(SaleLine, 'analytic_accounts'):
-                    if tbltipodocto.Encabezado != '0':
+                    tbltipodocto = Config.get_tbltipodoctos(tipo_doc)
+                    if tbltipodocto and tbltipodocto[0].Encabezado != '0':
                         AnalyticAccount = pool.get('analytic_account.account')
-                        analytic_account, = AnalyticAccount.search([('code', '=', str(tbltipodocto.Encabezado))])
+                        analytic_account, = AnalyticAccount.search([('code', '=', str(tbltipodocto[0].Encabezado))])
                 #Se trae la fecha de la venta y se adapta al formato correcto para Tryton
                 fecha = str(venta.fecha_hora).split()[0].split('-')
                 fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
@@ -201,9 +201,16 @@ class Sale(metaclass=PoolMeta):
                     elif (venta.retencion_iva + venta.retencion_ica) != venta.retencion_causada:
                         retencion_rete = True
                 #Ahora se procede a crear las líneas para la venta
+                not_product = False
                 #_lines = []
                 for lin in documentos_linea:
-                    producto, = Product.search(['OR', ('id_tecno', '=', str(lin.IdProducto)), ('code', '=', str(lin.IdProducto))])
+                    producto = Product.search(['OR', ('id_tecno', '=', str(lin.IdProducto)), ('code', '=', str(lin.IdProducto))])
+                    if not producto:
+                        msg = f"{id_venta} No se encontro el producto {str(lin.IdProducto)}"
+                        logs.append(msg)
+                        not_product = True
+                        break
+                    producto, = producto
                     linea = SaleLine()
                     linea.sale = sale
                     linea.product = producto
@@ -273,6 +280,9 @@ class Sale(metaclass=PoolMeta):
                         linea.analytic_accounts = [analytic_entry]
                     # _lines.append(linea)
                     linea.save()
+                if not_product:
+                    to_exception.append(id_venta)
+                    continue
                 #Se procesa los registros creados
                 with Transaction().set_user(1):
                     context = User.get_preferences()
