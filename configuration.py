@@ -619,7 +619,7 @@ class Configuration(ModelSQL, ModelView):
             if not template:
                 raise UserError("ERROR PRODUCTO", f"No se encontro el producto con código {code_product}")
             product, = Product.search([('template', '=', template[0])])
-            cost = Decimal(linea[1])
+            cost = linea[1]
             if not cost or cost == 0:
                 raise UserError("ERROR COSTO", f"No se encontro el costo para el producto con código {code_product}")
             date = cls.convert_str_date(linea[2])
