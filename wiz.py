@@ -21,7 +21,43 @@ class FixBugsConector(Wizard):
         if Warning.check(warning_name):
             raise UserWarning(warning_name, "No continue si desconoce el funcionamiento interno del asistente.")
 
-        
+        Production = pool.get('production')
+        cursor = Transaction().connection.cursor()
+        stock_move = Table('stock_move')
+        account_move = Table('account_move')
+        production_t = Table('production')
+
+        productions = Production.search([('state', '=', 'done')])
+        for prod in productions:
+            if prod.cost == 0:
+                for rec in prod.inputs:
+                    cursor.execute(*stock_move.update(
+                        columns=[stock_move.state],
+                        values=['draft'],
+                        where=stock_move.id == rec.id)
+                    )
+                for rec in prod.outputs:
+                    cursor.execute(*stock_move.update(
+                        columns=[stock_move.state],
+                        values=['draft'],
+                        where=stock_move.id == rec.id)
+                    )
+                if prod.move:
+                    cursor.execute(*account_move.update(
+                        columns=[account_move.state],
+                        values=['draft'],
+                        where=account_move.id == prod.move.id)
+                    )
+                    cursor.execute(*account_move.delete(
+                        where=account_move.id == prod.move.id)
+                    )
+                #Draft production
+                cursor.execute(*production_t.update(
+                    columns=[production_t.state],
+                    values=['draft'],
+                    where=production_t.id == prod.id)
+                )
+                    
 
         return 'end'
 

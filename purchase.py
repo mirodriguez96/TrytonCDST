@@ -64,6 +64,7 @@ class Purchase(metaclass=PoolMeta):
         #to_save = []
         to_created = []
         to_exception = []
+        not_import = []
         #Procedemos a realizar la compra
         for compra in data:
             sw = compra.sw
@@ -71,6 +72,11 @@ class Purchase(metaclass=PoolMeta):
             tipo_doc = compra.tipo
             id_compra = str(sw)+'-'+tipo_doc+'-'+str(numero_doc)
             try:
+                if compra.anulado == 'S':
+                    msg = f"{id_compra} Documento anulado en TecnoCarnes"
+                    logs.append(msg)
+                    not_import.append(id_compra)
+                    continue
                 existe = Purchase.search([('id_tecno', '=', id_compra)])
                 if existe:
                     to_created.append(id_compra)
@@ -271,6 +277,8 @@ class Purchase(metaclass=PoolMeta):
         for idt in to_exception:
             #print('excepcion...', idt) #TEST
             Config.update_exportado(idt, 'E')
+        for idt in not_import:
+            Config.update_exportado(idt, 'X')
         logging.warning('FINISH COMPRAS')
 
 

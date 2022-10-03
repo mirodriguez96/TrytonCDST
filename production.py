@@ -124,18 +124,19 @@ class Production(metaclass=PoolMeta):
                 elif cantidad > 0:
                     transf['from_location'] = bodega.production_location.id
                     transf['to_location'] = bodega.storage_location.id
-                    transf['unit_price'] = Decimal(line.Valor_Unitario)
+                    valor_unitario = Decimal(line.Valor_Unitario)
+                    transf['unit_price'] = valor_unitario
                     salidas.append(transf)
                     # Se valida que el precio de venta sea diferente de 0
                     if producto.list_price == 0:
-                        if line.Valor_Unitario == 0:
+                        if valor_unitario == 0:
                             msg = f"EXCEPCION {id_tecno} - Valor de venta en 0 en Tryton y TecnoCarnes (line.Valor_Unitario) del producto {line.IdProducto}"
                             logs.append(msg)
                             to_exception.append(id_tecno)
                             continue
                         to_write = {
-                            'sale_price_w_tax': Decimal(),
-                            'list_price': Decimal(line.Valor_Unitario)
+                            'sale_price_w_tax': valor_unitario,
+                            'list_price': valor_unitario
                             }
                         Template.write([producto.template], to_write)
             if entradas:
@@ -161,7 +162,7 @@ class Production(metaclass=PoolMeta):
                 Production.done(producciones)
                 to_created.append(id_tecno)
             except Exception as e:
-                msg = f"Exception {id_tecno}: {str(e)}"
+                msg = f"EXCEPCION {id_tecno}: {str(e)}"
                 logs.append(msg)
                 to_exception.append(id_tecno)
         Actualizacion.add_logs(actualizacion, logs)

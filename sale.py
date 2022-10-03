@@ -79,6 +79,7 @@ class Sale(metaclass=PoolMeta):
         logs = []
         to_created = []
         to_exception = []
+        not_import = []
         #Procedemos a realizar una venta
         for venta in data:
             try:
@@ -86,6 +87,11 @@ class Sale(metaclass=PoolMeta):
                 numero_doc = venta.Numero_documento
                 tipo_doc = venta.tipo
                 id_venta = str(sw)+'-'+tipo_doc+'-'+str(numero_doc)
+                if venta.anulado == 'S':
+                    msg = f"{id_venta} Documento anulado en TecnoCarnes"
+                    logs.append(msg)
+                    not_import.append(id_venta)
+                    continue
                 existe = Sale.search([('id_tecno', '=', id_venta)])
                 if existe:
                     to_created.append(id_venta)
@@ -314,6 +320,8 @@ class Sale(metaclass=PoolMeta):
         for idt in to_exception:
             Config.update_exportado(idt, 'E')
             # print('excepcion...', idt) #TEST
+        for idt in not_import:
+            Config.update_exportado(idt, 'X')
         print('FINISH VENTAS')
 
 
