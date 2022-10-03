@@ -94,28 +94,40 @@ class Actualizacion(ModelSQL, ModelView):
             consult += " AND sw = 5"
         elif self.name == 'COMPROBANTES DE EGRESO':
             consult += " AND sw = 6"
+        elif self.name == 'PRODUCCION':
+            consult += " AND sw = 12 AND ("
+            parametro = Config.get_data_parametros('177')
+            valor_parametro = parametro[0].Valor.split(',')
+            for tipo in valor_parametro:
+                consult += "tipo = "+str(tipo)
+                if (valor_parametro.index(tipo)+1) < len(valor_parametro):
+                    consult += " OR "
+            consult += ")"
         else:
             return None
         result = conexion.get_data(consult)
         result = int(result[0][0])
         return result
         
-    #@classmethod
+
     def getter_imported(self, name):
         quantity = None
         cursor = Transaction().connection.cursor()
         if self.name == 'VENTAS':
-            cursor.execute("SELECT COUNT(*) FROM sale_sale WHERE id_tecno LIKE '%-%'")
+            cursor.execute("SELECT COUNT(*) FROM sale_sale WHERE id_tecno LIKE '1-%' OR id_tecno LIKE '2-%'")
         elif self.name == 'COMPRAS':
-            cursor.execute("SELECT COUNT(*) FROM purchase_purchase WHERE id_tecno LIKE '%-%'")
+            cursor.execute("SELECT COUNT(*) FROM purchase_purchase WHERE id_tecno LIKE '3-%' OR id_tecno LIKE '4-%'")
         elif self.name == 'COMPROBANTES DE INGRESO':
             cursor.execute("SELECT COUNT(*) FROM account_voucher WHERE id_tecno LIKE '5-%'")
             quantity = int(cursor.fetchone()[0])
             cursor.execute("SELECT COUNT(*) FROM account_multirevenue WHERE id_tecno LIKE '5-%'")
             quantity2 = int(cursor.fetchone()[0])
             quantity += quantity2
+            return quantity
         elif self.name == 'COMPROBANTES DE EGRESO':
             cursor.execute("SELECT COUNT(*) FROM account_voucher WHERE id_tecno LIKE '6-%'")
+        elif self.name == 'PRODUCCION':
+            cursor.execute("SELECT COUNT(*) FROM production WHERE id_tecno LIKE '12-%'")
         else:
             return quantity
         result = cursor.fetchone()
@@ -128,15 +140,17 @@ class Actualizacion(ModelSQL, ModelView):
         Config = Pool().get('conector.configuration')
         conexion, = Config.search([], order=[('id', 'DESC')], limit=1)
         fecha = conexion.date.strftime('%Y-%m-%d %H:%M:%S')
-        consult = "SET DATEFORMAT ymd SELECT COUNT(*) FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime)"
+        consult = "SET DATEFORMAT ymd SELECT COUNT(*) FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado = 'E'"
         if self.name == 'VENTAS':
-            consult += " AND (sw = 1 or sw = 2) AND exportado = 'E'"
+            consult += " AND (sw = 1 or sw = 2)"
         elif self.name == 'COMPRAS':
-            consult += " AND (sw = 3 or sw = 4) AND exportado = 'E'"
+            consult += " AND (sw = 3 or sw = 4)"
         elif self.name == 'COMPROBANTES DE INGRESO':
-            consult += " AND sw = 5 AND exportado = 'E'"
+            consult += " AND sw = 5"
         elif self.name == 'COMPROBANTES DE EGRESO':
-            consult += " AND sw = 6 AND exportado = 'E'"
+            consult += " AND sw = 6"
+        elif self.name == 'PRODUCCION':
+            consult += " AND sw = 12"
         else:
             return None
         result = conexion.get_data(consult)
@@ -148,15 +162,17 @@ class Actualizacion(ModelSQL, ModelView):
         Config = Pool().get('conector.configuration')
         conexion, = Config.search([], order=[('id', 'DESC')], limit=1)
         fecha = conexion.date.strftime('%Y-%m-%d %H:%M:%S')
-        consult = "SET DATEFORMAT ymd SELECT COUNT(*) FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime)"
+        consult = "SET DATEFORMAT ymd SELECT COUNT(*) FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado = 'X'"
         if self.name == 'VENTAS':
-            consult += " AND (sw = 1 or sw = 2) AND exportado = 'X'"
+            consult += " AND (sw = 1 or sw = 2)"
         elif self.name == 'COMPRAS':
-            consult += " AND (sw = 3 or sw = 4) AND exportado = 'X'"
+            consult += " AND (sw = 3 or sw = 4)"
         elif self.name == 'COMPROBANTES DE INGRESO':
-            consult += " AND sw = 5 AND exportado = 'X'"
+            consult += " AND sw = 5"
         elif self.name == 'COMPROBANTES DE EGRESO':
-            consult += " AND sw = 6 AND exportado = 'X'"
+            consult += " AND sw = 6"
+        elif self.name == 'PRODUCCION':
+            consult += " AND sw = 12"
         else:
             return None
         result = conexion.get_data(consult)
@@ -178,6 +194,8 @@ class Actualizacion(ModelSQL, ModelView):
             consult += " AND sw = 5"
         elif self.name == 'COMPROBANTES DE EGRESO':
             consult += " AND sw = 6"
+        elif self.name == 'PRODUCCION':
+            consult += " AND sw = 12"
         else:
             return None
         result = conexion.get_data(consult)
@@ -215,7 +233,7 @@ class Actualizacion(ModelSQL, ModelView):
         logs = []
         for falt in list_difference:
             lid = falt.split('-')
-            Config.set_data(f"UPDATE dbo.Documentos SET exportado = 'S' WHERE tipo = {lid[0]} AND Numero_documento = {lid[1]}")
+            Config.set_data(f"UPDATE dbo.Documentos SET exportado = 'N' WHERE tipo = {lid[0]} AND Numero_documento = {lid[1]}")
             logs.append(f"DOCUMENTO FALTANTE: {falt}")
         actualizacion, = Actualizacion.search([('name', '=', name_a)])
         cls.add_logs(actualizacion, logs)
