@@ -47,11 +47,13 @@ class Purchase(metaclass=PoolMeta):
             actualizacion.save()
             logging.warning('FINISH COMPRAS')
             return
+        Invoice = pool.get('account.invoice')
         Purchase = pool.get('purchase.purchase')
         PurchaseLine = pool.get('purchase.line')
         Product = pool.get('product.product')
         Location = pool.get('stock.location')
         payment_term = pool.get('account.invoice.payment_term')
+        PaymentLine = pool.get('account.invoice-account.move.line')
         Party = pool.get('party.party')
         Address = pool.get('party.address')
         Tax = pool.get('account.tax')
@@ -222,18 +224,20 @@ class Purchase(metaclass=PoolMeta):
                 #Se requiere procesar de forma 'manual' la compra para que genere la factura
                 purchase.process([purchase])
                 #Se hace uso del asistente para crear el envio del proveedor
-                purchase.generate_shipment([purchase])
+                if compra.sw == 3:
+                    Purchase.generate_shipment([purchase])
                 for shipment in purchase.shipments:
-                    shipment.number = tipo_doc+'-'+str(numero_doc)
-                    shipment.reference = tipo_doc+'-'+str(numero_doc)
+                    shipment.reference = purchase.number
                     shipment.planned_date = fecha_date
                     shipment.effective_date = fecha_date
+                    shipment.save()
                     shipment.receive([shipment])
                     shipment.done([shipment])
                 for shipment in purchase.shipment_returns:
-                    shipment.number = tipo_doc+'-'+str(numero_doc)
-                    shipment.reference = tipo_doc+'-'+str(numero_doc)
+                    shipment.reference = purchase.number
+                    shipment.planned_date = fecha_date 
                     shipment.effective_date = fecha_date
+                    shipment.save()
                     shipment.wait([shipment])
                     shipment.assign([shipment])
                     shipment.done([shipment])
@@ -245,14 +249,24 @@ class Purchase(metaclass=PoolMeta):
                         to_exception.append(id_compra)
                         continue
                 for invoice in purchase.invoices:
-                    invoice.number = tipo_doc+'-'+str(numero_doc)
-                    invoice.reference = tipo_doc+'-'+str(numero_doc)
+                    invoice.number = purchase.number
+                    invoice.reference = purchase.number
                     invoice.invoice_date = fecha_date
                     #Se agrega en la descripcion el nombre del tipo de documento de la tabla en sqlserver
                     desc = Config.get_tbltipodoctos(tipo_doc)
                     if desc:
                         invoice.description = desc[0].TipoDoctos.replace('\n', ' ').replace('\r', '')
                     invoice.validate_invoice([invoice])
+                    original_invoice = None
+                    if compra.sw == 4:
+                        dcto_base = str(compra.Tipo_Docto_Base)+'-'+str(compra.Numero_Docto_Base)
+                        invoice.comment = f"DEVOLUCION DE LA FACTURA {dcto_base}"
+                        original_invoice = Invoice.search([('number', '=', dcto_base)])
+                        if original_invoice:
+                            original_invoice = original_invoice[0]
+                        else:
+                            msg = f"NO SE ENCONTRO LA FACTURA {dcto_base} PARA CRUZAR CON LA DEVOLUCION {invoice.number}"
+                            logs.append(msg)
                     #Verificamos que el total de la tabla en sqlserver coincidan o tengan una diferencia menor a 4 decimales, para contabilizar la factura
                     total_tryton = Decimal(abs(invoice.total_amount))
                     total_tecno = Decimal(abs(compra.valor_total))
@@ -261,8 +275,18 @@ class Purchase(metaclass=PoolMeta):
                     diferencia_total = abs(total_tryton - total_tecno)
                     if diferencia_total < Decimal(6.0):
                         with Transaction().set_context(_skip_warnings=True):
-                            invoice.post_batch([invoice])
-                            invoice.post([invoice])
+                            Invoice.post_batch([invoice])
+                            Invoice.post([invoice])
+                            if original_invoice:
+                                # payment_lines = invoice.payment_lines + (invoice.lines_to_pay[0])
+                                # original_invoice.payment_lines = payment_lines
+                                paymentline = PaymentLine()
+                                paymentline.invoice = original_invoice
+                                paymentline.invoice_account = invoice.account
+                                paymentline.invoice_party = invoice.party
+                                paymentline.line = invoice.lines_to_pay[0]
+                                paymentline.save()
+                                Invoice.process([original_invoice])
                     invoice.save()
                 to_created.append(id_compra)
             except Exception as e:
@@ -278,6 +302,7 @@ class Purchase(metaclass=PoolMeta):
             #print('excepcion...', idt) #TEST
             Config.update_exportado(idt, 'E')
         for idt in not_import:
+            #print('not_import...', idt) #TEST
             Config.update_exportado(idt, 'X')
         logging.warning('FINISH COMPRAS')
 

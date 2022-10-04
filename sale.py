@@ -393,15 +393,13 @@ class Sale(metaclass=PoolMeta):
                 Invoice.post_batch([invoice])
                 Invoice.post([invoice])
                 if invoice.original_invoice:
-                    if invoice.original_invoice.amount_to_pay + invoice.amount_to_pay != 0:
-                        paymentline = PaymentLine()
-                        paymentline.invoice = invoice.original_invoice
-                        paymentline.invoice_account = invoice.account
-                        paymentline.invoice_party = invoice.party
-                        for ml in invoice.move.lines:
-                            if ml.account.type.receivable:
-                                paymentline.line = ml
-                        paymentline.save()
+                    #if invoice.original_invoice.amount_to_pay + invoice.amount_to_pay != 0:
+                    paymentline = PaymentLine()
+                    paymentline.invoice = invoice.original_invoice
+                    paymentline.invoice_account = invoice.account
+                    paymentline.invoice_party = invoice.party
+                    paymentline.line = invoice.lines_to_pay[0]
+                    paymentline.save()
                     Invoice.reconcile_invoice(invoice)
             else:
                 msg1 = f'FACTURA {sale.id_tecno}'

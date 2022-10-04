@@ -130,7 +130,7 @@ class Configuration(ModelSQL, ModelView):
         Config = Pool().get('conector.configuration')
         config, = Config.search([], order=[('id', 'DESC')], limit=1)
         fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
-        #query = "SELECT * FROM dbo.Documentos WHERE tipo = 117 AND Numero_documento = 3694" #TEST
+        #query = "SELECT * FROM dbo.Documentos WHERE tipo = 106 AND Numero_documento = 502" #TEST
         query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND sw = "+sw+" AND exportado != 'T' AND exportado != 'E' AND exportado != 'X' ORDER BY fecha_hora ASC"
         data = cls.get_data(query)
         return data
@@ -607,6 +607,10 @@ class Configuration(ModelSQL, ModelView):
         ModifyCost = pool.get('product.modify_cost_price', type='wizard')
         _id, _, _ = ModifyCost.create()
         modify_cost = ModifyCost(_id)
+        RecomputeCost = pool.get('product.recompute_cost_price', type='wizard')
+        _id, _, _ = RecomputeCost.create()
+        recompute_cost_price = RecomputeCost(_id)
+        today = datetime.date.today()
         for linea in lineas:
             linea = linea.strip()
             if not linea:
@@ -629,6 +633,10 @@ class Configuration(ModelSQL, ModelView):
             modify_cost.start.date = date
             modify_cost.start.cost_price = cost
             modify_cost.transition_modify()
+            recompute_cost_price.model = Product
+            recompute_cost_price.records = [product]
+            recompute_cost_price.start.from_ = today
+            recompute_cost_price.transition_recompute()
 
 
     @classmethod

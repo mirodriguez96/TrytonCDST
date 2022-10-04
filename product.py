@@ -65,6 +65,7 @@ class Product(metaclass=PoolMeta):
                 valor_unitario = producto.valor_unitario
                 if producto.PromedioVenta > 0:
                     valor_unitario = producto.PromedioVenta
+                valor_unitario = round(valor_unitario, 2)
                 #En caso de existir el producto se procede a verificar su ultimo cambio y a modificar
                 if existe:
                     existe, = existe
