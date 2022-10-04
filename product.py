@@ -63,6 +63,8 @@ class Product(metaclass=PoolMeta):
                 udm_producto = cls.udm_producto(producto.unidad_Inventario)
                 vendible = cls.vendible_producto(producto.TipoProducto)
                 valor_unitario = producto.valor_unitario
+                if producto.PromedioVenta > 0:
+                    valor_unitario = producto.PromedioVenta
                 #En caso de existir el producto se procede a verificar su ultimo cambio y a modificar
                 if existe:
                     existe, = existe
@@ -85,7 +87,7 @@ class Product(metaclass=PoolMeta):
                             existe.template.sale_uom = udm_producto
                         existe.template.list_price = valor_unitario
                         existe.template.account_category = categoria_contable.id
-                        existe.template.sale_price_w_tax = 0
+                        existe.template.sale_price_w_tax = valor_unitario
                         existe.template.save()
                 else:
                     prod = Product()
@@ -101,7 +103,7 @@ class Product(metaclass=PoolMeta):
                         temp.sale_uom = udm_producto
                     temp.list_price = valor_unitario
                     temp.account_category = categoria_contable.id
-                    temp.sale_price_w_tax = 0
+                    temp.sale_price_w_tax = valor_unitario
                     prod.id_tecno = id_producto
                     prod.template = temp
                     to_template.append(temp)
