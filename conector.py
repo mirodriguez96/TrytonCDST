@@ -195,7 +195,14 @@ class Actualizacion(ModelSQL, ModelView):
         elif self.name == 'COMPROBANTES DE EGRESO':
             consult += " AND sw = 6"
         elif self.name == 'PRODUCCION':
-            consult += " AND sw = 12"
+            consult += " AND sw = 12 AND ("
+            parametro = Config.get_data_parametros('177')
+            valor_parametro = parametro[0].Valor.split(',')
+            for tipo in valor_parametro:
+                consult += "tipo = "+str(tipo)
+                if (valor_parametro.index(tipo)+1) < len(valor_parametro):
+                    consult += " OR "
+            consult += ")"
         else:
             return None
         result = conexion.get_data(consult)
