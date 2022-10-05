@@ -34,7 +34,7 @@ class Purchase(metaclass=PoolMeta):
         pool = Pool()
         Config = pool.get('conector.configuration')
         Actualizacion = pool.get('conector.actualizacion')
-        data = ()
+        data = []
         compras_tecno = Config.get_documentos_tecno('3')
         if compras_tecno:
             data = compras_tecno

@@ -329,17 +329,17 @@ class Sale(metaclass=PoolMeta):
     @classmethod
     def finish_shipment_process(cls, sale):
         for shipment in sale.shipments:
-            shipment.number = sale.number
-            shipment.reference = sale.reference
+            shipment.reference = sale.number
             shipment.effective_date = sale.sale_date
+            shipment.save()
             shipment.wait([shipment])
             shipment.pick([shipment])
             shipment.pack([shipment])
             shipment.done([shipment])
         for shipment in sale.shipment_returns:
-            shipment.number = sale.number
-            shipment.reference = sale.reference
+            shipment.reference = sale.number
             shipment.effective_date = sale.sale_date
+            shipment.save()
             shipment.receive([shipment])
             shipment.done([shipment])
 
