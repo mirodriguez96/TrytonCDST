@@ -4,6 +4,13 @@ this repository contains the full copyright notices and license terms. -->
 <tryton>
     <data>
 
+        <!-- Views Definitions -->
+        <record model="ir.ui.view" id="staff_event_view_form">
+            <field name="model">staff.event</field>
+            <field name="inherit" ref="staff_event.staff_event_view_form"/> <!--HEREDA DE LA VISTA-->
+            <field name="name">staff_event_form</field>
+        </record>
+
         <!--interfaz para el campo nuevo del banco-->
         <record model="ir.ui.view" id="bank_view_form">
             <field name="model">bank</field>

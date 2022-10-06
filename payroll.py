@@ -4,8 +4,10 @@ from trytond.pool import Pool, PoolMeta
 from trytond.wizard import (
     Wizard, StateView, Button, StateReport
 )
+from trytond.pyson import Eval
 from trytond.transaction import Transaction
 from trytond.report import Report
+from trytond.exceptions import UserError
 
 
 _TYPES_PAYMENT = [
@@ -142,3 +144,36 @@ class PayrollPaymentReportBcl(Report):
         report_context['records'] = new_objects
         report_context['company'] = user.company
         return report_context
+
+class StaffEvent(metaclass=PoolMeta):
+    __name__ = "staff.event"
+
+    analytic_account = fields.Many2One('analytic_account.account',
+        'Analytic Account', domain=[
+            ('type', 'in', ['normal', 'distribution']),
+            ('company', '=', Eval('context', {}).get('company', -1))
+        ])
+
+class Payroll(metaclass=PoolMeta):
+    __name__ = "staff.payroll"
+
+    @classmethod
+    def __setup__(cls):
+        super(Payroll, cls).__setup__()
+
+    def set_preliquidation(self, extras, discounts=None):
+        super(Payroll, self).set_preliquidation(extras, discounts)
+        Event = Pool().get('staff.event')
+        if not hasattr(Event, 'analytic_account'):
+            return
+        for line in self.lines:
+            if not line.is_event:
+                continue
+            if line.origin.analytic_account:
+                for acc in line.analytic_accounts:
+                    try:
+                        acc.write([acc], {'account': line.origin.analytic_account.id})
+                    except:
+                        wage = line.wage_type.rec_name
+                        raise UserError('analytic_event.msg_error_on_wage_type', wage)
+        self.save()

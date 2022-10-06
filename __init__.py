@@ -63,6 +63,8 @@ def register():
         report.PayrollExportStart,
         payroll.Bank,
         payroll.PayrollPaymentStartBcl,
+        payroll.StaffEvent,
+        payroll.Payroll,
         module='conector', type_='model')
 
     Pool.register(
