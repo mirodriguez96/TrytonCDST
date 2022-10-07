@@ -97,7 +97,7 @@ class Purchase(metaclass=PoolMeta):
                 fecha = str(compra.fecha_hora).split()[0].split('-')
                 fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
                 purchase.purchase_date = fecha_date
-                party = Party.search([('id_number', '=', compra.nit_Cedula)])
+                party = Party.search([('id_number', '=', compra.nit_Cedula.replace('\n',""))])
                 if not party:
                     msg = f"EXCEPCION {id_compra} - No se encontró el tercero con id {compra.nit_Cedula}"
                     logging.error(msg)

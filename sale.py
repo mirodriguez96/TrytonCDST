@@ -117,7 +117,7 @@ class Sale(metaclass=PoolMeta):
                 #Se trae la fecha de la venta y se adapta al formato correcto para Tryton
                 fecha = str(venta.fecha_hora).split()[0].split('-')
                 fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
-                nit_cedula = venta.nit_Cedula
+                nit_cedula = venta.nit_Cedula.replace('\n',"")
                 party = Party.search([('id_number', '=', nit_cedula)])
                 if not party:
                     msg2 = f'EXCEPCION {id_venta} - No se encontro el tercero {nit_cedula}'

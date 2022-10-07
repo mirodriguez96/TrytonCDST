@@ -65,7 +65,7 @@ class Voucher(ModelSQL, ModelView):
                     exceptions.append(id_tecno)
                     logs.append(msg1)
                     continue
-                nit_cedula = doc.nit_Cedula
+                nit_cedula = doc.nit_Cedula.replace('\n',"")
                 party = Party.search([('id_number', '=', nit_cedula)])
                 if not party:
                     msg = f"EL TERCERO {nit_cedula} NO EXISTE EN TRYTON"
@@ -180,7 +180,7 @@ class Voucher(ModelSQL, ModelView):
                     logs.append(msg1)
                     exceptions.append(id_tecno)
                     continue
-                tercero = Party.search([('id_number', '=', doc.nit_Cedula)])
+                tercero = Party.search([('id_number', '=', doc.nit_Cedula.replace('\n',""))])
                 if not tercero:
                     msg = f"EL TERCERO {doc.nit_Cedula} NO EXISTE EN TRYTON"
                     logs.append(msg)
