@@ -252,8 +252,9 @@ class Party(metaclass=PoolMeta):
             if len(comercial_name) > 2:
                 party['commercial_name'] = comercial_name
         country_code, = Country.search([('code', '=', '169')])
+        nit = (data.nit).replace('\n',"")
         adress = {
-            'id_tecno': data.nit+'-'+str(data.codigo_direccion),
+            'id_tecno': nit+'-'+str(data.codigo_direccion),
             'country_code': country_code,
             'party_name': party['name'],
         }
