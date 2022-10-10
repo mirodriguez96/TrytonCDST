@@ -8,7 +8,7 @@
             <label name="host_supplier"/>
             <field name="host_supplier"/>
             <label name="auth_supplier"/>
-            <field name="auth_supplier"/>
+            <field name="auth_supplier" widget="password"/>
             <label name="supplier_code"/>
             <field name="supplier_code"/>
             <separator id="suppot_document" string="Support document" colspan="4"/>
@@ -17,7 +17,7 @@
             <label name="host_ds_itsupplier"/>
             <field name="host_ds_itsupplier"/>
             <label name="auth_ds_itsupplier"/>
-            <field name="auth_ds_itsupplier"/>
+            <field name="auth_ds_itsupplier" widget="password"/>
             <label name="itsupplier_code_ds"/>
             <field name="itsupplier_code_ds"/>
             <label name="itsupplier_billing_resolution"/>

@@ -185,3 +185,59 @@ msgstr "Período Inicial"
 msgctxt "field:staff.payroll.export.start,end_period:"
 msgid "End Period"
 msgstr "Período Final"
+
+msgctxt "view:company.company:"
+msgid "Supplier it"
+msgstr "Proveedor Tecnológico"
+
+msgctxt "view:company.company:"
+msgid "Payroll"
+msgstr "Nómina"
+
+msgctxt "field:company.company,url_supplier:"
+msgid "Url prod"
+msgstr "Ruta (url)"
+
+msgctxt "field:company.company,auth_supplier:"
+msgid "Auth"
+msgstr "Autorización"
+
+msgctxt "field:company.company,host_supplier:"
+msgid "Host"
+msgstr "Dominio url"
+
+msgctxt "field:company.company,supplier_code:"
+msgid "Code"
+msgstr "Código sucursal"
+
+msgctxt "view:company.company:"
+msgid "Support document"
+msgstr "Documento soporte"
+
+msgctxt "field:company.company,url_ds_itsupplier:"
+msgid "Url prod"
+msgstr "Ruta (url)"
+
+msgctxt "field:company.company,auth_ds_itsupplier:"
+msgid "Auth"
+msgstr "Autorización"
+
+msgctxt "field:company.company,host_ds_itsupplier:"
+msgid "Host"
+msgstr "Dominio url"
+
+msgctxt "field:company.company,itsupplier_code_ds:"
+msgid "Code"
+msgstr "Código sucursal"
+
+msgctxt "field:company.company,itsupplier_billing_resolution:"
+msgid "Billing Resolution Number"
+msgstr "Número de resolución"
+
+msgctxt "field:company.company,itsupplier_print_format:"
+msgid "Print Format Number"
+msgstr "Número de formato de impresión"
+
+msgctxt "field:company.company,itsupplier_email_ds:"
+msgid "Email support document"
+msgstr "Copia al correo electrónico"

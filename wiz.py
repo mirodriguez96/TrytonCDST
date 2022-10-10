@@ -21,6 +21,17 @@ class FixBugsConector(Wizard):
         if Warning.check(warning_name):
             raise UserWarning(warning_name, "No continue si desconoce el funcionamiento interno del asistente.")
 
+        Product = pool.get('product.product')
+        Template = pool.get('product.template')
+        id_producto = '2001'
+        domain_inactive = [('code', '=', id_producto), ('active', '=', False)]
+        domain_active = [('code', '=', id_producto), ('active', '=', True)]
+        product = Product.search(domain_inactive)
+        print(product)
+        product = Product.search(domain_active)
+        print(product)
+        # template = Template.search([('code', '=', id_producto), ('active', '=', False)])
+        # print(template)
 
         return 'end'
 

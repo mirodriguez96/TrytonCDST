@@ -46,7 +46,12 @@ class Product(metaclass=PoolMeta):
         for producto in productos_tecno:
             try:
                 id_producto = str(producto.IdProducto)
-                existe = Product.search(['OR', ('id_tecno', '=', id_producto), ('code', '=', id_producto)])
+                product_inactive = Product.search([('code', '=', id_producto), ('active', '=', False)])
+                if product_inactive:
+                    msg = f"EL PRODUCTO CON CODIGO {id_producto} ESTA MARCADO COMO INACTIVO EN TRYTON"
+                    logs.append(msg)
+                    continue
+                existe = Product.search([('code', '=', id_producto), ('active', '=', True)])
                 id_categoria = producto.contable
                 categoria_contable = Category.search([('id_tecno', '=', id_categoria)])
                 if categoria_contable:
