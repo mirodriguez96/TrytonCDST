@@ -188,7 +188,7 @@ class Party(metaclass=PoolMeta):
         country_code, = Country.search([('code', '=', '169')])
         for dir in direcciones_db:
             try:
-                nit = dir.nit.replace('\n',"")
+                nit = (dir.nit).replace('\n',"")
                 party = Party.search([('id_number', '=', nit)])
                 if not party:
                     msg = f"NO SE ENCONTRO EL TERCERO {nit}"
