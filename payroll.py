@@ -2,7 +2,7 @@ from decimal import Decimal
 from trytond.model import ModelView, fields
 from trytond.pool import Pool, PoolMeta
 from trytond.wizard import (
-    Wizard, StateView, Button, StateReport
+    Wizard, StateView, Button, StateReport, StateTransition
 )
 from trytond.pyson import Eval
 from trytond.transaction import Transaction
@@ -144,6 +144,65 @@ class PayrollPaymentReportBcl(Report):
         report_context['records'] = new_objects
         report_context['company'] = user.company
         return report_context
+
+class PayslipSendStart(ModelView):
+    'Payslip Send Start'
+    __name__ = 'staff.payroll_payslip_send.start'
+    company = fields.Many2One('company.company', 'Company', required=True)
+    department = fields.Many2One('company.department', 'Department')
+    period = fields.Many2One('staff.payroll.period', 'Start Period', required=True)
+    subject = fields.Char('Subject', size=60, required=True)
+    cc = fields.Char('Cc', help='separate emails with commas')
+
+    @staticmethod
+    def default_company():
+        return Transaction().context.get('company')
+
+
+class PayslipSend(Wizard):
+    'Payslip Send'
+    __name__ = 'staff.payroll.payslip_send'
+    start = StateView('staff.payroll_payslip_send.start',
+        'conector.payroll_payslip_send_view_form', [
+        Button('Cancel', 'end', 'tryton-cancel'),
+        Button('Send', 'send_', 'tryton-ok', default=True),
+    ])
+    send_ = StateTransition()
+
+    def transition_send_(self):
+        pool = Pool()
+        model_name = 'staff.payroll'
+        Email = pool.get('ir.email')
+        Payroll = pool.get(model_name)
+        ActionReport = pool.get('ir.action.report')
+        report, = ActionReport.search([('report_name', '=', model_name)])
+        reports = [report.id]
+        subject = self.start.subject
+        dom = [
+            ('company', '=', self.start.company.id),
+            ('period', '=', self.start.period.id),
+            ('state', 'in', ['processed', 'posted']),
+            ('sended_mail', '=', False)
+         ]
+        if self.start.department:
+            dom.append(('department', '=', self.start.department.id))
+        payrolls = Payroll.search(dom)
+        for payroll in payrolls:
+            #email = 'clancheros@cdstecno.com'
+            email = payroll.employee.party.email
+            recipients_secondary = ''
+            if self.start.cc:
+                recipients_secondary = self.start.cc
+            record = [model_name, payroll.id]
+            try:
+                Email.send(to=email, cc=recipients_secondary, bcc='', subject=subject, body='',
+                    files=None, record=record, reports=reports, attachments=None)
+                Payroll.write([payroll], {'sended_mail': True})
+            except Exception as e:
+                raise UserError('No mail sent, check employee email', str(e))
+    
+        return 'end'
+
 
 class StaffEvent(metaclass=PoolMeta):
     __name__ = "staff.event"

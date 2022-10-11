@@ -39,5 +39,17 @@ this repository contains the full copyright notices and license terms. -->
         <menuitem parent="staff.menu_reporting" id="menu_payroll_payment"
             action="wizard_print_payroll_payment_bancolombia"/>
 
+        <!--interfaz para el envio del comprobante de nomina-->
+        <record model="ir.ui.view" id="payroll_payslip_send_view_form">
+            <field name="model">staff.payroll_payslip_send.start</field>
+            <field name="type">form</field>
+            <field name="name">payslip_send_form</field>
+        </record>
+        <record model="ir.action.wizard" id="wizard_payroll_payslip_send">
+            <field name="name">Payslip Send</field>
+            <field name="wiz_name">staff.payroll.payslip_send</field>
+        </record>
+        <menuitem parent="staff.menu_assitants" id="menu_payslip_send"
+            action="wizard_payroll_payslip_send"/>
     </data>
 </tryton>

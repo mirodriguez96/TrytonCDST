@@ -241,3 +241,37 @@ msgstr "Número de formato de impresión"
 msgctxt "field:company.company,itsupplier_email_ds:"
 msgid "Email support document"
 msgstr "Copia al correo electrónico"
+
+msgctxt "model:ir.ui.menu,name:menu_payslip_send"
+msgid "Payslip Send"
+msgstr "Enviar Soporte de Nómina"
+
+msgctxt "model:ir.action,name:wizard_payroll_payslip_send"
+msgid "Payslip Send"
+msgstr "Enviar Soporte de Nómina"
+
+msgctxt "field:staff.payroll_payslip_send.start,company:"
+msgid "Company"
+msgstr "Empresa"
+
+msgctxt "field:staff.payroll_payslip_send.start,department:"
+msgid "Department"
+msgstr "Departamento"
+
+msgctxt "field:staff.payroll_payslip_send.start,period:"
+msgid "Start Period"
+msgstr "Período"
+
+msgctxt "field:staff.payroll_payslip_send.start,subject:"
+msgid "Subject"
+msgstr "Asunto"
+
+
+
+msgctxt "wizard_button:staff.payroll.payslip_send,start,end:"
+msgid "Cancel"
+msgstr "Cancelar"
+
+msgctxt "wizard_button:staff.payroll.payslip_send,start,send_:"
+msgid "Send"
+msgstr "Enviar"

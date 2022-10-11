@@ -65,6 +65,7 @@ def register():
         payroll.PayrollPaymentStartBcl,
         payroll.StaffEvent,
         payroll.Payroll,
+        payroll.PayslipSendStart,
         module='conector', type_='model')
 
     Pool.register(
@@ -89,6 +90,7 @@ def register():
         #report.PortfolioStatus,
         report.PayrollExport,
         payroll.PayrollPaymentBcl,
+        payroll.PayslipSend,
         module='conector', type_='wizard')
 
     Pool.register(
