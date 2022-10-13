@@ -3,7 +3,6 @@ from trytond.pool import Pool, PoolMeta
 from trytond.exceptions import UserError
 from trytond.transaction import Transaction
 from decimal import Decimal
-import logging
 import datetime
 
 
@@ -31,7 +30,7 @@ class Voucher(ModelSQL, ModelView):
 
     @classmethod
     def import_voucher_payment(cls):
-        logging.warning("RUN COMPROBANTES DE EGRESO")
+        print("RUN COMPROBANTES DE EGRESO")
         pool = Pool()
         Config = pool.get('conector.configuration')
         Actualizacion = pool.get('conector.actualizacion')
@@ -139,13 +138,13 @@ class Voucher(ModelSQL, ModelView):
         for idt in created:
             Config.update_exportado(idt, 'T')
             #print(id)
-        logging.warning("FINISH COMPROBANTES DE EGRESO")
+        print("FINISH COMPROBANTES DE EGRESO")
 
 
     #Funcion encargada de crear los comprobantes de ingreso
     @classmethod
     def import_voucher(cls):
-        logging.warning("RUN COMPROBANTES DE INGRESO")
+        print("RUN COMPROBANTES DE INGRESO")
         pool = Pool()
         Config = pool.get('conector.configuration')
         Actualizacion = pool.get('conector.actualizacion')
@@ -336,7 +335,7 @@ class Voucher(ModelSQL, ModelView):
         for idt in created:
             Config.update_exportado(idt, 'T')
             #print('CREADO...', idt) #TEST
-        logging.warning("FINISH COMPROBANTES DE INGRESO")
+        print("FINISH COMPROBANTES DE INGRESO")
 
 
     #Se obtiene las lineas de la factura que se desea pagar
@@ -425,7 +424,6 @@ class Voucher(ModelSQL, ModelView):
             move_line = cls.get_moveline(ref, voucher.party, logs)
             if not move_line:
                 msg = f'NO SE ENCONTRO LA FACTURA {ref} EN TRYTON'
-                logging.warning(msg)
                 logs.append(msg)
                 continue
             #print(ref)
@@ -629,7 +627,7 @@ class Voucher(ModelSQL, ModelView):
         Voucher.delete(vouchers)
         # Se marca en la base de datos de importación como NO exportado y se elimina
         for idt in ids_tecno:
-            Conexion.update_exportado(idt, 'S')
+            Conexion.update_exportado(idt, 'N')
 
 
 # Se añaden campos relacionados con las retenciones aplicadas en TecnoCarnes
@@ -796,7 +794,7 @@ class MultiRevenue(metaclass=PoolMeta):
             Transaction.delete(multi.transactions)
         MultiRevenue.delete(multirevenue)
         for idt in ids_tecno:
-            Conexion.update_exportado(idt, 'S')
+            Conexion.update_exportado(idt, 'N')
 
 
 class Note(metaclass=PoolMeta):
