@@ -1,6 +1,6 @@
 from trytond.model import ModelSQL, ModelView, fields
 from trytond.pool import Pool
-from trytond.exceptions import UserError
+from trytond.exceptions import UserError, UserWarning
 from trytond.transaction import Transaction
 from decimal import Decimal
 import math
@@ -207,6 +207,10 @@ class Configuration(ModelSQL, ModelView):
     @classmethod
     @ModelView.button
     def importfile(cls, records):
+        Warning = Pool().get('res.user.warning')
+        warning_name = 'warning_import_conector'
+        if Warning.check(warning_name):
+            raise UserWarning(warning_name, "Se procede a importar el archivo cargado.")
         for config in records:
             if config.file:
                 file_decode = cls.encode_file(config.file, 'decode')
