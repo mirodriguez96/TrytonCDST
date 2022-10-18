@@ -200,6 +200,7 @@ class PayslipSend(Wizard):
                 Email.send(to=email, cc=recipients_secondary, bcc='', subject=subject, body='',
                     files=None, record=record, reports=reports, attachments=None)
                 Payroll.write([payroll], {'sended_mail': True})
+                Transaction().connection.commit()
             except Exception as e:
                 raise UserError('No mail sent, check employee email', str(e))
     
