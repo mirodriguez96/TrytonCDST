@@ -8,6 +8,7 @@ from trytond.pyson import Eval
 from trytond.transaction import Transaction
 from trytond.report import Report
 from trytond.exceptions import UserError
+import time
 
 
 _TYPES_PAYMENT = [
@@ -195,6 +196,7 @@ class PayslipSend(Wizard):
                 recipients_secondary = self.start.cc
             record = [model_name, payroll.id]
             try:
+                time.sleep(2)
                 Email.send(to=email, cc=recipients_secondary, bcc='', subject=subject, body='',
                     files=None, record=record, reports=reports, attachments=None)
                 Payroll.write([payroll], {'sended_mail': True})
