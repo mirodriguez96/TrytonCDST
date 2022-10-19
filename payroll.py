@@ -223,11 +223,12 @@ class PayslipSend(Wizard):
                 recipients_secondary = self.start.cc
             record = [model_name, payroll.id]
             try:
+                sadad
                 self.send(to=email, cc=recipients_secondary, bcc='', subject=subject, body='___',
                     files=None, record=record, reports=reports, attachments=None)
                 Payroll.write([payroll], {'sended_mail': True})
             except Exception as e:
-                raise UserError('No mail sent, check employee email', str(e))
+                raise UserError(f'No mail sent, check employee email {payroll.employee.rec_name}', str(e))
     
         return 'end'
 
