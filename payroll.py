@@ -223,7 +223,6 @@ class PayslipSend(Wizard):
                 recipients_secondary = self.start.cc
             record = [model_name, payroll.id]
             try:
-                sadad
                 self.send(to=email, cc=recipients_secondary, bcc='', subject=subject, body='___',
                     files=None, record=record, reports=reports, attachments=None)
                 Payroll.write([payroll], {'sended_mail': True})
