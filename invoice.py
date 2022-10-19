@@ -90,167 +90,172 @@ class Invoice(metaclass=PoolMeta):
         with Transaction().set_context(_skip_warnings=True):
             for nota in documentos:
                 id_tecno = str(nota.sw)+'-'+nota.tipo+'-'+str(nota.Numero_documento)
-                invoice = Invoice.search([('id_tecno', '=', id_tecno)])
-                if invoice:
-                    msg = f"LA NOTA {id_tecno} YA EXISTE EN TRYTON"
-                    logs.append(msg)
-                    created.append(id_tecno)
-                    continue
-                if nota.anulado == 'S':
-                    msg = f"{id_tecno} Documento anulado en TecnoCarnes"
-                    logs.append(msg)
-                    not_import.append(id_tecno)
-                    continue
-                nit_cedula = nota.nit_Cedula.replace('\n',"")
-                party = Party.search([('id_number', '=', nit_cedula)])
-                if not party:
-                    msg = f'EXCEPCION: NO SE ENCONTRO EL TERCERO {nit_cedula} DE LA NOTA {id_tecno}'
-                    logs.append(msg)
-                    actualizacion.reset_writedate('TERCEROS')
-                    to_exception.append(id_tecno)
-                    continue
-                party = party[0]
-                plazo_pago = PaymentTerm.search([('id_tecno', '=', nota.condicion)])
-                if not plazo_pago:
-                    msg = f'EXCEPCION: PLAZO {nota.condicion} NO EXISTE PARA LA NOTA {id_tecno}'
-                    logs.append(msg)
-                    to_exception.append(id_tecno)
-                    continue
-                plazo_pago = plazo_pago[0]
-                dcto_base = str(nota.Tipo_Docto_Base)+'-'+str(nota.Numero_Docto_Base)
-                original_invoice = Invoice.search([('number', '=', dcto_base)])
-                if not original_invoice:
-                    msg = f'EXCEPCION: DOCUMENTO {dcto_base} AL QUE HACE REFERENCIA LA NOTA {id_tecno} NO ENCONTRADO'
-                    logs.append(msg)
-                    to_exception.append(id_tecno)
-                    continue
-                original_invoice = original_invoice[0]
-                #print(id_tecno)
-                fecha = str(nota.fecha_hora).split()[0].split('-')
-                fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
-                invoice = Invoice()
-                invoice.id_tecno = id_tecno
-                invoice.party = party
-                invoice.cufe = '0'
-                invoice.on_change_party() #Se usa para traer la dirección del tercero
-                invoice.invoice_date = fecha_date
-                invoice.number = nota.tipo+'-'+str(nota.Numero_documento)
-                invoice.reference = dcto_base
-                description = (nota.notas).replace('\n', ' ').replace('\r', '')
-                if description:
-                    invoice.description = description
-                invoice.type = 'out'
-                if nota_tecno == "CREDITO":
-                    invoice.invoice_type = '91'
-                    invoice.operation_type = '22'
-                else:
-                    invoice.invoice_type = '92'
-                    invoice.operation_type = '32'
-                if party.account_receivable:
-                    invoice.account = party.account_receivable
-                elif Configuration.default_account_receivable:
-                    invoice.account = Configuration.default_account_receivable
-                else:
-                    msg = f'EXCEPCION: LA NOTA {id_tecno} NO SE CREO POR FALTA DE CUENTA POR COBRAR EN EL TERCERO Y LA CONFIGURACION CONTABLE POR DEFECTO'
-                    logs.append(msg)
-                    to_exception.append(id_tecno)
-                    continue
-                invoice.payment_term = plazo_pago
-                invoice.original_invoice = original_invoice
-                invoice.comment = f"NOTA DE {nota_tecno} DE LA FACTURA {dcto_base}"
-                invoice.number_document_reference = dcto_base
-                invoice.cufe_document_reference = '0'
-                invoice.date_document_reference = original_invoice.invoice_date
-                invoice.type_invoice_reference = original_invoice.invoice_type
-                invoice.on_change_type()
-                retencion_rete = False
-                if nota.retencion_causada > 0:
-                    if nota.retencion_iva == 0 and nota.retencion_ica == 0:
-                        retencion_rete = True
-                    elif (nota.retencion_iva + nota.retencion_ica) != nota.retencion_causada:
-                        retencion_rete = True
-                to_lines = []
-                lineas_tecno = Config.get_lineasd_tecno(id_tecno)
-                for linea in lineas_tecno:
-                    product = Product.search([('id_tecno', '=', linea.IdProducto)])
-                    if not product:
-                        msg = f"EXCEPCION: NO SE ENCONTRO EL PRODUCTO {linea.IdProducto}"
+                try:
+                    invoice = Invoice.search([('id_tecno', '=', id_tecno)])
+                    if invoice:
+                        msg = f"LA NOTA {id_tecno} YA EXISTE EN TRYTON"
                         logs.append(msg)
-                        to_lines = []
-                        break
+                        created.append(id_tecno)
+                        continue
+                    if nota.anulado == 'S':
+                        msg = f"{id_tecno} Documento anulado en TecnoCarnes"
+                        logs.append(msg)
+                        not_import.append(id_tecno)
+                        continue
+                    nit_cedula = nota.nit_Cedula.replace('\n',"")
+                    party = Party.search([('id_number', '=', nit_cedula)])
+                    if not party:
+                        msg = f'EXCEPCION: NO SE ENCONTRO EL TERCERO {nit_cedula} DE LA NOTA {id_tecno}'
+                        logs.append(msg)
+                        actualizacion.reset_writedate('TERCEROS')
+                        to_exception.append(id_tecno)
+                        continue
+                    party = party[0]
+                    plazo_pago = PaymentTerm.search([('id_tecno', '=', nota.condicion)])
+                    if not plazo_pago:
+                        msg = f'EXCEPCION: PLAZO {nota.condicion} NO EXISTE PARA LA NOTA {id_tecno}'
+                        logs.append(msg)
+                        to_exception.append(id_tecno)
+                        continue
+                    plazo_pago = plazo_pago[0]
+                    dcto_base = str(nota.Tipo_Docto_Base)+'-'+str(nota.Numero_Docto_Base)
+                    original_invoice = Invoice.search([('number', '=', dcto_base)])
+                    if not original_invoice:
+                        msg = f'EXCEPCION: DOCUMENTO {dcto_base} AL QUE HACE REFERENCIA LA NOTA {id_tecno} NO ENCONTRADO'
+                        logs.append(msg)
+                        to_exception.append(id_tecno)
+                        continue
+                    original_invoice = original_invoice[0]
+                    #print(id_tecno)
+                    fecha = str(nota.fecha_hora).split()[0].split('-')
+                    fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
+                    invoice = Invoice()
+                    invoice.id_tecno = id_tecno
+                    invoice.party = party
+                    invoice.cufe = '0'
+                    invoice.on_change_party() #Se usa para traer la dirección del tercero
+                    invoice.invoice_date = fecha_date
+                    invoice.number = nota.tipo+'-'+str(nota.Numero_documento)
+                    invoice.reference = dcto_base
+                    description = (nota.notas).replace('\n', ' ').replace('\r', '')
+                    if description:
+                        invoice.description = description
+                    invoice.type = 'out'
                     if nota_tecno == "CREDITO":
-                        cantidad = abs(round(linea.Cantidad_Facturada, 3)) * -1
+                        invoice.invoice_type = '91'
+                        invoice.operation_type = '22'
                     else:
-                        cantidad = abs(round(linea.Cantidad_Facturada, 3))
-                    line = Line()
-                    line.product = product[0]
-                    line.quantity = cantidad
-                    line.unit_price = linea.Valor_Unitario
-                    if operation_center:
-                        line.operation_center = operation_center
-                    line.on_change_product()
-                    tax_line = []
-                    not_impoconsumo = False
-                    for impuestol in line.taxes:
-                        clase_impuesto = impuestol.classification_tax
-                        if clase_impuesto == '05' and nota.retencion_iva > 0:
-                            if impuestol not in tax_line:
-                                tax_line.append(impuestol)
-                        elif clase_impuesto == '06' and retencion_rete:
-                            if impuestol not in tax_line:
-                                tax_line.append(impuestol)
-                        elif clase_impuesto == '07' and nota.retencion_ica > 0:
-                            if impuestol not in tax_line:
-                                tax_line.append(impuestol)
-                        elif impuestol.consumo and linea.Impuesto_Consumo > 0:
-                            #Se busca el impuesto al consumo con el mismo valor para aplicarlo
-                            tax = Tax.search([('consumo', '=', True), ('type', '=', 'fixed'), ('amount', '=', linea.Impuesto_Consumo)])
-                            if tax:
-                                tax_line.append(tax[0])
-                            else:
-                                msg = f'EXCEPCION: NO SE ENCONTRO EL IMPUESTO FIJO DE TIPO CONSUMO CON VALOR DE {linea.Impuesto_Consumo} EN EL DOCUMENTO {id_tecno}'
-                                logs.append(msg)
-                                to_exception.append(id_tecno)
-                                not_impoconsumo = True
-                                continue
-                        elif clase_impuesto != '05' and clase_impuesto != '06' and clase_impuesto != '07' and not impuestol.consumo:
-                            if impuestol not in tax_line:
-                                tax_line.append(impuestol)
-                    if not_impoconsumo:
-                        to_lines = []
-                        break
-                    line.taxes = tax_line
-                    if linea.Porcentaje_Descuento_1 > 0:
-                        descuento = (linea.Valor_Unitario * Decimal(linea.Porcentaje_Descuento_1)) / 100
-                        line.unit_price = Decimal(linea.Valor_Unitario - descuento)
+                        invoice.invoice_type = '92'
+                        invoice.operation_type = '32'
+                    if party.account_receivable:
+                        invoice.account = party.account_receivable
+                    elif Configuration.default_account_receivable:
+                        invoice.account = Configuration.default_account_receivable
+                    else:
+                        msg = f'EXCEPCION: LA NOTA {id_tecno} NO SE CREO POR FALTA DE CUENTA POR COBRAR EN EL TERCERO Y LA CONFIGURACION CONTABLE POR DEFECTO'
+                        logs.append(msg)
+                        to_exception.append(id_tecno)
+                        continue
+                    invoice.payment_term = plazo_pago
+                    invoice.original_invoice = original_invoice
+                    invoice.comment = f"NOTA DE {nota_tecno} DE LA FACTURA {dcto_base}"
+                    invoice.number_document_reference = dcto_base
+                    invoice.cufe_document_reference = '0'
+                    invoice.date_document_reference = original_invoice.invoice_date
+                    invoice.type_invoice_reference = original_invoice.invoice_type
+                    invoice.on_change_type()
+                    retencion_rete = False
+                    if nota.retencion_causada > 0:
+                        if nota.retencion_iva == 0 and nota.retencion_ica == 0:
+                            retencion_rete = True
+                        elif (nota.retencion_iva + nota.retencion_ica) != nota.retencion_causada:
+                            retencion_rete = True
+                    to_lines = []
+                    lineas_tecno = Config.get_lineasd_tecno(id_tecno)
+                    for linea in lineas_tecno:
+                        product = Product.search([('id_tecno', '=', linea.IdProducto)])
+                        if not product:
+                            msg = f"EXCEPCION: NO SE ENCONTRO EL PRODUCTO {linea.IdProducto}"
+                            logs.append(msg)
+                            to_lines = []
+                            break
+                        if nota_tecno == "CREDITO":
+                            cantidad = abs(round(linea.Cantidad_Facturada, 3)) * -1
+                        else:
+                            cantidad = abs(round(linea.Cantidad_Facturada, 3))
+                        line = Line()
+                        line.product = product[0]
+                        line.quantity = cantidad
+                        line.unit_price = linea.Valor_Unitario
+                        if operation_center:
+                            line.operation_center = operation_center
                         line.on_change_product()
-                        line.gross_unit_price = linea.Valor_Unitario 
-                        #line.discount = Decimal(linea.Porcentaje_Descuento_1/100)
-                    to_lines.append(line)
-                if to_lines:
-                    invoice.lines = to_lines
-                else:
-                    msg = f"EXCEPCION: NO SE CREARON LINEAS PARA LA NOTA {id_tecno}"
+                        tax_line = []
+                        not_impoconsumo = False
+                        for impuestol in line.taxes:
+                            clase_impuesto = impuestol.classification_tax
+                            if clase_impuesto == '05' and nota.retencion_iva > 0:
+                                if impuestol not in tax_line:
+                                    tax_line.append(impuestol)
+                            elif clase_impuesto == '06' and retencion_rete:
+                                if impuestol not in tax_line:
+                                    tax_line.append(impuestol)
+                            elif clase_impuesto == '07' and nota.retencion_ica > 0:
+                                if impuestol not in tax_line:
+                                    tax_line.append(impuestol)
+                            elif impuestol.consumo and linea.Impuesto_Consumo > 0:
+                                #Se busca el impuesto al consumo con el mismo valor para aplicarlo
+                                tax = Tax.search([('consumo', '=', True), ('type', '=', 'fixed'), ('amount', '=', linea.Impuesto_Consumo)])
+                                if tax:
+                                    tax_line.append(tax[0])
+                                else:
+                                    msg = f'EXCEPCION: NO SE ENCONTRO EL IMPUESTO FIJO DE TIPO CONSUMO CON VALOR DE {linea.Impuesto_Consumo} EN EL DOCUMENTO {id_tecno}'
+                                    logs.append(msg)
+                                    to_exception.append(id_tecno)
+                                    not_impoconsumo = True
+                                    continue
+                            elif clase_impuesto != '05' and clase_impuesto != '06' and clase_impuesto != '07' and not impuestol.consumo:
+                                if impuestol not in tax_line:
+                                    tax_line.append(impuestol)
+                        if not_impoconsumo:
+                            to_lines = []
+                            break
+                        line.taxes = tax_line
+                        if linea.Porcentaje_Descuento_1 > 0:
+                            descuento = (linea.Valor_Unitario * Decimal(linea.Porcentaje_Descuento_1)) / 100
+                            line.unit_price = Decimal(linea.Valor_Unitario - descuento)
+                            line.on_change_product()
+                            line.gross_unit_price = linea.Valor_Unitario 
+                            #line.discount = Decimal(linea.Porcentaje_Descuento_1/100)
+                        to_lines.append(line)
+                    if to_lines:
+                        invoice.lines = to_lines
+                    else:
+                        msg = f"EXCEPCION: NO SE CREARON LINEAS PARA LA NOTA {id_tecno}"
+                        logs.append(msg)
+                        to_exception.append(id_tecno)
+                        continue
+                    invoice.on_change_lines()
+                    invoice.save()
+                    Invoice.validate_invoice([invoice])
+                    total_tryton = abs(invoice.untaxed_amount)
+                    valor_total = Decimal(abs(nota.valor_total))
+                    valor_impuesto = Decimal(abs(nota.Valor_impuesto) + abs(nota.Impuesto_Consumo)) # + abs(nota.retencion_causada))
+                    if valor_impuesto > 0:
+                        total_tecno = valor_total - valor_impuesto
+                    else:
+                        total_tecno = valor_total
+                    diferencia_total = abs(total_tryton - total_tecno)
+                    if diferencia_total < Decimal(6.0):
+                        Invoice.post([invoice])
+                    else:
+                        msg = f"NO SE CONTABILIZO LA NOTA {id_tecno} YA QUE LA DIFERENCIA ENTRE EL TOTAL DE TRYTON Y TECNOCARNES ES DE {diferencia_total}"
+                        logs.append(msg)
+                    created.append(id_tecno)
+                except Exception as ex:
+                    msg = f"EXCEPCION {id_tecno} - {ex}"
                     logs.append(msg)
                     to_exception.append(id_tecno)
-                    continue
-                invoice.on_change_lines()
-                invoice.save()
-                Invoice.validate_invoice([invoice])
-                total_tryton = abs(invoice.untaxed_amount)
-                valor_total = Decimal(abs(nota.valor_total))
-                valor_impuesto = Decimal(abs(nota.Valor_impuesto) + abs(nota.Impuesto_Consumo)) # + abs(nota.retencion_causada))
-                if valor_impuesto > 0:
-                    total_tecno = valor_total - valor_impuesto
-                else:
-                    total_tecno = valor_total
-                diferencia_total = abs(total_tryton - total_tecno)
-                if diferencia_total < Decimal(6.0):
-                    Invoice.post([invoice])
-                else:
-                    msg = f"NO SE CONTABILIZO LA NOTA {id_tecno} YA QUE LA DIFERENCIA ENTRE EL TOTAL DE TRYTON Y TECNOCARNES ES DE {diferencia_total}"
-                    logs.append(msg)
-                created.append(id_tecno)
         actualizacion.add_logs(actualizacion, logs)
         for idt in created:
             Config.update_exportado(idt, 'T')
