@@ -4,7 +4,6 @@ from trytond.pool import Pool, PoolMeta
 from trytond.exceptions import UserError
 from trytond.transaction import Transaction
 from decimal import Decimal
-import logging
 from sql import Table
 
 
@@ -30,7 +29,7 @@ class Purchase(metaclass=PoolMeta):
 
     @classmethod
     def import_data_purchase(cls):
-        logging.warning('RUN COMPRAS')
+        print('RUN COMPRAS')
         pool = Pool()
         Config = pool.get('conector.configuration')
         Actualizacion = pool.get('conector.actualizacion')
@@ -45,7 +44,7 @@ class Purchase(metaclass=PoolMeta):
         actualizacion = Actualizacion.create_or_update('COMPRAS')
         if not data:
             actualizacion.save()
-            logging.warning('FINISH COMPRAS')
+            print('FINISH COMPRAS')
             return
         Invoice = pool.get('account.invoice')
         Purchase = pool.get('purchase.purchase')
@@ -100,7 +99,6 @@ class Purchase(metaclass=PoolMeta):
                 party = Party.search([('id_number', '=', compra.nit_Cedula.replace('\n',""))])
                 if not party:
                     msg = f"EXCEPCION {id_compra} - No se encontró el tercero con id {compra.nit_Cedula}"
-                    logging.error(msg)
                     logs.append(msg)
                     to_exception.append(id_compra)
                     continue
@@ -114,7 +112,6 @@ class Purchase(metaclass=PoolMeta):
                 bodega = Location.search([('id_tecno', '=', compra.bodega)])
                 if not bodega:
                     msg = f"EXCEPCION {id_compra} - No se econtro la bodega {compra.bodega}"
-                    logging.warning(msg)
                     logs.append(msg)
                     to_exception.append(id_compra)
                     continue
@@ -124,7 +121,6 @@ class Purchase(metaclass=PoolMeta):
                 plazo_pago = payment_term.search([('id_tecno', '=', compra.condicion)])
                 if not plazo_pago:
                     msg = f"EXCEPCION {id_compra} - No se econtro el plazo de pago {compra.condicion}"
-                    logging.warning(msg)
                     logs.append(msg)
                     to_exception.append(id_compra)
                     continue
@@ -304,7 +300,7 @@ class Purchase(metaclass=PoolMeta):
         for idt in not_import:
             #print('not_import...', idt) #TEST
             Config.update_exportado(idt, 'X')
-        logging.warning('FINISH COMPRAS')
+        print('FINISH COMPRAS')
 
 
     # Se elimina vía base de datos las compras y pagos relacionados
