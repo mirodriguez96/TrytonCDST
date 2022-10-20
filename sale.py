@@ -36,9 +36,9 @@ class Sale(metaclass=PoolMeta):
         ventas_tecno = Config.get_documentos_tecno('1')
         if ventas_tecno:
             data = ventas_tecno
-        # devoluciones_tecno = Config.get_documentos_tecno('2')
-        # if devoluciones_tecno:
-        #     data += devoluciones_tecno
+        devoluciones_tecno = Config.get_documentos_tecno('2')
+        if devoluciones_tecno:
+            data += devoluciones_tecno
 
         #Se crea o actualiza la fecha de importación
         actualizacion = Actualizacion.create_or_update('VENTAS')
@@ -441,7 +441,6 @@ class Sale(metaclass=PoolMeta):
                 },
                 'statement': statement.id,
                 'date': fecha_date,
-                'secuencia': pago.Secuencia
             }
             result_payment = cls.multipayment_invoices_statement(data_payment, logs, to_exception)
             if result_payment != 'ok':
