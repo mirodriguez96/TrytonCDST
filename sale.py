@@ -36,9 +36,9 @@ class Sale(metaclass=PoolMeta):
         ventas_tecno = Config.get_documentos_tecno('1')
         if ventas_tecno:
             data = ventas_tecno
-        devoluciones_tecno = Config.get_documentos_tecno('2')
-        if devoluciones_tecno:
-            data += devoluciones_tecno
+        # devoluciones_tecno = Config.get_documentos_tecno('2')
+        # if devoluciones_tecno:
+        #     data += devoluciones_tecno
 
         #Se crea o actualiza la fecha de importación
         actualizacion = Actualizacion.create_or_update('VENTAS')
@@ -440,7 +440,8 @@ class Sale(metaclass=PoolMeta):
                     sale: valor
                 },
                 'statement': statement.id,
-                'date': fecha_date
+                'date': fecha_date,
+                'secuencia': pago.Secuencia
             }
             result_payment = cls.multipayment_invoices_statement(data_payment, logs, to_exception)
             if result_payment != 'ok':
@@ -530,10 +531,9 @@ class Sale(metaclass=PoolMeta):
             if not total_pay:
                 total_pay = sale.total_amount
             else:
-                dif = Decimal(total_paid + total_pay) - sale.total_amount
-                dif = Decimal(abs(dif))
-                if dif < Decimal(600.0) and dif != 0:
-                    total_pay = sale.total_amount
+                remainder = sale.residual_amount - total_pay
+                if abs(remainder) < Decimal(600.0) and remainder != 0:
+                    total_pay = sale.residual_amount
             if not sale.invoice or (sale.invoice.state != 'posted' and sale.invoice.state != 'paid'):
                 Sale.post_invoice(sale)
             if not sale.party.account_receivable:
