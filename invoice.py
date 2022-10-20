@@ -128,6 +128,7 @@ class Invoice(metaclass=PoolMeta):
                     invoice.on_change_party() #Se usa para traer la dirección del tercero
                     invoice.invoice_date = fecha_date
                     invoice.number = nota.tipo+'-'+str(nota.Numero_documento)
+                    dcto_base = str(nota.Tipo_Docto_Base)+'-'+str(nota.Numero_Docto_Base)
                     invoice.reference = dcto_base
                     description = (nota.notas).replace('\n', ' ').replace('\r', '')
                     if description:
@@ -149,7 +150,6 @@ class Invoice(metaclass=PoolMeta):
                         to_exception.append(id_tecno)
                         continue
                     invoice.payment_term = plazo_pago
-                    dcto_base = str(nota.Tipo_Docto_Base)+'-'+str(nota.Numero_Docto_Base)
                     original_invoice = Invoice.search([('number', '=', dcto_base)])
                     if original_invoice:
                         original_invoice = original_invoice[0]
