@@ -118,14 +118,6 @@ class Invoice(metaclass=PoolMeta):
                         to_exception.append(id_tecno)
                         continue
                     plazo_pago = plazo_pago[0]
-                    dcto_base = str(nota.Tipo_Docto_Base)+'-'+str(nota.Numero_Docto_Base)
-                    original_invoice = Invoice.search([('number', '=', dcto_base)])
-                    if not original_invoice:
-                        msg = f'EXCEPCION: DOCUMENTO {dcto_base} AL QUE HACE REFERENCIA LA NOTA {id_tecno} NO ENCONTRADO'
-                        logs.append(msg)
-                        to_exception.append(id_tecno)
-                        continue
-                    original_invoice = original_invoice[0]
                     #print(id_tecno)
                     fecha = str(nota.fecha_hora).split()[0].split('-')
                     fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
@@ -157,12 +149,19 @@ class Invoice(metaclass=PoolMeta):
                         to_exception.append(id_tecno)
                         continue
                     invoice.payment_term = plazo_pago
-                    invoice.original_invoice = original_invoice
+                    dcto_base = str(nota.Tipo_Docto_Base)+'-'+str(nota.Numero_Docto_Base)
+                    original_invoice = Invoice.search([('number', '=', dcto_base)])
+                    if original_invoice:
+                        original_invoice = original_invoice[0]
+                        invoice.original_invoice = original_invoice
+                        invoice.date_document_reference = original_invoice.invoice_date
+                        invoice.type_invoice_reference = original_invoice.invoice_type
+                    else:
+                        msg = f'EL DOCUMENTO {dcto_base} AL QUE HACE REFERENCIA LA NOTA {id_tecno} NO FUE ENCONTRADO'
+                        logs.append(msg)
                     invoice.comment = f"NOTA DE {nota_tecno} DE LA FACTURA {dcto_base}"
                     invoice.number_document_reference = dcto_base
                     invoice.cufe_document_reference = '0'
-                    invoice.date_document_reference = original_invoice.invoice_date
-                    invoice.type_invoice_reference = original_invoice.invoice_type
                     invoice.on_change_type()
                     retencion_rete = False
                     if nota.retencion_causada > 0:
