@@ -358,10 +358,15 @@ class Payroll(metaclass=PoolMeta):
 
     def set_preliquidation(self, extras, discounts=None):
         super(Payroll, self).set_preliquidation(extras, discounts)
-        Event = Pool().get('staff.event')
+        pool = Pool()
+        Module = pool.get('ir.module')
+        Event = pool.get('staff.event')
         if not hasattr(Event, 'analytic_account'):
             return
-        AnalyticAccount = Pool().get('analytic_account.account')
+        analytic_actv = Module.search([('name', '=', 'analytic_account.account'), ('state', '=', 'activated')])
+        if not analytic_actv:
+            return
+        AnalyticAccount = pool.get('analytic_account.account')
         for line in self.lines:
             if not line.is_event:
                 continue
