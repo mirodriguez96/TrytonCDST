@@ -1,5 +1,4 @@
 from decimal import Decimal
-from multiprocessing import pool
 from trytond.model import ModelView, fields
 from trytond.pool import Pool, PoolMeta
 from trytond.wizard import (
@@ -358,23 +357,17 @@ class Payroll(metaclass=PoolMeta):
 
     def set_preliquidation(self, extras, discounts=None):
         super(Payroll, self).set_preliquidation(extras, discounts)
-        pool = Pool()
-        Module = pool.get('ir.module')
-        Event = pool.get('staff.event')
+        return
+        Event = Pool().get('staff.event')
         if not hasattr(Event, 'analytic_account'):
             return
-        analytic_actv = Module.search([('name', '=', 'analytic_account.account'), ('state', '=', 'activated')])
-        if not analytic_actv:
-            return
-        AnalyticAccount = pool.get('analytic_account.account')
         for line in self.lines:
             if not line.is_event:
                 continue
             if line.origin.analytic_account:
                 for acc in line.analytic_accounts:
                     try:
-                        analytic_account, = AnalyticAccount.search([('code', '=', line.origin.analytic_account)])
-                        acc.write([acc], {'account': analytic_account.id})
+                        acc.write([acc], {'account': line.origin.analytic_account.id})
                     except:
                         wage = line.wage_type.rec_name
                         raise UserError('analytic_event.msg_error_on_wage_type', wage)
