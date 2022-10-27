@@ -21,7 +21,14 @@ class FixBugsConector(Wizard):
         if Warning.check(warning_name):
             raise UserWarning(warning_name, "No continue si desconoce el funcionamiento interno del asistente.")
 
-        
+        User = pool.get('res.user')
+        Invoice = pool.get('account.invoice')
+        invoices = Invoice.search([('state', '=', 'posted'),('move', '=', None)])
+        print(invoices)
+        with Transaction().set_user(1):
+                    context = User.get_preferences()
+        with Transaction().set_context(context, _skip_warnings=True):
+            Invoice.process(invoices)
 
         return 'end'
 
