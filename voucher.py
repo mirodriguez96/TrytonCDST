@@ -42,6 +42,7 @@ class Voucher(ModelSQL, ModelView):
         logs = []
         created = []
         exceptions = []
+        account_type = 'account.type.payable'
         # Obtenemos los comprobantes de egreso de TecnoCarnes
         documentos = Config.get_documentos_tecno('6')
         # Comenzamos a recorrer los documentos a procesar y almacenamos los registros y creados en una lista
@@ -103,7 +104,7 @@ class Voucher(ModelSQL, ModelView):
                     operation_center = pool.get('company.operation_center')(1)
                     voucher.operation_center = operation_center
                 valor_aplicado = Decimal(doc.valor_aplicado)
-                lines = cls.get_lines_vtecno(facturas, voucher, logs)
+                lines = cls.get_lines_vtecno(facturas, voucher, logs, account_type)
                 if lines:
                     voucher.lines = lines
                     voucher.on_change_lines()
@@ -161,6 +162,7 @@ class Voucher(ModelSQL, ModelView):
         exceptions = []
         actualizacion = Actualizacion.create_or_update('COMPROBANTES DE INGRESO')
         documentos_db = Config.get_documentos_tecno('5')
+        account_type = 'account.type.receivable'
         for doc in documentos_db:
             try:
                 sw = str(doc.sw)
@@ -231,7 +233,7 @@ class Voucher(ModelSQL, ModelView):
                     to_lines = []
                     for rec in facturas:
                         ref = rec.tipo_aplica+'-'+str(rec.numero_aplica)
-                        move_line = cls.get_moveline(ref, tercero, logs)
+                        move_line = cls.get_moveline(ref, tercero, logs, account_type)
                         if move_line and rec.valor:
                             valor_pagado = Decimal(rec.valor + rec.descuento + rec.retencion + (rec.ajuste*-1) + rec.retencion_iva + rec.retencion_ica)
                             line = MultiRevenueLine()
@@ -340,7 +342,7 @@ class Voucher(ModelSQL, ModelView):
 
     #Se obtiene las lineas de la factura que se desea pagar
     @classmethod
-    def get_moveline(cls, reference, party, logs):
+    def get_moveline(cls, reference, party, logs, account_type):
         pool = Pool()
         Invoice = pool.get('account.invoice')
         MoveLine = pool.get('account.move.line')
@@ -352,10 +354,7 @@ class Voucher(ModelSQL, ModelView):
         line_domain = ['AND',
             ('reference', '=', reference),
             ('party', '=', party),
-            ['OR',
-                ('account.type.payable', '=', True),
-                ('account.type.receivable', '=', True),
-            ]
+            (account_type, '=', True),
         ]
         #Si no encuentra lineas a pagar... Se busca en saldos iniciales
         moveline = MoveLine.search(line_domain)
@@ -413,7 +412,7 @@ class Voucher(ModelSQL, ModelView):
 
 
     @classmethod
-    def get_lines_vtecno(cls, invoices, voucher, logs):
+    def get_lines_vtecno(cls, invoices, voucher, logs, account_type):
         pool = Pool()
         Module = pool.get('ir.module')
         Line = pool.get('account.voucher.line')
@@ -421,7 +420,7 @@ class Voucher(ModelSQL, ModelView):
         to_lines = []
         for inv in invoices:
             ref = inv.tipo_aplica+'-'+str(inv.numero_aplica)
-            move_line = cls.get_moveline(ref, voucher.party, logs)
+            move_line = cls.get_moveline(ref, voucher.party, logs, account_type)
             if not move_line:
                 msg = f'NO SE ENCONTRO LA FACTURA {ref} EN TRYTON'
                 logs.append(msg)
