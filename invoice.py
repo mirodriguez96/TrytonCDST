@@ -340,8 +340,8 @@ class UpdateInvoiceTecno(Wizard):
         Purchase.delete_imported_purchases(to_delete_purchases)
         return 'end'
 
-    def end(self):
-        return 'reload'
+    # def end(self):
+    #     return 'reload'
 
 
 
