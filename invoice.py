@@ -311,6 +311,7 @@ class UpdateInvoiceTecno(Wizard):
     do_submit = StateTransition()
 
     def transition_do_submit(self):
+        return 'end'
         pool = Pool()
         Invoice = pool.get('account.invoice')
         Sale = pool.get('sale.sale')
