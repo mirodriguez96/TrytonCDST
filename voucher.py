@@ -292,7 +292,7 @@ class Voucher(ModelSQL, ModelView):
                         operation_center = pool.get('company.operation_center')(1)
                         voucher.operation_center = operation_center
                     valor_aplicado = Decimal(doc.valor_aplicado)
-                    lines = cls.get_lines_vtecno(facturas, voucher, logs)
+                    lines = cls.get_lines_vtecno(facturas, voucher, logs, account_type)
                     if lines:
                         voucher.lines = lines
                         voucher.on_change_lines()
