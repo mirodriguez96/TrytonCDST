@@ -152,6 +152,7 @@ class ElectronicInvoice_2(object):
         self.company_resolution_number = self.invoice.company.itsupplier_billing_resolution or ''
         self.company_branch_code = self.invoice.company.itsupplier_code_ds or ''
         self.print_format = self.invoice.company.itsupplier_print_format or ''
+        self.print_format_note = self.invoice.company.itsupplier_print_format_note or ''
         self.company_email_ds = self.invoice.company.itsupplier_email_ds or ''
 
         # Party information------------------------------------------------------------------------------------------
@@ -242,7 +243,7 @@ class ElectronicInvoice_2(object):
         self.original_invoice_invoice_type = None
 
         if invoice.operation_type in ('20', '30') or invoice.type == 'in':
-            self.original_invoice_date = invoice.date_document_reference
+            self.original_invoice_date = date.strftime(invoice.date_document_reference, '%Y-%m-%d')
             self.original_invoice_number = invoice.number_document_reference
             self.original_invoice_cufe = invoice.cufe_document_reference
             self.original_invoice_invoice_type = invoice.type_invoice_reference
@@ -347,6 +348,14 @@ class ElectronicInvoice_2(object):
         return information
 
 
+    def _set_original_document_information(self, data):
+        if self.original_invoice_number:
+            data['NVFAC_TCRU'] = 'R'
+            data['Nvfac_numb'] = self.original_invoice_number
+            data["Nvfac_fecb"] = self.original_invoice_date
+        else:
+            data['NVFAC_TCRU'] = 'L'
+        return data
 
     def _get_lines(self):
         _lines = []
@@ -381,12 +390,11 @@ class ElectronicInvoice_2(object):
         document = self._get_information()
         document["proveedor"] = self._get_provider()
         document["lDetalle"] = self._get_lines()
-        if type == '05':
-            document["Nvfac_tipo"] = "DS"
-        if type == '95': # FIX NOTA DE AJUSTE
+        if type == '95': # NOTA DE AJUSTE
             document["Nvfac_tipo"] = "CS"
-            document["Nvfac_numb"] = self.original_invoice_number
-            document["Nvfac_fecb"] = self.original_invoice_date
-            pass
-        #print(document)
+            document["Nvfor_codi"] = self.print_format_note
+            document = self._set_original_document_information(document)
+            document['NVCON_CODI'] = self.credit_note_concept
+            document['NVCON_DESC'] = self.credit_note_concept
+        print(document)
         return document

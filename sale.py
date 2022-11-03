@@ -166,7 +166,7 @@ class Sale(metaclass=PoolMeta):
                 sale.number = tipo_doc+'-'+str(numero_doc)
                 sale.reference = tipo_doc+'-'+str(numero_doc)
                 sale.id_tecno = id_venta
-                sale.description = (venta.notas).replace('\n', ' ').replace('\r', '')
+                sale.description = (venta.notas).replace('\n', ' ').replace('\r', '').replace('\t', ' ')
                 sale.invoice_type = 'C'
                 sale.sale_date = fecha_date
                 sale.party = party.id
@@ -322,6 +322,7 @@ class Sale(metaclass=PoolMeta):
             # print('excepcion...', idt) #TEST
         for idt in not_import:
             Config.update_exportado(idt, 'X')
+            # print('not_import...', idt) #TEST
         print('FINISH VENTAS')
 
 

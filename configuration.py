@@ -22,7 +22,8 @@ TYPES_FILE = [
     ('product_costs', 'Product costs'),
     ('inventory', "Inventory"),
     ('bank_account', 'Bank Account'),
-    ('loans', 'Loans')
+    ('loans', 'Loans'),
+    ('access_biometric', 'Access biometric')
 ]
 
 class Configuration(ModelSQL, ModelView):
@@ -130,7 +131,7 @@ class Configuration(ModelSQL, ModelView):
         Config = Pool().get('conector.configuration')
         config, = Config.search([], order=[('id', 'DESC')], limit=1)
         fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
-        #query = "SELECT * FROM dbo.Documentos WHERE tipo = 117 AND Numero_documento = 5253" #TEST
+        #query = "SELECT * FROM dbo.Documentos WHERE tipo = 401 AND Numero_documento = 145228" #TEST
         query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND sw = "+sw+" AND exportado != 'T' AND exportado != 'E' AND exportado != 'X' ORDER BY fecha_hora ASC"
         data = cls.get_data(query)
         return data
@@ -233,6 +234,8 @@ class Configuration(ModelSQL, ModelView):
                     cls.import_csv_bank_account(lineas)
                 elif config.type_file == "loans":
                     cls.import_csv_loans(lineas)
+                elif config.type_file == "access_biometric":
+                    cls.import_csv_access_biometric(lineas)
                 else:
                     raise UserError('Importar archivo: ', 'Seleccione el tipo de importación')
             else:
@@ -812,4 +815,55 @@ class Configuration(ModelSQL, ModelView):
             to_save.append(loan)
         Loan.save(to_save)
         Loan.calculate(to_save)
+        print('FIN')
+
+
+    
+    @classmethod
+    def import_csv_access_biometric(cls, lineas):
+        print('INICIA')
+        return
+        pool = Pool()
+        Access = pool.get('staff.access')
+        Employee = pool.get('company.employee')
+        to_create = {}
+        _events = [
+            ('_DutyOn', 'enter_timestamp'),
+            ('_DutyOff', 'exit_timestamp'),
+            ('_GoIn', 'start_rest'),
+            ('_GoOut', 'end_rest'),
+        ]
+        first = True
+        for linea in lineas:
+            linea = linea.strip()
+            if not linea:
+                continue            
+            linea = linea.split(';')
+            if len(linea) != 4:
+                raise UserError('Error template access_biometric', 'employee;date;time;event')
+            # Se verifica que es la primera linea (encabezado) para omitirla
+            if first:
+                first = False
+                continue
+            _code = linea[0].strip()
+            employee = Employee.search([('code', '=', _code)])
+            if not employee:
+                raise UserError('error employee_code', f'employee code {_code} not found')
+            employee, = employee
+            if _code not in to_create.keys():
+                to_create[_code] = {'employee': employee.id}
+            _date = linea[1].strip()
+            _time = linea[2].strip()
+            _datetime = _date+' '+_time
+            print(_datetime)
+            try:
+                _date_time = datetime.datetime.strptime(_datetime, '%y/%m/%d %H:%M')
+            except Exception as e:
+                raise UserError('error datetime', e)
+            _event = linea[3].strip()
+            print(_event)
+            _event = _events[_event]
+            to_create[_code][_event] = _date_time
+            print("pasa el ciclo access_biometric")
+        print(to_create)
         print('FIN')

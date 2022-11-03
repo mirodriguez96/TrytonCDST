@@ -21,7 +21,17 @@ class FixBugsConector(Wizard):
         if Warning.check(warning_name):
             raise UserWarning(warning_name, "No continue si desconoce el funcionamiento interno del asistente.")
 
-        
+        # Invoice = pool.get('account.invoice')
+        # invoices = Invoice.search([('type', '=', 'out'), ('invoice_type', '!=', '91'), ('invoice_type', '!=', '92')])
+
+        Voucher = pool.get('account.voucher')
+        vouchers = Voucher.search([('voucher_type', '=', 'receipt')])
+
+        for voc in vouchers:
+            print(voc)
+            Voucher.force_draft_voucher([voc])
+            Transaction().connection.commit()
+            voc.delete()
 
         return 'end'
 

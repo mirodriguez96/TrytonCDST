@@ -238,6 +238,10 @@ msgctxt "field:company.company,itsupplier_print_format:"
 msgid "Print Format Number"
 msgstr "Número de formato de impresión"
 
+msgctxt "field:company.company,itsupplier_print_format_note:"
+msgid "Adjustment Note Print Format"
+msgstr "Número de formato de impresión para la nota de ajuste"
+
 msgctxt "field:company.company,itsupplier_email_ds:"
 msgid "Email support document"
 msgstr "Copia al correo electrónico"

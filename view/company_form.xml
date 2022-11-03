@@ -24,6 +24,8 @@
             <field name="itsupplier_billing_resolution"/>
             <label name="itsupplier_print_format"/>
             <field name="itsupplier_print_format"/>
+            <label name="itsupplier_print_format_note"/>
+            <field name="itsupplier_print_format_note"/>
             <label name="itsupplier_email_ds"/>
             <field name="itsupplier_email_ds"/>
         </page>
