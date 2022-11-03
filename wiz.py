@@ -31,8 +31,8 @@ class FixBugsConector(Wizard):
             print(voc)
             Voucher.force_draft_voucher([voc])
             Transaction().connection.commit()
-            voc.delete()
-
+            #voc.delete()
+        Voucher.delete(vouchers)
         return 'end'
 
 class VoucherMoveUnreconcile(Wizard):
