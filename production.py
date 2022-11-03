@@ -100,8 +100,8 @@ class Production(metaclass=PoolMeta):
                     cantidad = float(line.Cantidad_Facturada)
                     id_tecno_bodega = line.IdBodega
                     bodega, = Location.search([('id_tecno', '=', id_tecno_bodega)])
+                    print(line.IdProducto)
                     producto, = Product.search([('id_tecno', '=', line.IdProducto)])
-                    #print(producto)
                     transf = {
                         'product': producto.id,
                         'quantity': abs(cantidad),
