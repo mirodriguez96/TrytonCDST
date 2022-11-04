@@ -76,6 +76,7 @@ class FixBugsConector(Wizard):
                     cursor.execute(*stock_move_table.delete(
                         where=stock_move_table.id.in_(stock_moves))
                     )
+                Transaction().connection.commit()
             except Exception as ex:
                 print(ex)
         
