@@ -35,48 +35,51 @@ class FixBugsConector(Wizard):
 
         for sale in sales:
             print(sale)
-            # The invoices must be delete
-            for invoice in sale.invoices:
-                if invoice.state == 'paid':
-                    self.unreconcile_move(invoice.move)
-                if invoice.move:
-                    cursor.execute(*move_table.update(
-                        columns=[move_table.state],
+            try:
+                # The invoices must be delete
+                for invoice in sale.invoices:
+                    if invoice.state == 'paid':
+                        self.unreconcile_move(invoice.move)
+                    if invoice.move:
+                        cursor.execute(*move_table.update(
+                            columns=[move_table.state],
+                            values=['draft'],
+                            where=move_table.id == invoice.move.id)
+                        )
+                        cursor.execute(*move_table.delete(
+                            where=move_table.id == invoice.move.id)
+                        )
+                    cursor.execute(*invoice_table.update(
+                        columns=[invoice_table.state, invoice_table.number],
+                        values=['validate', None],
+                        where=invoice_table.id == invoice.id)
+                    )
+                    cursor.execute(*invoice_table.delete(
+                        where=invoice_table.id == invoice.id)
+                    )
+
+                if sale.id:
+                    cursor.execute(*sale_table.update(
+                        columns=[sale_table.state, sale_table.shipment_state, sale_table.invoice_state],
+                        values=['draft', 'none', 'none'],
+                        where=sale_table.id == sale.id)
+                    )
+                # The stock moves must be delete
+                stock_moves = [m.id for line in sale.lines for m in line.moves]
+                if stock_moves:
+                    cursor.execute(*stock_move_table.update(
+                        columns=[stock_move_table.state],
                         values=['draft'],
-                        where=move_table.id == invoice.move.id)
-                    )
-                    cursor.execute(*move_table.delete(
-                        where=move_table.id == invoice.move.id)
-                    )
-                cursor.execute(*invoice_table.update(
-                    columns=[invoice_table.state, invoice_table.number],
-                    values=['validate', None],
-                    where=invoice_table.id == invoice.id)
-                )
-                cursor.execute(*invoice_table.delete(
-                    where=invoice_table.id == invoice.id)
-                )
+                        where=stock_move_table.id.in_(stock_moves)
+                    ))
 
-            if sale.id:
-                cursor.execute(*sale_table.update(
-                    columns=[sale_table.state, sale_table.shipment_state, sale_table.invoice_state],
-                    values=['draft', 'none', 'none'],
-                    where=sale_table.id == sale.id)
-                )
-            # The stock moves must be delete
-            stock_moves = [m.id for line in sale.lines for m in line.moves]
-            if stock_moves:
-                cursor.execute(*stock_move_table.update(
-                    columns=[stock_move_table.state],
-                    values=['draft'],
-                    where=stock_move_table.id.in_(stock_moves)
-                ))
-
-                cursor.execute(*stock_move_table.delete(
-                    where=stock_move_table.id.in_(stock_moves))
-                )
+                    cursor.execute(*stock_move_table.delete(
+                        where=stock_move_table.id.in_(stock_moves))
+                    )
+            except Exception as ex:
+                print(ex)
         
-        Sale.delete(sales)
+        #Sale.delete(sales)
 
         return 'end'
 
