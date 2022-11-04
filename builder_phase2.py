@@ -244,7 +244,8 @@ class ElectronicInvoice_2(object):
         self.original_invoice_invoice_type = None
 
         if invoice.operation_type in ('20', '30') or invoice.type == 'in':
-            self.original_invoice_date = date.strftime(invoice.date_document_reference, '%Y-%m-%d') or None
+            if invoice.date_document_reference:
+                self.original_invoice_date = date.strftime(invoice.date_document_reference, '%Y-%m-%d')
             self.original_invoice_number = invoice.number_document_reference
             self.original_invoice_cufe = invoice.cufe_document_reference
             self.original_invoice_invoice_type = invoice.type_invoice_reference
