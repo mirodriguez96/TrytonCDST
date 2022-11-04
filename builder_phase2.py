@@ -361,8 +361,8 @@ class ElectronicInvoice_2(object):
         _lines = []
         sequence = 1
         for line in self.invoice.lines:
-            unit_price = str(line.unit_price)
-            amount = str(line.amount)
+            unit_price = str(abs(line.unit_price))
+            amount = str(abs(line.amount))
             if line.unit.symbol.upper() == 'KG':
                 unit = 'KGM'
             else:
