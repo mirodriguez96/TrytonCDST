@@ -24,15 +24,60 @@ class FixBugsConector(Wizard):
         # Invoice = pool.get('account.invoice')
         # invoices = Invoice.search([('type', '=', 'out'), ('invoice_type', '!=', '91'), ('invoice_type', '!=', '92')])
 
-        Voucher = pool.get('account.voucher')
-        vouchers = Voucher.search([('voucher_type', '=', 'receipt')])
+        sale_table = Table('sale_sale')
+        invoice_table = Table('account_invoice')
+        move_table = Table('account_move')
+        stock_move_table = Table('stock_move')
+        Sale = Pool().get('sale.sale')
 
-        for voc in vouchers:
-            print(voc)
-            Voucher.force_draft_voucher([voc])
-            Transaction().connection.commit()
-            #voc.delete()
-        Voucher.delete(vouchers)
+        cursor = Transaction().connection.cursor()
+        sales = Sale.seacrh([()])
+
+        for sale in sales:
+            print(sale)
+            # The invoices must be delete
+            for invoice in sale.invoices:
+                if invoice.state == 'paid':
+                    self.unreconcile_move(invoice.move)
+                if invoice.move:
+                    cursor.execute(*move_table.update(
+                        columns=[move_table.state],
+                        values=['draft'],
+                        where=move_table.id == invoice.move.id)
+                    )
+                    cursor.execute(*move_table.delete(
+                        where=move_table.id == invoice.move.id)
+                    )
+                cursor.execute(*invoice_table.update(
+                    columns=[invoice_table.state, invoice_table.number],
+                    values=['validate', None],
+                    where=invoice_table.id == invoice.id)
+                )
+                cursor.execute(*invoice_table.delete(
+                    where=invoice_table.id == invoice.id)
+                )
+
+            if sale.id:
+                cursor.execute(*sale_table.update(
+                    columns=[sale_table.state, sale_table.shipment_state, sale_table.invoice_state],
+                    values=['draft', 'none', 'none'],
+                    where=sale_table.id == sale.id)
+                )
+            # The stock moves must be delete
+            stock_moves = [m.id for line in sale.lines for m in line.moves]
+            if stock_moves:
+                cursor.execute(*stock_move_table.update(
+                    columns=[stock_move_table.state],
+                    values=['draft'],
+                    where=stock_move_table.id.in_(stock_moves)
+                ))
+
+                cursor.execute(*stock_move_table.delete(
+                    where=stock_move_table.id.in_(stock_moves))
+                )
+        
+        Sale.delete(sales)
+
         return 'end'
 
 class VoucherMoveUnreconcile(Wizard):
