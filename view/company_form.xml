@@ -22,6 +22,8 @@
             <field name="itsupplier_code_ds"/>
             <label name="itsupplier_billing_resolution"/>
             <field name="itsupplier_billing_resolution"/>
+            <label name="itsupplier_billing_resolution_note"/>
+            <field name="itsupplier_billing_resolution_note"/>
             <label name="itsupplier_print_format"/>
             <field name="itsupplier_print_format"/>
             <label name="itsupplier_print_format_note"/>

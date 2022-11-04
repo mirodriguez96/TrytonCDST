@@ -150,6 +150,7 @@ class ElectronicInvoice_2(object):
         #        MESSAGES['shop_address'] = 'Falta la dirección de la tienda'
         
         self.company_resolution_number = self.invoice.company.itsupplier_billing_resolution or ''
+        self.company_resolution_number_note = self.invoice.company.itsupplier_billing_resolution_note or ''
         self.company_branch_code = self.invoice.company.itsupplier_code_ds or ''
         self.print_format = self.invoice.company.itsupplier_print_format or ''
         self.print_format_note = self.invoice.company.itsupplier_print_format_note or ''
@@ -243,7 +244,7 @@ class ElectronicInvoice_2(object):
         self.original_invoice_invoice_type = None
 
         if invoice.operation_type in ('20', '30') or invoice.type == 'in':
-            self.original_invoice_date = date.strftime(invoice.date_document_reference, '%Y-%m-%d')
+            self.original_invoice_date = date.strftime(invoice.date_document_reference, '%Y-%m-%d') or None
             self.original_invoice_number = invoice.number_document_reference
             self.original_invoice_cufe = invoice.cufe_document_reference
             self.original_invoice_invoice_type = invoice.type_invoice_reference
@@ -392,6 +393,7 @@ class ElectronicInvoice_2(object):
         document["lDetalle"] = self._get_lines()
         if type == '95': # NOTA DE AJUSTE
             document["Nvfac_tipo"] = "CS"
+            document["Nvres_nume"] = self.company_resolution_number_note
             document["Nvfor_codi"] = self.print_format_note
             document = self._set_original_document_information(document)
             document['NVCON_CODI'] = self.credit_note_concept

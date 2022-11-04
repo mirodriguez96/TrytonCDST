@@ -234,6 +234,10 @@ msgctxt "field:company.company,itsupplier_billing_resolution:"
 msgid "Billing Resolution Number"
 msgstr "Número de resolución"
 
+msgctxt "field:company.company,itsupplier_billing_resolution_note:"
+msgid "Adjustment Note Billing Resolution Number"
+msgstr "Número de resolución para la nota de ajuste"
+
 msgctxt "field:company.company,itsupplier_print_format:"
 msgid "Print Format Number"
 msgstr "Número de formato de impresión"
