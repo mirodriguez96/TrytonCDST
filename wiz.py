@@ -80,6 +80,12 @@ class FixBugsConector(Wizard):
 
         return 'end'
 
+    def unreconcile_move(self, move):
+        Reconciliation = Pool().get('account.move.reconciliation')
+        reconciliations = [l.reconciliation for l in move.lines if l.reconciliation]
+        if reconciliations:
+            Reconciliation.delete(reconciliations)
+
 class VoucherMoveUnreconcile(Wizard):
     'Voucher Move Unreconcile'
     __name__ = 'account.move.voucher_unreconcile'
