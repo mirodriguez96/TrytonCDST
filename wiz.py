@@ -31,7 +31,7 @@ class FixBugsConector(Wizard):
         Sale = Pool().get('sale.sale')
 
         cursor = Transaction().connection.cursor()
-        sales = Sale.seacrh([()])
+        sales = Sale.search([()])
 
         for sale in sales:
             print(sale)
