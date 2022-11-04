@@ -372,7 +372,7 @@ class ElectronicInvoice_2(object):
                 "Nvpro_codi": line.product.template.code,
                 "Nvpro_nomb": line.product.template.name,
                 "Nvuni_desc": unit,
-                "Nvfac_cant": line.quantity,
+                "Nvfac_cant": abs(line.quantity),
                 "Nvfac_valo": unit_price,
                 "Nvfac_pdes": "0.00", # Fix porcentaje descuento
                 "Nvfac_desc": "0.00", # Fix valor descuento
