@@ -68,7 +68,7 @@ class Invoice(metaclass=PoolMeta):
         else:
             documentos = Config.get_documentos_tecno('31')
         if not documentos:
-            actualizacion.save()
+            #actualizacion.save()
             print(f"FINISH NOTAS DE {nota_tecno}")
             return
         ###
@@ -311,7 +311,7 @@ class UpdateInvoiceTecno(Wizard):
     do_submit = StateTransition()
 
     def transition_do_submit(self):
-        return 'end'
+        #return 'end'
         pool = Pool()
         Invoice = pool.get('account.invoice')
         Sale = pool.get('sale.sale')
