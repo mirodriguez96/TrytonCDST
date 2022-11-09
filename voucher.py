@@ -149,7 +149,7 @@ class Voucher(ModelSQL, ModelView):
         pool = Pool()
         Config = pool.get('conector.configuration')
         Actualizacion = pool.get('conector.actualizacion')
-        Module = pool.get('ir.module')
+        #Module = pool.get('ir.module')
         Voucher = pool.get('account.voucher')
         Line = pool.get('account.voucher.line')
         Party = pool.get('party.party')
@@ -413,7 +413,7 @@ class Voucher(ModelSQL, ModelView):
     @classmethod
     def get_lines_vtecno(cls, invoices, voucher, logs, account_type):
         pool = Pool()
-        Module = pool.get('ir.module')
+        #Module = pool.get('ir.module')
         Line = pool.get('account.voucher.line')
         config_voucher = pool.get('account.voucher_configuration')(1)
         to_lines = []
@@ -432,8 +432,8 @@ class Voucher(ModelSQL, ModelView):
             line.reference = ref
             line.move_line = move_line
             line.on_change_move_line()
-            company_operation = Module.search([('name', '=', 'company_operation'), ('state', '=', 'activated')])
-            if company_operation:
+            #company_operation = Module.search([('name', '=', 'company_operation'), ('state', '=', 'activated')])
+            if hasattr(line, 'operation_center'):
                 operation_center = pool.get('company.operation_center')(1)
                 line.operation_center = operation_center
             valor = Decimal(inv.valor)
@@ -456,7 +456,7 @@ class Voucher(ModelSQL, ModelView):
                 line_discount.detail = 'DESCUENTO'
                 line_discount.amount = round((descuento * -1), 2)
                 line_discount.account = config_voucher.account_discount_tecno
-                if company_operation:
+                if hasattr(line_discount, 'operation_center'):
                     operation_center = pool.get('company.operation_center')(1)
                     line_discount.operation_center = operation_center
                 to_lines.append(line_discount)
@@ -470,7 +470,7 @@ class Voucher(ModelSQL, ModelView):
                 line_rete.tax = config_voucher.account_rete_tecno
                 line_rete.on_change_tax()
                 line_rete.amount = round((retencion*-1), 2)
-                if company_operation:
+                if hasattr(line_rete, 'operation_center'):
                     operation_center = pool.get('company.operation_center')(1)
                     line_rete.operation_center = operation_center
                 to_lines.append(line_rete)
@@ -484,7 +484,7 @@ class Voucher(ModelSQL, ModelView):
                 line_retiva.tax = config_voucher.account_retiva_tecno
                 line_retiva.on_change_tax()
                 line_retiva.amount = round((retencion_iva*-1), 2)
-                if company_operation:
+                if hasattr(line_retiva, 'operation_center'):
                     operation_center = pool.get('company.operation_center')(1)
                     line_retiva.operation_center = operation_center
                 to_lines.append(line_retiva)
@@ -498,7 +498,7 @@ class Voucher(ModelSQL, ModelView):
                 line_retica.tax = config_voucher.account_retica_tecno
                 line_retica.on_change_tax()
                 line_retica.amount = round((retencion_ica*-1), 2)
-                if company_operation:
+                if hasattr(line_retica, 'operation_center'):
                     operation_center = pool.get('company.operation_center')(1)
                     line_retica.operation_center = operation_center
                 to_lines.append(line_retica)
@@ -512,7 +512,7 @@ class Voucher(ModelSQL, ModelView):
                 elif Decimal(move_line.credit) > 0:
                     line_ajuste.account = config_voucher.account_adjust_expense
                 line_ajuste.amount = round(ajuste, 2)
-                if company_operation:
+                if hasattr(line_ajuste, 'operation_center'):
                     operation_center = pool.get('company.operation_center')(1)
                     line_ajuste.operation_center = operation_center
                 to_lines.append(line_ajuste)
