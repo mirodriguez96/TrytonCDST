@@ -100,8 +100,9 @@ class Voucher(ModelSQL, ModelView):
                 nota = (doc.notas).replace('\n', ' ').replace('\r', '')
                 if nota:
                     voucher.description = nota
-                if hasattr(voucher, 'operation_center'):
-                    operation_center = pool.get('company.operation_center')(1)
+                if hasattr(Voucher, 'operation_center'):
+                    OperationCenter = pool.get('company.operation_center')
+                    operation_center, = OperationCenter.search([], order=[('id', 'DESC')], limit=1)
                     voucher.operation_center = operation_center
                 valor_aplicado = Decimal(doc.valor_aplicado)
                 lines = cls.get_lines_vtecno(facturas, voucher, logs, account_type)
@@ -121,8 +122,9 @@ class Voucher(ModelSQL, ModelView):
                         line_ajuste.detail = 'AJUSTE'
                         line_ajuste.account = config_voucher.account_adjust_expense
                         line_ajuste.amount = diferencia
-                        if hasattr(line_ajuste, 'operation_center'):
-                            operation_center = pool.get('company.operation_center')(1)
+                        if hasattr(Line, 'operation_center'):
+                            OperationCenter = pool.get('company.operation_center')
+                            operation_center, = OperationCenter.search([], order=[('id', 'DESC')], limit=1)
                             line_ajuste.operation_center = operation_center
                         line_ajuste.save()
                         voucher.on_change_lines()
@@ -287,8 +289,9 @@ class Voucher(ModelSQL, ModelView):
                     nota = (doc.notas).replace('\n', ' ').replace('\r', '')
                     if nota:
                         voucher.description = nota
-                    if hasattr(voucher, 'operation_center'):
-                        operation_center = pool.get('company.operation_center')(1)
+                    if hasattr(Voucher, 'operation_center'):
+                        OperationCenter = pool.get('company.operation_center')
+                        operation_center, = OperationCenter.search([], order=[('id', 'DESC')], limit=1)
                         voucher.operation_center = operation_center
                     valor_aplicado = Decimal(doc.valor_aplicado)
                     lines = cls.get_lines_vtecno(facturas, voucher, logs, account_type)
@@ -312,8 +315,10 @@ class Voucher(ModelSQL, ModelView):
                             line_ajuste.detail = 'AJUSTE'
                             line_ajuste.account = config_voucher.account_adjust_income
                             line_ajuste.amount = diferencia
-                            if hasattr(line_ajuste, 'operation_center'):
-                                operation_center = pool.get('company.operation_center')(1)
+                            if hasattr(Line, 'operation_center'):
+                                OperationCenter = pool.get('company.operation_center')
+                                operation_center, = OperationCenter.search([], order=[('id', 'DESC')], limit=1)
+                                print(line_ajuste, operation_center)
                                 line_ajuste.operation_center = operation_center
                             line_ajuste.save()
                             voucher.on_change_lines()
@@ -433,8 +438,10 @@ class Voucher(ModelSQL, ModelView):
             line.move_line = move_line
             line.on_change_move_line()
             #company_operation = Module.search([('name', '=', 'company_operation'), ('state', '=', 'activated')])
-            if hasattr(line, 'operation_center'):
-                operation_center = pool.get('company.operation_center')(1)
+            if hasattr(Line, 'operation_center'):
+                OperationCenter = pool.get('company.operation_center')
+                operation_center, = OperationCenter.search([], order=[('id', 'DESC')], limit=1)
+                print(line, operation_center)
                 line.operation_center = operation_center
             valor = Decimal(inv.valor)
             descuento = Decimal(inv.descuento)
@@ -456,8 +463,9 @@ class Voucher(ModelSQL, ModelView):
                 line_discount.detail = 'DESCUENTO'
                 line_discount.amount = round((descuento * -1), 2)
                 line_discount.account = config_voucher.account_discount_tecno
-                if hasattr(line_discount, 'operation_center'):
-                    operation_center = pool.get('company.operation_center')(1)
+                if hasattr(Line, 'operation_center'):
+                    OperationCenter = pool.get('company.operation_center')
+                    operation_center, = OperationCenter.search([], order=[('id', 'DESC')], limit=1)
                     line_discount.operation_center = operation_center
                 to_lines.append(line_discount)
             if retencion > 0:
@@ -470,8 +478,9 @@ class Voucher(ModelSQL, ModelView):
                 line_rete.tax = config_voucher.account_rete_tecno
                 line_rete.on_change_tax()
                 line_rete.amount = round((retencion*-1), 2)
-                if hasattr(line_rete, 'operation_center'):
-                    operation_center = pool.get('company.operation_center')(1)
+                if hasattr(Line, 'operation_center'):
+                    OperationCenter = pool.get('company.operation_center')
+                    operation_center, = OperationCenter.search([], order=[('id', 'DESC')], limit=1)
                     line_rete.operation_center = operation_center
                 to_lines.append(line_rete)
             if retencion_iva > 0:
@@ -484,8 +493,9 @@ class Voucher(ModelSQL, ModelView):
                 line_retiva.tax = config_voucher.account_retiva_tecno
                 line_retiva.on_change_tax()
                 line_retiva.amount = round((retencion_iva*-1), 2)
-                if hasattr(line_retiva, 'operation_center'):
-                    operation_center = pool.get('company.operation_center')(1)
+                if hasattr(Line, 'operation_center'):
+                    OperationCenter = pool.get('company.operation_center')
+                    operation_center, = OperationCenter.search([], order=[('id', 'DESC')], limit=1)
                     line_retiva.operation_center = operation_center
                 to_lines.append(line_retiva)
             if retencion_ica > 0:
@@ -498,8 +508,9 @@ class Voucher(ModelSQL, ModelView):
                 line_retica.tax = config_voucher.account_retica_tecno
                 line_retica.on_change_tax()
                 line_retica.amount = round((retencion_ica*-1), 2)
-                if hasattr(line_retica, 'operation_center'):
-                    operation_center = pool.get('company.operation_center')(1)
+                if hasattr(Line, 'operation_center'):
+                    OperationCenter = pool.get('company.operation_center')
+                    operation_center, = OperationCenter.search([], order=[('id', 'DESC')], limit=1)
                     line_retica.operation_center = operation_center
                 to_lines.append(line_retica)
             if ajuste > 0:
@@ -512,8 +523,9 @@ class Voucher(ModelSQL, ModelView):
                 elif Decimal(move_line.credit) > 0:
                     line_ajuste.account = config_voucher.account_adjust_expense
                 line_ajuste.amount = round(ajuste, 2)
-                if hasattr(line_ajuste, 'operation_center'):
-                    operation_center = pool.get('company.operation_center')(1)
+                if hasattr(Line, 'operation_center'):
+                    OperationCenter = pool.get('company.operation_center')
+                    operation_center, = OperationCenter.search([], order=[('id', 'DESC')], limit=1)
                     line_ajuste.operation_center = operation_center
                 to_lines.append(line_ajuste)
         return to_lines
