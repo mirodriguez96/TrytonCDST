@@ -287,8 +287,7 @@ class Voucher(ModelSQL, ModelView):
                     nota = (doc.notas).replace('\n', ' ').replace('\r', '')
                     if nota:
                         voucher.description = nota
-                    company_operation = Module.search([('name', '=', 'company_operation'), ('state', '=', 'activated')])
-                    if company_operation:
+                    if hasattr(voucher, 'operation_center'):
                         operation_center = pool.get('company.operation_center')(1)
                         voucher.operation_center = operation_center
                     valor_aplicado = Decimal(doc.valor_aplicado)
@@ -313,7 +312,7 @@ class Voucher(ModelSQL, ModelView):
                             line_ajuste.detail = 'AJUSTE'
                             line_ajuste.account = config_voucher.account_adjust_income
                             line_ajuste.amount = diferencia
-                            if company_operation:
+                            if hasattr(line_ajuste, 'operation_center'):
                                 operation_center = pool.get('company.operation_center')(1)
                                 line_ajuste.operation_center = operation_center
                             line_ajuste.save()
