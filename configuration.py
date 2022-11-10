@@ -35,6 +35,7 @@ class Configuration(ModelSQL, ModelView):
     user = fields.Char('User', required=True, help="Enter the user of the database without leaving spaces")
     password = fields.Char('Password', required=True, help="Enter the password of the database without leaving spaces")
     date = fields.Date('Date', required=True, help="Enter the import start date")
+    end_date = fields.Date('End Date', help="Enter the import end date" )
     file = fields.Binary('File', help="Enter the file to import with (;)")
     type_file = fields.Selection(TYPES_FILE, 'Type file')
     #doc_types = fields.Char('Doc types', help="Example: 101;120;103")
@@ -132,7 +133,11 @@ class Configuration(ModelSQL, ModelView):
         config, = Config.search([], order=[('id', 'DESC')], limit=1)
         fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
         #query = "SELECT * FROM dbo.Documentos WHERE tipo = 401 AND Numero_documento = 145228" #TEST
-        query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND sw = "+sw+" AND exportado != 'T' AND exportado != 'E' AND exportado != 'X' ORDER BY fecha_hora ASC"
+        query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND sw = "+sw+" AND exportado != 'T' AND exportado != 'E' AND exportado != 'X' "
+        if config.end_date:
+            end_date = config.end_date.strftime('%Y-%m-%d %H:%M:%S')
+            query += "AND fecha_hora <= CAST('"+end_date+"' AS datetime) "
+        query += "ORDER BY fecha_hora ASC"
         data = cls.get_data(query)
         return data
 
@@ -142,7 +147,11 @@ class Configuration(ModelSQL, ModelView):
         config, = Config.search([], order=[('id', 'DESC')], limit=1)
         fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
         #query = "SELECT * FROM dbo.Documentos WHERE tipo = 110 AND Numero_documento=127016" #TEST
-        query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND sw = "+sw+" AND tipo = "+tipo+" AND exportado != 'T' AND exportado != 'E' AND exportado != 'X' ORDER BY fecha_hora ASC"
+        query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND sw = "+sw+" AND tipo = "+tipo+" AND exportado != 'T' AND exportado != 'E' AND exportado != 'X' "
+        if config.end_date:
+            end_date = config.end_date.strftime('%Y-%m-%d %H:%M:%S')
+            query += "AND fecha_hora <= CAST('"+end_date+"' AS datetime) "
+        query += "ORDER BY fecha_hora ASC"
         data = cls.get_data(query)
         return data
 

@@ -318,7 +318,6 @@ class Voucher(ModelSQL, ModelView):
                             if hasattr(Line, 'operation_center'):
                                 OperationCenter = pool.get('company.operation_center')
                                 operation_center, = OperationCenter.search([], order=[('id', 'DESC')], limit=1)
-                                print(line_ajuste, operation_center)
                                 line_ajuste.operation_center = operation_center
                             line_ajuste.save()
                             voucher.on_change_lines()
@@ -441,7 +440,6 @@ class Voucher(ModelSQL, ModelView):
             if hasattr(Line, 'operation_center'):
                 OperationCenter = pool.get('company.operation_center')
                 operation_center, = OperationCenter.search([], order=[('id', 'DESC')], limit=1)
-                print(line, operation_center)
                 line.operation_center = operation_center
             valor = Decimal(inv.valor)
             descuento = Decimal(inv.descuento)

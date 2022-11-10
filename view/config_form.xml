@@ -10,6 +10,8 @@
     <field name="password" widget="password"/>
     <label name="date"/>
     <field name="date"/>
+    <label name="end_date"/>
+    <field name="end_date"/>
     <button string="Test" name="test_conexion" colspan="2"/>
 
     <notebook colspan="6">
