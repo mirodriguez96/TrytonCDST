@@ -136,7 +136,7 @@ class Configuration(ModelSQL, ModelView):
         query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND sw = "+sw+" AND exportado != 'T' AND exportado != 'E' AND exportado != 'X' "
         if config.end_date:
             end_date = config.end_date.strftime('%Y-%m-%d %H:%M:%S')
-            query += "AND fecha_hora <= CAST('"+end_date+"' AS datetime) "
+            query += "AND fecha_hora < CAST('"+end_date+"' AS datetime) "
         query += "ORDER BY fecha_hora ASC"
         data = cls.get_data(query)
         return data
@@ -150,7 +150,7 @@ class Configuration(ModelSQL, ModelView):
         query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND sw = "+sw+" AND tipo = "+tipo+" AND exportado != 'T' AND exportado != 'E' AND exportado != 'X' "
         if config.end_date:
             end_date = config.end_date.strftime('%Y-%m-%d %H:%M:%S')
-            query += "AND fecha_hora <= CAST('"+end_date+"' AS datetime) "
+            query += "AND fecha_hora < CAST('"+end_date+"' AS datetime) "
         query += "ORDER BY fecha_hora ASC"
         data = cls.get_data(query)
         return data
