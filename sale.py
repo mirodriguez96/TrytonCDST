@@ -18,6 +18,9 @@ class Cron(metaclass=PoolMeta):
         cls.method.selection.append(
             ('sale.sale|import_data_sale', "Importar ventas"),
             )
+        cls.method.selection.append(
+            ('sale.sale|import_data_sale_return', "Importar devoluciones de ventas"),
+            )
 
 
 #Heredamos del modelo sale.sale para agregar el campo id_tecno
@@ -29,17 +32,19 @@ class Sale(metaclass=PoolMeta):
     @classmethod
     def import_data_sale(cls):
         print('RUN VENTAS')
+        cls.import_tecnocarnes('1')
+
+    @classmethod
+    def import_data_sale_return(cls):
+        print('RUN DEVOLUCIONES DE VENTAS')
+        cls.import_tecnocarnes('2')
+
+    @classmethod
+    def import_tecnocarnes(cls, swt):
         pool = Pool()
         Config = pool.get('conector.configuration')
         Actualizacion = pool.get('conector.actualizacion')
-        data = []
-        ventas_tecno = Config.get_documentos_tecno('1')
-        if ventas_tecno:
-            data = ventas_tecno
-        devoluciones_tecno = Config.get_documentos_tecno('2')
-        if devoluciones_tecno:
-            data += devoluciones_tecno
-
+        data = Config.get_documentos_tecno(swt)
         #Se crea o actualiza la fecha de importación
         actualizacion = Actualizacion.create_or_update('VENTAS')
         if not data:
