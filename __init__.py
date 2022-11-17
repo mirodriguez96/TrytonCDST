@@ -66,12 +66,13 @@ def register():
         payroll.StaffEvent,
         payroll.Payroll,
         payroll.PayslipSendStart,
+        wiz.DocumentsForImportParameters,
         module='conector', type_='model')
 
     Pool.register(
         account.BalanceStock,
         electronic_payroll_wizard.PayrollElectronicCdst,
-        invoice.UpdateInvoiceTecno,
+        #invoice.UpdateInvoiceTecno,
         invoice.UpdateNoteDate,
         wiz.DeleteVoucherTecno,
         wiz.VoucherMoveUnreconcile,
@@ -91,6 +92,7 @@ def register():
         report.PayrollExport,
         payroll.PayrollPaymentBcl,
         payroll.PayslipSend,
+        wiz.DocumentsForImport,
         module='conector', type_='wizard')
 
     Pool.register(

@@ -304,44 +304,43 @@ class Invoice(metaclass=PoolMeta):
                 invoice.get_message('El campo proveedor de autorización no ha sido seleccionado')
 
 
-class UpdateInvoiceTecno(Wizard):
-    'Update Invoice Tecno'
-    __name__ = 'account.invoice.update_invoice_tecno'
-    start_state = 'do_submit'
-    do_submit = StateTransition()
+# class UpdateInvoiceTecno(Wizard):
+#     'Update Invoice Tecno'
+#     __name__ = 'account.invoice.update_invoice_tecno'
+#     start_state = 'do_submit'
+#     do_submit = StateTransition()
 
-    def transition_do_submit(self):
-        #return 'end'
-        pool = Pool()
-        Invoice = pool.get('account.invoice')
-        Sale = pool.get('sale.sale')
-        Purchase = pool.get('purchase.purchase')
+#     def transition_do_submit(self):
+#         pool = Pool()
+#         Invoice = pool.get('account.invoice')
+#         Sale = pool.get('sale.sale')
+#         Purchase = pool.get('purchase.purchase')
 
-        ids = Transaction().context['active_ids']
+#         ids = Transaction().context['active_ids']
 
-        to_delete_sales = []
-        to_delete_purchases = []
-        for invoice in Invoice.browse(ids):
-            rec_name = invoice.rec_name
-            party_name = invoice.party.name
-            rec_party = rec_name+' de '+party_name
-            if invoice.number and '-' in invoice.number:
-                if invoice.type == 'out':
-                    sale = Sale.search([('number', '=', invoice.number)])
-                    if sale:
-                        to_delete_sales.append(sale[0])
-                elif invoice.type == 'in':
-                    purchase = Purchase.search([('number', '=', invoice.number)])
-                    if purchase:
-                        to_delete_purchases.append(purchase[0])
-            else:
-                raise UserError("Revisa el número de la factura (tipo-numero): ", rec_party)
-        Sale.delete_imported_sales(to_delete_sales)
-        Purchase.delete_imported_purchases(to_delete_purchases)
-        return 'end'
+#         to_delete_sales = []
+#         to_delete_purchases = []
+#         for invoice in Invoice.browse(ids):
+#             rec_name = invoice.rec_name
+#             party_name = invoice.party.name
+#             rec_party = rec_name+' de '+party_name
+#             if invoice.number and '-' in invoice.number:
+#                 if invoice.type == 'out':
+#                     sale = Sale.search([('number', '=', invoice.number)])
+#                     if sale:
+#                         to_delete_sales.append(sale[0])
+#                 elif invoice.type == 'in':
+#                     purchase = Purchase.search([('number', '=', invoice.number)])
+#                     if purchase:
+#                         to_delete_purchases.append(purchase[0])
+#             else:
+#                 raise UserError("Revisa el número de la factura (tipo-numero): ", rec_party)
+#         Sale.delete_imported_sales(to_delete_sales)
+#         Purchase.delete_imported_purchases(to_delete_purchases)
+#         return 'end'
 
-    # def end(self):
-    #     return 'reload'
+#     def end(self):
+#         return 'reload'
 
 
 

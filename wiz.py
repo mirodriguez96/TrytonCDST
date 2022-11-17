@@ -1,4 +1,4 @@
-from decimal import Decimal
+#from decimal import Decimal
 from trytond.model import ModelView, fields
 from trytond.wizard import Wizard, StateTransition, StateView, Button
 from trytond.pool import Pool
@@ -7,6 +7,12 @@ from trytond.exceptions import UserError, UserWarning
 from sql import Table
 #import datetime
 
+_EXPORTADO = [
+    ('N', 'SIN IMPORTAR'),
+    ('E', 'EXCEPCION'),
+    ('X', 'NO IMPORTAR'),
+    ('T', 'IMPORTADO')
+]
 
 class FixBugsConector(Wizard):
     'Fix Bugs Conector'
@@ -21,74 +27,43 @@ class FixBugsConector(Wizard):
         if Warning.check(warning_name):
             raise UserWarning(warning_name, "No continue si desconoce el funcionamiento interno del asistente.")
 
-        # Invoice = pool.get('account.invoice')
-        # invoices = Invoice.search([('type', '=', 'out'), ('invoice_type', '!=', '91'), ('invoice_type', '!=', '92')])
 
-        sale_table = Table('sale_sale')
-        invoice_table = Table('account_invoice')
-        move_table = Table('account_move')
-        stock_move_table = Table('stock_move')
-        Sale = Pool().get('sale.sale')
-
-        cursor = Transaction().connection.cursor()
-        sales = Sale.search([()])
-
-        for sale in sales:
-            print(sale)
-            try:
-                # The invoices must be delete
-                for invoice in sale.invoices:
-                    if invoice.state == 'paid':
-                        self.unreconcile_move(invoice.move)
-                    if invoice.move:
-                        cursor.execute(*move_table.update(
-                            columns=[move_table.state],
-                            values=['draft'],
-                            where=move_table.id == invoice.move.id)
-                        )
-                        cursor.execute(*move_table.delete(
-                            where=move_table.id == invoice.move.id)
-                        )
-                    cursor.execute(*invoice_table.update(
-                        columns=[invoice_table.state, invoice_table.number],
-                        values=['validate', None],
-                        where=invoice_table.id == invoice.id)
-                    )
-                    cursor.execute(*invoice_table.delete(
-                        where=invoice_table.id == invoice.id)
-                    )
-
-                if sale.id:
-                    cursor.execute(*sale_table.update(
-                        columns=[sale_table.state, sale_table.shipment_state, sale_table.invoice_state],
-                        values=['draft', 'none', 'none'],
-                        where=sale_table.id == sale.id)
-                    )
-                # The stock moves must be delete
-                stock_moves = [m.id for line in sale.lines for m in line.moves]
-                if stock_moves:
-                    cursor.execute(*stock_move_table.update(
-                        columns=[stock_move_table.state],
-                        values=['draft'],
-                        where=stock_move_table.id.in_(stock_moves)
-                    ))
-
-                    cursor.execute(*stock_move_table.delete(
-                        where=stock_move_table.id.in_(stock_moves))
-                    )
-                Transaction().connection.commit()
-            except Exception as ex:
-                print(ex)
-        
-        #Sale.delete(sales)
 
         return 'end'
 
-    def unreconcile_move(self, move):
-        Reconciliation = Pool().get('account.move.reconciliation')
-        reconciliations = [l.reconciliation for l in move.lines if l.reconciliation]
-        if reconciliations:
-            Reconciliation.delete(reconciliations)
+class DocumentsForImportParameters(ModelView):
+    'Documents For Import Parameters'
+    __name__ = 'conector.configuration.documents_for_import_parameters'
+    tipo = fields.Char('Tipo', required=True)
+    numero = fields.Char('Número', required=True)
+    exportado = fields.Selection(_EXPORTADO, 'Exportado', required=True)
+
+    @classmethod
+    def default_exportado(cls):
+        return 'N'
+
+class DocumentsForImport(Wizard):
+    'Documents For Import'
+    __name__ = 'conector.configuration.documents_for_import'
+
+    start = StateView('conector.configuration.documents_for_import_parameters',
+    'conector.documents_for_import_parameters_view_form', [
+        Button('Cancel', 'end', 'tryton-cancel'),
+        Button('Create', 'documents_for_import', 'tryton-go-next',
+            default=True)])
+    documents_for_import = StateTransition()
+
+    def transition_documents_for_import(self):
+        pool = Pool()
+        Configuration = pool.get('conector.configuration')
+        cnx, = Configuration.search([], order=[('id', 'DESC')], limit=1)
+        tipo = self.start.tipo
+        numero = self.start.numero
+        exportado = self.start.exportado
+        query = "UPDATE dbo.Documentos SET exportado = '"+exportado+"' WHERE tipo = "+tipo+" and Numero_documento = "+numero
+        #print(query)
+        cnx.set_data(query)
+        return 'end'
 
 class VoucherMoveUnreconcile(Wizard):
     'Voucher Move Unreconcile'

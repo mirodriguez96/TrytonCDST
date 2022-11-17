@@ -12,8 +12,28 @@
             <field name="model">conector.configuration,-1</field>
             <field name="action" ref="act_fix_bugs_conector"/>
         </record>
+        <!-- ################## -->
+        <!-- # Mark Documents # -->
+        <!-- ################## -->
+        <record model="ir.action.wizard" id="act_documents_for_import">
+            <field name="name">Mark documents for import</field>
+            <field name="wiz_name">conector.configuration.documents_for_import</field>
+        </record>
+        <record model="ir.action.keyword" id="act_documents_for_import_keyword">
+            <field name="keyword">form_action</field>
+            <field name="model">conector.configuration,-1</field>
+            <field name="action" ref="act_documents_for_import"/>
+        </record>
+        <!-- ############################# -->
+        <!-- # Mark Documents Parameters # -->
+        <!-- ############################# -->
+        <record model="ir.ui.view" id="documents_for_import_parameters_view_form">
+            <field name="model">conector.configuration.documents_for_import_parameters</field>
+            <field name="type">form</field>
+            <field name="name">documents_for_import_form</field>
+        </record>
         <!--Asistente para eliminar las facturas importados de TecnoCarnes-->
-        <record model="ir.action.wizard" id="act_update_invoice_tecno">
+        <!-- <record model="ir.action.wizard" id="act_update_invoice_tecno">
             <field name="name">Reimport invoice</field>
             <field name="wiz_name">account.invoice.update_invoice_tecno</field>
         </record>
@@ -21,7 +41,7 @@
             <field name="keyword">form_action</field>
             <field name="model">account.invoice,-1</field>
             <field name="action" ref="act_update_invoice_tecno"/>
-        </record>
+        </record> -->
         <!--Asistente para eliminar los voucher importados de TecnoCarnes-->
         <record model="ir.action.wizard" id="act_delete_voucher_tecno">
             <field name="name">Delete voucher imported</field>
