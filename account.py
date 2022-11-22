@@ -124,6 +124,8 @@ class BalanceStock(Wizard):
             stock_accounts = set()
             with Transaction().set_context(self.stock_balance_context()):
                 for product in Product.search(self.product_domain()):
+                    if not product.account_category:
+                        raise UserError('msg_error_balance_stock', f'{product} account_category_missing')
                     if not product.account_category.account_stock:
                         raise UserError('msg_error_balance_stock', f'{product} account_stock_missing')
                     stock_account = product.account_category.account_stock
