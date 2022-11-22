@@ -197,7 +197,8 @@ class Sale(metaclass=PoolMeta):
                         logs.append(msg)
                         to_exception.append(id_venta)
                         continue
-                    sale.sale_device = sale_device[0]
+                    sale_device, = sale_device
+                    sale.sale_device = sale_device
                     sale.invoice_number = sale.number
                 #Se busca una dirección del tercero para agregar en la factura y envio
                 address = Address.search([('party', '=', party.id)], limit=1)
