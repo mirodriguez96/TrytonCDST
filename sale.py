@@ -191,8 +191,13 @@ class Sale(metaclass=PoolMeta):
                     sale.pos_create_date = fecha_date
                     #sale.self_pick_up = True
                     #Busco la terminal y se la asigno
-                    sale_device, = SaleDevice.search([('id_tecno', '=', venta.pc)])
-                    sale.sale_device = sale_device
+                    sale_device = SaleDevice.search([('id_tecno', '=', venta.pc)])
+                    if not sale_device:
+                        msg = f'EXCEPCION {id_venta} - Terminal de venta {venta.pc} no existe'
+                        logs.append(msg)
+                        to_exception.append(id_venta)
+                        continue
+                    sale.sale_device = sale_device[0]
                     sale.invoice_number = sale.number
                 #Se busca una dirección del tercero para agregar en la factura y envio
                 address = Address.search([('party', '=', party.id)], limit=1)
