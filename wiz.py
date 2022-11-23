@@ -29,13 +29,6 @@ class FixBugsConector(Wizard):
 
         Voucher = pool.get('account.voucher')
         numbers = [
-        253975,
-        253976,
-        253978,
-        253981,
-        253982,
-        253983,
-        253984,
         253986,
         253987,
         253988,
@@ -639,8 +632,9 @@ class FixBugsConector(Wizard):
             print(voucher)
             if voucher:
                 Voucher.unreconcilie_move_voucher(voucher)
+                Transaction().connection.commit()
                 Voucher.delete_imported_vouchers(voucher)
-            Transaction().connection.commit()
+                Transaction().connection.commit()
 
         return 'end'
 
