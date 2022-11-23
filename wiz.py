@@ -633,6 +633,8 @@ class FixBugsConector(Wizard):
             if voucher:
                 Voucher.unreconcilie_move_voucher(voucher)
                 Transaction().connection.commit()
+                Voucher.force_draft_voucher(voucher)
+                Transaction().connection.commit()
                 Voucher.delete_imported_vouchers(voucher)
                 Transaction().connection.commit()
 
