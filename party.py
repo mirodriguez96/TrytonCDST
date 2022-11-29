@@ -52,6 +52,7 @@ class Party(metaclass=PoolMeta):
                 SegundoApellido = cls.delete_caracter(tercero.SegundoApellido.strip()).upper()
                 mail = tercero.mail.strip()
                 telefono = tercero.telefono.strip()
+                telefono = '+57'+telefono
                 TipoPersona = cls.person_type(tercero.TipoPersona.strip())
                 ciiu = tercero.IdActividadEconomica
                 TipoContribuyente = cls.tax_regime(tercero.IdTipoContribuyente)

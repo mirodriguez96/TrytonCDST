@@ -171,6 +171,10 @@ class Voucher(ModelSQL, ModelView):
                 tipo = doc.tipo
                 nro = str(doc.Numero_documento)
                 id_tecno = sw+'-'+tipo+'-'+nro
+                if doc.anulado == 'S':
+                    msg = f'Documento {id_tecno} ANULADO EN TECNOCARNES'
+                    logs.append(msg)
+                    continue
                 comprobante = cls.find_voucher(sw+'-'+tipo+'-'+nro)
                 if comprobante:
                     msg = f"EL DOCUMENTO {id_tecno} YA EXISTE EN TRYTON"
@@ -231,43 +235,53 @@ class Voucher(ModelSQL, ModelView):
                         to_transactions.append(transaction)
                     if to_transactions:
                         multingreso.transactions = to_transactions
+                    else:
+                        msg = f'EXCEPCION: MULTI-INGRESO {id_tecno} - No tiene formas de pago el multi-ingreso'
+                        logs.append(msg)
+                        exceptions.append(id_tecno)
+                        continue
                     #Se ingresa las lineas a pagar
                     to_lines = []
                     for rec in facturas:
                         ref = rec.tipo_aplica+'-'+str(rec.numero_aplica)
                         move_line = cls.get_moveline(ref, tercero, logs, account_type)
-                        if move_line and rec.valor:
-                            valor_pagado = Decimal(rec.valor + rec.descuento + rec.retencion + (rec.ajuste*-1) + rec.retencion_iva + rec.retencion_ica)
-                            line = MultiRevenueLine()
-                            line.move_line = move_line
-                            amount_to_pay = Decimal(move_line.move.origin.amount_to_pay)
-                            if valor_pagado > amount_to_pay:
-                                valor_pagado = amount_to_pay
-                            line.amount = valor_pagado
-                            line.original_amount = amount_to_pay
-                            line.is_prepayment = False
-                            line.reference_document = ref
-                            line.others_concepts = cls.get_others_tecno(rec, amount_to_pay)
-                            to_lines.append(line)
-                        else:
-                            if doc.anulado == 'S':
-                                msg = f'MULTI-INGRESO {id_tecno} ANULADO EN TECNOCARNES'
-                                exceptions.append(id_tecno)
-                                logs.append(msg)
+                        if move_line:
+                            if rec.valor:
+                                valor_pagado = Decimal(rec.valor + rec.descuento + rec.retencion + (rec.ajuste*-1) + rec.retencion_iva + rec.retencion_ica)
+                                line = MultiRevenueLine()
+                                line.move_line = move_line
+                                amount_to_pay = move_line.debit
+                                if move_line.move.origin and move_line.move.origin.amount_to_pay:
+                                    amount_to_pay = move_line.move.origin.amount_to_pay
+                                if valor_pagado > amount_to_pay:
+                                    valor_pagado = amount_to_pay
+                                line.amount = valor_pagado
+                                line.original_amount = amount_to_pay
+                                line.is_prepayment = False
+                                line.reference_document = ref
+                                line.others_concepts = cls.get_others_tecno(rec, amount_to_pay)
+                                to_lines.append(line)
                             else:
-                                msg = f'NO SE ENCONTRO LA FACTURA {ref} EN TRYTON O REVISA SU VALOR {str(rec.valor)}. MULTI-INGRESO {id_tecno}'
-                                exceptions.append(id_tecno)
+                                msg = f'EXCEPCION: MULTI-INGRESO {id_tecno} - Valor erroneo ({rec.valor}) de la factura {ref}'
                                 logs.append(msg)
+                                to_lines = []
+                                break
+                        else:
+                            msg = f'EXCEPCION: MULTI-INGRESO {id_tecno} - No se encontro la factura {ref} en Tryton'
+                            logs.append(msg)
+                            to_lines = []
+                            break
                     if to_lines:
                         multingreso.lines = to_lines
-                    multingreso.save()
-                    if multingreso.transactions and multingreso.lines:
-                        MultiRevenue.create_voucher_tecno(multingreso)
                     else:
-                        msg = f'REVISAR EL COMPROBANTE MULTI-INGRESO {id_tecno}'
+                        msg = f'EXCEPCION: MULTI-INGRESO {id_tecno} - No tiene lineas (facturas) el multi-ingreso'
                         logs.append(msg)
                         exceptions.append(id_tecno)
+                        continue
+                    multingreso.save()
+                    MultiRevenue.create_voucher_tecno(multingreso)
                     created.append(id_tecno)
+                # Comprobantes de ingreso (UNA SOLA FORMA DE PAGO)
                 elif len(tipo_pago) == 1:
                     print('VOUCHER:', id_tecno)
                     forma_pago = tipo_pago[0].forma_pago
@@ -776,7 +790,7 @@ class MultiRevenue(metaclass=PoolMeta):
                 voucher, = Voucher.create([voucher_to_create[key][line_id]])
                 voucher.on_change_lines()
                 Voucher.process([voucher])
-                if voucher.amount_to_pay > Decimal("0.0"):
+                if voucher.amount_to_pay and voucher.amount_to_pay > 0:
                     Voucher.post([voucher])
 
 
