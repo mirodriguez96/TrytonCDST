@@ -52,7 +52,6 @@ class Party(metaclass=PoolMeta):
                 SegundoApellido = cls.delete_caracter(tercero.SegundoApellido.strip()).upper()
                 mail = tercero.mail.strip()
                 telefono = tercero.telefono.strip()
-                telefono = '+57'+telefono
                 TipoPersona = cls.person_type(tercero.TipoPersona.strip())
                 ciiu = tercero.IdActividadEconomica
                 TipoContribuyente = cls.tax_regime(tercero.IdTipoContribuyente)
@@ -98,13 +97,15 @@ class Party(metaclass=PoolMeta):
                             contact_mail.save()
                         contact_tel = Mcontact.search([('id_tecno', '=', nit_cedula+'-tel')])
                         if contact_tel:
+                            contact_tel.type = 'other'
                             contact_tel, = contact_tel
                             contact_tel.value = telefono
                             contact_tel.save()
                         elif len(telefono) > 4:
                             contact_tel = Mcontact()
-                            contact_tel.type = 'phone'
+                            contact_tel.type = 'other'
                             contact_tel.value = telefono
+                            contact_tel.name = 'telefono'
                             contact_tel.party = exists
                             contact_tel.save()
                         exists.save()
@@ -139,7 +140,8 @@ class Party(metaclass=PoolMeta):
                     if len(telefono) > 4:
                         phone = {
                             'id_tecno': nit_cedula+'-tel',
-                            'type': 'phone',
+                            'type': 'other',
+                            'name': 'telefono',
                             'value': telefono
                         }
                         contacts.append(phone)
@@ -147,6 +149,7 @@ class Party(metaclass=PoolMeta):
                         email = {
                             'id_tecno': nit_cedula+'-mail',
                             'type': 'email',
+                            'name': 'mail',
                             'value': mail
                         }
                         contacts.append(email)
