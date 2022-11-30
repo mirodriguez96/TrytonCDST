@@ -834,6 +834,7 @@ class Configuration(ModelSQL, ModelView):
         return
         pool = Pool()
         Access = pool.get('staff.access')
+        Rest = pool.get('staff.access.rest')
         Employee = pool.get('company.employee')
         to_create = {}
         _events = [
@@ -854,25 +855,30 @@ class Configuration(ModelSQL, ModelView):
             if first:
                 first = False
                 continue
-            _code = linea[0].strip()
-            employee = Employee.search([('code', '=', _code)])
+            code = linea[0].strip()
+            employee = Employee.search([('code', '=', code)])
             if not employee:
-                raise UserError('error employee_code', f'employee code {_code} not found')
+                raise UserError('error employee_code', f'employee code {code} not found')
             employee, = employee
-            if _code not in to_create.keys():
-                to_create[_code] = {'employee': employee.id}
-            _date = linea[1].strip()
-            _time = linea[2].strip()
-            _datetime = _date+' '+_time
-            print(_datetime)
+            if employee not in to_create.keys():
+                to_create[employee] = {}
+            _date_time = linea[1].strip()
             try:
-                _date_time = datetime.datetime.strptime(_datetime, '%y/%m/%d %H:%M')
+               _datetime = datetime.datetime.strptime(_date_time, '%d/%m/%Y %H:%M')
+               _date = datetime.date(_datetime.year, _datetime.month, _datetime.day)
             except Exception as e:
-                raise UserError('error datetime', e)
-            _event = linea[3].strip()
-            print(_event)
-            _event = _events[_event]
-            to_create[_code][_event] = _date_time
-            print("pasa el ciclo access_biometric")
+               raise UserError('error datetime', e)
+            
+            _event = linea[2].strip() 
+            _event = _events[_event.upper()]
+
+            if _date not in to_create[employee].keys():
+                to_create[employee][_date] = {_event: []}
+
+            if _event not in to_create[employee][_date].keys():
+                to_create[employee][_date] = {_event: []}
+            
+            to_create[employee][_date][_event].append(_datetime)
+
         print(to_create)
         print('FIN')

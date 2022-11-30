@@ -42,6 +42,7 @@ class Voucher(ModelSQL, ModelView):
         logs = []
         created = []
         exceptions = []
+        not_import = []
         account_type = 'account.type.payable'
         # Obtenemos los comprobantes de egreso de TecnoCarnes
         documentos = Config.get_documentos_tecno('6')
@@ -52,6 +53,11 @@ class Voucher(ModelSQL, ModelView):
                 nro = str(doc.Numero_documento)
                 tipo_numero = doc.tipo+'-'+nro
                 id_tecno = sw+'-'+tipo_numero
+                if doc.anulado == 'S':
+                    msg = f'Documento {id_tecno} ANULADO EN TECNOCARNES'
+                    logs.append(msg)
+                    not_import.append(id_tecno)
+                    continue
                 # Buscamos si ya existe el comprobante
                 comprobante = Voucher.search([('id_tecno', '=', id_tecno)])
                 if comprobante:
@@ -141,6 +147,9 @@ class Voucher(ModelSQL, ModelView):
         for idt in created:
             Config.update_exportado(idt, 'T')
             #print(id)
+        for idt in not_import:
+            Config.update_exportado(idt, 'X')
+            # print('not_import...', idt) #TEST
         print("FINISH COMPROBANTES DE EGRESO")
 
 
@@ -162,6 +171,7 @@ class Voucher(ModelSQL, ModelView):
         logs = []
         created = []
         exceptions = []
+        not_import = []
         actualizacion = Actualizacion.create_or_update('COMPROBANTES DE INGRESO')
         documentos_db = Config.get_documentos_tecno('5')
         account_type = 'account.type.receivable'
@@ -174,6 +184,7 @@ class Voucher(ModelSQL, ModelView):
                 if doc.anulado == 'S':
                     msg = f'Documento {id_tecno} ANULADO EN TECNOCARNES'
                     logs.append(msg)
+                    not_import.append(id_tecno)
                     continue
                 comprobante = cls.find_voucher(sw+'-'+tipo+'-'+nro)
                 if comprobante:
@@ -202,6 +213,7 @@ class Voucher(ModelSQL, ModelView):
                     exceptions.append(id_tecno)
                     continue            
                 fecha_date = cls.convert_fecha_tecno(doc.fecha_hora)
+                # Comprobante con mas de 1 forma de pago
                 if len(tipo_pago) > 1:
                     print('MULTI-INGRESO:', id_tecno)
                     multingreso = MultiRevenue()
@@ -209,16 +221,16 @@ class Voucher(ModelSQL, ModelView):
                     multingreso.party = tercero
                     multingreso.date = fecha_date
                     multingreso.id_tecno = id_tecno
-                    #Se ingresa las formas de pago (transacciones)
+                    # Se crea una lista con las formas de pago (transacciones)
                     to_transactions = []
                     doble_fp = False
                     for pago in tipo_pago:
                         paymode = PayMode.search([('id_tecno', '=', pago.forma_pago)])
                         if not paymode:
-                            msg = f"NO SE ENCONTRO LA FORMA DE PAGO {pago.forma_pago}"
+                            msg = f"EXCEPCION: MULTI-INGRESO {id_tecno} - NO SE ENCONTRO LA FORMA DE PAGO {pago.forma_pago}"
                             logs.append(msg)
                             exceptions.append(id_tecno)
-                            continue
+                            break
                         for existr in to_transactions:
                             if existr.payment_mode == paymode[0]:
                                 existr.amount += Decimal(pago.valor)
@@ -233,21 +245,18 @@ class Voucher(ModelSQL, ModelView):
                         transaction.date = fecha_date
                         transaction.payment_mode = paymode[0]
                         to_transactions.append(transaction)
-                    if to_transactions:
-                        multingreso.transactions = to_transactions
-                    else:
-                        msg = f'EXCEPCION: MULTI-INGRESO {id_tecno} - No tiene formas de pago el multi-ingreso'
-                        logs.append(msg)
-                        exceptions.append(id_tecno)
+                    if id_tecno in exceptions:
                         continue
-                    #Se ingresa las lineas a pagar
+                    multingreso.transactions = to_transactions
+                    # Se crea una lista con las lineas (facturas) a pagar
                     to_lines = []
-                    for rec in facturas:
-                        ref = rec.tipo_aplica+'-'+str(rec.numero_aplica)
-                        move_line = cls.get_moveline(ref, tercero, logs, account_type)
+                    for factura in facturas:
+                        reference = factura.tipo_aplica+'-'+str(factura.numero_aplica)
+                        move_line = cls.get_moveline(reference, tercero, logs, account_type)
                         if move_line:
-                            if rec.valor:
-                                valor_pagado = Decimal(rec.valor + rec.descuento + rec.retencion + (rec.ajuste*-1) + rec.retencion_iva + rec.retencion_ica)
+                            if factura.valor:
+                                print(reference)
+                                valor_pagado = Decimal(factura.valor + factura.descuento + factura.retencion + (factura.ajuste*-1) + factura.retencion_iva + factura.retencion_ica)
                                 line = MultiRevenueLine()
                                 line.move_line = move_line
                                 amount_to_pay = move_line.debit
@@ -258,26 +267,22 @@ class Voucher(ModelSQL, ModelView):
                                 line.amount = valor_pagado
                                 line.original_amount = amount_to_pay
                                 line.is_prepayment = False
-                                line.reference_document = ref
-                                line.others_concepts = cls.get_others_tecno(rec, amount_to_pay)
+                                line.reference_document = reference
+                                line.others_concepts = cls.get_others_tecno(factura, amount_to_pay)
                                 to_lines.append(line)
                             else:
-                                msg = f'EXCEPCION: MULTI-INGRESO {id_tecno} - Valor erroneo ({rec.valor}) de la factura {ref}'
+                                msg = f'EXCEPCION: MULTI-INGRESO {id_tecno} - Valor erroneo ({factura.valor}) de la factura {reference}'
                                 logs.append(msg)
-                                to_lines = []
+                                exceptions.append(id_tecno)
                                 break
                         else:
-                            msg = f'EXCEPCION: MULTI-INGRESO {id_tecno} - No se encontro la factura {ref} en Tryton'
+                            msg = f'EXCEPCION: MULTI-INGRESO {id_tecno} - No se encontro la factura {reference} en Tryton'
                             logs.append(msg)
-                            to_lines = []
+                            exceptions.append(id_tecno)
                             break
-                    if to_lines:
-                        multingreso.lines = to_lines
-                    else:
-                        msg = f'EXCEPCION: MULTI-INGRESO {id_tecno} - No tiene lineas (facturas) el multi-ingreso'
-                        logs.append(msg)
-                        exceptions.append(id_tecno)
+                    if id_tecno in exceptions:
                         continue
+                    multingreso.lines = to_lines
                     multingreso.save()
                     MultiRevenue.create_voucher_tecno(multingreso)
                     created.append(id_tecno)
@@ -354,6 +359,9 @@ class Voucher(ModelSQL, ModelView):
         for idt in created:
             Config.update_exportado(idt, 'T')
             #print('CREADO...', idt) #TEST
+        for idt in not_import:
+            Config.update_exportado(idt, 'X')
+            # print('not_import...', idt) #TEST
         print("FINISH COMPROBANTES DE INGRESO")
 
 
@@ -702,11 +710,11 @@ class MultiRevenue(metaclass=PoolMeta):
                     voucher_to_create[transaction.id] = {}
                 if line.id not in voucher_to_create[transaction.id].keys():
                     voucher_to_create[transaction.id][line.id] = {
-                        'party': line.origin.party.id,
+                        'party': line.party_document.id,
                         'company': multirevenue.company.id,
                         'voucher_type': 'receipt',
                         'date': transaction.date,
-                        'description': f"MULTI-INGRESO FACTURA {line.origin.number}",
+                        'description': f"MULTI-INGRESO FACTURA {line.reference_document}",
                         'reference': multirevenue.code,
                         'payment_mode': payment_mode.id,
                         'state': 'draft',
@@ -722,8 +730,8 @@ class MultiRevenue(metaclass=PoolMeta):
                     if concept.id in concept_ids:
                         continue
                     c_line = {
-                        'party': line.origin.party.id,
-                        'reference': line.origin.reference,
+                        'party': line.party_document.id,
+                        'reference': line.reference_document,
                         'detail': concept.description,
                         'amount': concept.amount,
                         'operation_center': operation_center.id
