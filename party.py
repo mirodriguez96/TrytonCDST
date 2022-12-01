@@ -97,9 +97,10 @@ class Party(metaclass=PoolMeta):
                             contact_mail.save()
                         contact_tel = Mcontact.search([('id_tecno', '=', nit_cedula+'-tel')])
                         if contact_tel:
-                            contact_tel.type = 'other'
                             contact_tel, = contact_tel
+                            contact_tel.type = 'other'
                             contact_tel.value = telefono
+                            contact_tel.name = 'telefono'
                             contact_tel.save()
                         elif len(telefono) > 4:
                             contact_tel = Mcontact()
