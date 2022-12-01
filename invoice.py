@@ -22,21 +22,6 @@ ELECTRONIC_STATES = [
 ]
 
 
-class Cron(metaclass=PoolMeta):
-    'Cron'
-    __name__ = 'ir.cron'
-
-    @classmethod
-    def __setup__(cls):
-        super().__setup__()
-        cls.method.selection.append(
-            ('account.invoice|import_credit_note', "Importar Notas de Crédito"),
-            )
-        cls.method.selection.append(
-            ('account.invoice|import_debit_note', "Importar Notas de Débito"),
-            )
-
-
 class Invoice(metaclass=PoolMeta):
     'Invoice'
     __name__ = 'account.invoice'

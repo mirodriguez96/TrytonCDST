@@ -3,21 +3,6 @@ from trytond.model import fields
 from trytond.pool import Pool, PoolMeta
 
 
-class Cron(metaclass=PoolMeta):
-    'Cron'
-    __name__ = 'ir.cron'
-
-    @classmethod
-    def __setup__(cls):
-        super().__setup__()
-        cls.method.selection.append(
-            ('party.party|import_parties_tecno', "Importar terceros"),
-            )
-        cls.method.selection.append(
-            ('party.party|import_addresses_tecno', "Importar direcciones de terceros"),
-            )
-
-
 #Herencia del party.party e insercción de la función actualizar terceros
 class Party(metaclass=PoolMeta):
     'Party'
@@ -67,7 +52,7 @@ class Party(metaclass=PoolMeta):
                     #LA HORA DEL SISTEMA DE TRYTON TIENE UNA DIFERENCIA HORARIA DE 5 HORAS CON LA DE TECNO
                     if exists.write_date:
                         write_date = (exists.write_date - datetime.timedelta(hours=5))
-                    elif exists.create_date:
+                    else:
                         create_date = (exists.create_date - datetime.timedelta(hours=5))
                     #Ahora vamos a verificar si el cambio más reciente fue hecho en la bd sqlserver para actualizarlo
                     if (write_date and ultimo_cambio > write_date) or (not write_date and ultimo_cambio > create_date):

@@ -3,18 +3,6 @@ from trytond.pool import Pool, PoolMeta
 from trytond.transaction import Transaction
 
 
-class Cron(metaclass=PoolMeta):
-    'Cron'
-    __name__ = 'ir.cron'
-
-    @classmethod
-    def __setup__(cls):
-        super().__setup__()
-        cls.method.selection.append(
-            ('sale.device|import_data_pos', "Importar Config Pos"),
-            )
-
-
 #Heredar para agregar el campo id_tecno
 class SaleDevice(metaclass=PoolMeta):
     'SaleDevice'

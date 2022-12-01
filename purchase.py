@@ -7,22 +7,6 @@ from decimal import Decimal
 from sql import Table
 
 
-
-class Cron(metaclass=PoolMeta):
-    'Cron'
-    __name__ = 'ir.cron'
-
-    @classmethod
-    def __setup__(cls):
-        super().__setup__()
-        cls.method.selection.append(
-            ('purchase.purchase|import_data_purchase', "Importar compras"),
-            )
-        cls.method.selection.append(
-            ('purchase.purchase|import_data_purchase_return', "Importar devoluciones de compras"),
-            )
-
-
 #Heredamos del modelo purchase.purchase para agregar el campo id_tecno
 class Purchase(metaclass=PoolMeta):
     'Purchase'

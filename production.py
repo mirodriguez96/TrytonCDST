@@ -4,18 +4,6 @@ from decimal import Decimal
 import datetime
 
 
-class Cron(metaclass=PoolMeta):
-    'Cron'
-    __name__ = 'ir.cron'
-
-    @classmethod
-    def __setup__(cls):
-        super().__setup__()
-        cls.method.selection.append(
-            ('production|import_data_production', "Importar producciones"),
-            )
-
-
 #Heredamos del modelo sale.sale para agregar el campo id_tecno
 class Production(metaclass=PoolMeta):
     'Production'

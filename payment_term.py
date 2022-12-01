@@ -11,17 +11,6 @@ PAYMENT_TYPE = [
 ]
 
 
-class Cron(metaclass=PoolMeta):
-    'Cron'
-    __name__ = 'ir.cron'
-
-    @classmethod
-    def __setup__(cls):
-        super().__setup__()
-        cls.method.selection.append(
-            ('account.invoice.payment_term|import_payment_term', "Importar plazos de pago"),
-            )
-
 class PaymentTerm(metaclass=PoolMeta):
     __name__ = 'account.invoice.payment_term'
 

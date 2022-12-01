@@ -18,20 +18,7 @@ PAYMENT_CODES = [
 
 __all__ = [
     'VoucherPayMode',
-    'Cron',
     ]
-
-class Cron(metaclass=PoolMeta):
-    'Cron'
-    __name__ = 'ir.cron'
-
-    @classmethod
-    def __setup__(cls):
-        super().__setup__()
-        cls.method.selection.append(
-            ('account.voucher.paymode|update_paymode', "Importar formas de pago"),
-            )
-
 
 class VoucherPayMode(ModelSQL, ModelView):
     'Voucher Pay Mode'

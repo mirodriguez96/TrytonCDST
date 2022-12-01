@@ -3,20 +3,6 @@ from trytond.pool import Pool, PoolMeta
 import datetime
 
 
-class Cron(metaclass=PoolMeta):
-    __name__ = 'ir.cron'
-
-    @classmethod
-    def __setup__(cls):
-        super().__setup__()
-        cls.method.selection.append(
-            ('product.product|import_products_tecno', "Importar productos"),
-            )
-        cls.method.selection.append(
-            ('product.category|import_categories_tecno', "Importar categorias de productos"),
-            )
-
-
 class Product(metaclass=PoolMeta):
     __name__ = 'product.product'
     id_tecno = fields.Char('Id TecnoCarnes', required=False)

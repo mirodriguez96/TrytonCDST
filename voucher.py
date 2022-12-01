@@ -6,21 +6,6 @@ from decimal import Decimal
 import datetime
 
 
-class Cron(metaclass=PoolMeta):
-    'Cron'
-    __name__ = 'ir.cron'
-
-    @classmethod
-    def __setup__(cls):
-        super().__setup__()
-        cls.method.selection.append(
-            ('account.voucher|import_voucher', "Importar comprobantes de ingreso"),
-            )
-        cls.method.selection.append(
-            ('account.voucher|import_voucher_payment', "Importar comprobantes de egreso"),
-            )
-
-
 #Heredamos del modelo sale.sale para agregar el campo id_tecno
 class Voucher(ModelSQL, ModelView):
     'Voucher'

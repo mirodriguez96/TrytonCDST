@@ -7,22 +7,6 @@ from decimal import Decimal
 from sql import Table
 
 
-
-class Cron(metaclass=PoolMeta):
-    'Cron'
-    __name__ = 'ir.cron'
-
-    @classmethod
-    def __setup__(cls):
-        super().__setup__()
-        cls.method.selection.append(
-            ('sale.sale|import_data_sale', "Importar ventas"),
-            )
-        cls.method.selection.append(
-            ('sale.sale|import_data_sale_return', "Importar devoluciones de ventas"),
-            )
-
-
 #Heredamos del modelo sale.sale para agregar el campo id_tecno
 class Sale(metaclass=PoolMeta):
     'Sale'

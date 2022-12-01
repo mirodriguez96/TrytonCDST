@@ -19,6 +19,7 @@ from . import wiz
 from . import report
 from . import account
 from . import payroll
+from . import cron
 
 def register():
     Pool.register(
@@ -29,33 +30,22 @@ def register():
         party.Party,
         party.PartyAddress,
         party.ContactMechanism,
-        party.Cron,
         product.Product,
         product.ProductCategory,
-        product.Cron,
         sale.Sale,
-        sale.Cron,
         sale_device.SaleDevice,
         sale_device.Journal,
-        sale_device.Cron,
         location.Location,
-        location.Cron,
         configuration.Configuration,
-        voucher.Cron,
         voucher.Voucher,
         voucher.MultiRevenue,
         voucher.Note,
-        pay_mode.Cron,
         pay_mode.VoucherPayMode,
         payment_term.PaymentTerm,
-        payment_term.Cron,
-        purchase.Cron,
         purchase.Purchase,
         invoice.Invoice,
-        invoice.Cron,
         tax.Tax,
         production.Production,
-        production.Cron,
         voucher.VoucherConfiguration,
         wiz.CreateAdjustmentNotesParameters,
         wiz.AddCenterOperationLineP,
@@ -66,6 +56,7 @@ def register():
         payroll.StaffEvent,
         payroll.Payroll,
         payroll.PayslipSendStart,
+        cron.Cron,
         wiz.DocumentsForImportParameters,
         module='conector', type_='model')
 

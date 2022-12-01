@@ -2,18 +2,6 @@ from trytond.model import fields
 from trytond.pool import Pool, PoolMeta
 
 
-class Cron(metaclass=PoolMeta):
-    'Cron'
-    __name__ = 'ir.cron'
-
-    @classmethod
-    def __setup__(cls):
-        super().__setup__()
-        cls.method.selection.append(
-            ('stock.location|import_warehouse', "Importar bodegas"),
-            )
-
-
 #Heredamos del modelo stock.location para agregar el campo id_tecno que nos servira de relación con db sqlserver
 class Location(metaclass=PoolMeta):
     "Location"
