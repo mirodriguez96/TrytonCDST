@@ -17,6 +17,7 @@ class Production(metaclass=PoolMeta):
         for rec in records:
             cls.create_account_move(rec)
 
+    # Función encargada de importar las producciones de TecnoCarnes a Tryton
     @classmethod
     def import_data_production(cls):
         print('RUN PRODUCTION')
@@ -57,10 +58,6 @@ class Production(metaclass=PoolMeta):
                     continue
                 existe = Production.search([('id_tecno', '=', id_tecno)])
                 if existe:
-                    # existe, = existe
-                    # existe.id_tecno = None
-                    # existe.save()
-                    # cls.reverse_production([existe])
                     msg = f"La producción {id_tecno} ya existe en Tryton"
                     logs.append(msg)
                     to_created.append(id_tecno)
@@ -86,10 +83,20 @@ class Production(metaclass=PoolMeta):
                 first = True
                 for line in lines:
                     cantidad = float(line.Cantidad_Facturada)
-                    id_tecno_bodega = line.IdBodega
-                    bodega, = Location.search([('id_tecno', '=', id_tecno_bodega)])
-                    #print(line.IdProducto)
-                    producto, = Product.search(['OR', ('id_tecno', '=', line.IdProducto), ('code', '=', line.IdProducto)])
+                    bodega = Location.search([('id_tecno', '=', line.IdBodega)])
+                    if not bodega:
+                        msg = f"EXCEPCION {id_tecno} - No se encontro la bodega {line.IdBodega}"
+                        logs.append(msg)
+                        to_exception.append(id_tecno)
+                        break
+                    bodega, = bodega
+                    producto = Product.search(['OR', ('id_tecno', '=', line.IdProducto), ('code', '=', line.IdProducto)])
+                    if not producto:
+                        msg = f"EXCEPCION {id_tecno} - No se encontro el producto {line.IdProducto}"
+                        logs.append(msg)
+                        to_exception.append(id_tecno)
+                        break
+                    producto, = producto
                     transf = {
                         'product': producto.id,
                         'quantity': abs(cantidad),
@@ -119,29 +126,29 @@ class Production(metaclass=PoolMeta):
                         # Se valida que el precio de venta sea diferente de 0
                         if producto.list_price == 0:
                             if valor_unitario == 0:
-                                msg = f"EXCEPCION {id_tecno} - Valor de venta en 0 en Tryton y TecnoCarnes (line.Valor_Unitario) del producto {line.IdProducto}"
+                                msg = f"EXCEPCION {id_tecno} - Valor de venta en 0 en tryton y tecnoCarnes del producto {line.IdProducto}"
                                 logs.append(msg)
                                 to_exception.append(id_tecno)
-                                continue
+                                break
                             to_write = {
                                 'sale_price_w_tax': valor_unitario,
                                 'list_price': valor_unitario
                                 }
                             Template.write([producto.template], to_write)
-                if entradas:
-                    production['inputs'] = [('create', entradas)]
-                else:
+                if id_tecno in to_exception:
+                    continue
+                if not entradas:
                     msg = f"EXCEPCION {id_tecno} - No se encontraron líneas de entrada para la producción"
                     logs.append(msg)
                     to_exception.append(id_tecno)
                     continue
-                if salidas:
-                    production['outputs'] = [('create', salidas)]
-                else:
+                if not salidas:
                     msg = f"EXCEPCION {id_tecno} - No se encontraron líneas de salida para la producción"
                     logs.append(msg)
                     to_exception.append(id_tecno)
                     continue
+                production['inputs'] = [('create', entradas)]
+                production['outputs'] = [('create', salidas)]
                 #Se crea y procesa las producciones
                 producciones = Production.create([production])
                 Production.wait(producciones)
