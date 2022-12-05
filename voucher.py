@@ -364,7 +364,12 @@ class Voucher(ModelSQL, ModelView):
             ('reference', '=', reference),
             ('party', '=', party),
             (account_type, '=', True),
+            ('reconciliation', '=', None)
         ]
+        if account_type == 'account.type.receivable':
+            line_domain.append(('debit', '>', 0))
+        elif account_type == 'account.type.payable':
+            line_domain.append(('credit', '>', 0))
         #Si no encuentra lineas a pagar... Se busca en saldos iniciales
         moveline = MoveLine.search(line_domain)
         if moveline:
