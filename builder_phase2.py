@@ -195,8 +195,8 @@ class ElectronicInvoice_2(object):
         self.party_address = invoice.party.street
         self.party_country_code = invoice.party.get_country_iso(invoice.party.country_code, 'code')  # 'CO'
         self.party_country_name = invoice.party.get_country_iso(invoice.party.country_code, 'name')  # 'CO'
-        self.party_department = invoice.party.department_name if self.party_country_code == 'CO' else ''
-        self.party_city = invoice.party.city_name if invoice.party.city_name else ''
+        self.party_department = invoice.party.department_name
+        self.party_city = invoice.party.city_name
         self.party_phone = invoice.party.phone or invoice.party.mobile
         self.party_email = invoice.party.email
         self.reference = invoice.reference or ''
@@ -294,6 +294,10 @@ class ElectronicInvoice_2(object):
             "Nvpro_dire": self.party_address,
             "Nvpro_regi": self.fiscal_regimen_party, #FIX
         }
+        if self.party_country_code != 'CO':
+            provider['Nvpro_ciud'] = self.party_city.upper()
+            # Al ser extranjero se coloca en el departameto el mismo valor de la ciudad
+            provider['Nvpro_depa'] = self.party_city.upper()
         if self.party_type_id == '31':
             provider["Nvpro_dive"] = self.party_check_digit
         if self.party_postal_zone:
@@ -386,7 +390,7 @@ class ElectronicInvoice_2(object):
             sequence += 1
         return _lines
 
-
+    # Esta función se utiliza para crear el diccionario con los datos que se va a enviar al proveedor tecnologico
     def make(self, type):
         #document = {}
         document = self._get_information()
