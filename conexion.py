@@ -1,6 +1,6 @@
 import pyodbc
 
-
+# Clase no utilizada
 class Conexion:
 
     def __init__(self, data):

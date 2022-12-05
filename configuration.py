@@ -134,6 +134,7 @@ class Configuration(ModelSQL, ModelView):
         fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
         #query = "SELECT * FROM dbo.Documentos WHERE tipo = 146 AND Numero_documento = 442" #TEST
         query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND sw = "+sw+" AND exportado != 'T' AND exportado != 'E' AND exportado != 'X' "
+        # Se valida si en la configuración de la base de datos, añadieron un valor en la fecha final de importación
         if config.end_date:
             end_date = config.end_date.strftime('%Y-%m-%d %H:%M:%S')
             query += "AND fecha_hora < CAST('"+end_date+"' AS datetime) "
@@ -204,7 +205,7 @@ class Configuration(ModelSQL, ModelView):
         return data
 
 
-    #
+    # Se solicita un archivo para ser codificado o descodificado
     @classmethod
     def encode_file(cls, file, process='encode'):
         if process == 'encode':
@@ -213,7 +214,7 @@ class Configuration(ModelSQL, ModelView):
             file_decod = file.decode()
         return file_decod
 
-    # Boton de importaciones
+    # Una vez cargado el archivo a importar, se envía a la función según el tipo de importación deseada
     @classmethod
     @ModelView.button
     def importfile(cls, records):
@@ -381,7 +382,7 @@ class Configuration(ModelSQL, ModelView):
         Product.create(products)
         print(not_products)
 
-    #Importador de saldos iniciales
+    #Importar saldos iniciales
     @classmethod
     def import_csv_balances(cls, lineas):
         pool = Pool()
@@ -480,7 +481,7 @@ class Configuration(ModelSQL, ModelView):
         print('FIN import_csv_balances')
 
 
-    #Función encargada de verificar las cuentas nuevas a importar
+    # Función encargada de importar y verificar las cuentas nuevas
     @classmethod
     def import_csv_accounts(cls, lineas):
         pool = Pool()
@@ -540,7 +541,7 @@ class Configuration(ModelSQL, ModelView):
             raise UserError('Importación de archivo: ', f'Error: Faltan las cuentas padres {not_account}')
 
 
-    #Función encargada de verificar las cuentas nuevas a importar
+    # Función encargada de actualizar las cuentas del PUC
     @classmethod
     def update_csv_accounts(cls, lineas):
         pool = Pool()
@@ -614,7 +615,7 @@ class Configuration(ModelSQL, ModelView):
         if int(val) == 1:
             return True
 
-
+    # Funcion encargada de actualizar los costos de los productos
     @classmethod
     def import_csv_product_costs(cls, lineas):
         pool = Pool()
@@ -654,7 +655,7 @@ class Configuration(ModelSQL, ModelView):
             recompute_cost_price.start.from_ = today
             recompute_cost_price.transition_recompute()
 
-
+    # Funcion encargada de cargar el inventario
     @classmethod
     def import_csv_inventory(cls, lineas):
         pool = Pool()
@@ -694,7 +695,7 @@ class Configuration(ModelSQL, ModelView):
             inventory.save()
         print('FIN')
 
-
+    # Funcion encargada de cargar las cuentas bancarias de los empleados
     @classmethod
     def import_csv_bank_account(cls, lineas):
         pool = Pool()
@@ -748,7 +749,7 @@ class Configuration(ModelSQL, ModelView):
         BankAccount.save(to_save)
         print('FIN')
 
-
+    # Funcion encargada de cargar los prestamos de los empleados
     @classmethod
     def import_csv_loans(cls, lineas):
         pool = Pool()
@@ -826,8 +827,7 @@ class Configuration(ModelSQL, ModelView):
         Loan.calculate(to_save)
         print('FIN')
 
-
-    
+    # Funcion encargada de cargar los ingresos y salidas de los empleados (access biometric)
     @classmethod
     def import_csv_access_biometric(cls, lineas):
         print('INICIA')

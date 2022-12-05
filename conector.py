@@ -35,6 +35,8 @@ class Actualizacion(ModelSQL, ModelView):
         return actualizacion
 
 
+    # se obtiene la fecha de la ultima actualizacion (modificacion) de un registro del modelo conector.actualizacion
+    # pero la fecha del registro debe ser diferente a la del dia de hoy
     @classmethod
     def get_fecha_actualizacion(cls, actualizacion):
         fecha = datetime.date(1,1,1)
@@ -47,7 +49,8 @@ class Actualizacion(ModelSQL, ModelView):
                 fecha = (actualizacion.create_date - datetime.timedelta(hours=5))
         return fecha
 
-
+    # se solicita una actualizacion y una lista de registros (logs) para validar si existen
+    # y si no existen, se almacena en el campo logs de la actualizacion dada
     @classmethod
     def add_logs(cls, actualizacion, logs):
         now = datetime.datetime.now() - datetime.timedelta(hours=5)
@@ -77,9 +80,9 @@ class Actualizacion(ModelSQL, ModelView):
                 values=[None],
                 where=conector_actualizacion.name == name)
             )
-
     
-    #Se consulta en la base de datos de SQLSERVER
+    # Se consulta en la base de datos de SQLSERVER por la cantidad de documentos
+    # que se van a importar
     def getter_quantity(self, name):
         Config = Pool().get('conector.configuration')
         conexion, = Config.search([], order=[('id', 'DESC')], limit=1)
@@ -109,7 +112,8 @@ class Actualizacion(ModelSQL, ModelView):
         result = int(result[0][0])
         return result
         
-
+    # Se consulta la cantidad de documentos (registros) que hay almacenados en Tryton
+    # que han sido importados por el modulo conector
     def getter_imported(self, name):
         quantity = None
         cursor = Transaction().connection.cursor()
@@ -135,7 +139,7 @@ class Actualizacion(ModelSQL, ModelView):
             quantity = int(result[0])
         return quantity
 
-
+    # Se consulta en la base de datos de SQLSERVER los documentos marcados como excepcion
     def getter_exceptions(self, name):
         Config = Pool().get('conector.configuration')
         conexion, = Config.search([], order=[('id', 'DESC')], limit=1)
@@ -157,7 +161,7 @@ class Actualizacion(ModelSQL, ModelView):
         result = int(result[0][0])
         return result
 
-
+    # Se consulta en la base de datos de SQLSERVER los documentos marcados como no a importar por el modulo conector
     def getter_cancelled(self, name):
         Config = Pool().get('conector.configuration')
         conexion, = Config.search([], order=[('id', 'DESC')], limit=1)
@@ -179,7 +183,7 @@ class Actualizacion(ModelSQL, ModelView):
         result = int(result[0][0])
         return result
 
-
+    # Se consulta en la base de datos de SQLSERVER los documentos que faltan por ser importados
     def getter_not_imported(self, name):
         Config = Pool().get('conector.configuration')
         conexion, = Config.search([], order=[('id', 'DESC')], limit=1)
@@ -209,6 +213,8 @@ class Actualizacion(ModelSQL, ModelView):
         result = int(result[0][0])
         return result
 
+    # Se revisa los documentos existentes en Tryton vs SqlServer (TecnoCarnes) para marcarlos como pendientes por importar.
+    # Se solicita el nombre de la tabla en tryton (table), la lista de sw según el documento y el nombre de la actualizacion
     @classmethod
     def revisa_secuencia_imp(cls, table, l_sw, name_a):
         pool = Pool()

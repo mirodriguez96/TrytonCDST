@@ -23,6 +23,7 @@ class Sale(metaclass=PoolMeta):
         print('RUN DEVOLUCIONES DE VENTAS')
         cls.import_tecnocarnes('2')
 
+    # Función encargada de importar las ventas y devoluciones de ventas de SqlServer (TecnoCarnes)
     @classmethod
     def import_tecnocarnes(cls, swt):
         pool = Pool()
@@ -53,6 +54,7 @@ class Sale(metaclass=PoolMeta):
         if company_operation:
             CompanyOperation = pool.get('company.operation_center')
             operation_center = CompanyOperation.search([], order=[('id', 'DESC')], limit=1)
+        # A continuación se crea una lista que va almacenar los tipos de ventas que existen en SqlServer (TecnoCarnes) como ventas POS
         venta_pos = []
         pdevoluciones_pos = Config.get_data_parametros('10')
         if pdevoluciones_pos:
@@ -76,6 +78,8 @@ class Sale(metaclass=PoolMeta):
                 numero_doc = venta.Numero_documento
                 tipo_doc = venta.tipo
                 id_venta = str(sw)+'-'+tipo_doc+'-'+str(numero_doc)
+                # Se valida si el registro en el campo anulado esta marcado con 'S' para indicar que fue anulado
+                # almacenar el mensaje el registro y posteriormente sea marcado para NO importar
                 if venta.anulado == 'S':
                     msg = f"{id_venta} Documento anulado en TecnoCarnes"
                     logs.append(msg)

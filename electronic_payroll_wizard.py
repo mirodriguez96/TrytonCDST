@@ -3,7 +3,7 @@ from trytond.transaction import Transaction
 from trytond.pool import Pool
 from . it_supplier_noova import ElectronicPayrollCdst
 
-
+# Asistente encargado de enviar las nóminas electronicas de los empleados
 class PayrollElectronicCdst(Wizard):
     'Payroll Electronic Cdst'
     __name__ = 'staff.payroll_electronic.it_supplier'

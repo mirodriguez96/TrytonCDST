@@ -7,8 +7,8 @@ class Product(metaclass=PoolMeta):
     __name__ = 'product.product'
     id_tecno = fields.Char('Id TecnoCarnes', required=False)
 
-    #Función encargada de crear o actualizar los productos y categorias de db TecnoCarnes,
-    #teniendo en cuenta la ultima fecha de actualizacion y si existe o no.
+    # Función encargada de crear o actualizar los productos y categorias de db TecnoCarnes,
+    # teniendo en cuenta la ultima fecha de actualizacion y si existe o no.
     @classmethod
     def import_products_tecno(cls):
         print('RUN PRODUCTOS')

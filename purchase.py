@@ -24,6 +24,7 @@ class Purchase(metaclass=PoolMeta):
         print('RUN DEVOLUCIONES DE COMPRAS')
         cls.import_tecnocarnes('4')
 
+    # Función encargada de importar de SqlServer (TecnoCarnes) las compras y devoluciones de las compras
     @classmethod
     def import_tecnocarnes(cls, swt):
         pool = Pool()
@@ -51,11 +52,10 @@ class Purchase(metaclass=PoolMeta):
         if company_operation:
             CompanyOperation = pool.get('company.operation_center')
             operation_center = CompanyOperation.search([], order=[('id', 'DESC')], limit=1)
-        logs = []
-        #to_save = []
-        to_created = []
-        to_exception = []
-        not_import = []
+        logs = [] # lista utilizada para almacenar los mensajes (logs) en el proceso de la importación
+        to_created = [] # lista utilizada para almacenar los documentos que se importaron correctamente
+        to_exception = [] # lista utilizada para almacenar los documentos que tuvieron alguna excepcion en el proceso de la importación
+        not_import = [] # lista utilizada para almacenar los documentos que NO se deben importar (anulados)
         #Procedemos a realizar la compra
         for compra in data:
             sw = compra.sw

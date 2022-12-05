@@ -28,6 +28,7 @@ class SaleDevice(metaclass=PoolMeta):
         Actualizacion.add_logs(actualizacion, logs)
         print("FINISH CONFIG POS")
 
+    # Se importan las tiendas que seran utilizadas para las ventas POS
     @classmethod
     def import_sale_shop(cls, logs):
         pool = Pool()
@@ -38,6 +39,7 @@ class SaleDevice(metaclass=PoolMeta):
         payment_term, = payment_term.search([], order=[('id', 'DESC')], limit=1)
         currency = pool.get('currency.currency')
         moneda, = currency.search([('code', '=', 'COP')])
+        # Se concuerda que las bodegas de SqlServer (TecnoCarnes) equivalen a las tiendas en Tryton
         bodegas = Config.get_data_table('TblBodega')
         to_create = []
         for bodega in bodegas:
@@ -65,7 +67,7 @@ class SaleDevice(metaclass=PoolMeta):
                 to_create.append(shop)
         Shop.create(to_create)
 
-
+    # Se crea una lista de precios para las tiendas a importar
     @classmethod
     def price_list_sale(cls, shop):
         pool = Pool()

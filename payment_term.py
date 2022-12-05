@@ -21,6 +21,7 @@ class PaymentTerm(metaclass=PoolMeta):
     def default_payment_type():
         return '1'
 
+    # Función encargada de importar los plazos de pago de SqlSqerver (TecnoCarnes)
     @classmethod
     def import_payment_term(cls):
         pool = Pool()
@@ -35,28 +36,28 @@ class PaymentTerm(metaclass=PoolMeta):
         for condicion in condiciones_pago:
             id_tecno = condicion.IdCondiciones_pago
             nombre = condicion.Condiciones_pago.strip()
-            dias = int(condicion.dias_vcto)
-            contado = '2'
-            if dias == 0:
-                contado = '1'
+            dias_vcto = int(condicion.dias_vcto)
+            payment_type = '2'
+            if dias_vcto == 0:
+                payment_type = '1'
 
             existe = PaymentTerm.search([('id_tecno', '=', id_tecno)])
             if existe:
                 existe[0].name = nombre
-                existe[0].payment_type = contado
+                existe[0].payment_type = payment_type
                 line, = existe[0].lines
                 delta, = line.relativedeltas
-                delta.days = dias
+                delta.days = dias_vcto
                 existe[0].save()
             else:
                 #Se crea un nuevo plazo de pago
                 plazo_pago = PaymentTerm()
                 plazo_pago.id_tecno = id_tecno
                 plazo_pago.name = nombre
-                plazo_pago.payment_type = contado
+                plazo_pago.payment_type = payment_type
                 #delta es quien se le indica los días del plazo de pago
                 delta = Delta()
-                delta.days = dias
+                delta.days = dias_vcto
                 #line es quien se le indica el tipo del plazo de pago
                 line = Line()
                 line.type = 'remainder'

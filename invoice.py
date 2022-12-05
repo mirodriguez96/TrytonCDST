@@ -31,7 +31,7 @@ class Invoice(metaclass=PoolMeta):
     def default_electronic_state():
         return 'none'
 
-
+    # Funcion encargada de eliminar loas conciliaciones del asiento pasado como parametro
     @classmethod
     def unreconcile_move(self, move):
         Reconciliation = Pool().get('account.move.reconciliation')
@@ -39,7 +39,7 @@ class Invoice(metaclass=PoolMeta):
         if reconciliations:
             Reconciliation.delete(reconciliations)
     
-    #Importar notas de TecnoCarnes
+    # Función encargada de importar notas débito y crédito de TecnoCarnes
     @classmethod
     def import_notas_tecno(cls, nota_tecno):
         print(f'RUN NOTAS DE {nota_tecno}')
@@ -47,10 +47,11 @@ class Invoice(metaclass=PoolMeta):
         Config = pool.get('conector.configuration')
         Actualizacion = pool.get('conector.actualizacion')
         actualizacion = Actualizacion.create_or_update(f'NOTAS DE {nota_tecno}')
-        # Obtenemos las notas de credito de TecnoCarnes
         if nota_tecno == "CREDITO":
+            # Obtenemos las notas de credito de TecnoCarnes
             documentos = Config.get_documentos_tecno('32')
         else:
+            # Obtenemos las notas de debito de TecnoCarnes
             documentos = Config.get_documentos_tecno('31')
         if not documentos:
             #actualizacion.save()
@@ -277,6 +278,7 @@ class Invoice(metaclass=PoolMeta):
                 )}
             },)
 
+    # Boton (función) que sirve para enviar los documentos soporte al proveedor tecnologico
     @classmethod
     @ModelView.button
     def send_support_document(cls, records):
@@ -328,7 +330,7 @@ class Invoice(metaclass=PoolMeta):
 #         return 'reload'
 
 
-
+# Asistente encargado de cambiar la fecha del asiento y la nota contable para que coincidan
 class UpdateNoteDate(Wizard):
     'Update Note Date'
     __name__ = 'account.invoice.update_note_date'

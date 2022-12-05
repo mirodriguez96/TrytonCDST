@@ -9,6 +9,7 @@ class Location(metaclass=PoolMeta):
 
     id_tecno = fields.Char('Id Tabla Sqlserver', required=False)
 
+    # Se importa de la base de datos SqlServer (TecnoCarnes) las bodegas
     @classmethod
     def import_warehouse(cls):
         print('RUN BODEGAS')

@@ -204,7 +204,7 @@ class Production(metaclass=PoolMeta):
         #print(to_reverse)
         Production.save(to_reverse)
 
-
+    # Función que recibe una producción y de acuerdo a esa información crea un asiento contable 
     @classmethod
     def create_account_move(cls, rec):
         pool = Pool()

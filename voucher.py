@@ -12,7 +12,7 @@ class Voucher(ModelSQL, ModelView):
     __name__ = 'account.voucher'
     id_tecno = fields.Char('Id Tabla Sqlserver', required=False)
 
-
+    # Función encargada de importar los recibos (comprobantes) de egreso
     @classmethod
     def import_voucher_payment(cls):
         print("RUN COMPROBANTES DE EGRESO")
@@ -138,7 +138,7 @@ class Voucher(ModelSQL, ModelView):
         print("FINISH COMPROBANTES DE EGRESO")
 
 
-    #Funcion encargada de crear los comprobantes de ingreso
+    # Funcion encargada de importar los recibos (comprobantes) de ingreso
     @classmethod
     def import_voucher(cls):
         print("RUN COMPROBANTES DE INGRESO")
@@ -198,7 +198,7 @@ class Voucher(ModelSQL, ModelView):
                     exceptions.append(id_tecno)
                     continue            
                 fecha_date = cls.convert_fecha_tecno(doc.fecha_hora)
-                # Comprobante con mas de 1 forma de pago
+                # Comprobante con mas de 1 forma de pago (MULTI-INGRESO)
                 if len(tipo_pago) > 1:
                     print('MULTI-INGRESO:', id_tecno)
                     multingreso = MultiRevenue()
@@ -240,7 +240,6 @@ class Voucher(ModelSQL, ModelView):
                         move_line = cls.get_moveline(reference, tercero, logs, account_type)
                         if move_line:
                             if factura.valor:
-                                print(reference)
                                 valor_pagado = Decimal(factura.valor + factura.descuento + factura.retencion + (factura.ajuste*-1) + factura.retencion_iva + factura.retencion_ica)
                                 line = MultiRevenueLine()
                                 line.move_line = move_line
@@ -382,6 +381,7 @@ class Voucher(ModelSQL, ModelView):
         else:
             return False
 
+    # Se obtiene el valor total a pagar de a cuerdo a línea de asiento
     @classmethod
     def get_amounts_to_pay(cls, moveline, voucher_type):
         amount = moveline.credit or moveline.debit
@@ -404,7 +404,7 @@ class Voucher(ModelSQL, ModelView):
         return amount, amount_to_pay, untaxed_amount
 
 
-    #Metodo encargado de consultar y verificar si existe un voucher con la id de la BD
+    #Metodo encargado de consultar y verificar si existe un comprobante de multi-ingreso con la id de la BD
     @classmethod
     def find_voucher(cls, idt):
         pool = Pool()
@@ -420,7 +420,7 @@ class Voucher(ModelSQL, ModelView):
             else:
                 return False
 
-
+    # Función encargada de crear las diferentes líneas del comprobante
     @classmethod
     def get_lines_vtecno(cls, invoices, voucher, logs, account_type):
         pool = Pool()
@@ -535,7 +535,7 @@ class Voucher(ModelSQL, ModelView):
                 to_lines.append(line_ajuste)
         return to_lines
 
-
+    # Función encargada de crear lineas de descuento, retencion, etc para los MULTI-INGRESOS
     @classmethod
     def get_others_tecno(cls, rec, original_amount):
         pool = Pool()
@@ -600,7 +600,7 @@ class Voucher(ModelSQL, ModelView):
         fecha = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
         return fecha
 
-    
+    # Función encargada de desconciliar los asientos de los comprobantes
     @classmethod
     def unreconcilie_move_voucher(cls, vouchers):
         pool = Pool()
@@ -616,6 +616,7 @@ class Voucher(ModelSQL, ModelView):
                 Reconciliation.delete(reconciliations)
             Move.draft([move.id])
 
+    # Función que se encarga de forzar a borrador los comprobantes
     @classmethod
     def force_draft_voucher(cls, vouchers):
         pool = Pool()
@@ -629,7 +630,7 @@ class Voucher(ModelSQL, ModelView):
         Voucher.draft(vouchers)
         Voucher.save(vouchers)
         
-
+    # Función encargada de reimportar los comprobantes que fueron previamente desconciliado
     @classmethod
     def delete_imported_vouchers(cls, vouchers):
         pool = Pool()
@@ -675,6 +676,7 @@ class MultiRevenue(metaclass=PoolMeta):
     __name__ = 'account.multirevenue'
     id_tecno = fields.Char('Id Tabla Sqlserver', required=False)
 
+    # Función encargada de crear los comprobantes de ingreso (idividuales) de acuerdo al multi-ingreso pasado por parametro
     @classmethod
     def create_voucher_tecno(cls, multirevenue):
         voucher_to_create = {}
@@ -816,7 +818,7 @@ class Note(metaclass=PoolMeta):
     __name__ = 'account.note'
 
 
-    # Metodo encargado de crear notas contables para las facturas que requieren un ajuste
+    # Metodo encargado de crear notas contables para las facturas que requieren un ajuste para poder ser conciliadas
     @classmethod
     def create_adjustment_note (cls, data):
         pool = Pool()

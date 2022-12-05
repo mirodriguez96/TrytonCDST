@@ -16,6 +16,7 @@ from trytond.pool import Pool, PoolMeta
 class Account(metaclass=PoolMeta):
     __name__ = 'account.account'
 
+    # Funcion encargada de buscar las cuentas padres (parent) y verificar si tiene algún tipo asignado, para quitarselo
     @classmethod
     def delete_account_type(cls, accounts):
         pool = Pool()
@@ -27,11 +28,9 @@ class Account(metaclass=PoolMeta):
                     parents.append(account.parent)
         for parent in parents:
             if parent.type:
-                print('parent delete:', parent)
                 Account.write([parent], {'type': None})
 
 
-#Asistente encargado de ajustar las cuentas de inventario
 class BalanceStockStart(ModelView):
     'Balance Stock Start'
     __name__ = 'account.fiscalyear.balance_stock.start'
@@ -76,6 +75,7 @@ class BalanceStockStart(ModelView):
             return self.fiscalyear.end_date
 
 
+# Asistente encargado de ajustar las cuentas de inventario
 class BalanceStock(Wizard):
     'Balance Stock Move'
     __name__ = 'account.fiscalyear.balance_stock'
@@ -110,6 +110,7 @@ class BalanceStock(Wizard):
             'date': self.start.date,
             }
 
+    # Funcion encargada de crear un asiento con las diferentes cuentas de inventario ajustadas a una fecha dada
     def create_move(self):
         pool = Pool()
         Account = pool.get('account.account')

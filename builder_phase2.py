@@ -346,8 +346,8 @@ class ElectronicInvoice_2(object):
             "Nvfac_tota": self.untaxed_amount, # Campo con el mismo valor de Nvfac_stot
             "Nvfac_totp": self.untaxed_amount, # Valor total sin impuestos
             "Nvfac_roun": "0.00",
-            "Nvcon_codi": "", # Fix concepto de la nota de ajuste
-            "Nvcon_desc": "", # Fix nombre concepto de la nota de ajuste
+            "Nvcon_codi": "",
+            "Nvcon_desc": "",
         }
         if self.company_email_ds:
             information["Nvema_copi"] = self.company_email_ds

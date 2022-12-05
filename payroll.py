@@ -93,7 +93,7 @@ class PayrollPaymentStartBcl(ModelView):
     def default_company():
         return Transaction().context.get('company')
 
-
+# Asistente encargado de recoger la información de las nominas que se van a utilizar para el reporte
 class PayrollPaymentBcl(Wizard):
     'Payroll Payment'
     __name__ = 'staff.payroll.payment_bancolombia'
@@ -131,7 +131,7 @@ class PayrollPaymentBcl(Wizard):
     def transition_print_(self):
         return 'end'
 
-
+# Se genera un reporte con los campos necesarios para el envío de la nómina mediante la plataforma de Bancolombia
 class PayrollPaymentReportBcl(Report):
     __name__ = 'staff.payroll.payment_report_bancolombia'
 
@@ -173,6 +173,7 @@ class PayrollPaymentReportBcl(Report):
         report_context['company'] = user.company
         return report_context
 
+# Se crea la vista que solicitara la información necesaria para el envío del comprobante de nómina por email
 class PayslipSendStart(ModelView):
     'Payslip Send Start'
     __name__ = 'staff.payroll_payslip_send.start'
@@ -186,7 +187,7 @@ class PayslipSendStart(ModelView):
     def default_company():
         return Transaction().context.get('company')
 
-
+# Asistente encargado de recolectar las nóminas y enviarlas por email
 class PayslipSend(Wizard):
     'Payslip Send'
     __name__ = 'staff.payroll.payslip_send'
@@ -223,7 +224,7 @@ class PayslipSend(Wizard):
                 recipients_secondary = self.start.cc
             record = [model_name, payroll.id]
             try:
-                self.send(to=email, cc=recipients_secondary, bcc='', subject=subject, body='___',
+                send_mail(to=email, cc=recipients_secondary, bcc='', subject=subject, body=payroll.employee.party.email,
                     files=None, record=record, reports=reports, attachments=None)
                 Payroll.write([payroll], {'sended_mail': True})
                 Transaction().connection.commit()
@@ -233,110 +234,105 @@ class PayslipSend(Wizard):
         return 'end'
 
     
-    # Copia funcion 'send' del modelo 'ir.email' modificando para enviar de forma individual (no transactional)
-    def send(self, to='', cc='', bcc='', subject='', body='',
-            files=None, record=None, reports=None, attachments=None):
-        pool = Pool()
-        Email = pool.get('ir.email')
-        User = pool.get('res.user')
-        ActionReport = pool.get('ir.action.report')
-        Attachment = pool.get('ir.attachment')
-        transaction = Transaction()
-        user = User(transaction.user)
-
-        Model = pool.get(record[0])
-        record = Model(record[1])
-
-        body_html = HTML_EMAIL % {
+# Copia funcion 'send' del modelo 'ir.email' modificando para enviar de forma individual (no transactional)
+def send_mail(to='', cc='', bcc='', subject='', body='',
+        files=None, record=None, reports=None, attachments=None):
+    pool = Pool()
+    Email = pool.get('ir.email')
+    User = pool.get('res.user')
+    ActionReport = pool.get('ir.action.report')
+    Attachment = pool.get('ir.attachment')
+    transaction = Transaction()
+    user = User(transaction.user)
+    Model = pool.get(record[0])
+    record = Model(record[1])
+    body_html = HTML_EMAIL % {
+        'subject': subject,
+        'body': body,
+        'signature': user.signature or '',
+        }
+    content = MIMEMultipart('alternative')
+    if html2text:
+        body_text = HTML_EMAIL % {
             'subject': subject,
             'body': body,
-            'signature': user.signature or '',
+            'signature': '',
             }
-        content = MIMEMultipart('alternative')
-        if html2text:
-            body_text = HTML_EMAIL % {
-                'subject': subject,
-                'body': body,
-                'signature': '',
-                }
-            converter = html2text.HTML2Text()
-            body_text = converter.handle(body_text)
-            if user.signature:
-                body_text += '\n-- \n' + converter.handle(user.signature)
-            part = MIMEText(body_text, 'plain', _charset='utf-8')
-            content.attach(part)
-        part = MIMEText(body_html, 'html', _charset='utf-8')
+        converter = html2text.HTML2Text()
+        body_text = converter.handle(body_text)
+        if user.signature:
+            body_text += '\n-- \n' + converter.handle(user.signature)
+        part = MIMEText(body_text, 'plain', _charset='utf-8')
         content.attach(part)
-        if files or reports or attachments:
-            msg = MIMEMultipart('mixed')
-            msg.attach(content)
-            if files is None:
-                files = []
-            else:
-                files = list(files)
-
-            for report_id in (reports or []):
-                report = ActionReport(report_id)
-                Report = pool.get(report.report_name, type='report')
-                ext, content, _, title = Report.execute(
-                    [record.id], {
-                        'action_id': report.id,
-                        })
-                name = '%s.%s' % (title, ext)
-                if isinstance(content, str):
-                    content = content.encode('utf-8')
-                files.append((name, content))
-            if attachments:
-                files += [
-                    (a.name, a.data) for a in Attachment.browse(attachments)]
-            for name, data in files:
-                mimetype, _ = mimetypes.guess_type(name)
-                if mimetype:
-                    attachment = MIMENonMultipart(*mimetype.split('/'))
-                    attachment.set_payload(data)
-                    encode_base64(attachment)
-                else:
-                    attachment = MIMEApplication(data)
-                attachment.add_header(
-                    'Content-Disposition', 'attachment',
-                    filename=('utf-8', '', name))
-                msg.attach(attachment)
+    part = MIMEText(body_html, 'html', _charset='utf-8')
+    content.attach(part)
+    if files or reports or attachments:
+        msg = MIMEMultipart('mixed')
+        msg.attach(content)
+        if files is None:
+            files = []
         else:
-            msg = content
-        msg['From'] = from_ = config.get('email', 'from')
-        if user.email:
-            if user.name:
-                user_email = formataddr((user.name, user.email))
+            files = list(files)
+        for report_id in (reports or []):
+            report = ActionReport(report_id)
+            Report = pool.get(report.report_name, type='report')
+            ext, content, _, title = Report.execute(
+                [record.id], {
+                    'action_id': report.id,
+                    })
+            name = '%s.%s' % (title, ext)
+            if isinstance(content, str):
+                content = content.encode('utf-8')
+            files.append((name, content))
+        if attachments:
+            files += [
+                (a.name, a.data) for a in Attachment.browse(attachments)]
+        for name, data in files:
+            mimetype, _ = mimetypes.guess_type(name)
+            if mimetype:
+                attachment = MIMENonMultipart(*mimetype.split('/'))
+                attachment.set_payload(data)
+                encode_base64(attachment)
             else:
-                user_email = user.email
-            msg['Behalf-Of'] = user_email
-            msg['Reply-To'] = user_email
-        msg['To'] = ', '.join(formataddr(a) for a in getaddresses([to]))
-        msg['Cc'] = ', '.join(formataddr(a) for a in getaddresses([cc]))
-        msg['Subject'] = Header(subject, 'utf-8')
-
-        to_addrs = list(filter(None, map(
-                    str.strip,
-                    _get_emails(to) + _get_emails(cc) + _get_emails(bcc))))
-        sendmail(
-            from_, to_addrs, msg, server=None, strict=True)
-
-        email = Email(
-            recipients=to,
-            recipients_secondary=cc,
-            recipients_hidden=bcc,
-            addresses=[{'address': a} for a in to_addrs],
-            subject=subject,
-            body=body,
-            resource=record)
-        email.save()
-        with Transaction().set_context(_check_access=False):
-            attachments_ = []
-            for name, data in files:
-                attachments_.append(
-                    Attachment(resource=email, name=name, data=data))
-            Attachment.save(attachments_)
-        return email
+                attachment = MIMEApplication(data)
+            attachment.add_header(
+                'Content-Disposition', 'attachment',
+                filename=('utf-8', '', name))
+            msg.attach(attachment)
+    else:
+        msg = content
+    msg['From'] = from_ = config.get('email', 'from')
+    if user.email:
+        if user.name:
+            user_email = formataddr((user.name, user.email))
+        else:
+            user_email = user.email
+        msg['Behalf-Of'] = user_email
+        msg['Reply-To'] = user_email
+    msg['To'] = ', '.join(formataddr(a) for a in getaddresses([to]))
+    msg['Cc'] = ', '.join(formataddr(a) for a in getaddresses([cc]))
+    msg['Subject'] = Header(subject, 'utf-8')
+    to_addrs = list(filter(None, map(
+                str.strip,
+                _get_emails(to) + _get_emails(cc) + _get_emails(bcc))))
+    sendmail(
+        from_, to_addrs, msg, server=None, strict=True)
+    email = Email(
+        recipients=to,
+        recipients_secondary=cc,
+        recipients_hidden=bcc,
+        addresses=[{'address': a} for a in to_addrs],
+        subject=subject,
+        body=body,
+        resource=record)
+    email.save()
+    with Transaction().set_context(_check_access=False):
+        attachments_ = []
+        for name, data in files:
+            attachments_.append(
+                Attachment(resource=email, name=name, data=data))
+        Attachment.save(attachments_)
+    return email
 
 
 class StaffEvent(metaclass=PoolMeta):
@@ -350,6 +346,7 @@ class Payroll(metaclass=PoolMeta):
     def __setup__(cls):
         super(Payroll, cls).__setup__()
 
+    # Se hereda y modifica la función preliquidation para añadir las cuentas analiticas en las liquidaciones que la tenga
     def set_preliquidation(self, extras, discounts=None):
         super(Payroll, self).set_preliquidation(extras, discounts)
         PayrollLine = Pool().get('staff.payroll.line')
