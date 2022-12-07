@@ -4,6 +4,7 @@ from trytond.exceptions import UserError
 from trytond.transaction import Transaction
 from decimal import Decimal
 import datetime
+from sql import Table
 
 
 #Heredamos del modelo sale.sale para agregar el campo id_tecno
@@ -38,17 +39,26 @@ class Voucher(ModelSQL, ModelView):
                 nro = str(doc.Numero_documento)
                 tipo_numero = doc.tipo+'-'+nro
                 id_tecno = sw+'-'+tipo_numero
+                # Buscamos si ya existe el comprobante
+                comprobante = cls.find_voucher(id_tecno)
+                if comprobante:
+                    if doc.anulado == 'S':
+                        if comprobante.__name__ == 'account.voucher':
+                            cls.unreconcilie_move_voucher([comprobante])
+                            cls.force_draft_voucher([comprobante])
+                            Voucher.delete([comprobante])
+                            msg = f"El documento {id_tecno} fue eliminado de tryton porque fue anulado en TecnoCarnes"
+                            logs.append(msg)
+                            not_import.append(id_tecno)
+                            continue
+                    msg = f"EL DOCUMENTO {id_tecno} YA EXISTE EN TRYTON"
+                    logs.append(msg)
+                    created.append(id_tecno)
+                    continue
                 if doc.anulado == 'S':
                     msg = f'Documento {id_tecno} ANULADO EN TECNOCARNES'
                     logs.append(msg)
                     not_import.append(id_tecno)
-                    continue
-                # Buscamos si ya existe el comprobante
-                comprobante = Voucher.search([('id_tecno', '=', id_tecno)])
-                if comprobante:
-                    msg = f"EL DOCUMENTO {id_tecno} YA EXISTE EN TRYTON"
-                    logs.append(msg)
-                    created.append(id_tecno)
                     continue
                 facturas = Config.get_dctos_cruce(id_tecno)
                 if not facturas:
@@ -153,6 +163,7 @@ class Voucher(ModelSQL, ModelView):
         MultiRevenue = pool.get('account.multirevenue')
         MultiRevenueLine = pool.get('account.multirevenue.line')
         Transaction = pool.get('account.multirevenue.transaction')
+        OthersConcepts = pool.get('account.multirevenue.others_concepts')
         logs = []
         created = []
         exceptions = []
@@ -166,16 +177,35 @@ class Voucher(ModelSQL, ModelView):
                 tipo = doc.tipo
                 nro = str(doc.Numero_documento)
                 id_tecno = sw+'-'+tipo+'-'+nro
+                comprobante = cls.find_voucher(id_tecno)
+                if comprobante:
+                    if doc.anulado == 'S':
+                        if comprobante.__name__ == 'account.voucher':
+                            cls.unreconcilie_move_voucher([comprobante])
+                            cls.force_draft_voucher([comprobante])
+                            Voucher.delete([comprobante])
+                        if comprobante.__name__ == 'account.multirevenue':
+                            vouchers = Voucher.search([('reference', '=', comprobante.code)])
+                            cls.unreconcilie_move_voucher(vouchers)
+                            cls.force_draft_voucher(vouchers)
+                            Voucher.delete(vouchers)
+                            for line in comprobante.lines:
+                                OthersConcepts.delete(line.others_concepts)
+                            MultiRevenueLine.delete(comprobante.lines)
+                            Transaction.delete(comprobante.transactions)
+                            MultiRevenue.delete([comprobante])
+                        msg = f"El documento {id_tecno} fue eliminado de tryton porque fue anulado en TecnoCarnes"
+                        logs.append(msg)
+                        not_import.append(id_tecno)
+                        continue
+                    msg = f"EL DOCUMENTO {id_tecno} YA EXISTE EN TRYTON"
+                    logs.append(msg)
+                    created.append(id_tecno)
+                    continue
                 if doc.anulado == 'S':
                     msg = f'Documento {id_tecno} ANULADO EN TECNOCARNES'
                     logs.append(msg)
                     not_import.append(id_tecno)
-                    continue
-                comprobante = cls.find_voucher(sw+'-'+tipo+'-'+nro)
-                if comprobante:
-                    msg = f"EL DOCUMENTO {id_tecno} YA EXISTE EN TRYTON"
-                    logs.append(msg)
-                    created.append(id_tecno)
                     continue
                 facturas = Config.get_dctos_cruce(id_tecno)
                 if not facturas:
@@ -183,9 +213,10 @@ class Voucher(ModelSQL, ModelView):
                     logs.append(msg1)
                     exceptions.append(id_tecno)
                     continue
-                tercero = Party.search([('id_number', '=', doc.nit_Cedula.replace('\n',""))])
+                nit_cedula = doc.nit_Cedula.replace('\n',"")
+                tercero = Party.search([('id_number', '=', nit_cedula)])
                 if not tercero:
-                    msg = f"EL TERCERO {doc.nit_Cedula} NO EXISTE EN TRYTON"
+                    msg = f"EL TERCERO {nit_cedula} NO EXISTE EN TRYTON"
                     logs.append(msg)
                     exceptions.append(id_tecno)
                     continue
@@ -239,8 +270,8 @@ class Voucher(ModelSQL, ModelView):
                         reference = factura.tipo_aplica+'-'+str(factura.numero_aplica)
                         move_line = cls.get_moveline(reference, tercero, logs, account_type)
                         if move_line:
-                            if factura.valor:
-                                valor_pagado = Decimal(factura.valor + factura.descuento + factura.retencion + (factura.ajuste*-1) + factura.retencion_iva + factura.retencion_ica)
+                            valor_pagado = Decimal(factura.valor + factura.descuento + factura.retencion + (factura.ajuste*-1) + factura.retencion_iva + factura.retencion_ica)
+                            if valor_pagado and valor_pagado > 0:
                                 line = MultiRevenueLine()
                                 line.move_line = move_line
                                 amount_to_pay = move_line.debit
@@ -421,7 +452,7 @@ class Voucher(ModelSQL, ModelView):
         else:
             multirevenue = MultiRevenue.search([('id_tecno', '=', idt)])
             if multirevenue:
-                return multirevenue
+                return multirevenue[0]
             else:
                 return False
 
@@ -610,28 +641,38 @@ class Voucher(ModelSQL, ModelView):
     def unreconcilie_move_voucher(cls, vouchers):
         pool = Pool()
         Reconciliation = pool.get('account.move.reconciliation')
-        Move = pool.get('account.move')
-        to_unreconcilie = []
+        moves = []
+        reconciliations = None
         for voucher in vouchers:
             if voucher.move:
-                to_unreconcilie.append(voucher.move)
-        for move in to_unreconcilie:
+                moves.append(voucher.move)
+        for move in moves:
             reconciliations = [l.reconciliation for l in move.lines if l.reconciliation]
             if reconciliations:
                 Reconciliation.delete(reconciliations)
-            Move.draft([move.id])
+        return reconciliations
 
     # Función que se encarga de forzar a borrador los comprobantes
     @classmethod
     def force_draft_voucher(cls, vouchers):
         pool = Pool()
         Voucher = pool.get('account.voucher')
-        Move = pool.get('account.move')
+        move_table = Table('account_move')
+        cursor = Transaction().connection.cursor()
+        move_ids = []
         for voucher in vouchers:
             if voucher.move:
-                Move.draft([voucher.move.id])
-                Move.delete([voucher.move])
+                move_ids.append(voucher.move.id)
             voucher.number = None
+        if move_ids:
+            cursor.execute(*move_table.update(
+                columns=[move_table.state],
+                values=['draft'],
+                where=move_table.id.in_(move_ids)
+            ))
+            cursor.execute(*move_table.delete(
+                where=move_table.id.in_(move_ids)
+            ))
         Voucher.draft(vouchers)
         Voucher.save(vouchers)
         
@@ -702,7 +743,7 @@ class MultiRevenue(metaclass=PoolMeta):
                     voucher_to_create[transaction.id] = {}
                 if line.id not in voucher_to_create[transaction.id].keys():
                     voucher_to_create[transaction.id][line.id] = {
-                        'party': line.party_document.id,
+                        'party': line.move_line.party.id,
                         'company': multirevenue.company.id,
                         'voucher_type': 'receipt',
                         'date': transaction.date,
@@ -722,7 +763,7 @@ class MultiRevenue(metaclass=PoolMeta):
                     if concept.id in concept_ids:
                         continue
                     c_line = {
-                        'party': line.party_document.id,
+                        'party': line.move_line.party.id,
                         'reference': line.reference_document,
                         'detail': concept.description,
                         'amount': concept.amount,

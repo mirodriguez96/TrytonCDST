@@ -301,9 +301,9 @@ class Sale(metaclass=PoolMeta):
                     cls.finish_shipment_process(sale)
                     if sale.invoice_type == 'P':
                         Sale.post_invoices(sale)
-                        if sale.payment_term.id_tecno == '0':
-                            cls.set_payment_pos(sale, logs, to_exception)
-                            Sale.update_state([sale])
+                        #if sale.payment_term.id_tecno == '0':
+                        cls.set_payment_pos(sale, logs, to_exception)
+                        Sale.update_state([sale])
                     else:
                         cls.finish_invoice_process(sale, venta, logs, to_exception)
                 to_created.append(id_venta)
@@ -568,7 +568,7 @@ class Sale(metaclass=PoolMeta):
                 Sale.do_reconcile([sale])
         return 'ok'
 
-
+    # Función creada con base al asistente forzar a borrador del módulo sale_pos de presik
     @classmethod
     def force_draft(cls, sales):
         sale_table = Table('sale_sale')
@@ -576,6 +576,8 @@ class Sale(metaclass=PoolMeta):
         move_table = Table('account_move')
         stock_move_table = Table('stock_move')
         statement_line = Table('account_statement_line')
+        shipment_table = Table('stock_shipment_out')
+        shipment_return_table = Table('stock_shipment_out_return')
         cursor = Transaction().connection.cursor()
 
         for sale in sales:
@@ -611,6 +613,16 @@ class Sale(metaclass=PoolMeta):
             )
             # The stock moves must be delete
             stock_moves = [m.id for line in sale.lines for m in line.moves]
+            shipments = []
+            for shipment in sale.shipments:
+                shipments.append(shipment.id)
+                for inventory_move in shipment.inventory_moves:
+                    stock_moves.append(inventory_move.id)
+            shipment_returns = []
+            for shipment in sale.shipment_returns:
+                shipment_returns.append(shipment.id)
+                for inventory_move in shipment.inventory_moves:
+                    stock_moves.append(inventory_move.id)
             if stock_moves:
                 cursor.execute(*stock_move_table.update(
                     columns=[stock_move_table.state],
@@ -621,7 +633,30 @@ class Sale(metaclass=PoolMeta):
                 cursor.execute(*stock_move_table.delete(
                     where=stock_move_table.id.in_(stock_moves))
                 )
-            #Se verifica si tiene lineas de pago y se eliminan
+
+            if shipments:
+                cursor.execute(*shipment_table.update(
+                    columns=[shipment_table.state],
+                    values=['draft'],
+                    where=shipment_table.id.in_(shipments)
+                ))
+                #Eliminación de los envíos
+                cursor.execute(*shipment_table.delete(
+                    where=shipment_table.id.in_(shipments))
+                )
+
+            if shipment_returns:
+                cursor.execute(*shipment_return_table.update(
+                    columns=[shipment_return_table.state],
+                    values=['draft'],
+                    where=shipment_return_table.id.in_(shipment_returns)
+                ))
+                #Eliminación de las devoluciones de envíos
+                cursor.execute(*shipment_return_table.delete(
+                    where=shipment_return_table.id.in_(shipment_returns))
+                )
+            
+            #Se verifica si tiene lineas de pago (POS) y se eliminan
             if sale.payments:
                 for payment in sale.payments:
                     cursor.execute(*statement_line.delete(
@@ -643,5 +678,5 @@ class Sale(metaclass=PoolMeta):
             cls.force_draft([sale])
             #Se elimina la venta
             cursor.execute(*sale_table.delete(where=sale_table.id == sale.id))
-        for id in ids_tecno:
-            Conexion.update_exportado(id, 'S')
+        for idt in ids_tecno:
+            Conexion.update_exportado(idt, 'S')

@@ -63,7 +63,7 @@ def register():
     Pool.register(
         account.BalanceStock,
         electronic_payroll_wizard.PayrollElectronicCdst,
-        #invoice.UpdateInvoiceTecno,
+        invoice.UpdateInvoiceTecno,
         invoice.UpdateNoteDate,
         wiz.DeleteVoucherTecno,
         wiz.VoucherMoveUnreconcile,

@@ -33,7 +33,7 @@
             <field name="name">documents_for_import_form</field>
         </record>
         <!--Asistente para eliminar las facturas importados de TecnoCarnes-->
-        <!-- <record model="ir.action.wizard" id="act_update_invoice_tecno">
+        <record model="ir.action.wizard" id="act_update_invoice_tecno">
             <field name="name">Reimport invoice</field>
             <field name="wiz_name">account.invoice.update_invoice_tecno</field>
         </record>
@@ -41,7 +41,7 @@
             <field name="keyword">form_action</field>
             <field name="model">account.invoice,-1</field>
             <field name="action" ref="act_update_invoice_tecno"/>
-        </record> -->
+        </record>
         <!--Asistente para eliminar los voucher importados de TecnoCarnes-->
         <record model="ir.action.wizard" id="act_delete_voucher_tecno">
             <field name="name">Delete voucher imported</field>

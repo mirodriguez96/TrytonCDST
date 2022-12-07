@@ -302,6 +302,8 @@ class Purchase(metaclass=PoolMeta):
         invoice_table = Table('account_invoice')
         move_table = Table('account_move')
         stock_move_table = Table('stock_move')
+        shipment_table = Table('stock_shipment_in')
+        shipment_return_table = Table('stock_shipment_in_return')
         cursor = Transaction().connection.cursor()
         Conexion = pool.get('conector.configuration')
         ids_tecno = []
@@ -339,6 +341,16 @@ class Purchase(metaclass=PoolMeta):
                 )
             # The stock moves must be delete
             stock_moves = [m.id for line in purchase.lines for m in line.moves]
+            shipments = []
+            for shipment in purchase.shipments:
+                shipments.append(shipment.id)
+                for inventory_move in shipment.inventory_moves:
+                    stock_moves.append(inventory_move.id)
+            shipment_returns = []
+            for shipment in purchase.shipment_returns:
+                shipment_returns.append(shipment.id)
+                for inventory_move in shipment.inventory_moves:
+                    stock_moves.append(inventory_move.id)
             if stock_moves:
                 cursor.execute(*stock_move_table.update(
                     columns=[stock_move_table.state],
@@ -348,6 +360,28 @@ class Purchase(metaclass=PoolMeta):
 
                 cursor.execute(*stock_move_table.delete(
                     where=stock_move_table.id.in_(stock_moves))
+                )
+
+            if shipments:
+                cursor.execute(*shipment_table.update(
+                    columns=[shipment_table.state],
+                    values=['draft'],
+                    where=shipment_table.id.in_(shipments)
+                ))
+                #Eliminación de los envíos
+                cursor.execute(*shipment_table.delete(
+                    where=shipment_table.id.in_(shipments))
+                )
+
+            if shipment_returns:
+                cursor.execute(*shipment_return_table.update(
+                    columns=[shipment_return_table.state],
+                    values=['draft'],
+                    where=shipment_return_table.id.in_(shipment_returns)
+                ))
+                #Eliminación de las devoluciones de envíos
+                cursor.execute(*shipment_return_table.delete(
+                    where=shipment_return_table.id.in_(shipment_returns))
                 )
 
             # Se elimina la compra
