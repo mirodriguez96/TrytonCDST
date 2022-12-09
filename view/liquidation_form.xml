@@ -2,9 +2,11 @@
 <!-- This file is part of Tryton.  The COPYRIGHT file at the top level of
 this repository contains the full copyright notices and license terms. -->
 <data>
+    <!--
     <xpath
         expr="/form/notebook/page[@id='information']/field[@name='operation_center']" position="after">
-            <!-- <label name="sended_mail"/>
-            <field name="sended_mail"/> -->
+            <label name="sended_mail"/>
+            <field name="sended_mail"/>
     </xpath>
+    -->
 </data>

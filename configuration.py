@@ -906,6 +906,7 @@ class Configuration(ModelSQL, ModelView):
                         access.enter_timestamp = start_time
                         access.exit_timestamp = end_time
                         access.rests = rests
+                        access.state = 'open'
                         access.save()
                         # to_save.append(access)
                         continue
@@ -916,6 +917,7 @@ class Configuration(ModelSQL, ModelView):
                         access.enter_timestamp = exit_timestamp
                         access.exit_timestamp = exit_timestamp
                         access.rests = cls.validate_access_rests(rests, access)
+                        access.state = 'open'
                         access.save()
                         # to_save.append(access)
                     continue
@@ -929,6 +931,7 @@ class Configuration(ModelSQL, ModelView):
                         exit_timestamp = to_create[empleoyee][date]['exit_timestamp'].pop(0)
                         access.exit_timestamp = exit_timestamp
                     access.rests = cls.validate_access_rests(rests, access)
+                    cls.validate_access(access)
                     access.save()
                     # to_save.append(access)
                 if 'exit_timestamp' in to_create[empleoyee][date].keys() and to_create[empleoyee][date]['exit_timestamp']:
@@ -939,6 +942,7 @@ class Configuration(ModelSQL, ModelView):
                         access.enter_timestamp = exit_timestamp
                         access.exit_timestamp = exit_timestamp
                         access.rests = cls.validate_access_rests(rests, access)
+                        cls.validate_access(access)
                         access.save()
                         # to_save.append(access)
         # Access.save(to_save)
@@ -1018,3 +1022,15 @@ class Configuration(ModelSQL, ModelView):
                 result_rests.append(rest)
         rests = result_rests
         return result
+
+
+    @classmethod
+    def validate_access(cls, access):
+        state = 'close'
+        if access.enter_timestamp and access.exit_timestamp and access.enter_timestamp != access.exit_timestamp:
+            for rest in access.rests:
+                if not rest.start_rest or not rest.end_rest:
+                    state = 'open'
+        else:
+            state = 'open'
+        access.state = state
