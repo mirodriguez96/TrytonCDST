@@ -25,6 +25,12 @@ TYPES_FILE = [
     ('loans', 'Loans'),
     ('access_biometric', 'Access biometric')
 ]
+_events = {
+            'Laborando': 'enter_timestamp',
+            'Salir': 'exit_timestamp',
+            'Descansando': 'start_rest',
+            'Retornar': 'end_rest',
+        }
 
 class Configuration(ModelSQL, ModelView):
     'Configuration'
@@ -40,6 +46,10 @@ class Configuration(ModelSQL, ModelView):
     type_file = fields.Selection(TYPES_FILE, 'Type file')
     #doc_types = fields.Char('Doc types', help="Example: 101;120;103")
     order_type_production = fields.Char('Order types', help="Example: 101;202;303")
+    access_enter_timestamp = fields.Char('Inicia a laborar', help="Example: Laborando")
+    access_exit_timestamp = fields.Char('Finaliza de laborar', help="Example: Salir")
+    access_start_rest = fields.Char('Inicia a descansar', help="Example: Descansando")
+    access_end_rest = fields.Char('Finaliza de descansar', help="Example: Retornar")
 
 
     @classmethod
@@ -831,26 +841,27 @@ class Configuration(ModelSQL, ModelView):
     @classmethod
     def import_csv_access_biometric(cls, lineas):
         print('INICIA')
-        return
         pool = Pool()
         Access = pool.get('staff.access')
-        Rest = pool.get('staff.access.rest')
+        # Rest = pool.get('staff_access_extratime.rests')
         Employee = pool.get('company.employee')
+        Config = pool.get('conector.configuration')
+        configuration, = Config.search([], order=[('id', 'DESC')], limit=1)
         to_create = {}
-        _events = [
-            ('_DutyOn', 'enter_timestamp'),
-            ('_DutyOff', 'exit_timestamp'),
-            ('_GoIn', 'start_rest'),
-            ('_GoOut', 'end_rest'),
-        ]
+        _events = {
+            configuration.access_enter_timestamp: 'enter_timestamp',
+            configuration.access_exit_timestamp: 'exit_timestamp',
+            configuration.access_start_rest: 'start_rest',
+            configuration.access_end_rest: 'end_rest',
+        }
         first = True
         for linea in lineas:
             linea = linea.strip()
             if not linea:
                 continue            
             linea = linea.split(';')
-            if len(linea) != 4:
-                raise UserError('Error template access_biometric', 'employee;date;time;event')
+            if len(linea) != 3:
+                raise UserError('Error template access_biometric', 'employee;datetime(d/m/y h:m);event')
             # Se verifica que es la primera linea (encabezado) para omitirla
             if first:
                 first = False
@@ -865,20 +876,145 @@ class Configuration(ModelSQL, ModelView):
             _date_time = linea[1].strip()
             try:
                _datetime = datetime.datetime.strptime(_date_time, '%d/%m/%Y %H:%M')
+               _datetime = (_datetime + datetime.timedelta(hours=5))
                _date = datetime.date(_datetime.year, _datetime.month, _datetime.day)
             except Exception as e:
                raise UserError('error datetime', e)
             
             _event = linea[2].strip() 
-            _event = _events[_event.upper()]
+            _event = _events[_event]
 
             if _date not in to_create[employee].keys():
-                to_create[employee][_date] = {_event: []}
+                to_create[employee][_date] = {}
 
             if _event not in to_create[employee][_date].keys():
-                to_create[employee][_date] = {_event: []}
-            
-            to_create[employee][_date][_event].append(_datetime)
+                to_create[employee][_date][_event] = []
 
-        print(to_create)
+            to_create[employee][_date][_event].append(_datetime)
+            to_create[employee][_date][_event].sort() #Se va ordenando la lista (FIX)
+
+        # to_save = []
+        for empleoyee in to_create.keys():
+            for date in to_create[empleoyee].keys():
+                start_time = datetime.datetime.combine(date, datetime.datetime.min.time())
+                end_time = datetime.datetime.combine(date, datetime.datetime.max.time())
+                rests = cls.get_access_rests(to_create[empleoyee][date])
+                if 'enter_timestamp' not in to_create[empleoyee][date].keys():
+                    if 'exit_timestamp' not in to_create[empleoyee][date].keys():
+                        access = Access()
+                        access.employee = empleoyee
+                        access.enter_timestamp = start_time
+                        access.exit_timestamp = end_time
+                        access.rests = rests
+                        access.save()
+                        # to_save.append(access)
+                        continue
+                    # Si tiene exit_timestamp
+                    for exit_timestamp in to_create[empleoyee][date]['exit_timestamp']:
+                        access = Access()
+                        access.employee = empleoyee
+                        access.enter_timestamp = exit_timestamp
+                        access.exit_timestamp = exit_timestamp
+                        access.rests = cls.validate_access_rests(rests, access)
+                        access.save()
+                        # to_save.append(access)
+                    continue
+                for enter_timestamp in to_create[empleoyee][date]['enter_timestamp']:
+                    print("ENTANDO ", enter_timestamp)
+                    access = Access()
+                    access.employee = empleoyee
+                    access.enter_timestamp = enter_timestamp
+                    access.exit_timestamp = None
+                    if 'exit_timestamp' in to_create[empleoyee][date].keys() and to_create[empleoyee][date]['exit_timestamp']:
+                        exit_timestamp = to_create[empleoyee][date]['exit_timestamp'].pop(0)
+                        access.exit_timestamp = exit_timestamp
+                    access.rests = cls.validate_access_rests(rests, access)
+                    access.save()
+                    # to_save.append(access)
+                if 'exit_timestamp' in to_create[empleoyee][date].keys() and to_create[empleoyee][date]['exit_timestamp']:
+                    for exit_timestamp in to_create[empleoyee][date]['exit_timestamp']:
+                        print("SALIENDO ", exit_timestamp)
+                        access = Access()
+                        access.employee = empleoyee
+                        access.enter_timestamp = exit_timestamp
+                        access.exit_timestamp = exit_timestamp
+                        access.rests = cls.validate_access_rests(rests, access)
+                        access.save()
+                        # to_save.append(access)
+        # Access.save(to_save)
         print('FIN')
+
+
+    @classmethod
+    def get_access_rests(cls, events):
+        Rest = Pool().get('staff_access_extratime.rests')
+        rests = []
+        if 'start_rest' not in events.keys():
+            if 'end_rest' in events.keys():
+                for end_rest in events['end_rest']:
+                    rest = Rest()
+                    rest.start_rest = None
+                    rest.end_rest = end_rest
+                    rest.rest_paid = True
+                    rest.save()
+                    rests.append(rest)
+            return rests
+        if 'end_rest' not in events.keys():
+            for start_rest in events['start_rest']:
+                rest = Rest()
+                rest.start_rest = start_rest
+                rest.end_rest = None
+                rest.rest_paid = True
+                rest.save()
+                rests.append(rest)
+            return rests
+        # SI tiene start_rest y end_rest
+        for start_rest in events['start_rest']:
+            rest = Rest()
+            rest.start_rest = start_rest
+            rest.end_rest = None
+            if events['end_rest']:
+                end_rest = events['end_rest'].pop(0)
+                rest.end_rest = end_rest
+            rest.rest_paid = True
+            rest.save()
+            rests.append(rest)
+        for end_rest in events['end_rest']:
+            rest = Rest()
+            rest.start_rest = None
+            rest.end_rest = end_rest
+            rest.rest_paid = True
+            rest.save()
+            rests.append(rest)
+        return rests
+
+    @classmethod
+    def validate_access_rests(cls, rests, access):
+        result = []
+        for rest in rests:
+            if access.enter_timestamp and access.exit_timestamp and access.enter_timestamp == access.exit_timestamp:
+                result.append(rest)
+                continue
+            if rest.start_rest and rest.end_rest:
+                if access.exit_timestamp and rest.start_rest > access.enter_timestamp and rest.end_rest < access.exit_timestamp:
+                    result.append(rest)
+                elif not access.exit_timestamp and rest.start_rest > access.enter_timestamp:
+                    result.append(rest)
+            elif rest.start_rest:
+                # No tiene end_rest
+                if access.exit_timestamp and rest.start_rest > access.enter_timestamp and rest.start_rest < access.exit_timestamp:
+                    result.append(rest)
+                elif not access.exit_timestamp and rest.start_rest > access.enter_timestamp:
+                    result.append(rest)
+            else:
+                # No tiene start_rest
+                if access.exit_timestamp and rest.end_rest > access.enter_timestamp and rest.end_rest < access.exit_timestamp:
+                    result.append(rest)
+                elif not access.exit_timestamp and rest.end_rest > access.enter_timestamp:
+                    result.append(rest)
+        result_rests = []
+        for rest in rests:
+            if rest not in result:
+                result_rests.append(rest)
+        rests = result_rests
+        return result

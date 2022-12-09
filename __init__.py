@@ -56,6 +56,9 @@ def register():
         payroll.StaffEvent,
         payroll.Payroll,
         payroll.PayslipSendStart,
+        payroll.Liquidation,
+        payroll.LiquidationPaymentStartBcl,
+        payroll.SettlementSendStart,
         cron.Cron,
         wiz.DocumentsForImportParameters,
         module='conector', type_='model')
@@ -83,6 +86,8 @@ def register():
         report.PayrollExport,
         payroll.PayrollPaymentBcl,
         payroll.PayslipSend,
+        payroll.LiquidationPaymentBcl,
+        payroll.SettlementSend,
         wiz.DocumentsForImport,
         module='conector', type_='wizard')
 
@@ -90,4 +95,5 @@ def register():
         #report.PortfolioStatusReport,
         report.PayrollExportReport,
         payroll.PayrollPaymentReportBcl,
+        payroll.LiquidationPaymentReportBcl,
         module='conector', type_='report')
