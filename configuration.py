@@ -907,6 +907,7 @@ class Configuration(ModelSQL, ModelView):
                         access.exit_timestamp = end_time
                         access.rests = rests
                         access.state = 'open'
+                        access.rest.on_change_with_rest()
                         access.save()
                         # to_save.append(access)
                         continue
@@ -917,6 +918,7 @@ class Configuration(ModelSQL, ModelView):
                         access.enter_timestamp = exit_timestamp
                         access.exit_timestamp = exit_timestamp
                         access.rests = cls.validate_access_rests(rests, access)
+                        access.rest.on_change_with_rest()
                         access.state = 'open'
                         access.save()
                         # to_save.append(access)
@@ -932,6 +934,7 @@ class Configuration(ModelSQL, ModelView):
                         access.exit_timestamp = exit_timestamp
                     access.rests = cls.validate_access_rests(rests, access)
                     cls.validate_access(access)
+                    access.rest.on_change_with_rest()
                     access.save()
                     # to_save.append(access)
                 if 'exit_timestamp' in to_create[empleoyee][date].keys() and to_create[empleoyee][date]['exit_timestamp']:
@@ -943,6 +946,7 @@ class Configuration(ModelSQL, ModelView):
                         access.exit_timestamp = exit_timestamp
                         access.rests = cls.validate_access_rests(rests, access)
                         cls.validate_access(access)
+                        access.rest.on_change_with_rest()
                         access.save()
                         # to_save.append(access)
         # Access.save(to_save)
@@ -960,6 +964,7 @@ class Configuration(ModelSQL, ModelView):
                     rest.start_rest = None
                     rest.end_rest = end_rest
                     rest.rest_paid = True
+                    rest.on_change_with_rest()
                     rest.save()
                     rests.append(rest)
             return rests
@@ -969,6 +974,7 @@ class Configuration(ModelSQL, ModelView):
                 rest.start_rest = start_rest
                 rest.end_rest = None
                 rest.rest_paid = True
+                rest.on_change_with_rest()
                 rest.save()
                 rests.append(rest)
             return rests
@@ -981,6 +987,7 @@ class Configuration(ModelSQL, ModelView):
                 end_rest = events['end_rest'].pop(0)
                 rest.end_rest = end_rest
             rest.rest_paid = True
+            rest.on_change_with_rest()
             rest.save()
             rests.append(rest)
         for end_rest in events['end_rest']:
@@ -988,6 +995,7 @@ class Configuration(ModelSQL, ModelView):
             rest.start_rest = None
             rest.end_rest = end_rest
             rest.rest_paid = True
+            rest.on_change_with_rest()
             rest.save()
             rests.append(rest)
         return rests

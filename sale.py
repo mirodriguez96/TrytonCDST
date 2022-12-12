@@ -301,7 +301,6 @@ class Sale(metaclass=PoolMeta):
                     cls.finish_shipment_process(sale)
                     if sale.invoice_type == 'P':
                         Sale.post_invoices(sale)
-                        #if sale.payment_term.id_tecno == '0':
                         cls.set_payment_pos(sale, logs, to_exception)
                         Sale.update_state([sale])
                     else:
@@ -415,9 +414,10 @@ class Sale(metaclass=PoolMeta):
         Config = Pool().get('conector.configuration')
         pagos = Config.get_tipos_pago(sale.id_tecno)
         if not pagos:
-            msg = f"EXCEPCION {sale.id_tecno} - No se encontraron pagos asociados en tecnocarnes (documentos_che)"
-            logs.append(msg)
-            to_exception.append(sale.id_tecno)
+            if sale.payment_term.id_tecno == '0':
+                msg = f"EXCEPCION {sale.id_tecno} - No se encontraron pagos asociados en tecnocarnes (documentos_che)"
+                logs.append(msg)
+                to_exception.append(sale.id_tecno)
             return
         #si existe pagos pos...
         pool = Pool()
