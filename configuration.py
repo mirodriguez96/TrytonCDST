@@ -860,20 +860,25 @@ class Configuration(ModelSQL, ModelView):
             if not linea:
                 continue            
             linea = linea.split(';')
-            if len(linea) != 3:
+            if len(linea) != 15:
                 raise UserError('Error template access_biometric', 'employee;datetime(d/m/y h:m);event')
             # Se verifica que es la primera linea (encabezado) para omitirla
             if first:
                 first = False
                 continue
-            code = linea[0].strip()
+            code = linea[2].strip()
             employee = Employee.search([('code', '=', code)])
             if not employee:
                 raise UserError('error employee_code', f'employee code {code} not found')
             employee, = employee
             if employee not in to_create.keys():
                 to_create[employee] = {}
-            _date_time = linea[1].strip()
+            _year = linea[5].strip()
+            _month = linea[6].strip()
+            _day = linea[7].strip()
+            _hour = linea[8].strip()
+            _minute = linea[9].strip()
+            _date_time = _day+'/'+_month+'/'+_year+' '+_hour+':'+_minute
             try:
                _datetime = datetime.datetime.strptime(_date_time, '%d/%m/%Y %H:%M')
                _datetime = (_datetime + datetime.timedelta(hours=5))
@@ -881,7 +886,7 @@ class Configuration(ModelSQL, ModelView):
             except Exception as e:
                raise UserError('error datetime', e)
             
-            _event = linea[2].strip() 
+            _event = linea[11].strip() 
             _event = _events[_event]
 
             if _date not in to_create[employee].keys():
@@ -907,7 +912,7 @@ class Configuration(ModelSQL, ModelView):
                         access.exit_timestamp = end_time
                         access.rests = rests
                         access.state = 'open'
-                        access.rest.on_change_with_rest()
+                        access.on_change_with_rest()
                         access.save()
                         # to_save.append(access)
                         continue
@@ -918,7 +923,7 @@ class Configuration(ModelSQL, ModelView):
                         access.enter_timestamp = exit_timestamp
                         access.exit_timestamp = exit_timestamp
                         access.rests = cls.validate_access_rests(rests, access)
-                        access.rest.on_change_with_rest()
+                        access.on_change_with_rest()
                         access.state = 'open'
                         access.save()
                         # to_save.append(access)
@@ -934,7 +939,7 @@ class Configuration(ModelSQL, ModelView):
                         access.exit_timestamp = exit_timestamp
                     access.rests = cls.validate_access_rests(rests, access)
                     cls.validate_access(access)
-                    access.rest.on_change_with_rest()
+                    access.on_change_with_rest()
                     access.save()
                     # to_save.append(access)
                 if 'exit_timestamp' in to_create[empleoyee][date].keys() and to_create[empleoyee][date]['exit_timestamp']:
@@ -946,7 +951,7 @@ class Configuration(ModelSQL, ModelView):
                         access.exit_timestamp = exit_timestamp
                         access.rests = cls.validate_access_rests(rests, access)
                         cls.validate_access(access)
-                        access.rest.on_change_with_rest()
+                        access.on_change_with_rest()
                         access.save()
                         # to_save.append(access)
         # Access.save(to_save)
