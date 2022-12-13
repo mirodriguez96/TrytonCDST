@@ -179,7 +179,6 @@ class PayrollPaymentReportBcl(Report):
 class LiquidationPaymentStartBcl(ModelView):
     'Liquidation Payment Start'
     __name__ = 'staff.payroll_liquidation_payment_bancolombia.start'
-    #period = fields.Many2One('staff.payroll.period', 'Period', required=True)
     company = fields.Many2One('company.company', 'Company', required=True)
     department = fields.Many2One('company.department', 'Department')
     payment_type = fields.Selection(_TYPES_PAYMENT, 'Type payment', required=True)
@@ -205,6 +204,7 @@ class LiquidationPaymentStartBcl(ModelView):
     def default_kind():
         return 'contract'
 
+# Asistente encargado de recoger la información de las liquidaciones que se van a utilizar para el reporte
 class LiquidationPaymentBcl(Wizard):
     'Liquidation Payment'
     __name__ = 'staff.payroll.liquidation_payment'
@@ -222,7 +222,6 @@ class LiquidationPaymentBcl(Wizard):
             department_id = self.start.department.id
         if self.start.date:
             date = self.start.date
-            #period = self.start.period.id
         if self.start.send_sequence:
             send_sequence = (self.start.send_sequence).upper()
         else:
@@ -244,6 +243,7 @@ class LiquidationPaymentBcl(Wizard):
     def transition_print_(self):
         return 'end'
 
+# Se genera un reporte con los campos necesarios para el envío de liquidaciones mediante la plataforma de Bancolombia
 class LiquidationPaymentReportBcl(Report):
     __name__ = 'staff.payroll_payment_liq_report_bancolombia'
 
@@ -252,11 +252,9 @@ class LiquidationPaymentReportBcl(Report):
         report_context = super().get_context(records, header,  data)
         pool = Pool()
         user = pool.get('res.user')(Transaction().user)
-        #Payroll = pool.get('staff.payroll')
         Liquidation = pool.get('staff.liquidation')
         clause = [('state', '=', 'posted')]
         if data['liquidation_date']:
-        #clause.append(('period', '=', data['period']))
             clause.append(('liquidation_date', '=', data['liquidation_date']))
         if data['department']:
             clause.append(('employee.department', '=', data['department']))
@@ -264,7 +262,6 @@ class LiquidationPaymentReportBcl(Report):
             clause.append(('kind', '=', data['kind']))
         print(clause)
         liquidations = Liquidation.search(clause)
-        #payrolls = Payroll.search(clause)
         new_objects = []
         values = {}
         print(liquidations)
@@ -376,7 +373,7 @@ class SettlementSendStart(ModelView):
     def default_kind():
         return 'contract'
 
-
+# Asistente encargado de recolectar las nóminas y enviarlas por email
 class SettlementSend(Wizard):
     'Settlement Send'
     __name__ = 'staff.payroll.settlement_send'
@@ -390,30 +387,24 @@ class SettlementSend(Wizard):
     def transition_send_(self):
         pool = Pool()
         model_name = 'staff.liquidation.report'
-        # Email = pool.get('ir.email')
         Liquidation = pool.get('staff.liquidation')
         ActionReport = pool.get('ir.action.report')
-        report, = ActionReport.search([('report_name', '=', model_name)]) #staff.liquidation.report  nombre de reporte
+        report, = ActionReport.search([('report_name', '=', model_name)]) 
         reports = [report.id]
         subject = self.start.subject
         print(self.start.kind)
         dom = [
             ('company', '=', self.start.company.id),
             ('liquidation_date', '=', self.start.date),
-            #('state', 'in', ['confirmed', 'posted']),
             ('kind', '=', self.start.kind),
-            #('sended_mail', '=', False) #valida campo en liquidacion; crear el campo; seccion de informacion adicional
+            ('sended_mail', '=', False)
          ]
         if self.start.department:
             dom.append(('department', '=', self.start.department.id))
         liquidations = Liquidation.search(dom)
-        print(liquidations)
         
         for liquidation in liquidations:
-            print('hola')
-            print(liquidation.state)
             if liquidation.state == 'confirmed' or liquidation.state == 'posted':
-                print(liquidation.state)
                 #email = 'gisela.sanchez@cdstecno.com'
                 #email = 'andres.genes@cdstecno.com'
                 email = liquidation.employee.party.email
@@ -424,8 +415,8 @@ class SettlementSend(Wizard):
                 try:
                     send_mail(to=email, cc=recipients_secondary, bcc='', subject=subject, body='___',
                         files=None, record=record, reports=reports, attachments=None)
-                    #Liquidation.write([liquidation], {'sended_mail': True})
-                    Transaction().connection.commit() #conservar cada transaccion, confirma cada una si se ejecutan sin problemas
+                    Liquidation.write([liquidation], {'sended_mail': True})
+                    Transaction().connection.commit() 
                 except Exception as e:
                     raise UserError(f'No mail sent, check employee email {liquidation.employee.rec_name}', str(e))
             else:
@@ -434,7 +425,7 @@ class SettlementSend(Wizard):
     
 # Copia funcion 'send' del modelo 'ir.email' modificando para enviar de forma individual (no transactional)
 def send_mail(to='', cc='', bcc='', subject='', body='',
-        files=None, record=None, reports=None, attachments=None):
+            files=None, record=None, reports=None, attachments=None):
     pool = Pool()
     Email = pool.get('ir.email')
     User = pool.get('res.user')
