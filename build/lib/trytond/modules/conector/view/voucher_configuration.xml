@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<!-- This file is part product_barcode module for Tryton.
+The COPYRIGHT file at the top level of this repository contains the full copyright notices and license terms. -->
+<data>
+    <xpath expr="/form/field[@name='account_adjust_income']" position="after">
+        <label name="account_discount_tecno"/>
+        <field name="account_discount_tecno"/>
+        <label name="account_rete_tecno"/>
+        <field name="account_rete_tecno"/>
+        <label name="account_retiva_tecno"/>
+        <field name="account_retiva_tecno"/>
+        <label name="account_retica_tecno"/>
+        <field name="account_retica_tecno"/>
+        <label name="adjustment_amount"/>
+        <field name="adjustment_amount"/>
+    </xpath>
+</data>

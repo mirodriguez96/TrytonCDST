@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<form>
+    <label name="tipo"/>
+    <field name="tipo"/>
+    <label name="numero"/>
+    <field name="numero"/>
+    <label name="exportado"/>
+    <field name="exportado"/>
+</form>

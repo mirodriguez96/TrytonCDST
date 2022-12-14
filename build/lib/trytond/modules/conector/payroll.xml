@@ -1,0 +1,96 @@
+<?xml version="1.0"?>
+<!-- This file is part of Tryton.  The COPYRIGHT file at the top level of
+this repository contains the full copyright notices and license terms. -->
+<tryton>
+    <data>
+
+        <!-- Views Definitions -->
+        <record model="ir.ui.view" id="staff_event_view_form">
+            <field name="model">staff.event</field>
+            <field name="inherit" ref="staff_event.staff_event_view_form"/> <!--HEREDA DE LA VISTA-->
+            <field name="name">staff_event_form</field>
+        </record>
+
+        <!--interfaz para el campo nuevo del banco-->
+        <record model="ir.ui.view" id="bank_view_form">
+            <field name="model">bank</field>
+            <field name="inherit" ref="bank.bank_view_form"/>
+            <field name="name">bank_form</field>
+        </record>
+
+        <!--interfaz para el campo nuevo de la liquidacion-->
+        <record model="ir.ui.view" id="liquidation_view_form1">
+            <field name="model">staff.liquidation</field>
+            <field name="inherit" ref="staff_payroll_co.liquidation_view_form"/>
+            <field name="name">liquidation_form</field>
+        </record>
+        
+        <!--interfaz para la generación del reporte-->
+        <record model="ir.action.report" id="report_payroll_payment_bancolombia">
+            <field name="name">Payroll Payment Report Bancolombia</field>
+            <field name="model"></field>
+            <field name="report_name">staff.payroll.payment_report_bancolombia</field>
+            <field name="report">conector/bank_payments_bancolombia_sap.fods</field>
+            <field name="template_extension">ods</field>
+            <field name="translatable">False</field>
+        </record>
+        <record model="ir.ui.view" id="payroll_payment_start_bancolombia_view_form">
+            <field name="model">staff.payroll_payment_bancolombia.start</field>
+            <field name="type">form</field>
+            <field name="name">payroll_payment_start_bancolombia_form</field>
+        </record>
+        <record model="ir.action.wizard" id="wizard_print_payroll_payment_bancolombia">
+            <field name="name">Payroll Payment Bancolombia</field>
+            <field name="wiz_name">staff.payroll.payment_bancolombia</field>
+        </record>
+        <menuitem parent="staff.menu_reporting" id="menu_payroll_payment"
+            action="wizard_print_payroll_payment_bancolombia"/>
+
+        <!--interfaz para la generación del reporte Liquidacion-->
+        <record model="ir.action.report" id="report_liquidation_payment_bancolombia">
+            <field name="name">Liquidation Payment Report Bancolombia</field>
+            <field name="model"></field>
+            <field name="report_name">staff.payroll_payment_liq_report_bancolombia</field>
+            <field name="report">conector/bank_payments_bancolombia_sap.fods</field>
+            <field name="template_extension">ods</field>
+            <field name="translatable">False</field>
+        </record>
+        <record model="ir.ui.view" id="payment_liquidation_start_bancolombia_view_form">
+            <field name="model">staff.payroll_liquidation_payment_bancolombia.start</field>
+            <field name="type">form</field>
+            <field name="name">liquidation_payment_start_bancolombia_form</field>
+        </record>
+        <record model="ir.action.wizard" id="wizard_print_liquidation_payment_bancolombia">
+            <field name="name">Liquidation Payment</field>
+            <field name="wiz_name">staff.payroll.liquidation_payment</field>
+        </record>
+        <menuitem parent="staff.menu_reporting" id="menu_liquidation_payment"
+            action="wizard_print_liquidation_payment_bancolombia"/>
+
+        <!--interfaz para el envio del comprobante de nomina-->
+        <record model="ir.ui.view" id="payroll_payslip_send_view_form">
+            <field name="model">staff.payroll_payslip_send.start</field>
+            <field name="type">form</field>
+            <field name="name">payslip_send_form</field>
+        </record>
+        <record model="ir.action.wizard" id="wizard_payroll_payslip_send">
+            <field name="name">Payslip Send</field>
+            <field name="wiz_name">staff.payroll.payslip_send</field>
+        </record>
+        <menuitem parent="staff.menu_assitants" id="menu_payslip_send"
+            action="wizard_payroll_payslip_send"/>
+        
+        <!--interfaz para el envio del comprobante de liquidacion-->
+        <record model="ir.ui.view" id="payroll_settlement_send_view_form">
+            <field name="model">staff.payroll_settlement_send.start</field>
+            <field name="type">form</field>
+            <field name="name">settlement_send_form</field>
+        </record>
+        <record model="ir.action.wizard" id="wizard_payroll_settlement_send">
+            <field name="name">Settlement Send</field>
+            <field name="wiz_name">staff.payroll.settlement_send</field>
+        </record>
+        <menuitem parent="staff.menu_assitants" id="menu_settlement_send"
+            action="wizard_payroll_settlement_send"/>
+    </data>
+</tryton>

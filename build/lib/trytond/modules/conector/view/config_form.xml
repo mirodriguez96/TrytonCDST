@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<form>
+    <label name="server"/>
+    <field name="server"/>
+    <label name="db"/>
+    <field name="db"/>
+    <label name="user"/>
+    <field name="user"/>
+    <label name="password"/>
+    <field name="password" widget="password"/>
+    <label name="date"/>
+    <field name="date"/>
+    <label name="end_date"/>
+    <field name="end_date"/>
+    <button string="Test" name="test_conexion" colspan="2"/>
+
+    <notebook colspan="6">
+      <page string="Import" id="file_import">
+        <label name="type_file"/>
+        <field name="type_file"/>
+        <label name="file"/>
+        <field name="file"/>
+        <button string="File Import" name="importfile" colspan="4"/>
+      </page>
+      <page string="Production" id="config_production">
+        <label name="order_type_production"/>
+        <field name="order_type_production" colspan="2"/>
+      </page>
+      <page string="Access" id="config_production">
+        <label name="access_enter_timestamp"/>
+        <field name="access_enter_timestamp"/>
+        <label name="access_exit_timestamp"/>
+        <field name="access_exit_timestamp"/>
+        <label name="access_start_rest"/>
+        <field name="access_start_rest"/>
+        <label name="access_end_rest"/>
+        <field name="access_end_rest"/>
+      </page>
+  </notebook>
+</form>

@@ -688,6 +688,9 @@ class Statement(metaclass=PoolMeta):
 
     @fields.depends('end_balance')
     def on_change_with_end_balance(self):
+        print('hola2')
+        pool = Pool()
+        Lang = pool.get('ir.lang')
         amount = (self.start_balance
             + sum(l.amount for l in self.lines))
         return amount
