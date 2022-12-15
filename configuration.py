@@ -860,16 +860,19 @@ class Configuration(ModelSQL, ModelView):
             if not linea:
                 continue            
             linea = linea.split(';')
-            if len(linea) != 15:
+            if len(linea) != 14:
                 raise UserError('Error template access_biometric', 'employee;datetime(d/m/y h:m);event')
             # Se verifica que es la primera linea (encabezado) para omitirla
             if first:
                 first = False
                 continue
             code = linea[2].strip()
+            if not code or code == '':
+                continue
             employee = Employee.search([('code', '=', code)])
             if not employee:
-                raise UserError('error employee_code', f'employee code {code} not found')
+                continue
+                # raise UserError('error employee_code', f'employee code {code} not found')
             employee, = employee
             if employee not in to_create.keys():
                 to_create[employee] = {}
@@ -886,17 +889,20 @@ class Configuration(ModelSQL, ModelView):
             except Exception as e:
                raise UserError('error datetime', e)
             
-            _event = linea[11].strip() 
-            _event = _events[_event]
-
             if _date not in to_create[employee].keys():
                 to_create[employee][_date] = {}
+
+            _event = linea[11].strip() 
+            _event = _events.get(_event)
+            # En caso de no existir el evento se registra como un inicio de descanso
+            if not _event:
+                _event = 'start_rest'
 
             if _event not in to_create[employee][_date].keys():
                 to_create[employee][_date][_event] = []
 
             to_create[employee][_date][_event].append(_datetime)
-            to_create[employee][_date][_event].sort() #Se va ordenando la lista (FIX)
+            # to_create[employee][_date][_event].sort() #Se va ordenando la lista (FIX)
 
         # to_save = []
         for empleoyee in to_create.keys():
@@ -912,46 +918,55 @@ class Configuration(ModelSQL, ModelView):
                         access.exit_timestamp = end_time
                         access.rests = rests
                         access.state = 'open'
-                        access.on_change_with_rest()
+                        access.rest = access.on_change_with_rest()
                         access.save()
                         # to_save.append(access)
                         continue
                     # Si tiene exit_timestamp
+                    to_create[empleoyee][date]['exit_timestamp'].sort()
                     for exit_timestamp in to_create[empleoyee][date]['exit_timestamp']:
                         access = Access()
                         access.employee = empleoyee
                         access.enter_timestamp = exit_timestamp
                         access.exit_timestamp = exit_timestamp
                         access.rests = cls.validate_access_rests(rests, access)
-                        access.on_change_with_rest()
+                        access.rest = access.on_change_with_rest()
                         access.state = 'open'
                         access.save()
                         # to_save.append(access)
                     continue
+                to_create[empleoyee][date]['enter_timestamp'].sort()
+                if 'exit_timestamp' in to_create[empleoyee][date].keys():
+                    to_create[empleoyee][date]['exit_timestamp'].sort()
                 for enter_timestamp in to_create[empleoyee][date]['enter_timestamp']:
-                    print("ENTANDO ", enter_timestamp)
                     access = Access()
                     access.employee = empleoyee
                     access.enter_timestamp = enter_timestamp
                     access.exit_timestamp = None
                     if 'exit_timestamp' in to_create[empleoyee][date].keys() and to_create[empleoyee][date]['exit_timestamp']:
-                        exit_timestamp = to_create[empleoyee][date]['exit_timestamp'].pop(0)
-                        access.exit_timestamp = exit_timestamp
+                        i = 0
+                        for exit_timestamp in to_create[empleoyee][date]['exit_timestamp']:
+                            # Se valida que el registro a asignar como hora de salida sea mayor a la de entrada
+                            if exit_timestamp >= enter_timestamp:
+                                exit_timestamp = to_create[empleoyee][date]['exit_timestamp'].pop(i)
+                                access.exit_timestamp = exit_timestamp
+                                break
+                            i += 1
                     access.rests = cls.validate_access_rests(rests, access)
                     cls.validate_access(access)
-                    access.on_change_with_rest()
+                    access.rest = access.on_change_with_rest()
                     access.save()
                     # to_save.append(access)
                 if 'exit_timestamp' in to_create[empleoyee][date].keys() and to_create[empleoyee][date]['exit_timestamp']:
                     for exit_timestamp in to_create[empleoyee][date]['exit_timestamp']:
-                        print("SALIENDO ", exit_timestamp)
                         access = Access()
                         access.employee = empleoyee
+                        # En caso de tener registro de salida pero no entrada, se asigna la misma hora de salida como entrada
                         access.enter_timestamp = exit_timestamp
                         access.exit_timestamp = exit_timestamp
                         access.rests = cls.validate_access_rests(rests, access)
                         cls.validate_access(access)
-                        access.on_change_with_rest()
+                        access.rest = access.on_change_with_rest()
                         access.save()
                         # to_save.append(access)
         # Access.save(to_save)
@@ -964,26 +979,30 @@ class Configuration(ModelSQL, ModelView):
         rests = []
         if 'start_rest' not in events.keys():
             if 'end_rest' in events.keys():
+                events['end_rest'].sort()
                 for end_rest in events['end_rest']:
                     rest = Rest()
                     rest.start_rest = None
                     rest.end_rest = end_rest
                     rest.rest_paid = True
-                    rest.on_change_with_rest()
+                    rest.rest = rest.on_change_with_rest()
                     rest.save()
                     rests.append(rest)
             return rests
         if 'end_rest' not in events.keys():
+            events['start_rest'].sort()
             for start_rest in events['start_rest']:
                 rest = Rest()
                 rest.start_rest = start_rest
                 rest.end_rest = None
                 rest.rest_paid = True
-                rest.on_change_with_rest()
+                rest.rest = rest.on_change_with_rest()
                 rest.save()
                 rests.append(rest)
             return rests
         # SI tiene start_rest y end_rest
+        events['start_rest'].sort()
+        events['end_rest'].sort()
         for start_rest in events['start_rest']:
             rest = Rest()
             rest.start_rest = start_rest
@@ -992,7 +1011,7 @@ class Configuration(ModelSQL, ModelView):
                 end_rest = events['end_rest'].pop(0)
                 rest.end_rest = end_rest
             rest.rest_paid = True
-            rest.on_change_with_rest()
+            rest.rest = rest.on_change_with_rest()
             rest.save()
             rests.append(rest)
         for end_rest in events['end_rest']:
@@ -1000,7 +1019,7 @@ class Configuration(ModelSQL, ModelView):
             rest.start_rest = None
             rest.end_rest = end_rest
             rest.rest_paid = True
-            rest.on_change_with_rest()
+            rest.rest = rest.on_change_with_rest()
             rest.save()
             rests.append(rest)
         return rests
