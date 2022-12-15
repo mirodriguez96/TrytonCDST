@@ -69,9 +69,10 @@ class Voucher(ModelSQL, ModelView):
                 nit_cedula = doc.nit_Cedula.replace('\n',"")
                 party = Party.search([('id_number', '=', nit_cedula)])
                 if not party:
-                    msg = f"EL TERCERO {nit_cedula} NO EXISTE EN TRYTON"
+                    msg = f"REVISAR {id_tecno} - El tercero {nit_cedula} no existe en tryton"
                     logs.append(msg)
-                    exceptions.append(id_tecno)
+                    Party.import_parties_tecno()
+                    # exceptions.append(id_tecno)
                     continue
                 party, = party
                 tipo_pago = Config.get_tipos_pago(id_tecno)
@@ -216,9 +217,10 @@ class Voucher(ModelSQL, ModelView):
                 nit_cedula = doc.nit_Cedula.replace('\n',"")
                 tercero = Party.search([('id_number', '=', nit_cedula)])
                 if not tercero:
-                    msg = f"EL TERCERO {nit_cedula} NO EXISTE EN TRYTON"
+                    msg = f"REVISAR {id_tecno} - El tercero {nit_cedula} no existe en tryton"
                     logs.append(msg)
-                    exceptions.append(id_tecno)
+                    Party.import_parties_tecno()
+                    # exceptions.append(id_tecno)
                     continue
                 tercero, = tercero
                 #Se obtiene la forma de pago, según la tabla Documentos_Che de TecnoCarnes

@@ -4,3 +4,5 @@ test.py
 fix-proteus.py
 test.txt
 .~*
+dist/*
+build/*

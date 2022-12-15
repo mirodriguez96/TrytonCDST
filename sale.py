@@ -93,7 +93,7 @@ class Sale(metaclass=PoolMeta):
                     continue
                 print(id_venta)
                 if company_operation and not operation_center:
-                    msg = f"{id_venta} Falta el centro de operación"
+                    msg = f"EXCEPCION {id_venta} - Falta el centro de operación"
                     logs.append(msg)
                     to_exception.append(id_venta)
                     continue
@@ -115,10 +115,11 @@ class Sale(metaclass=PoolMeta):
                 nit_cedula = venta.nit_Cedula.replace('\n',"")
                 party = Party.search([('id_number', '=', nit_cedula)])
                 if not party:
-                    msg2 = f'EXCEPCION {id_venta} - No se encontro el tercero {nit_cedula}'
+                    msg2 = f'REVISAR {id_venta} - No se encontro el tercero {nit_cedula}'
                     logs.append(msg2)
-                    actualizacion.reset_writedate('TERCEROS')
-                    to_exception.append(id_venta)
+                    Party.import_parties_tecno()
+                    # actualizacion.reset_writedate('TERCEROS')
+                    # to_exception.append(id_venta)
                     continue
                 party = party[0]
                 #Se indica a que bodega pertenece
@@ -692,20 +693,3 @@ class Statement(metaclass=PoolMeta):
             + sum(l.amount for l in self.lines))
         return amount
 
-    # def validate_balance(self):
-    #     pool = Pool()
-    #     print('hola')
-    #     Lang = pool.get('ir.lang')
-    #     amount = (self.start_balance
-    #         + sum(l.amount for l in self.lines))
-    #     self.end_balance = amount
-    #     if amount != self.end_balance:
-    #         lang = Lang.get()
-    #         end_balance = lang.currency(
-    #             self.end_balance, self.journal.currency)
-    #         amount = lang.currency(amount, self.journal.currency)
-    #         raise UserError(
-    #             gettext('account_statement.msg_statement_wrong_end_balance',
-    #                 statement=self.rec_name,
-    #                 end_balance=end_balance,
-    #                 amount=amount))
