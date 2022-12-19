@@ -5,9 +5,7 @@ from trytond.exceptions import UserError
 from trytond.transaction import Transaction
 from decimal import Decimal
 from sql import Table
-from trytond.i18n import gettext
 
-#from .exceptions import (StatementValidateError,UserError)
 
 #Heredamos del modelo sale.sale para agregar el campo id_tecno
 class Sale(metaclass=PoolMeta):

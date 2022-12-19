@@ -82,12 +82,19 @@ class Voucher(ModelSQL, ModelView):
                     exceptions.append(id_tecno)
                     continue
                 #for pago in tipo_pago: 
-                paymode = PayMode.search([('id_tecno', '=', tipo_pago[0].forma_pago)]) # REVISAR CRITICO ¿CUANDO HAY MAS DE 1 FORMA DE PAGO?
+                paymode = PayMode.search([('id_tecno', '=', tipo_pago[0].forma_pago)])
                 if not paymode:
                     msg = f"NO SE ENCONTRO LA FORMA DE PAGO {tipo_pago[0].forma_pago}"
                     logs.append(msg)
                     exceptions.append(id_tecno)
                     continue
+                else:
+                    # REVISAR ¿CUANDO HAY MAS DE 1 FORMA DE PAGO?
+                    if len(paymode) != 1:
+                        msg = f"EXCEPCION {id_tecno} - se esperaba 1 forma de pago y se obtuvo {len(paymode)}"
+                        logs.append(msg)
+                        exceptions.append(id_tecno)
+                        continue
                 print('VOUCHER EGRESO:', id_tecno)
                 fecha_date = cls.convert_fecha_tecno(doc.fecha_hora)
                 voucher = Voucher()
@@ -111,6 +118,9 @@ class Voucher(ModelSQL, ModelView):
                 if lines:
                     voucher.lines = lines
                     voucher.on_change_lines()
+                else:
+                    exceptions.append(id_tecno)
+                    continue
                 #Se verifica que el comprobante tenga lineas para ser procesado y contabilizado (doble verificación por error)
                 if voucher.lines and voucher.amount_to_pay > 0:
                     Voucher.process([voucher])
@@ -210,7 +220,7 @@ class Voucher(ModelSQL, ModelView):
                     continue
                 facturas = Config.get_dctos_cruce(id_tecno)
                 if not facturas:
-                    msg1 = f"NO HAY FACTURAS EN TECNOCARNES PARA EL RECIBO {id_tecno}"
+                    msg1 = f"EXCEPCION NO HAY FACTURAS EN TECNOCARNES PARA EL RECIBO {id_tecno}"
                     logs.append(msg1)
                     exceptions.append(id_tecno)
                     continue
@@ -226,7 +236,7 @@ class Voucher(ModelSQL, ModelView):
                 #Se obtiene la forma de pago, según la tabla Documentos_Che de TecnoCarnes
                 tipo_pago = Config.get_tipos_pago(id_tecno)
                 if not tipo_pago:
-                    msg = f"NO SE ENCONTRO FORMA(S) DE PAGO EN TECNOCARNES (DOCUMENTOS_CHE) PARA EL DOCUMENTO {id_tecno}"
+                    msg = f"EXCEPCION NO SE ENCONTRO FORMA(S) DE PAGO EN TECNOCARNES (DOCUMENTOS_CHE) PARA EL DOCUMENTO {id_tecno}"
                     logs.append(msg)
                     exceptions.append(id_tecno)
                     continue            
@@ -309,7 +319,7 @@ class Voucher(ModelSQL, ModelView):
                     forma_pago = tipo_pago[0].forma_pago
                     paymode = PayMode.search([('id_tecno', '=', forma_pago)])
                     if not paymode:
-                        msg = f"NO SE ENCONTRO LA FORMA DE PAGO {forma_pago}"
+                        msg = f"EXCEPCION {id_tecno} - NO SE ENCONTRO LA FORMA DE PAGO {forma_pago}"
                         logs.append(msg)
                         exceptions.append(id_tecno)
                         continue
@@ -334,8 +344,9 @@ class Voucher(ModelSQL, ModelView):
                     if lines:
                         voucher.lines = lines
                         voucher.on_change_lines()
-                        #if company_operation:
-                        #    voucher.on_change_operation_center()
+                    else:
+                        exceptions.append(id_tecno)
+                        continue                    
                     voucher.save()
                     #Se verifica que el comprobante tenga lineas para ser procesado y contabilizado (doble verificación por error)
                     if voucher.lines and voucher.amount_to_pay > 0:
@@ -361,7 +372,7 @@ class Voucher(ModelSQL, ModelView):
                         voucher.save()
                     created.append(id_tecno)
                 else:
-                    msg1 = f"EL DOCUMENTO {id_tecno} NO ENCONTRO FORMA DE PAGO EN TECNOCARNES"
+                    msg1 = f"EXCEPCION EL DOCUMENTO {id_tecno} NO ENCONTRO FORMA DE PAGO EN TECNOCARNES"
                     exceptions.append(id_tecno)
                     logs.append(msg1)
                     continue
@@ -470,18 +481,16 @@ class Voucher(ModelSQL, ModelView):
             ref = inv.tipo_aplica+'-'+str(inv.numero_aplica)
             move_line = cls.get_moveline(ref, voucher.party, logs, account_type)
             if not move_line:
-                msg = f'NO SE ENCONTRO LA FACTURA {ref} EN TRYTON'
+                msg = f'EXCEPCION {voucher.id_tecno} - NO SE ENCONTRO LA FACTURA {ref} EN TRYTON'
                 logs.append(msg)
-                continue
+                return None
             #print(ref)
             valor_original, amount_to_pay, untaxed_amount = cls.get_amounts_to_pay(move_line, voucher.voucher_type)
-            #print(valor_original, amount_to_pay, untaxed_amount)
             line = Line()
             line.amount_original = valor_original
             line.reference = ref
             line.move_line = move_line
             line.on_change_move_line()
-            #company_operation = Module.search([('name', '=', 'company_operation'), ('state', '=', 'activated')])
             if hasattr(Line, 'operation_center'):
                 OperationCenter = pool.get('company.operation_center')
                 operation_center, = OperationCenter.search([], order=[('id', 'DESC')], limit=1)
