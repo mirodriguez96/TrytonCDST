@@ -873,9 +873,9 @@ class Configuration(ModelSQL, ModelView):
             if not employee:
                 continue
                 # raise UserError('error employee_code', f'employee code {code} not found')
+            employee, = employee
             if not employee.contract.position:
                 raise UserError('employee', f'employee position {employee.rec_name} not found')
-            employee, = employee
             if employee not in to_create.keys():
                 to_create[employee] = {}
             _year = linea[5].strip()
