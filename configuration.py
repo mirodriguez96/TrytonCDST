@@ -873,6 +873,8 @@ class Configuration(ModelSQL, ModelView):
             if not employee:
                 continue
                 # raise UserError('error employee_code', f'employee code {code} not found')
+            if not employee.contract.position:
+                raise UserError('employee', f'employee position {employee.rec_name} not found')
             employee, = employee
             if employee not in to_create.keys():
                 to_create[employee] = {}
@@ -908,7 +910,7 @@ class Configuration(ModelSQL, ModelView):
         for empleoyee in to_create.keys():
             for date in to_create[empleoyee].keys():
                 start_time = datetime.datetime.combine(date, datetime.datetime.min.time())
-                end_time = datetime.datetime.combine(date, datetime.datetime.max.time())
+                end_time = datetime.datetime.combine(date, datetime.time(23,59,59))
                 rests = cls.get_access_rests(to_create[empleoyee][date])
                 if 'enter_timestamp' not in to_create[empleoyee][date].keys():
                     if 'exit_timestamp' not in to_create[empleoyee][date].keys():
