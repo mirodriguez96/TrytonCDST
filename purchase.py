@@ -171,7 +171,7 @@ class Purchase(metaclass=PoolMeta):
                     not_impoconsumo = False
                     impuestos_linea = []
                     for impuestol in line.taxes:
-                        clase_impuesto = impuestol.classification_tax
+                        clase_impuesto = impuestol.classification_tax_tecno
                         if clase_impuesto == '05' and retencion_iva:
                             if impuestol not in impuestos_linea:
                                 impuestos_linea.append(impuestol)
@@ -349,8 +349,6 @@ class Purchase(metaclass=PoolMeta):
             shipment_returns = []
             for shipment in purchase.shipment_returns:
                 shipment_returns.append(shipment.id)
-                for inventory_move in shipment.inventory_moves:
-                    stock_moves.append(inventory_move.id)
             if stock_moves:
                 cursor.execute(*stock_move_table.update(
                     columns=[stock_move_table.state],

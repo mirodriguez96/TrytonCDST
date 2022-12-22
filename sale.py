@@ -249,7 +249,7 @@ class Sale(metaclass=PoolMeta):
                     #A continuación se verifica las retenciones e impuesto al consumo
                     impuestos_linea = []
                     for impuestol in linea.taxes:
-                        clase_impuesto = impuestol.classification_tax
+                        clase_impuesto = impuestol.classification_tax_tecno
                         if clase_impuesto == '05' and retencion_iva:
                             if impuestol not in impuestos_linea:
                                 impuestos_linea.append(impuestol)

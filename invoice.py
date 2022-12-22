@@ -178,7 +178,7 @@ class Invoice(metaclass=PoolMeta):
                         tax_line = []
                         not_impoconsumo = False
                         for impuestol in line.taxes:
-                            clase_impuesto = impuestol.classification_tax
+                            clase_impuesto = impuestol.classification_tax_tecno
                             if clase_impuesto == '05' and nota.retencion_iva > 0:
                                 if impuestol not in tax_line:
                                     tax_line.append(impuestol)
