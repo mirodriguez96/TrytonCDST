@@ -11,7 +11,10 @@ from trytond.wizard import Wizard, StateView, StateAction, Button
 from trytond.modules.stock.exceptions import PeriodCloseError
 from trytond.pool import Pool, PoolMeta
 
-
+TYPES_PRODUCT = [
+    ('no_consumable', 'No consumable'),
+    ('consumable', 'Consumable')
+]
 
 class Account(metaclass=PoolMeta):
     __name__ = 'account.account'
@@ -53,6 +56,7 @@ class BalanceStockStart(ModelView):
             ('date', '<=', Eval('fiscalyear_end_date')),
             ],
         depends=['fiscalyear_start_date', 'fiscalyear_end_date'])
+    type = fields.Selection(TYPES_PRODUCT, 'Type', required=True)
 
     @classmethod
     def default_journal(cls, **pattern):
@@ -99,10 +103,14 @@ class BalanceStock(Wizard):
             }
 
     def product_domain(self):
-        return [
+        product_domain = [
             ('type', '=', 'goods'),
-            ('consumable', '=', False),
             ]
+        if self.start.type == 'no_consumable':
+            product_domain.append(('consumable', '=', False))
+        else:
+            product_domain.append(('consumable', '=', True))
+        return product_domain
 
     def account_balance_context(self):
         return {

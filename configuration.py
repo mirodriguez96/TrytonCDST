@@ -25,12 +25,6 @@ TYPES_FILE = [
     ('loans', 'Loans'),
     ('access_biometric', 'Access biometric')
 ]
-_events = {
-            'Laborando': 'enter_timestamp',
-            'Salir': 'exit_timestamp',
-            'Descansando': 'start_rest',
-            'Retornar': 'end_rest',
-        }
 
 class Configuration(ModelSQL, ModelView):
     'Configuration'

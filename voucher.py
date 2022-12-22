@@ -841,6 +841,7 @@ class MultiRevenue(metaclass=PoolMeta):
             for line_id in voucher_to_create[key]:
                 voucher, = Voucher.create([voucher_to_create[key][line_id]])
                 voucher.on_change_lines()
+                voucher.save()
                 Voucher.process([voucher])
                 if voucher.amount_to_pay and voucher.amount_to_pay > 0:
                     Voucher.post([voucher])

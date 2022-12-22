@@ -8,5 +8,7 @@ this repository contains the full copyright notices and license terms. -->
         position="after">
             <label name="consumo"/>
             <field name="consumo"/>
+            <label name="classification_tax_tecno"/>
+            <field name="classification_tax_tecno"/>
     </xpath>
 </data>

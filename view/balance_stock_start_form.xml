@@ -8,4 +8,6 @@ this repository contains the full copyright notices and license terms. -->
     <field name="fiscalyear"/>
     <label name="date"/>
     <field name="date"/>
+    <label name="type"/>
+    <field name="type"/>
 </form>
