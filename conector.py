@@ -216,37 +216,81 @@ class Actualizacion(ModelSQL, ModelView):
     # Se revisa los documentos existentes en Tryton vs SqlServer (TecnoCarnes) para marcarlos como pendientes por importar.
     # Se solicita el nombre de la tabla en tryton (table), la lista de sw según el documento y el nombre de la actualizacion
     @classmethod
-    def revisa_secuencia_imp(cls, table, l_sw, name_a):
+    def revisa_secuencia_imp(cls, name):
         pool = Pool()
         Config = pool.get('conector.configuration')
         Actualizacion = pool.get('conector.actualizacion')
         cursor = Transaction().connection.cursor()
-        consult = "SELECT number FROM "+table+" WHERE "
-        for sw in l_sw:
-            consult += f"id_tecno LIKE '{sw}-%'"
-            if l_sw.index(sw) != (len(l_sw)-1):
-                consult += " OR "
-        cursor.execute(consult)
-        result = cursor.fetchall()
-        if not result:
+        # Se procede primero a buscar los documentos importados en Tryton
+        result = None
+        result_tryton = []
+        cond = None
+        if name == 'VENTAS':
+            consultv = "SELECT id_tecno FROM sale_sale WHERE id_tecno is not null"
+            cursor.execute(consultv)
+            result = cursor.fetchall()
+            cond = "(sw=1 OR sw=2)"
+        if name == 'COMPRAS':
+            consultv = "SELECT id_tecno FROM purchase_purchase WHERE id_tecno is not null"
+            cursor.execute(consultv)
+            result = cursor.fetchall()
+            cond = "(sw=3 OR sw=4)"
+        if name == 'COMPROBANTES DE INGRESO':
+            consult1 = "SELECT id_tecno FROM account_voucher WHERE id_tecno LIKE '5-%'"
+            cursor.execute(consult1)
+            result = cursor.fetchall()
+            result_tryton = [r[0] for r in result]
+            consult2 = "SELECT id_tecno FROM account_multirevenue WHERE id_tecno is not null"
+            cursor.execute(consult2)
+            result = cursor.fetchall()
+            cond = "sw=5"
+        if name == 'COMPROBANTES DE EGRESO':
+            consultv = "SELECT id_tecno FROM account_voucher WHERE id_tecno  LIKE '6-%'"
+            cursor.execute(consultv)
+            result = cursor.fetchall()
+            cond = "sw=6"
+        if name == 'PRODUCCION':
+            consultv = "SELECT id_tecno FROM production WHERE id_tecno is not null"
+            cursor.execute(consultv)
+            result = cursor.fetchall()
+            cond = "sw=12 AND ("
+            parametro = Config.get_data_parametros('177')
+            valor_parametro = parametro[0].Valor.split(',')
+            for tipo in valor_parametro:
+                cond += "tipo="+tipo.strip()
+                if valor_parametro.index(tipo) != (len(valor_parametro)-1):
+                    cond += " OR "
+            cond += ")"
+        if name == 'NOTAS DE CREDITO':
+            consultv = "SELECT id_tecno FROM account_invoice WHERE id_tecno  LIKE '32-%'"
+            cursor.execute(consultv)
+            result = cursor.fetchall()
+            cond = "sw=32"
+        if name == 'NOTAS DE DEBITO':
+            consultv = "SELECT id_tecno FROM account_voucher WHERE id_tecno  LIKE '31-%'"
+            cursor.execute(consultv)
+            result = cursor.fetchall()
+            cond = "sw=31"
+        # Se almacena el resultado de la busqueda en una lista
+        if not result_tryton and result:
+            result_tryton = [r[0] for r in result]
+        elif result_tryton and result:
+            for r in result:
+                result_tryton.append(r[0])
+        # Si no entró a ningún documento no hace nada
+        if not cond:
             return
-        result = [r[0] for r in result]
         config, = Config.search([], order=[('id', 'DESC')], limit=1)
-        fecha = config.date
-        fecha = fecha.strftime('%Y-%m-%d %H:%M:%S')
-        consult2 = "SELECT CONCAT(tipo,'-',numero_documento) FROM Documentos WHERE ("
-        for sw in l_sw:
-            consult2 += f"sw = {sw}"
-            if l_sw.index(sw) != (len(l_sw)-1):
-                consult2 += " OR "
-        consult2 += ") AND fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado = 'T' AND tipo<>0 ORDER BY tipo,numero_documento"
-        result_tecno = Config.get_data(consult2)
+        fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
+        consultc = f"SELECT CONCAT(sw,'-',tipo,'-',numero_documento) FROM Documentos WHERE {cond} AND fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado = 'T' AND tipo<>0 ORDER BY tipo,numero_documento"
+        result_tecno = Config.get_data(consultc)
         result_tecno = [r[0] for r in result_tecno]
-        list_difference = [r for r in result_tecno if r not in result]
+        list_difference = [r for r in result_tecno if r not in result_tryton]
+        # Se guarda el registro y se marcan los documentos para ser importados de nuevo
         logs = []
         for falt in list_difference:
             lid = falt.split('-')
-            Config.set_data(f"UPDATE dbo.Documentos SET exportado = 'N' WHERE tipo = {lid[0]} AND Numero_documento = {lid[1]}")
+            Config.set_data(f"UPDATE dbo.Documentos SET exportado = 'N' WHERE sw = {lid[0]} AND tipo = {lid[1]} AND Numero_documento = {lid[2]}")
             logs.append(f"DOCUMENTO FALTANTE: {falt}")
-        actualizacion, = Actualizacion.search([('name', '=', name_a)])
-        cls.add_logs(actualizacion, logs)
+        actualizacion, = Actualizacion.search([('name', '=', name)])
+        cls.add_logs(actualizacion, logs) 

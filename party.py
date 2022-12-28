@@ -1,12 +1,49 @@
 import datetime
 from trytond.model import fields
 from trytond.pool import Pool, PoolMeta
+from trytond.pyson import Eval
 
+RECEIVABLE_PAYABLE_TECNO = {}
 
 #Herencia del party.party e insercción de la función actualizar terceros
 class Party(metaclass=PoolMeta):
     'Party'
     __name__ = 'party.party'
+    receivable_tecno = fields.Function(fields.Numeric('Receivable Tecno',
+            digits=(16, Eval('currency_digits', 2)),
+            depends=['currency_digits']),
+            'get_receivable_payable_tecno')
+    payable_tecno = fields.Function(fields.Numeric('Payable Tecno',
+            digits=(16, Eval('currency_digits', 2)),
+            depends=['currency_digits']),
+            'get_receivable_payable_tecno')
+
+    # Funcion encargada de consultar en TecnoCarnes el saldo por pagar y cobrar de los terceros
+    def get_receivable_payable_tecno(self, name):
+        '''
+        Function to compute receivable, payable (today) for parties.
+        '''
+        pool = Pool()
+        Config = pool.get('conector.configuration')
+        value = 0
+        
+        global RECEIVABLE_PAYABLE_TECNO
+        if not RECEIVABLE_PAYABLE_TECNO:
+            query = "SELECT nit_cedula, sum(porcobrar), sum(porpagar) from VIEWCTASPORPAGARYCOBRAR GROUP BY nit_cedula"
+            result = Config.get_data(query)
+            for val in result:
+                if val[0] not in RECEIVABLE_PAYABLE_TECNO.keys():
+                    RECEIVABLE_PAYABLE_TECNO[val[0]] = {
+                        'receivable': val[1],
+                        'payable': val[2]
+                    }
+        if name == 'receivable_tecno':
+            if self.id_number in RECEIVABLE_PAYABLE_TECNO.keys():
+                value = RECEIVABLE_PAYABLE_TECNO[self.id_number]['receivable']
+        elif name == 'payable_tecno':
+            if self.id_number in RECEIVABLE_PAYABLE_TECNO.keys():
+                value = RECEIVABLE_PAYABLE_TECNO[self.id_number]['payable']
+        return value
 
     # Función encargada de crear o actualizar los terceros de db TecnoCarnes teniendo en cuenta la ultima fecha de actualizacion y si existe.
     @classmethod

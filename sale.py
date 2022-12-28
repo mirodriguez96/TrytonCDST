@@ -215,7 +215,7 @@ class Sale(metaclass=PoolMeta):
                 for lin in documentos_linea:
                     producto = Product.search(['OR', ('id_tecno', '=', str(lin.IdProducto)), ('code', '=', str(lin.IdProducto))])
                     if not producto:
-                        msg = f"{id_venta} No se encontro el producto {str(lin.IdProducto)}"
+                        msg = f"REVISAR {id_venta} - No se encontro el producto {str(lin.IdProducto)}"
                         logs.append(msg)
                         not_product = True
                         break
@@ -302,9 +302,9 @@ class Sale(metaclass=PoolMeta):
                     cls.finish_shipment_process(sale)
                     if sale.invoice_type == 'P':
                         Sale.post_invoices(sale)
-                        cls.set_payment_pos(sale, logs, to_exception)
-                        Sale.update_state([sale])
-                    else:
+                    cls.set_payment_pos(sale, logs, to_exception)
+                    Sale.update_state([sale])
+                    if sale.invoice_type != 'P':
                         cls.finish_invoice_process(sale, venta, logs, to_exception)
                 to_created.append(id_venta)
             except Exception as e:
@@ -354,7 +354,7 @@ class Sale(metaclass=PoolMeta):
         if not sale.invoices:
             sale._process_invoice([sale])
             if not sale.invoices:
-                msg1 = f"EXCEPTION {sale.id_tecno} VENTA SIN FACTURA"
+                msg1 = f"REVISAR {sale.id_tecno} VENTA SIN FACTURA"
                 logs.append(msg1)
                 to_exception.append(sale.id_tecno)
         for invoice in sale.invoices:
@@ -386,7 +386,7 @@ class Sale(metaclass=PoolMeta):
                 if original_invoice:
                     invoice.original_invoice = original_invoice[0]
                 else:
-                    msg = f"NO SE ENCONTRO LA FACTURA {dcto_base} PARA CRUZAR CON LA DEVOLUCION {invoice.number}"
+                    msg = f"REVISAR: NO SE ENCONTRO LA FACTURA {dcto_base} PARA CRUZAR CON LA DEVOLUCION {invoice.number}"
                     logs.append(msg)
                     to_exception.append(sale.id_tecno)
             if diferencia_total < Decimal(6.0):
@@ -402,7 +402,7 @@ class Sale(metaclass=PoolMeta):
                     paymentline.save()
                     Invoice.reconcile_invoice(invoice)
             else:
-                msg1 = f'FACTURA {sale.id_tecno}'
+                msg1 = f'REVISAR FACTURA {sale.id_tecno}'
                 msg2 = f'No contabilizada diferencia total mayor al rango permitido'
                 full_msg = ' - '.join([msg1, msg2])
                 logs.append(full_msg)
@@ -416,7 +416,7 @@ class Sale(metaclass=PoolMeta):
         pagos = Config.get_tipos_pago(sale.id_tecno)
         if not pagos:
             if sale.payment_term.id_tecno == '0':
-                msg = f"EXCEPCION {sale.id_tecno} - No se encontraron pagos asociados en tecnocarnes (documentos_che)"
+                msg = f"REVISAR {sale.id_tecno} - No se encontraron pagos asociados en tecnocarnes (documentos_che)"
                 logs.append(msg)
                 to_exception.append(sale.id_tecno)
             return
@@ -424,6 +424,12 @@ class Sale(metaclass=PoolMeta):
         pool = Pool()
         Journal = pool.get('account.statement.journal')
         for pago in pagos:
+            valor = pago.valor
+            if valor == 0:
+                msg = f"REVISAR {sale.id_tecno} - Revisar el valor del pago, su valor es de {valor}"
+                logs.append(msg)
+                to_exception.append(sale.id_tecno)
+                return
             fecha = str(pago.fecha).split()[0].split('-')
             fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
             journal, = Journal.search([('id_tecno', '=', pago.forma_pago)])
@@ -433,7 +439,6 @@ class Sale(metaclass=PoolMeta):
                 'journal': journal,
             }
             statement, = cls.search_or_create_statement(args_statement)
-            valor = pago.valor
             if pago.sw == 2 and valor > 0:
                 valor = valor*-1
             data_payment = {
@@ -445,7 +450,7 @@ class Sale(metaclass=PoolMeta):
             }
             result_payment = cls.multipayment_invoices_statement(data_payment, logs, to_exception)
             if result_payment != 'ok':
-                msg = f"ERROR AL PROCESAR EL PAGO DE LA VENTA POS {sale.number}"
+                msg = f"REVISAR: ERROR AL PROCESAR EL PAGO DE LA VENTA POS {sale.number}"
                 logs.append(msg)
 
     

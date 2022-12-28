@@ -283,3 +283,11 @@ msgstr "Cancelar"
 msgctxt "wizard_button:staff.payroll.payslip_send,start,send_:"
 msgid "Send"
 msgstr "Enviar"
+
+msgctxt "field:party.party,payable_tecno:"
+msgid "Payable Tecno"
+msgstr "Por pagar Tecno"
+
+msgctxt "field:party.party,receivable_tecno:"
+msgid "Receivable Tecno"
+msgstr "Por cobrar Tecno"
