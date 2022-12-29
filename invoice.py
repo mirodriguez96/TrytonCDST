@@ -31,6 +31,10 @@ class Invoice(metaclass=PoolMeta):
     def default_electronic_state():
         return 'none'
 
+    @staticmethod
+    def default_cufe():
+        return '0'
+
     # Funcion encargada de eliminar loas conciliaciones del asiento pasado como parametro
     @classmethod
     def unreconcile_move(self, move):

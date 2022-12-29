@@ -152,6 +152,15 @@ class Sale(metaclass=PoolMeta):
                     logs.append(msg)
                     to_exception.append(id_venta)
                     continue
+                #Busco la terminal y se la asigno
+                sale_device = SaleDevice.search([('id_tecno', '=', venta.pc)])
+                if not sale_device:
+                    msg = f'EXCEPCION {id_venta} - Terminal de venta {venta.pc} no existe'
+                    logs.append(msg)
+                    to_exception.append(id_venta)
+                    continue
+                sale_device = sale_device[0]
+
                 with Transaction().set_user(1):
                     User.shop = shop
                     context = User.get_preferences()
@@ -169,6 +178,8 @@ class Sale(metaclass=PoolMeta):
                 sale.warehouse = bodega
                 sale.payment_term = plazo_pago
                 sale.self_pick_up = False
+                sale.invoice_number = sale.number
+                sale.invoice_date = fecha_date
                 #Se revisa si la venta es clasificada como electronica o pos y se cambia el tipo
                 if tipo_doc in venta_electronica:
                     #continue #TEST
@@ -176,19 +187,9 @@ class Sale(metaclass=PoolMeta):
                 elif tipo_doc in venta_pos:
                     sale.shop = shop
                     sale.invoice_type = 'P'
-                    sale.invoice_date = fecha_date
                     sale.pos_create_date = fecha_date
                     #sale.self_pick_up = True
-                    #Busco la terminal y se la asigno
-                    sale_device = SaleDevice.search([('id_tecno', '=', venta.pc)])
-                    if not sale_device:
-                        msg = f'EXCEPCION {id_venta} - Terminal de venta {venta.pc} no existe'
-                        logs.append(msg)
-                        to_exception.append(id_venta)
-                        continue
-                    sale_device, = sale_device
                     sale.sale_device = sale_device
-                    sale.invoice_number = sale.number
                 #Se busca una dirección del tercero para agregar en la factura y envio
                 address = Address.search([('party', '=', party.id)], limit=1)
                 if address:
@@ -300,11 +301,17 @@ class Sale(metaclass=PoolMeta):
                     Sale.confirm([sale])
                     Sale.process([sale])
                     cls.finish_shipment_process(sale)
-                    if sale.invoice_type == 'P':
+                    pagos = Config.get_tipos_pago(id_venta)
+                    if pagos:
                         Sale.post_invoices(sale)
-                    cls.set_payment_pos(sale, logs, to_exception)
-                    Sale.update_state([sale])
-                    if sale.invoice_type != 'P':
+                        cls.set_payment_pos(pagos, sale, sale_device, logs, to_exception)
+                        Sale.update_state([sale])
+                    elif sale.payment_term.id_tecno == '0':
+                        msg = f"REVISAR {sale.id_tecno} - No se encontraron pagos asociados en tecnocarnes (documentos_che)"
+                        logs.append(msg)
+                        to_exception.append(sale.id_tecno)
+                        continue
+                    elif sale.invoice_type != 'P':
                         cls.finish_invoice_process(sale, venta, logs, to_exception)
                 to_created.append(id_venta)
             except Exception as e:
@@ -411,15 +418,7 @@ class Sale(metaclass=PoolMeta):
 
     #Función encargada de buscar recibos de caja pagados en TecnoCarnes y pagarlos en Tryton
     @classmethod
-    def set_payment_pos(cls, sale, logs, to_exception):
-        Config = Pool().get('conector.configuration')
-        pagos = Config.get_tipos_pago(sale.id_tecno)
-        if not pagos:
-            if sale.payment_term.id_tecno == '0':
-                msg = f"REVISAR {sale.id_tecno} - No se encontraron pagos asociados en tecnocarnes (documentos_che)"
-                logs.append(msg)
-                to_exception.append(sale.id_tecno)
-            return
+    def set_payment_pos(cls, pagos, sale, sale_device, logs, to_exception):
         #si existe pagos pos...
         pool = Pool()
         Journal = pool.get('account.statement.journal')
@@ -434,7 +433,7 @@ class Sale(metaclass=PoolMeta):
             fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
             journal, = Journal.search([('id_tecno', '=', pago.forma_pago)])
             args_statement = {
-                'device': sale.sale_device,
+                'device': sale_device,
                 'date': fecha_date,
                 'journal': journal,
             }
@@ -540,7 +539,7 @@ class Sale(metaclass=PoolMeta):
                 if abs(remainder) < Decimal(600.0) and remainder != 0:
                     total_pay = sale.residual_amount
             if not sale.invoice or (sale.invoice.state != 'posted' and sale.invoice.state != 'paid'):
-                Sale.post_invoice(sale)
+                Sale.post_invoices(sale)
             if not sale.party.account_receivable:
                 Party = pool.get('party.party')
                 config = Configuration(1)
