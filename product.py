@@ -32,6 +32,10 @@ class Product(metaclass=PoolMeta):
         for producto in productos_tecno:
             try:
                 id_producto = str(producto.IdProducto)
+                if producto.ref_anulada == 'S':
+                    msg = f"EL PRODUCTO CON CODIGO {id_producto} ESTA MARCADO COMO ANULADO EN TECNOCARNES"
+                    logs.append(msg)
+                    continue
                 product_inactive = Product.search([('code', '=', id_producto), ('active', '=', False)])
                 if product_inactive:
                     msg = f"EL PRODUCTO CON CODIGO {id_producto} ESTA MARCADO COMO INACTIVO EN TRYTON"
@@ -165,8 +169,8 @@ class ProductCategory(metaclass=PoolMeta):
         to_create = []
         logs = []
         for modelo in modelos:
+            id_tecno = modelo.IDMODELOS
             try:
-                id_tecno = modelo.IDMODELOS
                 name = str(id_tecno)+' - '+modelo.MODELOS.strip()
                 existe = Category.search([('id_tecno', '=', id_tecno)])
                 if not existe:
@@ -199,7 +203,7 @@ class ProductCategory(metaclass=PoolMeta):
 
                     to_create.append(category)
             except Exception as e:
-                msg = f"EXCEPTION {name} -> {str(e)}"
+                msg = f"EXCEPCION {id_tecno} - {str(e)}"
                 logs.append(msg)
         Category.create(to_create)
         Actualizacion.add_logs(actualizacion, logs)
