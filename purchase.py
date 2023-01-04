@@ -63,14 +63,20 @@ class Purchase(metaclass=PoolMeta):
             tipo_doc = compra.tipo
             id_compra = str(sw)+'-'+tipo_doc+'-'+str(numero_doc)
             try:
+                existe = Purchase.search([('id_tecno', '=', id_compra)])
+                if existe:
+                    if compra.anulado == 'S':
+                        msg =  f"El documento {id_compra} fue eliminado de tryton porque fue anulado en TecnoCarnes"
+                        logs.append(msg)
+                        cls.delete_imported_purchases(existe)
+                        not_import.append(id_compra)
+                        continue
+                    to_created.append(id_compra)
+                    continue
                 if compra.anulado == 'S':
                     msg = f"{id_compra} Documento anulado en TecnoCarnes"
                     logs.append(msg)
                     not_import.append(id_compra)
-                    continue
-                existe = Purchase.search([('id_tecno', '=', id_compra)])
-                if existe:
-                    to_created.append(id_compra)
                     continue
                 print(id_compra)
                 if company_operation and not operation_center:
@@ -140,7 +146,7 @@ class Purchase(metaclass=PoolMeta):
                     #print(id_producto)
                     producto = Product.search([('id_tecno', '=', str(lin.IdProducto))])
                     if not producto:
-                        msg = f"{id_compra} No se encontro el producto {str(lin.IdProducto)}"
+                        msg = f"{id_compra} No se encontro el producto {str(lin.IdProducto)} - Revisar variante o inactivos"
                         logs.append(msg)
                         not_product = True
                         break
@@ -396,3 +402,26 @@ class Purchase(metaclass=PoolMeta):
         reconciliations = [l.reconciliation for l in move.lines if l.reconciliation]
         if reconciliations:
             Reconciliation.delete(reconciliations)
+
+
+class PurchaseLine(metaclass=PoolMeta):
+    __name__ = 'purchase.line'
+
+    @classmethod
+    def __setup__(cls):
+        super(PurchaseLine, cls).__setup__()
+
+    # Se hereda la funcion 'compute_taxes' para posteriormente quitar el impuesto (IVA) a los terceros 'regimen_no_responsable'
+    def compute_taxes(self, party):
+        taxes_id = super(PurchaseLine, self).compute_taxes(party)
+        Tax = Pool().get('account.tax')
+        if party.regime_tax == 'regimen_no_responsable':
+            taxes_result = set()
+            for tax_id in taxes_id:
+                tax = Tax(tax_id)
+                # El impuesto de IVA equivale al codigo 01
+                if tax.classification_tax_tecno == '01':
+                    continue
+                taxes_result.add(tax_id)
+            taxes_id = list(taxes_result)
+        return taxes_id

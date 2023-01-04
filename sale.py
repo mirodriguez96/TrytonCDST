@@ -78,18 +78,22 @@ class Sale(metaclass=PoolMeta):
                 numero_doc = venta.Numero_documento
                 tipo_doc = venta.tipo
                 id_venta = str(sw)+'-'+tipo_doc+'-'+str(numero_doc)
-                # Se valida si el registro en el campo anulado esta marcado con 'S' para indicar que fue anulado
-                # almacenar el mensaje el registro y posteriormente sea marcado para NO importar
+                existe = Sale.search([('id_tecno', '=', id_venta)])
+                if existe:
+                    if venta.anulado == 'S':
+                        msg =  f"El documento {id_venta} fue eliminado de tryton porque fue anulado en TecnoCarnes"
+                        logs.append(msg)
+                        cls.delete_imported_sales(existe)
+                        not_import.append(id_venta)
+                        continue
+                    to_created.append(id_venta)
+                    continue
+                print(id_venta)
                 if venta.anulado == 'S':
                     msg = f"{id_venta} Documento anulado en TecnoCarnes"
                     logs.append(msg)
                     not_import.append(id_venta)
                     continue
-                existe = Sale.search([('id_tecno', '=', id_venta)])
-                if existe:
-                    to_created.append(id_venta)
-                    continue
-                print(id_venta)
                 if company_operation and not operation_center:
                     msg = f"EXCEPCION {id_venta} - Falta el centro de operación"
                     logs.append(msg)
@@ -216,7 +220,7 @@ class Sale(metaclass=PoolMeta):
                 for lin in documentos_linea:
                     producto = Product.search(['OR', ('id_tecno', '=', str(lin.IdProducto)), ('code', '=', str(lin.IdProducto))])
                     if not producto:
-                        msg = f"REVISAR {id_venta} - No se encontro el producto {str(lin.IdProducto)}"
+                        msg = f"REVISAR {id_venta} - No se encontro el producto {str(lin.IdProducto)} - Revisar variante o inactivos"
                         logs.append(msg)
                         not_product = True
                         break
@@ -291,6 +295,9 @@ class Sale(metaclass=PoolMeta):
                     # _lines.append(linea)
                     linea.save()
                 if not_product:
+                    # sale.invoice_number = None
+                    # sale.save()
+                    # Sale.delete([sale])
                     to_exception.append(id_venta)
                     continue
                 #Se procesa los registros creados
@@ -301,6 +308,8 @@ class Sale(metaclass=PoolMeta):
                     Sale.confirm([sale])
                     Sale.process([sale])
                     cls.finish_shipment_process(sale)
+                    if sale.invoice_type == 'P':
+                        Sale.post_invoices(sale)
                     pagos = Config.get_tipos_pago(id_venta)
                     if pagos:
                         Sale.post_invoices(sale)
@@ -684,7 +693,32 @@ class Sale(metaclass=PoolMeta):
             #Se elimina la venta
             cursor.execute(*sale_table.delete(where=sale_table.id == sale.id))
         for idt in ids_tecno:
-            Conexion.update_exportado(idt, 'S')
+            print('Conexion.update_exportado(idt, S)')
+            #Conexion.update_exportado(idt, 'N')
+
+
+class SaleLine(metaclass=PoolMeta):
+    __name__ = 'sale.line'
+
+    @classmethod
+    def __setup__(cls):
+        super(SaleLine, cls).__setup__()
+
+    # Se hereda la funcion 'compute_taxes' para posteriormente quitar el impuesto (IVA) a los terceros 'regimen_no_responsable'
+    def compute_taxes(self, party):
+        taxes_id = super(SaleLine, self).compute_taxes(party)
+        Tax = Pool().get('account.tax')
+        if party.regime_tax == 'regimen_no_responsable':
+            taxes_result = set()
+            for tax_id in taxes_id:
+                tax = Tax(tax_id)
+                # El impuesto de IVA equivale al codigo 01
+                if tax.classification_tax_tecno == '01':
+                    continue
+                taxes_result.add(tax_id)
+            taxes_id = list(taxes_result)
+        return taxes_id
+
 
 class Statement(metaclass=PoolMeta):
     __name__ = 'account.statement'

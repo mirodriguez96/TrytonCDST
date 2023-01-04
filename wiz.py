@@ -27,6 +27,18 @@ class FixBugsConector(Wizard):
         if Warning.check(warning_name):
             raise UserWarning(warning_name, "No continue si desconoce el funcionamiento interno del asistente.")
 
+        Invoice = pool.get('account.invoice')
+        invoices = Invoice.search([
+            ('number', 'like', '401-'),
+            ('state', '=', 'draft')
+            ])
+
+        Sale = pool.get('sale.sale')
+        
+        for invoice in invoices:
+            sale, = Sale.search([(invoice.number)])
+            Sale.post_invoices(sale)
+
         return 'end'
 
 class DocumentsForImportParameters(ModelView):
