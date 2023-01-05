@@ -393,7 +393,7 @@ class Purchase(metaclass=PoolMeta):
                 where=purchase_table.id == purchase.id)
             )
         for idt in ids_tecno:
-            Conexion.update_exportado(idt, 'S')
+            Conexion.update_exportado(idt, 'N')
 
 
     @classmethod

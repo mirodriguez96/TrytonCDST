@@ -693,8 +693,7 @@ class Sale(metaclass=PoolMeta):
             #Se elimina la venta
             cursor.execute(*sale_table.delete(where=sale_table.id == sale.id))
         for idt in ids_tecno:
-            print('Conexion.update_exportado(idt, S)')
-            #Conexion.update_exportado(idt, 'N')
+            Conexion.update_exportado(idt, 'N')
 
 
 class SaleLine(metaclass=PoolMeta):
