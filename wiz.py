@@ -29,9 +29,11 @@ class FixBugsConector(Wizard):
 
         Invoice = pool.get('account.invoice')
         invoices = Invoice.search([
-            ('number', 'like', '401-'),
+            ('number', 'like', '401-%'),
             ('state', '=', 'draft')
             ])
+
+        print(invoices)
 
         Sale = pool.get('sale.sale')
         for invoice in invoices:
