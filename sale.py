@@ -157,9 +157,17 @@ class Sale(metaclass=PoolMeta):
                     to_exception.append(id_venta)
                     continue
                 #Busco la terminal y se la asigno
-                sale_device = SaleDevice.search([('id_tecno', '=', venta.pc)])
+                # sale_device = SaleDevice.search([('id_tecno', '=', venta.pc)])
+                id_tecno_device = venta.pc+'-'+str(venta.bodega)
+                sale_device = SaleDevice.search(['OR',
+                    ('id_tecno', '=', id_tecno_device),
+                    ['AND',
+                        ('id_tecno', '=', venta.pc),
+                        ('shop.warehouse.id_tecno', '=', venta.bodega)
+                    ]
+                ])
                 if not sale_device:
-                    msg = f'EXCEPCION {id_venta} - Terminal de venta {venta.pc} no existe'
+                    msg = f'EXCEPCION {id_venta} - Terminal de venta {id_tecno_device} no existe'
                     logs.append(msg)
                     to_exception.append(id_venta)
                     continue
@@ -313,7 +321,11 @@ class Sale(metaclass=PoolMeta):
                     pagos = Config.get_tipos_pago(id_venta)
                     if pagos:
                         Sale.post_invoices(sale)
-                        cls.set_payment_pos(pagos, sale, sale_device, logs, to_exception)
+                        args_statement = {
+                            'device': sale_device,
+                            'usuario': venta.usuario,
+                        }
+                        cls.set_payment_pos(pagos, sale, args_statement, logs, to_exception)
                         Sale.update_state([sale])
                     elif sale.payment_term.id_tecno == '0':
                         msg = f"REVISAR {sale.id_tecno} - No se encontraron pagos asociados en tecnocarnes (documentos_che)"
@@ -427,7 +439,7 @@ class Sale(metaclass=PoolMeta):
 
     #Función encargada de buscar recibos de caja pagados en TecnoCarnes y pagarlos en Tryton
     @classmethod
-    def set_payment_pos(cls, pagos, sale, sale_device, logs, to_exception):
+    def set_payment_pos(cls, pagos, sale, args_statement, logs, to_exception):
         #si existe pagos pos...
         pool = Pool()
         Journal = pool.get('account.statement.journal')
@@ -440,12 +452,9 @@ class Sale(metaclass=PoolMeta):
                 return
             fecha = str(pago.fecha).split()[0].split('-')
             fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
+            args_statement['date'] = fecha_date
             journal, = Journal.search([('id_tecno', '=', pago.forma_pago)])
-            args_statement = {
-                'device': sale_device,
-                'date': fecha_date,
-                'journal': journal,
-            }
+            args_statement['journal'] = journal
             statement, = cls.search_or_create_statement(args_statement)
             if pago.sw == 2 and valor > 0:
                 valor = valor*-1
@@ -471,12 +480,15 @@ class Sale(metaclass=PoolMeta):
         device = Device(args['device'])
         date = args['date']
         journal = args['journal']
+        usuario = args['usuario']
+        name_statement = '%s - %s - %s' % (device.rec_name, journal.rec_name.strip(), usuario)
         statement = Statement.search([
-                ('journal', '=', journal.id),
-                ('sale_device', '=', device.id),
-                ('date', '=', date),
-                ('state', '=', 'draft')
-            ])
+            ('name', '=', name_statement),
+            ('journal', '=', journal.id),
+            ('sale_device', '=', device.id),
+            ('date', '=', date),
+            ('state', '=', 'draft')
+        ])
         if not statement:
             statements_date = Statement.search([
                     ('journal', '=', journal.id),
@@ -485,7 +497,7 @@ class Sale(metaclass=PoolMeta):
                 ])
             turn = len(statements_date) + 1
             values = {
-                'name': '%s - %s' % (device.rec_name, journal.rec_name),
+                'name': name_statement,
                 'date': date,
                 'journal': journal.id,
                 'company': device.shop.company.id,
@@ -502,32 +514,13 @@ class Sale(metaclass=PoolMeta):
     @classmethod
     def multipayment_invoices_statement(cls, args, logs, to_exception):
         pool = Pool()
-        Date = pool.get('ir.date')
         Sale = pool.get('sale.sale')
         Configuration = pool.get('account.configuration')
-        User = pool.get('res.user')
         StatementLine = pool.get('account.statement.line')
         sales = args.get('sales', None)
-        if not sales:
-            sales_ids = args.get('sales_ids', None)
-            sales = Sale.browse(sales_ids)
         statement_id = args.get('statement', None)
-        if not statement_id:
-            journal_id = args.get('journal_id', None)
-            user = User(1)
-            statements = cls.search([
-                ('journal', '=', journal_id),
-                ('state', '=', 'draft'),
-                ('sale_device', '=', user.sale_device.id),
-            ])
-            if statements:
-                statement_id = statements[0].id
-            else:
-                return
         date = args.get('date', None)
-        if not date:
-            date = Date.today()
-
+        # Se procede a crear la línea de pago en el estado de cuenta correspondiente para cada venta
         for sale in sales.keys():
             total_paid = Decimal(0.0)
             if sale.payments:

@@ -5,13 +5,13 @@ from trytond.pool import Pool
 from trytond.transaction import Transaction
 from trytond.exceptions import UserError, UserWarning
 from sql import Table
-import datetime
+#import datetime
 
 _EXPORTADO = [
-    ('N', 'SIN IMPORTAR'),
-    ('E', 'EXCEPCION'),
-    ('X', 'NO IMPORTAR'),
-    ('T', 'IMPORTADO')
+    ('N', '(N) SIN IMPORTAR'),
+    ('E', '(E) EXCEPCION'),
+    ('X', '(X) NO IMPORTAR'),
+    ('T', '(T) IMPORTADO')
 ]
 
 class FixBugsConector(Wizard):
@@ -27,24 +27,21 @@ class FixBugsConector(Wizard):
         if Warning.check(warning_name):
             raise UserWarning(warning_name, "No continue si desconoce el funcionamiento interno del asistente.")
 
-        Invoice = pool.get('account.invoice')
-        invoices = Invoice.search([
-            ('number', 'like', '401-%'),
-            ('state', '=', 'draft')
-            ])
-
-        print(invoices)
-
-        Sale = pool.get('sale.sale')
-        for invoice in invoices:
-            sale, = Sale.search([('number', '=', invoice.number)])
-            print(invoice, sale)
-            Sale.post_invoices(sale)
+        # Invoice = pool.get('account.invoice')
+        # invoices = Invoice.search([
+        #     ('number', 'like', '401-%'),
+        #     ('state', '=', 'draft')
+        #     ])
+        # print(invoices)
+        # Sale = pool.get('sale.sale')
+        # for invoice in invoices:
+        #     sale, = Sale.search([('number', '=', invoice.number)])
+        #     print(invoice, sale)
+        #     Sale.post_invoices(sale)
 
         # cursor = Transaction().connection.cursor()
         # sale_table = Table('sale_sale')
         # Sale = pool.get('sale.sale')
-
         # start_date = datetime.datetime(2022,12,22)
         # end_date = datetime.datetime(2023,1,4)
         # cursor.execute(*sale_table.select(sale_table.id,
@@ -76,7 +73,7 @@ class DocumentsForImport(Wizard):
     start = StateView('conector.configuration.documents_for_import_parameters',
     'conector.documents_for_import_parameters_view_form', [
         Button('Cancel', 'end', 'tryton-cancel'),
-        Button('Create', 'documents_for_import', 'tryton-go-next',
+        Button('Mark', 'documents_for_import', 'tryton-go-next',
             default=True)])
     documents_for_import = StateTransition()
 

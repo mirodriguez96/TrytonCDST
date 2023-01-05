@@ -126,33 +126,52 @@ class SaleDevice(metaclass=PoolMeta):
         pool = Pool()
         Config = pool.get('conector.configuration')
         SaleDevice = pool.get('sale.device')
+        Journal = pool.get('account.statement.journal')
         Shop = pool.get('sale.shop')
         equipos = Config.get_data_table('TblEquipo')
+        bodegas = Config.get_data_table('TblBodega')
         
         to_create = []
         for equipo in equipos:
-            id_equipo = equipo.IdEquipo
-            nombre = equipo.Equipo
-            shop = Shop.search([('warehouse.id_tecno', '=', equipo.Ubicacion)])
-            if not shop:
-                shop = Shop.search([], order=[('id', 'DESC')], limit=1)
-            #En caso de ser un nombre vacio se continua con el siguiente
-            if len(nombre) == 0 or nombre == ' ':
-                msg = f"EL NOMBRE DEL EQUIPO ESTA VACIO {id_equipo}"
-                logs.append(msg)
-                continue
-            
-            device = SaleDevice.search([('id_tecno', '=', id_equipo)])
-            if not device:
-                sale_data = {
-                    'id_tecno': id_equipo,
-                    'name': nombre,
-                    'code': id_equipo,
-                    'shop': shop[0].id,
-                    'environment': 'retail'
-                }
-                to_create.append(sale_data)
-        SaleDevice.create(to_create)
+            for bodega in bodegas:
+                id_tecno = equipo.IdEquipo+'-'+str(bodega.IdBodega)
+                nombre = equipo.Equipo+' - '+bodega.Bodega
+                shop = Shop.search([('warehouse.id_tecno', '=', bodega.IdBodega)])
+                if not shop:
+                    shop = Shop.search([], order=[('id', 'DESC')], limit=1)
+                #En caso de ser un nombre vacio se continua con el siguiente
+                if len(equipo.Equipo) == 0 or equipo.Equipo == ' ':
+                    msg = f"EL NOMBRE DEL EQUIPO ESTA VACIO {equipo.IdEquipo}"
+                    logs.append(msg)
+                    break
+
+                journals = Journal.search([()])
+                device = SaleDevice.search(['OR',
+                    ('id_tecno', '=', id_tecno),
+                    ['AND',
+                        ('id_tecno', '=', equipo.IdEquipo),
+                        ('shop.warehouse.id_tecno', '=', bodega.IdBodega)
+                    ]
+                ])
+                if not device:
+                    sale_data = {
+                        'id_tecno': id_tecno,
+                        'name': nombre,
+                        'code': id_tecno,
+                        'shop': shop[0].id,
+                        'environment': 'retail'
+                    }
+                    to_create.append(sale_data)
+                else:
+                    device, = device
+                    if not device.journals and journals:
+                        device.journals = journals
+                        device.save()
+        devices = SaleDevice.create(to_create)
+        for device in devices:
+            if not device.journals and journals:
+                device.journals = journals
+                device.save()
 
 
     #Libro de Ventas Pos
