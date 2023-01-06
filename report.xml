@@ -46,5 +46,27 @@ this repository contains the full copyright notices and license terms. -->
         </record>
         <menuitem parent="staff.menu_reporting" id="menu_payroll_export_wizard"
             action="payroll_export_wizard"/>
+
+        <!-- Report Income Daily report -->
+        <record model="ir.action.report" id="cdsreport_sale_income_daily">
+            <field name="name">Report Sale Income Daily Test</field>
+            <field name="model"></field>
+            <field name="report_name">sale_pos.cdssale_income_daily_report</field>
+            <field name="report">conector/reporte_diario_ventas.fods</field>
+            <field name="template_extension">ods</field>
+            <field name="translatable">False</field>
+        </record>
+        <record model="ir.ui.view" id="cdssale_income_daily_start_view_form">
+            <field name="model">sale_pos.cdssale_income_daily.start</field>
+            <field name="type">form</field>
+            <field name="name">cdssale_income_daily_start_form</field>
+        </record>
+        <record model="ir.action.wizard" id="wizard_printer_sale_income_daily">
+            <field name="name">Sale Report </field>
+            <field name="wiz_name">sale_pos.cdssale_income_daily</field>
+        </record>
+        <menuitem parent="sale.menu_reporting" id="menu_sale_income_daily"
+            action="wizard_printer_sale_income_daily" sequence="11"
+            icon="tryton-print"/>
     </data>
 </tryton>
