@@ -345,7 +345,7 @@ class CDSSaleIncomeDailyReport(Report):
             ('company', '=', data['company']),
             ('invoice_date', '=', data['date']),
             ('number', '!=', None),
-            ('state', 'in', ['posted', 'paid', 'canceled', 'validated']),
+            ('state', 'in', ['posted', 'paid', 'validated']),
         ]
         shop_names = ''
         if data['shop']:
@@ -372,6 +372,7 @@ class CDSSaleIncomeDailyReport(Report):
             cash = 0
             electronic = 0
             credit = 0
+            paid = 0
             total_invoices_amount.append(invoice.total_amount)
             if invoice.sales:
                 sale = invoice.sales[0]
