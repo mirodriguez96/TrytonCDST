@@ -54,6 +54,7 @@ def register():
         wiz.AddCenterOperationLineP,
         #report.PortfolioStatusStart,
         report.PayrollExportStart,
+        report.CDSSaleIncomeDailyStart,
         payroll.Bank,
         payroll.PayrollPaymentStartBcl,
         payroll.StaffEvent,
@@ -87,6 +88,7 @@ def register():
         wiz.ReimportExcepcionDocument,
         #report.PortfolioStatus,
         report.PayrollExport,
+        report.CDSSaleIncomeDaily,
         payroll.PayrollPaymentBcl,
         payroll.PayslipSend,
         payroll.LiquidationPaymentBcl,
@@ -97,6 +99,7 @@ def register():
     Pool.register(
         #report.PortfolioStatusReport,
         report.PayrollExportReport,
+        report.CDSSaleIncomeDailyReport,
         payroll.PayrollPaymentReportBcl,
         payroll.LiquidationPaymentReportBcl,
         module='conector', type_='report')
