@@ -697,19 +697,19 @@ class SaleLine(metaclass=PoolMeta):
         super(SaleLine, cls).__setup__()
 
     # Se hereda la funcion 'compute_taxes' para posteriormente quitar el impuesto (IVA) a los terceros 'regimen_no_responsable'
-    def compute_taxes(self, party):
-        taxes_id = super(SaleLine, self).compute_taxes(party)
-        Tax = Pool().get('account.tax')
-        if party.regime_tax == 'regimen_no_responsable':
-            taxes_result = set()
-            for tax_id in taxes_id:
-                tax = Tax(tax_id)
-                # El impuesto de IVA equivale al codigo 01
-                if tax.classification_tax_tecno == '01':
-                    continue
-                taxes_result.add(tax_id)
-            taxes_id = list(taxes_result)
-        return taxes_id
+    # def compute_taxes(self, party):
+    #     taxes_id = super(SaleLine, self).compute_taxes(party)
+    #     Tax = Pool().get('account.tax')
+    #     if party.regime_tax == 'regimen_no_responsable':
+    #         taxes_result = set()
+    #         for tax_id in taxes_id:
+    #             tax = Tax(tax_id)
+    #             # El impuesto de IVA equivale al codigo 01
+    #             if tax.classification_tax_tecno == '01':
+    #                 continue
+    #             taxes_result.add(tax_id)
+    #         taxes_id = list(taxes_result)
+    #     return taxes_id
 
 
 class Statement(metaclass=PoolMeta):

@@ -5,7 +5,7 @@ from trytond.pool import Pool
 from trytond.transaction import Transaction
 from trytond.exceptions import UserError, UserWarning
 from sql import Table
-#import datetime
+import datetime
 
 _EXPORTADO = [
     ('N', '(N) SIN IMPORTAR'),
@@ -39,19 +39,19 @@ class FixBugsConector(Wizard):
         #     print(invoice, sale)
         #     Sale.post_invoices(sale)
 
-        # cursor = Transaction().connection.cursor()
-        # sale_table = Table('sale_sale')
-        # Sale = pool.get('sale.sale')
-        # start_date = datetime.datetime(2022,12,22)
-        # end_date = datetime.datetime(2023,1,4)
-        # cursor.execute(*sale_table.select(sale_table.id,
-        #     where= (sale_table.create_date >= start_date) & (sale_table.create_date < end_date)
-        #     ))
-        # for sale_id in cursor.fetchall():
-        #     sale = Sale(sale_id[0])
-        #     print(sale)
-        #     Sale.delete_imported_sales([sale])
-        #     Transaction().connection.commit()
+        cursor = Transaction().connection.cursor()
+        sale_table = Table('sale_sale')
+        Sale = pool.get('sale.sale')
+        start_date = datetime.datetime(2022,12,22)
+        end_date = datetime.datetime(2023,1,4)
+        cursor.execute(*sale_table.select(sale_table.id,
+            where= (sale_table.create_date >= start_date) & (sale_table.create_date < end_date)
+            ))
+        for sale_id in cursor.fetchall():
+            sale = Sale(sale_id[0])
+            print(sale)
+            Sale.delete_imported_sales([sale])
+            Transaction().connection.commit()
 
         return 'end'
 

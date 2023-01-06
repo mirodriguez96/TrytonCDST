@@ -26,17 +26,19 @@ class Party(metaclass=PoolMeta):
         pool = Pool()
         Config = pool.get('conector.configuration')
         value = 0
+        now = datetime.datetime.now()
+        date_time = datetime.datetime(now.year, now.month, now.day, now.hour, now.minute)
         
         global RECEIVABLE_PAYABLE_TECNO
-        if not RECEIVABLE_PAYABLE_TECNO:
+        if not RECEIVABLE_PAYABLE_TECNO or (RECEIVABLE_PAYABLE_TECNO and RECEIVABLE_PAYABLE_TECNO['date_time'] < date_time):
             query = "SELECT nit_cedula, sum(porcobrar), sum(porpagar) from VIEWCTASPORPAGARYCOBRAR GROUP BY nit_cedula"
             result = Config.get_data(query)
             for val in result:
-                if val[0] not in RECEIVABLE_PAYABLE_TECNO.keys():
-                    RECEIVABLE_PAYABLE_TECNO[val[0]] = {
-                        'receivable': val[1],
-                        'payable': val[2]
-                    }
+                RECEIVABLE_PAYABLE_TECNO[val[0]] = {
+                    'receivable': val[1],
+                    'payable': val[2]
+                }
+            RECEIVABLE_PAYABLE_TECNO['date_time'] = date_time
         if name == 'receivable_tecno':
             if self.id_number in RECEIVABLE_PAYABLE_TECNO.keys():
                 value = RECEIVABLE_PAYABLE_TECNO[self.id_number]['receivable']
@@ -76,7 +78,7 @@ class Party(metaclass=PoolMeta):
                 telefono = tercero.telefono.strip()
                 TipoPersona = cls.person_type(tercero.TipoPersona.strip())
                 ciiu = tercero.IdActividadEconomica
-                TipoContribuyente = cls.tax_regime(tercero.IdTipoContribuyente)
+                regime_tax = cls.tax_regime(tercero)
                 exists = Party.search([('id_number', '=', nit_cedula)])
                 #Ahora verificamos si el tercero existe en tryton
                 if exists:
@@ -105,7 +107,7 @@ class Party(metaclass=PoolMeta):
                         #Verificación e inserción codigo ciiu
                         if ciiu and ciiu != 0:
                             exists.ciiu_code = ciiu
-                        exists.regime_tax = TipoContribuyente
+                        exists.regime_tax = regime_tax
                         contact_mail = Mcontact.search([('id_tecno', '=', nit_cedula+'-mail')])
                         if contact_mail:
                             contact_mail, = contact_mail
@@ -142,7 +144,7 @@ class Party(metaclass=PoolMeta):
                         'second_name': SegundoNombre,
                         'first_family_name': PrimerApellido,
                         'second_family_name': SegundoApellido,
-                        'regime_tax': TipoContribuyente,
+                        'regime_tax': regime_tax,
                         'type_person': TipoPersona,
                     }
                     # Equivalencia tipo de persona y asignación True en declarante
@@ -349,16 +351,16 @@ class Party(metaclass=PoolMeta):
     #Función encargada de realizar la equivalencia entre los regimen de impuestos de la db TecnoCarnes
     # y los regimen de impuestos del modulo account_col de presik
     @classmethod
-    def tax_regime(cls, regime):
+    def tax_regime(cls, tercero):
+        regime_tax = None
         #Equivalencia regimen de impuestos
-        if regime == 1 or regime == 4:
-            return 'gran_contribuyente'
-        elif regime == 2 or regime == 5 or regime == 6 or regime == 7 or regime == 8:
-            return 'regimen_responsable'
-        elif regime == 3 or regime == 0:
-            return'regimen_no_responsable'
-        else:
-            return None
+        if tercero.IdRegimen_Fiscal == 48:
+            regime_tax = 'regimen_responsable'
+        elif tercero.IdRegimen_Fiscal == 49:
+            regime_tax = 'regimen_no_responsable'
+        elif tercero.IdTipoContribuyente == 1 or tercero.IdTipoContribuyente == 4:
+            regime_tax = 'gran_contribuyente'
+        return regime_tax
 
 #Herencia del party.address e insercción del campo id_tecno
 class PartyAddress(metaclass=PoolMeta):
