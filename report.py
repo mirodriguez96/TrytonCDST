@@ -374,6 +374,7 @@ class CDSSaleIncomeDailyReport(Report):
             credit = 0
             paid = 0
             total_invoices_amount.append(invoice.total_amount)
+            sale_device_name = 'NO TERMINAL'
             if invoice.sales:
                 sale = invoice.sales[0]
                 if sale.sale_device:
