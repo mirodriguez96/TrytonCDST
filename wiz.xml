@@ -194,6 +194,16 @@
             <field name="model">conector.actualizacion,-1</field>
             <field name="action" ref="act_reimport_documents"/>
         </record>
+        <!--Asistente para confirmar varias lineas de extractos bancarios-->
+        <record model="ir.action.wizard" id="act_confirm_lines">
+            <field name="name">Confirm lines bank statement</field>
+            <field name="wiz_name">account.bank_statement.confirm_bank_statement_lines</field>
+        </record>
+        <record model="ir.action.keyword" id="act_confirm_lines_keyword">
+            <field name="keyword">form_action</field>
+            <field name="model">account.bank_statement,-1</field>
+            <field name="action" ref="act_confirm_lines"/>
+        </record>
     </data>
 
 </tryton>

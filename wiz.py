@@ -432,3 +432,22 @@ class ReimportExcepcionDocument(Wizard):
             query = "UPDATE dbo.Documentos SET exportado = 'N' WHERE exportado = 'E' "+cond
             Config.set_data(query)
         return 'end'
+
+class ConfirmLinesBankstatement(Wizard):
+    __name__ = 'account.bank_statement.confirm_bank_statement_lines'
+    start_state = 'run'
+    run = StateTransition()
+
+    def transition_run(self):
+        pool = Pool()
+        BankStatement = pool.get('account.bank_statement')
+        BankStatementLines = pool.get('account.bank_statement.line')
+        ids = Transaction().context['active_ids']
+        if ids:
+            lineas = []
+            for Statement in BankStatement.browse(ids):
+                for line in Statement.lines:
+                     if line.state != 'confirmed':
+                        lineas.append(line)
+                BankStatementLines.confirm(lineas)
+        return 'end'

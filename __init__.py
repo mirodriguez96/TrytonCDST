@@ -94,6 +94,7 @@ def register():
         payroll.LiquidationPaymentBcl,
         payroll.SettlementSend,
         wiz.DocumentsForImport,
+        wiz.ConfirmLinesBankstatement,
         module='conector', type_='wizard')
 
     Pool.register(
