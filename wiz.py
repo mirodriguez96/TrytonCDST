@@ -1,4 +1,4 @@
-#from decimal import Decimal
+from decimal import Decimal
 from trytond.model import ModelView, fields
 from trytond.wizard import Wizard, StateTransition, StateView, Button
 from trytond.pool import Pool
@@ -40,29 +40,25 @@ class FixBugsConector(Wizard):
         #     Sale.post_invoices(sale)
 
         cursor = Transaction().connection.cursor()
-        voucher_table = Table('account_voucher')
-        Voucher = pool.get('account.voucher')
-        start_date = datetime.datetime(2022,12,22)
-        end_date = datetime.datetime(2023,1,4)
-        # Reimporta comprobantes de ingreso
-        cursor.execute(*voucher_table.select(voucher_table.id,
-            where= (voucher_table.create_date >= start_date) & (voucher_table.create_date < end_date) & (voucher_table.id_tecno != None)
+        sale_table = Table('sale_sale')
+        Sale = pool.get('sale.sale')
+        Config = pool.get('conector.configuration')
+        start_date = datetime.datetime(2023,1,4,21)
+        end_date = datetime.datetime(2023,1,7)
+        # Reimporta ventas sin impuesto
+        cursor.execute(*sale_table.select(sale_table.id,
+            where= (sale_table.create_date >= start_date) & (sale_table.create_date < end_date) & (sale_table.id_tecno != None) & (sale_table.tax_amount_cache == Decimal('0.0'))
             ))
-        for voucher_id in cursor.fetchall():
-            voucher = Voucher(voucher_id[0])
-            print(voucher)
-            Voucher.delete_imported_vouchers([voucher])
-            Transaction().connection.commit()
-        # Reimporta multi-ingresos
-        multirevenue_table = Table('account_multirevenue')
-        Multirevenue = pool.get('account.multirevenue')
-        cursor.execute(*multirevenue_table.select(multirevenue_table.id,
-            where= (multirevenue_table.create_date >= start_date) & (multirevenue_table.create_date < end_date) & (multirevenue_table.id_tecno != None)
-            ))
-        for multirevenue_id in cursor.fetchall():
-            multirevenue = Multirevenue(multirevenue_id[0])
-            print(multirevenue)
-            Multirevenue.mark_rimport([multirevenue])
+        for sale_id in cursor.fetchall():
+            sale = Sale(sale_id[0])
+            id_tecno = sale.id_tecno
+            lista = id_tecno.split('-')
+            query = "SELECT * FROM dbo.Documentos WHERE sw="+lista[0]+" AND tipo="+lista[1]+" AND numero_documento="+lista[2]
+            datas = Config.get_data(query)
+            for data in datas:
+                if data.Valor_impuesto != Decimal('0.0') or data.Impuesto_Consumo != Decimal('0.0'):
+                    print(id_tecno)
+                    Sale.delete_imported_sales([sale])
             Transaction().connection.commit()
 
         return 'end'
