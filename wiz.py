@@ -45,8 +45,7 @@ class FixBugsConector(Wizard):
             datas = Config.get_data(query)
             for data in datas:
                 ivas = data.Valor_impuesto + data.Impuesto_Consumo
-                dif = abs(ivas - sale.tax_amount)
-                if ivas != Decimal('0.0') and dif < Decimal('10.0'):
+                if ivas != Decimal('0.0') and ivas != sale.tax_amount:
                     print(id_tecno)
                     Sale.delete_imported_sales([sale])
             Transaction().connection.commit()
