@@ -43,7 +43,7 @@ class FixBugsConector(Wizard):
         sale_table = Table('sale_sale')
         Sale = pool.get('sale.sale')
         Config = pool.get('conector.configuration')
-        start_date = datetime.datetime(2023,1,4,21)
+        start_date = datetime.datetime(2023,1,4,11)
         end_date = datetime.datetime(2023,1,7)
         # Reimporta ventas sin impuesto
         cursor.execute(*sale_table.select(sale_table.id,
