@@ -14,6 +14,8 @@ _EXPORTADO = [
     ('T', '(T) IMPORTADO')
 ]
 
+ZERO = Decimal('0.0')
+
 class FixBugsConector(Wizard):
     'Fix Bugs Conector'
     __name__ = 'conector.configuration.fix_bugs_conector'
@@ -35,7 +37,7 @@ class FixBugsConector(Wizard):
         end_date = datetime.datetime(2023,1,7)
         # Reimporta ventas sin impuesto
         cursor.execute(*sale_table.select(sale_table.id,
-            where= (sale_table.create_date >= start_date) & (sale_table.create_date < end_date) & (sale_table.id_tecno != None) & (sale_table.tax_amount_cache != Decimal('0.0'))
+            where= (sale_table.create_date >= start_date) & (sale_table.create_date < end_date) & (sale_table.id_tecno != None)
             ))
         for sale_id in cursor.fetchall():
             sale = Sale(sale_id[0])
@@ -44,9 +46,18 @@ class FixBugsConector(Wizard):
             query = "SELECT * FROM dbo.Documentos WHERE sw="+lista[0]+" AND tipo="+lista[1]+" AND numero_documento="+lista[2]
             datas = Config.get_data(query)
             for data in datas:
-                ivas = data.Valor_impuesto + data.Impuesto_Consumo
-                if ivas != Decimal('0.0') and ivas != sale.tax_amount:
+                impuestos_tecno = data.Valor_impuesto + data.Impuesto_Consumo
+                # subtotal_tecno = data.valor_total - impuestos_tecno
+                total_tecno = data.valor_total
+                if data.retencion_causada > ZERO:
+                    impuestos_tecno = impuestos_tecno - data.retencion_causada
+                    total_tecno = total_tecno - data.retencion_causada
+                dif = abs(abs(sale.tax_amount) - abs(impuestos_tecno))
+                if impuestos_tecno != ZERO and dif > Decimal('5.0'):
                     print(id_tecno)
+                    # print(sale.untaxed_amount, subtotal_tecno)
+                    # print(sale.tax_amount, impuestos_tecno)
+                    # print(sale.total_amount, total_tecno)
                     Sale.delete_imported_sales([sale])
             Transaction().connection.commit()
 
