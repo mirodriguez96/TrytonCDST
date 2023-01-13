@@ -94,6 +94,14 @@ class Sale(metaclass=PoolMeta):
                     logs.append(msg)
                     not_import.append(id_venta)
                     continue
+                if venta.sw == 2:
+                    dcto_base = str(venta.Tipo_Docto_Base)+'-'+str(venta.Numero_Docto_Base)
+                    original_invoice = Sale.search([('number', '=', dcto_base)])
+                    if not original_invoice:
+                        msg = f"EXCEPCION: El documento (devolucion) {id_venta} no encuentra el documento de referencia {dcto_base} para ser cruzado"
+                        logs.append(msg)
+                        to_exception.append(id_venta)
+                        continue
                 if company_operation and not operation_center:
                     msg = f"EXCEPCION {id_venta} - Falta el centro de operación"
                     logs.append(msg)
@@ -529,7 +537,7 @@ class Sale(metaclass=PoolMeta):
                     if total_paid == sale.total_amount:
                         Sale.do_reconcile([sale])
                     else:
-                        msg = f"{sale.id_tecno} sale_pos.msg_total_paid_>_total_amount"
+                        msg = f"{sale.id_tecno} - venta pos con un total pagado mayor al total de la venta"
                         logs.append(msg)
                         to_exception.append(sale.id_tecno)
                     continue
