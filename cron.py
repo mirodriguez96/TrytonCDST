@@ -41,9 +41,6 @@ class Cron(metaclass=PoolMeta):
             ('account.voucher.paymode|update_paymode', "Importar formas de pago"),
             )
         cls.method.selection.append(
-            ('account.voucher.paymode|update_paymode', "Importar formas de pago"),
-            )
-        cls.method.selection.append(
             ('account.invoice.payment_term|import_payment_term', "Importar plazos de pago"),
             )
         cls.method.selection.append(
