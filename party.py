@@ -79,7 +79,10 @@ class Party(metaclass=PoolMeta):
                 TipoPersona = cls.person_type(tercero.TipoPersona.strip())
                 ciiu = tercero.IdActividadEconomica
                 regime_tax = cls.tax_regime(tercero)
-                exists = Party.search([('id_number', '=', nit_cedula)])
+                exists = Party.search(['AND',
+                    ('id_number', '=', nit_cedula),
+                    ['OR', ('active', '=', True), ('active', '=', False)]
+                ])
                 #Ahora verificamos si el tercero existe en tryton
                 if exists:
                     exists, = exists

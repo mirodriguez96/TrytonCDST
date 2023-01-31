@@ -236,7 +236,7 @@ class Sale(metaclass=PoolMeta):
                 for lin in documentos_linea:
                     producto = Product.search(['OR', ('id_tecno', '=', str(lin.IdProducto)), ('code', '=', str(lin.IdProducto))])
                     if not producto:
-                        msg = f"REVISAR {id_venta} - No se encontro el producto {str(lin.IdProducto)} - Revisar variante o inactivos"
+                        msg = f"REVISAR {id_venta} - No se encontro el producto {str(lin.IdProducto)} - Revisar si tiene variante o esta inactivo"
                         logs.append(msg)
                         not_product = True
                         break

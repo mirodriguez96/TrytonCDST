@@ -146,7 +146,7 @@ class Purchase(metaclass=PoolMeta):
                     #print(id_producto)
                     producto = Product.search([('id_tecno', '=', str(lin.IdProducto))])
                     if not producto:
-                        msg = f"{id_compra} No se encontro el producto {str(lin.IdProducto)} - Revisar variante o inactivos"
+                        msg = f"{id_compra} No se encontro el producto {str(lin.IdProducto)} - Revisar si tiene variante o esta inactivo"
                         logs.append(msg)
                         not_product = True
                         break
