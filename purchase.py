@@ -35,7 +35,7 @@ class Purchase(metaclass=PoolMeta):
         actualizacion = Actualizacion.create_or_update('COMPRAS')
         if not data:
             actualizacion.save()
-            print('FINISH COMPRAS')
+            print('FINISH COMPRAS PREMA')
             return
         Invoice = pool.get('account.invoice')
         Purchase = pool.get('purchase.purchase')
@@ -150,6 +150,12 @@ class Purchase(metaclass=PoolMeta):
                         logs.append(msg)
                         not_product = True
                         break
+                    #mensaje si la busqueda de "Product" trae mas de un producto
+                    elif len(producto) > 1:
+                      msg = f"REVISAR {id_compra} - Hay mas de un producto que tienen el mismo código o id_tecno."
+                      logs.append(msg)
+                      not_product = True
+                      break
                     producto, = producto
                     line = PurchaseLine()
                     line.product = producto

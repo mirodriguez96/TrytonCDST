@@ -121,6 +121,7 @@ class Voucher(ModelSQL, ModelView):
                 else:
                     exceptions.append(id_tecno)
                     continue
+                voucher.save()
                 #Se verifica que el comprobante tenga lineas para ser procesado y contabilizado (doble verificación por error)
                 if voucher.lines and voucher.amount_to_pay > 0:
                     Voucher.process([voucher])
@@ -141,7 +142,7 @@ class Voucher(ModelSQL, ModelView):
                         line_ajuste.save()
                         voucher.on_change_lines()
                         Voucher.post([voucher])
-                voucher.save()
+                    voucher.save()
                 created.append(id_tecno)
             except Exception as e:
                 msg = f"EXCEPCION RECIBO {id_tecno} : {str(e)}"

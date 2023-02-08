@@ -34,7 +34,7 @@ class Sale(metaclass=PoolMeta):
         actualizacion = Actualizacion.create_or_update('VENTAS')
         if not data:
             actualizacion.save()
-            print('FINISH VENTAS')
+            print('FINISH VENTAS PREMA')
             return
         Sale = pool.get('sale.sale')
         SaleLine = pool.get('sale.line')
@@ -179,6 +179,12 @@ class Sale(metaclass=PoolMeta):
                     logs.append(msg)
                     to_exception.append(id_venta)
                     continue
+                #si la busqueda de "SaleDevice" trae mas de una terminal 
+                elif len(sale_device) > 1:
+                   msg = f'EXCEPCION {id_venta} - Hay mas de una terminal que concuerdan con el mismo equipo de venta y bodega'
+                   logs.append(msg)
+                   to_exception.append(id_venta)
+                   continue
                 sale_device = sale_device[0]
 
                 with Transaction().set_user(1):
@@ -240,7 +246,19 @@ class Sale(metaclass=PoolMeta):
                         logs.append(msg)
                         not_product = True
                         break
+                    #Verificamos si la busqueda de "Product" trae mas de un producto
+                    if len(producto) > 1:
+                      msg = f"REVISAR {id_venta} - Hay mas de un producto que tienen el mismo código o id_tecno."
+                      logs.append(msg)
+                      not_product = True
+                      break
                     producto, = producto
+                    #verificacion que el producto si este marcado para la venta.
+                    if not producto.template.salable:
+                      msg = f"REVISAR {id_venta} - El producto {str(lin.IdProducto)} no esta marcado como vendible"
+                      logs.append(msg)
+                      not_product = True
+                      break
                     linea = SaleLine()
                     linea.sale = sale
                     linea.product = producto
