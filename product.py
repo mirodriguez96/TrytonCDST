@@ -85,6 +85,9 @@ class Product(metaclass=PoolMeta):
                         existe.template.account_category = categoria_contable.id
                         existe.template.sale_price_w_tax = valor_unitario
                         existe.template.save()
+                        # Se realiza la asignacion de nuevo del id_tecno para que al guardar el producto detecte cambios y se actualice la fecha de ultima modificacion
+                        existe.id_tecno = id_producto
+                        existe.save()
                 else:
                     prod = Product()
                     temp = Template()
@@ -172,8 +175,8 @@ class ProductCategory(metaclass=PoolMeta):
             id_tecno = modelo.IDMODELOS
             try:
                 name = str(id_tecno)+' - '+modelo.MODELOS.strip()
-                existe = Category.search([('id_tecno', '=', id_tecno)])
-                if not existe:
+                category = Category.search([('id_tecno', '=', id_tecno)])
+                if not category:
                     category = {
                         'id_tecno': id_tecno,
                         'name': name,
