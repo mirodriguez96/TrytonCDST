@@ -113,6 +113,8 @@ class ElectronicPayroll(object):
         self.company_first_familyname = payroll.company.party.first_family_name or ''
         self.company_second_familyname = payroll.company.party.second_family_name or ''
         self.company_check_digit = payroll.company.party.check_digit
+        if self.company_check_digit and self.company_check_digit == 0:
+            self.company_check_digit = '0'
         self.company_country_code = 'CO'
         self.company_department_code = payroll.company.party.department_code
         self.company_city_code = payroll.company.party.city_code
