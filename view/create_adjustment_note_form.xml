@@ -8,4 +8,10 @@ this repository contains the full copyright notices and license terms. -->
     <field name="adjustment_account"/>
     <label name="analytic_account"/>
     <field name="analytic_account"/>
+    <label name="date_start"/>
+    <field name="date_start"/>
+    <label name="date_finish"/>
+    <field name="date_finish"/>
+    <label name="date"/>
+    <field name="date"/>
 </form>

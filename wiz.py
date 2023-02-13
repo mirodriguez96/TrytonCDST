@@ -305,6 +305,9 @@ class CreateAdjustmentNotesParameters(ModelView):
     invoice_type = fields.Selection([('in', 'Proveedor'), ('out', 'Cliente')], 'Invoice type', required=True)
     adjustment_account = fields.Many2One('account.account', 'Adjustment account', domain=[('type', '!=', None)], required=True)
     analytic_account = fields.Char('Analytic account')
+    date_start = fields.Date('Date initial',required=True)
+    date_finish = fields.Date('Date end',required=True)
+    date = fields.Date('Date for notes',required=True)
 
 # Asistente encargado de crear las notas contables que realizaran el ajuste a las facturas con salod menor a 600 pesos
 class CreateAdjustmentNotes(Wizard):
@@ -324,7 +327,10 @@ class CreateAdjustmentNotes(Wizard):
         data = {
             'invoice_type': self.start.invoice_type,
             'adjustment_account': self.start.adjustment_account,
-            'analytic_account': None
+            'analytic_account': None,
+            'date': self.start.date,
+            'date_start': self.start.date_start,
+            'date_finish': self.start.date_finish
         }
         config = pool.get('account.voucher_configuration')(1)
         if config.adjustment_amount and config.adjustment_amount > 0:

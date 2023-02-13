@@ -886,7 +886,7 @@ class Note(metaclass=PoolMeta):
         Note = pool.get('account.note')
         Line = pool.get('account.note.line')
         Invoice = pool.get('account.invoice')
-        invoices = Invoice.search([('type', '=', data['invoice_type']), ('state', '=', 'posted')])
+        invoices = Invoice.search([('type', '=', data['invoice_type']), ('state', '=', 'posted'),('invoice_date', '>=',data['date_start']),('invoice_date', '<=', data['date_finish'])])
         inv_adjustment = []
         for inv in invoices:
             if inv.amount_to_pay <= data['amount'] and inv.amount_to_pay > 0:
@@ -960,7 +960,7 @@ class Note(metaclass=PoolMeta):
             if period:
                 note.date = last_date
             else:
-                note.date = datetime.date.today()
+                note.date = data['date']
             note.journal = config.default_journal_note
             note.description = f"AJUSTE FACTURA {inv.number}"
             note.lines = lines_to_create
