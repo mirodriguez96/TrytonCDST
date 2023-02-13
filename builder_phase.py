@@ -168,6 +168,8 @@ class ElectronicPayroll(object):
             if k in bank_inf and not self.payroll.bank_payment:
                 continue
             elif not field_value:
+                if k == 'company_check_digit': # FIX
+                    continue
                 self.status = MESSAGES[k]
                 break
 
