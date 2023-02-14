@@ -141,20 +141,19 @@ class Purchase(metaclass=PoolMeta):
                         retencion_rete = True
                 #Ahora traemos las lineas de producto para la compra a procesar
                 #_lines = []
-                not_product = False
                 for lin in lineas_tecno:
                     #print(id_producto)
                     producto = Product.search([('id_tecno', '=', str(lin.IdProducto))])
                     if not producto:
                         msg = f"{id_compra} No se encontro el producto {str(lin.IdProducto)} - Revisar si tiene variante o esta inactivo"
                         logs.append(msg)
-                        not_product = True
+                        to_exception.append(id_compra)
                         break
                     #mensaje si la busqueda de "Product" trae mas de un producto
                     elif len(producto) > 1:
                       msg = f"REVISAR {id_compra} - Hay mas de un producto que tienen el mismo código o id_tecno."
                       logs.append(msg)
-                      not_product = True
+                      to_exception.append(id_compra)
                       break
                     producto, = producto
                     line = PurchaseLine()
@@ -195,8 +194,12 @@ class Purchase(metaclass=PoolMeta):
                                 impuestos_linea.append(impuestol)
                         elif impuestol.consumo and impuesto_consumo > 0:
                             #Se busca el impuesto al consumo con el mismo valor para aplicarlo
-                            tax = Tax.search([('consumo', '=', True), ('type', '=', 'fixed'), ('amount', '=', impuesto_consumo)])
+                            tax = Tax.search([('consumo', '=', True), ('type', '=', 'fixed'), ('amount', '=', impuesto_consumo), ('group.kind', '=', 'purchase')])
                             if tax:
+                                if len(tax) > 1:
+                                    msg = f"EXCEPCION {id_compra} - Se encontro mas de un impuesto de tipo consumo con el importe igual a {impuesto_consumo} del grupo compras, recuerde que se debe manejar un unico impuesto con esta configuracion"
+                                    logs.append(msg)
+                                    to_exception.append(id_compra)
                                 tax, = tax
                                 impuestos_linea.append(tax)
                             else:
@@ -213,8 +216,7 @@ class Purchase(metaclass=PoolMeta):
                     line.taxes = impuestos_linea
                     line.unit_price = lin.Valor_Unitario
                     line.save()
-                if not_product:
-                    to_exception.append(id_compra)
+                if id_compra in to_exception:
                     continue
                 #Procesamos la compra para generar la factura y procedemos a rellenar los campos de la factura
                 purchase.quote([purchase])

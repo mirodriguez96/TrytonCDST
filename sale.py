@@ -237,27 +237,26 @@ class Sale(metaclass=PoolMeta):
                     elif (venta.retencion_iva + venta.retencion_ica) != venta.retencion_causada:
                         retencion_rete = True
                 #Ahora se procede a crear las líneas para la venta
-                not_product = False
                 #_lines = []
                 for lin in documentos_linea:
                     producto = Product.search(['OR', ('id_tecno', '=', str(lin.IdProducto)), ('code', '=', str(lin.IdProducto))])
                     if not producto:
                         msg = f"REVISAR {id_venta} - No se encontro el producto {str(lin.IdProducto)} - Revisar si tiene variante o esta inactivo"
                         logs.append(msg)
-                        not_product = True
+                        to_exception.append(id_venta)
                         break
                     #Verificamos si la busqueda de "Product" trae mas de un producto
                     if len(producto) > 1:
                       msg = f"REVISAR {id_venta} - Hay mas de un producto que tienen el mismo código o id_tecno."
                       logs.append(msg)
-                      not_product = True
+                      to_exception.append(id_venta)
                       break
                     producto, = producto
                     #verificacion que el producto si este marcado para la venta.
                     if not producto.template.salable:
                       msg = f"REVISAR {id_venta} - El producto {str(lin.IdProducto)} no esta marcado como vendible"
                       logs.append(msg)
-                      not_product = True
+                      to_exception.append(id_venta)
                       break
                     linea = SaleLine()
                     linea.sale = sale
@@ -300,8 +299,12 @@ class Sale(metaclass=PoolMeta):
                                 impuestos_linea.append(impuestol)
                         elif impuestol.consumo and impuesto_consumo > 0:
                             #Se busca el impuesto al consumo con el mismo valor para aplicarlo
-                            tax = Tax.search([('consumo', '=', True), ('type', '=', 'fixed'), ('amount', '=', impuesto_consumo)])
+                            tax = Tax.search([('consumo', '=', True), ('type', '=', 'fixed'), ('amount', '=', impuesto_consumo), ('group.kind', '=', 'sale')])
                             if tax:
+                                if len(tax) > 1:
+                                    msg = f"EXCEPCION {id_venta} - Se encontro mas de un impuesto de tipo consumo con el importe igual a {impuesto_consumo} del grupo venta, recuerde que se debe manejar un unico impuesto con esta configuracion"
+                                    logs.append(msg)
+                                    to_exception.append(id_venta)
                                 tax, = tax
                                 impuestos_linea.append(tax)
                             else:
@@ -328,11 +331,10 @@ class Sale(metaclass=PoolMeta):
                         linea.analytic_accounts = [analytic_entry]
                     # _lines.append(linea)
                     linea.save()
-                if not_product:
+                if id_venta in to_exception:
                     # sale.invoice_number = None
                     # sale.save()
                     # Sale.delete([sale])
-                    to_exception.append(id_venta)
                     continue
                 #Se procesa los registros creados
                 with Transaction().set_user(1):
