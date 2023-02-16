@@ -258,17 +258,29 @@ class Sale(metaclass=PoolMeta):
                       logs.append(msg)
                       to_exception.append(id_venta)
                       break
+                    cantidad_facturada = round(float(lin.Cantidad_Facturada), 3)
+                    # Se convierte a entero la cantidad en caso de que la UOM sea de tipo UNIDAD
+                    if producto.template.default_uom.id == 1:
+                        cantidad_facturada = int(cantidad_facturada)
+                    if cantidad_facturada < 0: # negativo = devolucion (TecnoCarnes)
+                        cant = cantidad_facturada
+                        for line in sale.lines:
+                            line_quantity = line.quantity
+                            if sw == 2:
+                                line_quantity = (line_quantity * -1)
+                                cant = (cantidad_facturada * -1)
+                            if line.product == producto and line_quantity > 0: # Mejorar
+                                total_quantity = round((line.quantity + cant), 3)
+                                line.quantity = total_quantity
+                                line.save()
+                                break
+                        continue
                     linea = SaleLine()
                     linea.sale = sale
                     linea.product = producto
                     linea.type = 'line'
                     linea.unit = producto.template.default_uom
-                    #Se verifica si es una devolución
-                    cant = float(lin.Cantidad_Facturada)
-                    cantidad_facturada = abs(round(cant, 3))
-                    if linea.unit.id == 1:
-                        cantidad_facturada = int(cantidad_facturada)
-                    #print(cant, cantidad_facturada)
+                    # Se verifica si es una devolución
                     if sw == 2:
                         linea.quantity = cantidad_facturada * -1
                         dcto_base = str(venta.Tipo_Docto_Base)+'-'+str(venta.Numero_Docto_Base)
@@ -299,16 +311,20 @@ class Sale(metaclass=PoolMeta):
                                 impuestos_linea.append(impuestol)
                         elif impuestol.consumo and impuesto_consumo > 0:
                             #Se busca el impuesto al consumo con el mismo valor para aplicarlo
-                            tax = Tax.search([('consumo', '=', True), ('type', '=', 'fixed'), ('amount', '=', impuesto_consumo), ('group.kind', '=', 'sale')])
+                            tax = Tax.search([('consumo', '=', True), ('type', '=', 'fixed'), ('amount', '=', impuesto_consumo), ['OR', ('group.kind', '=', 'sale'), ('group.kind', '=', 'both')]])
                             if tax:
                                 if len(tax) > 1:
                                     msg = f"EXCEPCION {id_venta} - Se encontro mas de un impuesto de tipo consumo con el importe igual a {impuesto_consumo} del grupo venta, recuerde que se debe manejar un unico impuesto con esta configuracion"
                                     logs.append(msg)
                                     to_exception.append(id_venta)
+                                    break
                                 tax, = tax
                                 impuestos_linea.append(tax)
                             else:
-                                raise UserError('ERROR IMPUESTO', 'No se encontró el impuesto al consumo: '+id_venta)
+                                msg = f"EXCEPCION: {id_venta} - No se encontró el impuesto al consumo con el importe igual a {impuesto_consumo}"
+                                logs.append(msg)
+                                to_exception.append(id_venta)
+                                break
                         elif clase_impuesto != '05' and clase_impuesto != '06' and clase_impuesto != '07' and not impuestol.consumo:
                             if impuestol not in impuestos_linea:
                                 impuestos_linea.append(impuestol)
@@ -332,15 +348,22 @@ class Sale(metaclass=PoolMeta):
                     # _lines.append(linea)
                     linea.save()
                 if id_venta in to_exception:
-                    # sale.invoice_number = None
-                    # sale.save()
-                    # Sale.delete([sale])
+                    sale.number = None
+                    sale.invoice_number = None
+                    sale.save()
+                    Sale.delete([sale])
                     continue
                 #Se procesa los registros creados
                 with Transaction().set_user(1):
                     context = User.get_preferences()
                 with Transaction().set_context(context, _skip_warnings=True):
                     Sale.quote([sale])
+                    validate_amount = cls.validate_amount(sale.total_amount, venta)
+                    if not validate_amount:
+                        msg = f'EXCEPCION: REVISAR {id_venta} El total de Tryton {sale.total_amount} NO es igual al total de TecnoCarnes {venta.valor_total}'
+                        logs.append(msg)
+                        to_exception.append(id_venta)
+                        continue
                     Sale.confirm([sale])
                     Sale.process([sale])
                     cls.finish_shipment_process(sale)
@@ -464,6 +487,19 @@ class Sale(metaclass=PoolMeta):
                 logs.append(full_msg)
                 invoice.comment = msg2
                 invoice.save()
+    
+    @classmethod
+    def validate_amount(cls, total_tryton, venta):
+        result = False
+        total_tryton = abs(total_tryton)
+        total_tecno = abs(venta.valor_total)
+        # valor_impuesto = abs(venta.Valor_impuesto)
+        # if valor_impuesto > 0:
+        #     total_tecno = (total_tecno - valor_impuesto)
+        diferencia = abs(total_tryton - total_tecno)
+        if diferencia < Decimal('6.0'):
+            result = True
+        return result
 
     #Función encargada de buscar recibos de caja pagados en TecnoCarnes y pagarlos en Tryton
     @classmethod
@@ -557,9 +593,9 @@ class Sale(metaclass=PoolMeta):
                     if total_paid == sale.total_amount:
                         Sale.do_reconcile([sale])
                     else:
-                        msg = f"{sale.id_tecno} - venta pos con un total pagado mayor al total de la venta"
+                        msg = f"REVISAR {sale.id_tecno} - venta pos con un total pagado mayor al total de la venta"
                         logs.append(msg)
-                        to_exception.append(sale.id_tecno)
+                        # to_exception.append(sale.id_tecno)
                     continue
             total_pay = args.get('sales')[sale]
             if not total_pay:
@@ -617,8 +653,7 @@ class Sale(metaclass=PoolMeta):
 
         for sale in sales:
             for invoice in sale.invoices:
-                if (hasattr(invoice, 'cufe') and invoice.cufe) or \
-                    hasattr(invoice, 'electronic_state') and \
+                if hasattr(invoice, 'electronic_state') and \
                     invoice.electronic_state == 'submitted':
                         raise UserError('account_col.msg_with_electronic_invoice')
                 if invoice.state == 'paid':

@@ -156,15 +156,26 @@ class Purchase(metaclass=PoolMeta):
                       to_exception.append(id_compra)
                       break
                     producto, = producto
+                    cantidad_facturada = abs(round(lin.Cantidad_Facturada, 3))
+                    if cantidad_facturada < 0: # negativo = devolucion (TecnoCarnes)
+                        cant = cantidad_facturada
+                        for line in compra.lines:
+                            line_quantity = line.quantity
+                            if sw == 2:
+                                line_quantity = (line_quantity * -1)
+                                cant = (cantidad_facturada * -1)
+                            if line.product == producto and line_quantity > 0: # Mejorar
+                                total_quantity = round((line.quantity + cant), 3)
+                                line.quantity = total_quantity
+                                line.save()
+                                break
+                        continue
                     line = PurchaseLine()
                     line.product = producto
                     line.purchase = purchase
                     line.type = 'line'
                     line.unit = producto.template.default_uom
                     #Se verifica si es una devolución
-                    cantidad_facturada = abs(round(lin.Cantidad_Facturada, 3))
-                    # if line.unit.id == 1:
-                    #     cantidad_facturada = int(cantidad_facturada)
                     if sw == 4:
                         line.quantity = cantidad_facturada * -1
                         #Se indica a que documento hace referencia la devolucion
@@ -194,7 +205,7 @@ class Purchase(metaclass=PoolMeta):
                                 impuestos_linea.append(impuestol)
                         elif impuestol.consumo and impuesto_consumo > 0:
                             #Se busca el impuesto al consumo con el mismo valor para aplicarlo
-                            tax = Tax.search([('consumo', '=', True), ('type', '=', 'fixed'), ('amount', '=', impuesto_consumo), ('group.kind', '=', 'purchase')])
+                            tax = Tax.search([('consumo', '=', True), ('type', '=', 'fixed'), ('amount', '=', impuesto_consumo), ['OR', ('group.kind', '=', 'purchase'), ('group.kind', '=', 'both')]])
                             if tax:
                                 if len(tax) > 1:
                                     msg = f"EXCEPCION {id_compra} - Se encontro mas de un impuesto de tipo consumo con el importe igual a {impuesto_consumo} del grupo compras, recuerde que se debe manejar un unico impuesto con esta configuracion"
