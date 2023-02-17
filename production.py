@@ -120,7 +120,7 @@ class Production(metaclass=PoolMeta):
                     elif cantidad > 0:
                         transf['from_location'] = bodega.production_location.id
                         transf['to_location'] = bodega.storage_location.id
-                        valor_unitario = Decimal(line.Valor_Unitario)
+                        valor_unitario = Decimal(round(line.Valor_Unitario, 2))
                         transf['unit_price'] = valor_unitario
                         salidas.append(transf)
                         # Se valida que el precio de venta sea diferente de 0
