@@ -17,6 +17,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.nonmultipart import MIMENonMultipart
 from email.mime.text import MIMEText
 from email.utils import formataddr, getaddresses
+from trytond.modules.company import CompanyReport
 from trytond.sendmail import sendmail
 from trytond.config import config
 
@@ -554,3 +555,33 @@ class Payroll(metaclass=PoolMeta):
                         wage = line.wage_type.rec_name
                         raise UserError('staff_event.msg_error_on_analytic_account', wage)
         self.save()
+        
+class PayrollReport(CompanyReport):
+    __name__ = 'staff.payroll'
+    
+    #Metodo para heredar el metodo de generacion del reporte.
+    @classmethod
+    def get_context(cls, records, header, data):
+        report_context = super().get_context(records, header, data)
+        Loans = Pool().get('staff.loan')
+        party = ''
+        amount=0.0
+        for record in report_context['records']:
+            party = record.employee.party.name
+        #busco el prestamo de ese tercero 
+        loans =  Loans.search([('party', '=',party),('state', '=','posted')])
+        #Si no hay prestamo limpio la variable
+        if not loans:
+            for keys in report_context['records']:
+                keys.total_cost = 0.0
+        else:
+            for loan in loans:
+                for line in loan.lines:
+                    #busco que las lineas que tenga esten pendientes de pago y las guardo.
+                    if line.state == 'pending': 
+                        amount += float(line.amount)
+                        
+        #asigno el monto en una variable que no se usa
+        for keys in report_context['records']:
+            keys.total_cost = amount
+        return report_context

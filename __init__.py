@@ -103,4 +103,5 @@ def register():
         report.CDSSaleIncomeDailyReport,
         payroll.PayrollPaymentReportBcl,
         payroll.LiquidationPaymentReportBcl,
+        payroll.PayrollReport,
         module='conector', type_='report')

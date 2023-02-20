@@ -496,7 +496,11 @@ class Sale(metaclass=PoolMeta):
         # valor_impuesto = abs(venta.Valor_impuesto)
         # if valor_impuesto > 0:
         #     total_tecno = (total_tecno - valor_impuesto)
-        diferencia = abs(total_tryton - total_tecno)
+        if venta.retencion_causada > 0:
+            rete_tecno = abs(venta.retencion_causada)
+            diferencia = abs(total_tryton - total_tecno - rete_tecno)
+        else:
+            diferencia = abs(total_tryton - total_tecno)
         if diferencia < Decimal('6.0'):
             result = True
         return result
