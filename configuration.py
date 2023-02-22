@@ -690,7 +690,10 @@ class Configuration(ModelSQL, ModelView):
             template = ProductTemplate.search([('code', '=', code_product)])
             if not template:
                 raise UserError("ERROR PRODUCTO", f"No se encontro el producto con código {code_product}")
-            product, = Product.search([('template', '=', template[0])])
+            product = Product.search([('template', '=', template[0])])
+            if not product:
+                raise UserError("ERROR PRODUCTO", f"No se encontro La variante con código {code_product}")
+            product, = product
             line.product = product
             line.quantity = Decimal(linea[3])
             to_lines.append(line)
