@@ -56,13 +56,15 @@ class FixBugsConector(Wizard):
                     if lines.account.code == '13050505':
                         if lines.move_line:#linea de asiento
                             move_line_voucher = None
-                            if not voucher.move.lines:
-                                print('not voucher.move.lines '+ str(voucher.move))
+                            if not voucher.move:
+                                print('not voucher.move '+ str(voucher))
                             else:
                                 for mline in voucher.move.lines:
                                     print(mline.reference, lines.move_line.description)
                                     if mline.account == lines.move_line.account and mline.reference == lines.move_line.reference and mline.party == lines.move_line.party and mline.credit > 0:
                                         move_line_voucher = mline
+                            if not move_line_voucher:
+                                continue
                             if lines.move_line.move_origin:#origen del asiento
                                 invoice = lines.move_line.move_origin
                                 print(invoice)
