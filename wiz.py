@@ -49,13 +49,16 @@ class FixBugsConector(Wizard):
             date = datetime.date(2022, 11, 1)
             vouchers = Voucher.search([('voucher_type', '=', 'receipt'), ('state', '=', 'posted'), ('date', '>=', date)])
             log=[]
-
+            log2= [445423]
+            exito=[]
             for voucher in vouchers:
                 print(voucher)
                 for lines in voucher.lines:
                     if lines.account.code == '13050505':
                         if lines.move_line:#linea de asiento
                             move_line_voucher = None
+                            if lines.move_line.move_origin.id in log2:
+                                continue
                             if not voucher.move:
                                 print('not voucher.move '+ str(voucher))
                             else:
@@ -98,10 +101,13 @@ class FixBugsConector(Wizard):
                                         Invoice.process([invoice])
                                         invoice.save()
                                         print('termina procesado')
+                                        exito.append(invoice.number)
                                     except Exception as e:
                                         msg = f"EXCEPCION {lines.move_line.move_origin.number} {str(e)}"
                                         log.append(msg)
-                                        pass           
+                                        pass   
+        print(log)  
+        print(exito)      
         Transaction().commit()
         return 'end'
 
