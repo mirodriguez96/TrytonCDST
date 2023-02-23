@@ -291,3 +291,8 @@ msgstr "Por pagar Tecno"
 msgctxt "field:party.party,receivable_tecno:"
 msgid "Receivable Tecno"
 msgstr "Por cobrar Tecno"
+
+msgctxt "field:account.tax.rule.line,additional_taxes:"
+msgid "Additional Taxes"
+msgstr "Impuestos adicionales"
+
