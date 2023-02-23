@@ -49,7 +49,7 @@ class FixBugsConector(Wizard):
             date = datetime.date(2022, 11, 1)
             vouchers = Voucher.search([('voucher_type', '=', 'receipt'), ('state', '=', 'posted'), ('date', '>=', date)])
             log=[]
-            log2= [445423]
+            log2= [445423,439340]
             exito=[]
             for voucher in vouchers:
                 print(voucher)
