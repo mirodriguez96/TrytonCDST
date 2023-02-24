@@ -6,6 +6,6 @@ this repository contains the full copyright notices and license terms. -->
     <xpath
         expr="/form/field[@name='keep_origin']" position="after">
             <!-- <label name="additional_taxes" /> -->
-            <field name="additional_taxes" colspsan="4"/>
+            <field name="additional_taxes" colspan="4"/>
     </xpath>
 </data>
