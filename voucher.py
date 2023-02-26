@@ -33,12 +33,34 @@ class Voucher(ModelSQL, ModelView):
         # Obtenemos los comprobantes de egreso de TecnoCarnes
         documentos = Config.get_documentos_tecno('6')
         # Comenzamos a recorrer los documentos a procesar y almacenamos los registros y creados en una lista
+
+        # tecno = {}
+        # vouchers = {}
+        # to_delete = []
+        # for doc in documentos:
+        #     id_tecno = f"{doc.sw}-{doc.tipo}-{doc.Numero_documento}"
+        #     tecno[id_tecno] = doc
+        # tryton_vouchers = Voucher.search([('id_tecno', 'in', tecno.keys())])
+        # for tryton_voucher in tryton_vouchers:
+        #     vouchers[tryton_voucher.id_tecno] = tryton_voucher
+        # for id_tecno, doc in tecno.items():
+        #     if id_tecno in vouchers and doc.anulado == 'S':
+        #         to_delete.append(vouchers[id_tecno])
+        #         msg = f"El documento {id_tecno} fue eliminado de tryton porque fue anulado en TecnoCarnes"
+        #         logs.append(msg)
+        #         not_import.append(id_tecno)
+        #         continue
+        #     elif id_tecno in vouchers and doc.anulado == 'N':
+        #         created.append(id_tecno)
+        #         continue
+        # cls.unreconcilie_move_voucher(to_delete)
+        # cls.force_draft_voucher(to_delete)
+        # Voucher.delete(to_delete)
+
         for doc in documentos:
             try:
-                sw = str(doc.sw)
-                nro = str(doc.Numero_documento)
-                tipo_numero = doc.tipo+'-'+nro
-                id_tecno = sw+'-'+tipo_numero
+                tipo_numero = f"{doc.tipo}-{doc.Numero_documento}"
+                id_tecno = f"{doc.sw}-{tipo_numero}"
                 # Buscamos si ya existe el comprobante
                 comprobante = cls.find_voucher(id_tecno)
                 if comprobante:
@@ -405,11 +427,12 @@ class Voucher(ModelSQL, ModelView):
         if invoice:
             # Se selecciona la primera linea pendiente por pagar
             return invoice[0].lines_to_pay[0]
-        line_domain = ['AND',
+        line_domain = [
             ('reference', '=', reference),
             ('party', '=', party),
             (account_type, '=', True),
-            ('reconciliation', '=', None)
+            ('reconciliation', '=', None),
+            ('move.state', '=', 'posted')
         ]
         if account_type == 'account.type.receivable':
             line_domain.append(('debit', '>', 0))
@@ -482,7 +505,7 @@ class Voucher(ModelSQL, ModelView):
             ref = inv.tipo_aplica+'-'+str(inv.numero_aplica)
             move_line = cls.get_moveline(ref, voucher.party, logs, account_type)
             if not move_line:
-                msg = f'EXCEPCION {voucher.id_tecno} - NO SE ENCONTRO LA FACTURA {ref} EN TRYTON'
+                msg = f"EXCEPCION {voucher.id_tecno} - NO SE ENCONTRO LA FACTURA {ref} o REVISAR SI NO ESTA CONTABILIZADA EN TRYTON"
                 logs.append(msg)
                 return None
             #print(ref)
