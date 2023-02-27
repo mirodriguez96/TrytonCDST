@@ -47,7 +47,7 @@ class FixBugsConector(Wizard):
             Invoice = pool.get('account.invoice')
             PaymentLine = pool.get('account.invoice-account.move.line')
             date = datetime.date(2022, 11, 1)
-            vouchers = Voucher.search([('voucher_type', '=', 'receipt'), ('state', '=', 'posted'), ('date', '>=', date)])
+            vouchers = Voucher.search([('voucher_type', '=', 'receipt'), ('state', '=', 'posted'), ('date', '>=', date),('description', 'like', 'MULTI-INGRESO%')])
             log=[]
             log2= [445423,439340]
             exito=[]
@@ -64,7 +64,7 @@ class FixBugsConector(Wizard):
                             else:
                                 for mline in voucher.move.lines:
                                     print(mline.reference, lines.move_line.description)
-                                    if mline.account == lines.move_line.account and mline.reference == lines.move_line.reference and mline.party == lines.move_line.party and mline.credit > 0:
+                                    if mline.account == lines.move_line.account  and mline.party == lines.move_line.party and mline.credit > 0:
                                         move_line_voucher = mline
                             if not move_line_voucher:
                                 continue
