@@ -5,13 +5,26 @@ from trytond.exceptions import UserError
 from trytond.transaction import Transaction
 from decimal import Decimal
 from sql import Table
+# from trytond.pyson import Eval
 
+# class Configuration(metaclass=PoolMeta):
+#     'Configuration'
+#     __name__ = 'purchase.configuration'
+#     type_order_tecno = fields.Char('Type order TecnoCarnes')
 
 #Heredamos del modelo purchase.purchase para agregar el campo id_tecno
 class Purchase(metaclass=PoolMeta):
     'Purchase'
     __name__ = 'purchase.purchase'
     id_tecno = fields.Char('Id Tabla Sqlserver', required=False)
+    # order_tecno = fields.Selection([('yes', 'Yes'), ('no', 'No')],
+    #                                'Order TecnoCarnes?',
+    #                                 states={
+    #                                     'readonly': Eval('state').in_(['processing', 'done']),
+    #                                     'required': Eval('state') == 'processing'
+    #                                     }
+    #                                 )
+    # order_tecno_sent = fields.Boolean('Order TecnoCarnes sent')
 
 
     @classmethod
@@ -267,7 +280,6 @@ class Purchase(metaclass=PoolMeta):
                     desc = Config.get_tbltipodoctos(tipo_doc)
                     if desc:
                         invoice.description = desc[0].TipoDoctos.replace('\n', ' ').replace('\r', '')
-                    invoice.validate_invoice([invoice])
                     original_invoice = None
                     if compra.sw == 4:
                         dcto_base = str(compra.Tipo_Docto_Base)+'-'+str(compra.Numero_Docto_Base)
@@ -281,11 +293,12 @@ class Purchase(metaclass=PoolMeta):
                     #Verificamos que el total de la tabla en sqlserver coincidan o tengan una diferencia menor a 4 decimales, para contabilizar la factura
                     total_tryton = Decimal(abs(invoice.total_amount))
                     total_tecno = Decimal(abs(compra.valor_total))
-                    # retencion_causada = Decimal(abs(compra.retencion_causada))
-                    # total_tecno = total_tecno - retencion_causada
+                    retencion_causada = Decimal(abs(compra.retencion_causada))
+                    total_tecno = total_tecno - retencion_causada
                     diferencia_total = abs(total_tryton - total_tecno)
                     if diferencia_total < Decimal(6.0):
                         with Transaction().set_context(_skip_warnings=True):
+                            Invoice.validate_invoice([invoice])
                             Invoice.post_batch([invoice])
                             Invoice.post([invoice])
                             if original_invoice:
@@ -422,6 +435,10 @@ class Purchase(metaclass=PoolMeta):
         if reconciliations:
             Reconciliation.delete(reconciliations)
 
+    # @classmethod
+    # def process(cls, purchases):
+    #     super().process(purchases)
+    #     pass
 
 class PurchaseLine(metaclass=PoolMeta):
     __name__ = 'purchase.line'
