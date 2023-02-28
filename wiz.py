@@ -24,19 +24,76 @@ class FixBugsConector(Wizard):
 
     def transition_fix_bugs_conector(self):
         pool = Pool()
-        Warning = pool.get('res.user.warning')
-        warning_name = 'warning_fix_bugs_conector'
-        if Warning.check(warning_name):
-            raise UserWarning(warning_name, "No continue si desconoce el funcionamiento interno del asistente.")
-
-        Invoice = pool.get('account.invoice')
-        invoices = Invoice.search([('state', '=', 'posted'), ('move', '=', None)])
-        print(invoices)
-        with Transaction().set_context(_skip_warnings=True):
-            for invoice in invoices:
-                print(invoice)
-                Invoice.process([invoice])
-                Transaction().connection.commit()
+        User = pool.get('res.user')
+        with Transaction().set_user(1):
+            context = User.get_preferences()
+        with Transaction().set_context(context):
+            Voucher = pool.get('account.voucher')
+            Invoice = pool.get('account.invoice')
+            PaymentLine = pool.get('account.invoice-account.move.line')
+            date = datetime.date(2022, 11, 1)
+            vouchers = Voucher.search([('voucher_type', '=', 'receipt'), ('state', '=', 'posted'), ('date', '>=', date),('description', 'like', 'MULTI-INGRESO%')])
+            log=[]
+            log2= [445423,439340]
+            exito=[]
+            for voucher in vouchers:
+                print(voucher)
+                for lines in voucher.lines:
+                    if lines.account.code == '13050505':
+                        if lines.move_line:#linea de asiento
+                            move_line_voucher = None
+                            if lines.move_line.move_origin.id in log2:
+                                continue
+                            if not voucher.move:
+                                print('not voucher.move '+ str(voucher))
+                            else:
+                                for mline in voucher.move.lines:
+                                    print(mline.reference, lines.move_line.description)
+                                    if mline.account == lines.move_line.account  and mline.party == lines.move_line.party and mline.credit > 0:
+                                        move_line_voucher = mline
+                            if not move_line_voucher:
+                                continue
+                            if lines.move_line.move_origin:#origen del asiento
+                                invoice = lines.move_line.move_origin
+                                print(invoice)
+                                print(move_line_voucher)
+                                if lines.move_line.move_origin.payment_lines:
+                                    exists_payment = False
+                                    for payment in invoice.payment_lines:
+                                        if payment == move_line_voucher:
+                                            exists_payment = True
+                                        # print('payment.move_origin.number: ' +str(payment.move_origin.number))
+                                        # print('voucher.number: ' +str(voucher.number))
+                                        # if voucher.number == payment.move_origin.number:
+                                        #     continue
+                                        # elif voucher.number == payment.move_origin.reference:
+                                        #     continue
+                                        # else:
+                                        #     print('linea del asiento diferente: ' +str(invoice.number))
+                                        #     print('voucher: ' +str(voucher.number))
+                                    if not exists_payment:
+                                        msg = f"NO EXISTE EL PAGO {voucher} PARA LA FACTURA {lines.move_line.move_origin}"
+                                        log.append(msg)
+                                        pass
+                                else:
+                                    try:
+                                        paymentline = PaymentLine()
+                                        paymentline.invoice = invoice #numero de la factura
+                                        paymentline.invoice_account = invoice.account #cuenta de la factura
+                                        paymentline.invoice_party = invoice.party#tercero de la factura
+                                        paymentline.line = move_line_voucher #coincida tercero,cuenta y referencia del asiento del comprobante
+                                        paymentline.save()
+                                        Invoice.process([invoice])
+                                        invoice.save()
+                                        print('termina procesado')
+                                        exito.append(invoice.number)
+                                    except Exception as e:
+                                        msg = f"EXCEPCION {lines.move_line.move_origin.number} {str(e)}"
+                                        log.append(msg)
+                                        pass   
+        print(log)  
+        print(exito)      
+        Transaction().commit()
         return 'end'
 
 class DocumentsForImportParameters(ModelView):
