@@ -5,7 +5,6 @@ from trytond.pool import Pool
 from trytond.transaction import Transaction
 from trytond.exceptions import UserError, UserWarning
 from sql import Table
-import datetime
 
 _EXPORTADO = [
     ('N', '(N) SIN IMPORTAR'),
@@ -29,14 +28,6 @@ class FixBugsConector(Wizard):
         if Warning.check(warning_name):
             raise UserWarning(warning_name, "No continue si desconoce el funcionamiento interno del asistente.")
 
-        Invoice = pool.get('account.invoice')
-        invoices = Invoice.search([('state', '=', 'posted'), ('move', '=', None)])
-        print(invoices)
-        with Transaction().set_context(_skip_warnings=True):
-            for invoice in invoices:
-                print(invoice)
-                Invoice.process([invoice])
-                Transaction().connection.commit()
         return 'end'
 
 class DocumentsForImportParameters(ModelView):
