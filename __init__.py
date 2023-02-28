@@ -68,6 +68,8 @@ def register():
         payroll.SettlementSendStart,
         cron.Cron,
         wiz.DocumentsForImportParameters,
+        payroll.Loan,
+        payroll.LoanLine,
         module='conector', type_='model')
 
     Pool.register(
