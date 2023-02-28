@@ -11,7 +11,16 @@ from sql import Table
 class Sale(metaclass=PoolMeta):
     'Sale'
     __name__ = 'sale.sale'
-    id_tecno = fields.Char('Id Tabla Sqlserver', required=False)
+    id_tecno = fields.Char('Id Tabla Sqlserver', required=False, select=True)
+
+    # V6.6 en adelante
+    # def __setup__(cls):
+    #     super().__setup__()
+    #     t = cls.__table__()
+    #     from trytond.model import Index
+    #     cls._sql_indexes.update({
+    #         Index(t, (t.id_tecno, Index.Equality()))
+    #     })
 
     @classmethod
     def import_data_sale(cls):
@@ -279,7 +288,7 @@ class Sale(metaclass=PoolMeta):
                     linea.sale = sale
                     linea.product = producto
                     linea.type = 'line'
-                    linea.unit = producto.template.default_uom
+                    linea.unit = producto.sale_uom
                     # Se verifica si es una devolución
                     if sw == 2:
                         linea.quantity = cantidad_facturada * -1
@@ -358,8 +367,8 @@ class Sale(metaclass=PoolMeta):
                     context = User.get_preferences()
                 with Transaction().set_context(context, _skip_warnings=True):
                     Sale.quote([sale])
-                    validate_amount = cls.validate_amount(sale.total_amount, venta)
-                    if not validate_amount:
+                    validate_total = cls._validate_total(sale.total_amount, venta)
+                    if not validate_total:
                         msg = f'EXCEPCION: REVISAR {id_venta} El total de Tryton {sale.total_amount} NO es igual al total de TecnoCarnes {venta.valor_total}'
                         logs.append(msg)
                         to_exception.append(id_venta)
@@ -449,16 +458,16 @@ class Sale(metaclass=PoolMeta):
                 invoice.description = tbltipodocto[0].TipoDoctos.replace('\n', ' ').replace('\r', '')
             invoice.save()
             Invoice.validate_invoice([invoice])
-            total_tryton = abs(invoice.untaxed_amount)
-            #Se almacena el total de la venta traida de TecnoCarnes
-            total_tecno = 0
-            valor_total = Decimal(abs(venta.valor_total))
-            valor_impuesto = Decimal(abs(venta.Valor_impuesto) + abs(venta.Impuesto_Consumo))
-            if valor_impuesto > 0:
-                total_tecno = valor_total - valor_impuesto
-            else:
-                total_tecno = valor_total
-            diferencia_total = abs(total_tryton - total_tecno)
+            # total_tryton = abs(invoice.untaxed_amount)
+            # Se almacena el total de la venta traida de TecnoCarnes
+            # total_tecno = 0
+            # valor_total = Decimal(abs(venta.valor_total))
+            # valor_impuesto = Decimal(abs(venta.Valor_impuesto) + abs(venta.Impuesto_Consumo))
+            # if valor_impuesto > 0:
+            #     total_tecno = valor_total - valor_impuesto
+            # else:
+            #     total_tecno = valor_total
+            # diferencia_total = abs(total_tryton - total_tecno)
             if venta.sw == 2:
                 dcto_base = str(venta.Tipo_Docto_Base)+'-'+str(venta.Numero_Docto_Base)
                 original_invoice = Invoice.search([('number', '=', dcto_base)])
@@ -468,39 +477,33 @@ class Sale(metaclass=PoolMeta):
                     msg = f"REVISAR: NO SE ENCONTRO LA FACTURA {dcto_base} PARA CRUZAR CON LA DEVOLUCION {invoice.number}"
                     logs.append(msg)
                     to_exception.append(sale.id_tecno)
-            if diferencia_total < Decimal(6.0):
-                Invoice.post_batch([invoice])
-                Invoice.post([invoice])
-                if invoice.original_invoice:
-                    #if invoice.original_invoice.amount_to_pay + invoice.amount_to_pay != 0:
-                    paymentline = PaymentLine()
-                    paymentline.invoice = invoice.original_invoice
-                    paymentline.invoice_account = invoice.account
-                    paymentline.invoice_party = invoice.party
-                    paymentline.line = invoice.lines_to_pay[0]
-                    paymentline.save()
-                    Invoice.reconcile_invoice(invoice)
-            else:
-                msg1 = f'REVISAR FACTURA {sale.id_tecno}'
-                msg2 = f'No contabilizada diferencia total mayor al rango permitido'
-                full_msg = ' - '.join([msg1, msg2])
-                logs.append(full_msg)
-                invoice.comment = msg2
-                invoice.save()
+            # if diferencia_total < Decimal(6.0):
+            Invoice.post_batch([invoice])
+            Invoice.post([invoice])
+            if invoice.original_invoice:
+                paymentline = PaymentLine()
+                paymentline.invoice = invoice.original_invoice
+                paymentline.invoice_account = invoice.account
+                paymentline.invoice_party = invoice.party
+                paymentline.line = invoice.lines_to_pay[0]
+                paymentline.save()
+                Invoice.reconcile_invoice(invoice)
+            # else:
+            #     msg1 = f'REVISAR FACTURA {sale.id_tecno}'
+            #     msg2 = f'No contabilizada diferencia total mayor al rango permitido'
+            #     full_msg = ' - '.join([msg1, msg2])
+            #     logs.append(full_msg)
+            #     invoice.comment = msg2
+            #     invoice.save()
     
     @classmethod
-    def validate_amount(cls, total_tryton, venta):
+    def _validate_total(cls, total_tryton, venta):
         result = False
-        total_tryton = abs(total_tryton)
+        retencion_causada = abs(venta.retencion_causada)
         total_tecno = abs(venta.valor_total)
-        # valor_impuesto = abs(venta.Valor_impuesto)
-        # if valor_impuesto > 0:
-        #     total_tecno = (total_tecno - valor_impuesto)
-        if venta.retencion_causada > 0:
-            rete_tecno = abs(venta.retencion_causada)
-            diferencia = abs(total_tryton - total_tecno - rete_tecno)
-        else:
-            diferencia = abs(total_tryton - total_tecno)
+        total_tryton = abs(total_tryton)
+        total_tecno = total_tecno - retencion_causada
+        diferencia = abs(total_tryton - total_tecno)
         if diferencia < Decimal('6.0'):
             result = True
         return result

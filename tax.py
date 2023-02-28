@@ -1,4 +1,4 @@
-from trytond.model import fields
+from trytond.model import ModelSQL, fields
 from trytond.pool import PoolMeta
 
 TAX_TECNO = [
@@ -33,3 +33,30 @@ class Tax(metaclass=PoolMeta):
     id_tecno = fields.Integer('Id TecnoCarnes', required=False)
     consumo = fields.Boolean('Tax consumption')
     classification_tax_tecno = fields.Selection(TAX_TECNO, 'Classification Tax Tecno')
+
+
+class MiddleModel(ModelSQL):
+    "Middle Model"
+    __name__ = 'account.tax.rule.line-account.tax'
+
+    rule_line = fields.Many2One('account.tax.rule.line', 'Rule Line')
+    tax = fields.Many2One('account.tax', 'Tax')
+
+
+class TaxRuleLine(metaclass=PoolMeta):
+    'Tax Rule Line'
+    __name__ = 'account.tax.rule.line'
+
+    additional_taxes = fields.Many2Many('account.tax.rule.line-account.tax',
+        "rule_line", "tax", "Additional Taxes")
+
+    @classmethod
+    def __setup__(cls):
+        super(TaxRuleLine, cls).__setup__()
+
+    def get_taxes(self, origin_tax):
+        taxes = super().get_taxes(origin_tax)
+        if taxes is not None and self.additional_taxes:
+            for tax in self.additional_taxes:
+                taxes.append(tax.id)
+        return taxes

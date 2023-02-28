@@ -23,21 +23,6 @@ class FixBugsConector(Wizard):
     fix_bugs_conector = StateTransition()
 
     def transition_fix_bugs_conector(self):
-        # pool = Pool()
-        # Warning = pool.get('res.user.warning')
-        # warning_name = 'warning_fix_bugs_conector'
-        # if Warning.check(warning_name):
-        #     raise UserWarning(warning_name, "No continue si desconoce el funcionamiento interno del asistente.")
-
-        # Invoice = pool.get('account.invoice')
-        # invoices = Invoice.search([('state', '=', 'posted'), ('move', '=', None)])
-        # print(invoices)
-        # with Transaction().set_context(_skip_warnings=True):
-        #     for invoice in invoices:
-        #         print(invoice)
-        #         Invoice.process([invoice])
-        #         Transaction().connection.commit()
-
         pool = Pool()
         User = pool.get('res.user')
         with Transaction().set_user(1):

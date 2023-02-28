@@ -2,7 +2,7 @@
 <tree>
     <field name="create_date" widget="date"/>
     <field name="create_date" widget="time"/>
-    <field name="name"/>
+    <field name="name" expand="1"/>
     <field name="write_date" widget="date"/>
     <field name="write_date" widget="time"/>
     <field name="quantity"/>

@@ -44,7 +44,12 @@ class VoucherPayMode(ModelSQL, ModelView):
             nombre = fp.FormaPago.strip()
             cuenta = fp.Cuenta
             paymode = PayMode.search([('id_tecno', '=', id_tecno)])
-            if not paymode:
+            if paymode:
+                paymode, = paymode
+                paymode.name = nombre
+                cls.add_account(paymode, cuenta)
+                paymode.save()
+            else:
                 #Diario por defecto del plan contable
                 journal, = Journal.search([('code', '=', 'CASH')])
                 paymode = PayMode()
