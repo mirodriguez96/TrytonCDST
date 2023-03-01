@@ -420,7 +420,48 @@ class ConfirmLinesBankstatement(Wizard):
             lineas = []
             for Statement in BankStatement.browse(ids):
                 for line in Statement.lines:
-                     if line.state != 'confirmed':
+                    if line.state != 'confirmed':
                         lineas.append(line)
-                BankStatementLines.confirm(lineas)
+            BankStatementLines.confirm(lineas)
+        return 'end'
+
+
+class GroupMultirevenueLines(Wizard):
+    __name__ = 'account.bank_statement.group_multirevenue_lines'
+    start_state = 'run'
+    run = StateTransition()
+
+    def transition_run(self):
+        pool = Pool()
+        BankStatement = pool.get('account.bank_statement')
+        BankStatementLine = pool.get('account.bank_statement.line')
+        ids = Transaction().context['active_ids']
+        if ids:
+            for statement in BankStatement.browse(ids):
+                lines = BankStatementLine.search([
+                    ('statement', '=', statement.id),
+                    ('statement.state', '=', 'draft'),
+                    ('description', 'like', 'MULTI-INGRESO%')])
+                to_group = {}
+                lines_group = {}
+                to_save = []
+                to_delete = []
+                for line in lines:
+                    # payment_mode = line.bank_move_lines[0].move_origin.payment_mode
+                    reference = line.bank_move_lines[0].move_origin.reference
+                    # key = (reference, payment_mode)
+                    if reference not in to_group.keys():
+                        to_group[reference] = list(line.bank_move_lines)
+                        lines_group[reference] = line
+                    else:
+                        to_group[reference] += list(line.bank_move_lines)
+                        to_delete.append(line)
+                for reference, lines in to_group.items():
+                    description = f"MULTI-INGRESO {reference}"
+                    lines_group[reference].description = description
+                    lines_group[reference].bank_move_lines = lines
+                    to_save.append(lines_group[reference])
+
+                BankStatementLine.save(to_save)
+                BankStatementLine.delete(to_delete)
         return 'end'

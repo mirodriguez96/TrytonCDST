@@ -98,6 +98,7 @@ def register():
         payroll.SettlementSend,
         wiz.DocumentsForImport,
         wiz.ConfirmLinesBankstatement,
+        wiz.GroupMultirevenueLines,
         module='conector', type_='wizard')
 
     Pool.register(

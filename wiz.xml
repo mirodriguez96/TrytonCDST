@@ -204,6 +204,17 @@
             <field name="model">account.bank_statement,-1</field>
             <field name="action" ref="act_confirm_lines"/>
         </record>
+        <!-- ########################## -->
+        <!-- # GroupMultirevenueLines # -->
+        <!-- ########################## -->
+        <record model="ir.action.wizard" id="act_group_multirevenue_lines">
+            <field name="name">Group MultiRevenue Lines</field>
+            <field name="wiz_name">account.bank_statement.group_multirevenue_lines</field>
+        </record>
+        <record model="ir.action.keyword" id="act_group_multirevenue_lines_keyword">
+            <field name="keyword">form_action</field>
+            <field name="model">account.bank_statement,-1</field>
+            <field name="action" ref="act_group_multirevenue_lines"/>
+        </record>
     </data>
-
 </tryton>

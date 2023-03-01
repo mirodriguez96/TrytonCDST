@@ -274,8 +274,6 @@ msgctxt "field:staff.payroll_payslip_send.start,subject:"
 msgid "Subject"
 msgstr "Asunto"
 
-
-
 msgctxt "wizard_button:staff.payroll.payslip_send,start,end:"
 msgid "Cancel"
 msgstr "Cancelar"
@@ -296,3 +294,6 @@ msgctxt "field:account.tax.rule.line,additional_taxes:"
 msgid "Additional Taxes"
 msgstr "Impuestos adicionales"
 
+msgctxt "model:ir.action,name:act_group_multirevenue_lines"
+msgid "Group MultiRevenue Lines"
+msgstr "Agrupar líneas (Multi-Ingreso)"
