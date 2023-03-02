@@ -68,5 +68,20 @@ this repository contains the full copyright notices and license terms. -->
         <menuitem parent="sale.menu_reporting" id="menu_sale_income_daily"
             action="wizard_printer_sale_income_daily" sequence="11"
             icon="tryton-print"/>
+
+        <!--Reporte de prestamo -->
+        <record model="ir.action.report" id="report_loan_format">
+           <field name="name">Loan Format</field>
+           <field name="report_name">staff.loan.loan_format_report</field>
+           <field name="model">staff.loan</field>
+           <field name="report">conector/loan_format_report.fodt</field>
+           <field name="template_extension">odt</field>
+        </record>
+        <record model="ir.action.keyword" id="report_loan_format_keyword">
+           <field name="keyword">form_print</field>
+           <field name="model">staff.loan,-1</field>
+           <field name="action" ref="report_loan_format"/>
+        </record>
+
     </data>
 </tryton>
