@@ -27,6 +27,29 @@ class FixBugsConector(Wizard):
         warning_name = 'warning_fix_bugs_conector'
         if Warning.check(warning_name):
             raise UserWarning(warning_name, "No continue si desconoce el funcionamiento interno del asistente.")
+        
+        cnx = pool.get('conector.configuration')
+        MultiRevenue = pool.get('account.multirevenue')
+        Transaction = pool.get('account.multirevenue.transaction')
+        PayMode = pool.get('account.voucher.paymode')
+        multi = MultiRevenue.search([])
+
+        to_save = []
+        for mr in multi:
+            print(mr)
+            to_transactions = []
+            pagos = cnx.get_tipos_pago(mr.id_tecno)
+            for pago in pagos:
+                paymode, = PayMode.search([('id_tecno', '=', pago.forma_pago)])
+                transaction = Transaction()
+                transaction.description = 'IMPORTACION TECNO (fix)'
+                transaction.amount = Decimal(pago.valor)
+                transaction.date = mr.date
+                transaction.payment_mode = paymode
+                to_transactions.append(transaction)
+            mr.transactions = to_transactions
+            to_save.append(mr)
+        MultiRevenue.save(to_save)
 
         return 'end'
 

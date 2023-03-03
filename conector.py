@@ -53,6 +53,10 @@ class Actualizacion(ModelSQL, ModelView):
     # y si no existen, se almacena en el campo logs de la actualizacion dada
     @classmethod
     def add_logs(cls, actualizacion, logs):
+        if not logs:
+            actualizacion.name = actualizacion.name
+            actualizacion.save()
+            return
         now = datetime.datetime.now() - datetime.timedelta(hours=5)
         logs_result = []
         registros = ""
@@ -115,23 +119,38 @@ class Actualizacion(ModelSQL, ModelView):
     # Se consulta la cantidad de documentos (registros) que hay almacenados en Tryton
     # que han sido importados por el modulo conector
     def getter_imported(self, name):
+        Config = Pool().get('conector.configuration')
+        configuration, = Config.search([], order=[('id', 'DESC')], limit=1)
+        fecha = configuration.date
         quantity = None
         cursor = Transaction().connection.cursor()
         if self.name == 'VENTAS':
-            cursor.execute("SELECT COUNT(*) FROM sale_sale WHERE id_tecno LIKE '1-%' OR id_tecno LIKE '2-%'")
+            cursor.execute(f"SELECT COUNT(*) FROM sale_sale \
+                           WHERE sale_date >= '{fecha}' \
+                           AND (id_tecno LIKE '1-%' OR id_tecno LIKE '2-%')")
         elif self.name == 'COMPRAS':
-            cursor.execute("SELECT COUNT(*) FROM purchase_purchase WHERE id_tecno LIKE '3-%' OR id_tecno LIKE '4-%'")
+            cursor.execute(f"SELECT COUNT(*) FROM purchase_purchase \
+                           WHERE purchase_date >= '{fecha}' \
+                           AND (id_tecno LIKE '3-%' OR id_tecno LIKE '4-%')")
         elif self.name == 'COMPROBANTES DE INGRESO':
-            cursor.execute("SELECT COUNT(*) FROM account_voucher WHERE id_tecno LIKE '5-%'")
+            cursor.execute(f"SELECT COUNT(*) FROM account_voucher \
+                           WHERE date >= '{fecha}' \
+                            AND id_tecno LIKE '5-%'")
             quantity = int(cursor.fetchone()[0])
-            cursor.execute("SELECT COUNT(*) FROM account_multirevenue WHERE id_tecno LIKE '5-%'")
+            cursor.execute(f"SELECT COUNT(*) FROM account_multirevenue \
+                           WHERE date >= '{fecha}' \
+                           AND id_tecno LIKE '5-%'")
             quantity2 = int(cursor.fetchone()[0])
             quantity += quantity2
             return quantity
         elif self.name == 'COMPROBANTES DE EGRESO':
-            cursor.execute("SELECT COUNT(*) FROM account_voucher WHERE id_tecno LIKE '6-%'")
+            cursor.execute(f"SELECT COUNT(*) FROM account_voucher \
+                           WHERE date >= '{fecha}' \
+                           AND id_tecno LIKE '6-%'")
         elif self.name == 'PRODUCCION':
-            cursor.execute("SELECT COUNT(*) FROM production WHERE id_tecno LIKE '12-%'")
+            cursor.execute(f"SELECT COUNT(*) FROM production \
+                           WHERE planned_date >= '{fecha}' \
+                           AND id_tecno LIKE '12-%'")
         else:
             return quantity
         result = cursor.fetchone()

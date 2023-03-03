@@ -297,3 +297,15 @@ msgstr "Impuestos adicionales"
 msgctxt "model:ir.action,name:act_group_multirevenue_lines"
 msgid "Group MultiRevenue Lines"
 msgstr "Agrupar líneas (Multi-Ingreso)"
+
+msgctxt "model:ir.action,name:act_confirm_lines"
+msgid "Confirm lines bank statement"
+msgstr "Confirmar líneas de extracto"
+
+msgctxt "model:ir.action,name:act_config"
+msgid "Configuration"
+msgstr "Configuración"
+
+msgctxt "model:ir.ui.menu,name:menu_act_config"
+msgid "Configuration"
+msgstr "Configuración"

@@ -43,7 +43,7 @@ class Sale(metaclass=PoolMeta):
         actualizacion = Actualizacion.create_or_update('VENTAS')
         if not data:
             actualizacion.save()
-            print('FINISH VENTAS PREMA')
+            print('FINISH VENTAS')
             return
         Sale = pool.get('sale.sale')
         SaleLine = pool.get('sale.line')
@@ -136,7 +136,7 @@ class Sale(metaclass=PoolMeta):
                 if not party:
                     msg2 = f'REVISAR {id_venta} - No se encontro el tercero {nit_cedula}'
                     logs.append(msg2)
-                    Party.import_parties_tecno()
+                    # Party.import_parties_tecno()
                     # actualizacion.reset_writedate('TERCEROS')
                     # to_exception.append(id_venta)
                     continue

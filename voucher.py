@@ -274,7 +274,7 @@ class Voucher(ModelSQL, ModelView):
                     multingreso.id_tecno = id_tecno
                     # Se crea una lista con las formas de pago (transacciones)
                     to_transactions = []
-                    doble_fp = False
+                    # doble_fp = False
                     for pago in tipo_pago:
                         paymode = PayMode.search([('id_tecno', '=', pago.forma_pago)])
                         if not paymode:
@@ -282,14 +282,14 @@ class Voucher(ModelSQL, ModelView):
                             logs.append(msg)
                             exceptions.append(id_tecno)
                             break
-                        for existr in to_transactions:
-                            if existr.payment_mode == paymode[0]:
-                                existr.amount += Decimal(pago.valor)
-                                doble_fp = True
-                                continue
-                        if doble_fp:
-                            doble_fp = False
-                            continue
+                        # for existr in to_transactions:
+                        #     if existr.payment_mode == paymode[0]:
+                        #         existr.amount += Decimal(pago.valor) #
+                        #         doble_fp = True
+                        #         continue
+                        # if doble_fp:
+                        #     doble_fp = False
+                        #     continue
                         transaction = Transaction()
                         transaction.description = 'IMPORTACION TECNO'
                         transaction.amount = Decimal(pago.valor)
