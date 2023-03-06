@@ -44,7 +44,7 @@ def register():
         voucher.Note,
         pay_mode.VoucherPayMode,
         payment_term.PaymentTerm,
-        # purchase.Configuration,
+        purchase.Configuration,
         purchase.Purchase,
         purchase.PurchaseLine,
         invoice.Invoice,
@@ -55,7 +55,6 @@ def register():
         voucher.VoucherConfiguration,
         wiz.CreateAdjustmentNotesParameters,
         wiz.AddCenterOperationLineP,
-        #report.PortfolioStatusStart,
         report.PayrollExportStart,
         report.CDSSaleIncomeDailyStart,
         payroll.Bank,
@@ -89,7 +88,6 @@ def register():
         wiz.CreateAdjustmentNotes,
         wiz.AddCenterOperationLine,
         wiz.ReimportExcepcionDocument,
-        #report.PortfolioStatus,
         report.PayrollExport,
         report.CDSSaleIncomeDaily,
         payroll.PayrollPaymentBcl,
@@ -102,7 +100,6 @@ def register():
         module='conector', type_='wizard')
 
     Pool.register(
-        #report.PortfolioStatusReport,
         report.PayrollExportReport,
         report.CDSSaleIncomeDailyReport,
         payroll.PayrollPaymentReportBcl,

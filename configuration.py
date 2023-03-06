@@ -96,6 +96,22 @@ class Configuration(ModelSQL, ModelView):
             cursor.execute(query)
         cnxn.close()
 
+    @classmethod
+    def set_data_rollback(cls, queries):
+        try:
+            cnxn = cls.conexion()
+            cnxn.autocommit = False
+            for query in queries:
+                cnxn.cursor().execute(query)
+        except pyodbc.DatabaseError as err:
+            cnxn.rollback()
+            raise UserError('database error', err)
+        else:
+            cnxn.commit()
+        finally:
+            cnxn.autocommit = True
+
+
     #Se marca en la tabla dbo.Documentos como exportado a Tryton
     @classmethod
     def update_exportado(cls, id, e):

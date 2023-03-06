@@ -5,26 +5,26 @@ from trytond.exceptions import UserError
 from trytond.transaction import Transaction
 from decimal import Decimal
 from sql import Table
-# from trytond.pyson import Eval
+from trytond.pyson import Eval
 
-# class Configuration(metaclass=PoolMeta):
-#     'Configuration'
-#     __name__ = 'purchase.configuration'
-#     type_order_tecno = fields.Char('Type order TecnoCarnes')
+class Configuration(metaclass=PoolMeta):
+    'Configuration'
+    __name__ = 'purchase.configuration'
+    type_order_tecno = fields.Char('Type order TecnoCarnes')
 
 #Heredamos del modelo purchase.purchase para agregar el campo id_tecno
 class Purchase(metaclass=PoolMeta):
     'Purchase'
     __name__ = 'purchase.purchase'
     id_tecno = fields.Char('Id Tabla Sqlserver', required=False)
-    # order_tecno = fields.Selection([('yes', 'Yes'), ('no', 'No')],
-    #                                'Order TecnoCarnes?',
-    #                                 states={
-    #                                     'readonly': Eval('state').in_(['processing', 'done']),
-    #                                     'required': Eval('state') == 'processing'
-    #                                     }
-    #                                 )
-    # order_tecno_sent = fields.Boolean('Order TecnoCarnes sent')
+    order_tecno = fields.Selection([('yes', 'Yes'), ('no', 'No')],
+                                   'Order TecnoCarnes',
+                                    states={
+                                        'readonly': Eval('state').in_(['processing', 'done']),
+                                        'required': Eval('state') == 'processing'
+                                        }
+                                    )
+    order_tecno_sent = fields.Boolean('Order TecnoCarnes sent', readonly=True)
 
 
     @classmethod
@@ -435,11 +435,119 @@ class Purchase(metaclass=PoolMeta):
         if reconciliations:
             Reconciliation.delete(reconciliations)
 
-    # @classmethod
-    # def process(cls, purchases):
-    #     super().process(purchases)
-    #     pass
+    @classmethod
+    def process(cls, purchases):
+        super().process(purchases)
+        pool = Pool()
+        configuration = pool.get('purchase.configuration')(1)
+        for purchase in purchases:
+            if purchase.order_tecno == 'yes' and not purchase.order_tecno_sent:
+                if configuration.type_order_tecno:
+                    cls._send_order(purchase, configuration.type_order_tecno)
+                else:
+                    raise UserError('Order TecnoCarnes', 'missing type_order_tecno')
+                
+    
+    @classmethod
+    def _send_order(cls, purchase, type_order):
+        """
+        Insert into Documentos_Ped 
+        (NUMERO_PEDIDO,NIT,DIRECCION_ENTREGA,DIRECCION_FACTURA,VENDEDOR,FECHA_HORA_PEDIDO,FECHA_HORA_LIMITE_ENTREGA,
+        FECHA_HORA_ENTREGA,NUMERO_ENTREGAS,CONDICION,DIAS_VALIDEZ,DESCUENTO_PIE,
+        VALOR_TOTAL,ANULADO,NOTAS,USUARIO,PC,DURACION,CONCEPTO,MONEDA,DESPACHO,
+        NIT_DESTINO,ABONO,PRIORIDAD,SW,BODEGA,NROOCTERCERO,TELEFONO1,PORC_PENDIENTE,
+        IDFORMAENVIO,IDTRANSPORTADOR,COMISION_VENDEDOR,TASA_MONEDA_EXT,CONTACTO_COMPRAS,
+        CONTACTO_PAGOS,CERTIFICADO_COMPLETACION,PUNTO_FOB,COD_MOTIVO_ANULACIONES,
+        TELEFONO2,EXPORTADO,TIPO_DESTINO,RETENCION_1,USUARIO_APROBACION,FECHA_APROBACION,
+        IdAlistador,Ultimo_Cambio_Registro,IdCanal,IdFormaPago) values 
+        (3,'98642443',1,1,0,{ ts '2022-12-31 10:46:29' },{ ts '2022-12-31 10:46:29' },
+        { ts '2022-12-31 10:46:29' },1,0,0,0,
+        0,1,'','Cad_Lan4','CAD',0,0,1,'F',
+        '98642443',0,'0',9,1,'0','0',
+        100,1,1,0,1,'Desconocido','Desconocido',
+        0,'0',0,'0','N',' ',0,' ',
+        { ts '2023-02-17 11:35:45' },0,{ ts '2023-02-17 11:35:45' },0,0)
 
+        Insert into Documentos_Lin_Ped 
+        (numero_pedido,IdProducto,cantidad,cantidad_despachada,
+        valor_unitario,porcentaje_iva,porcentaje_descuento,
+        und,cantidad_und,nota,despacho_virtual,porc_dcto_2,
+        porc_dcto_3,sw,bodega,fecha_hora_entrega,MaxCantidad,
+        MinCantidad,DireccionEnvio,IdVendedor,IdCliente,DireccionFactura,
+        Producto,Linea,Exportado,Numero_Lote,Tipo_Destino,Envase,
+        Porcentaje_ReteFuente,Serial,Cantidad_Orden) values 
+        (3,30,10,0,14000,0,0,'1',0,
+        'NOTA ',
+        0,0,0,9,1,{ ts '2022-01-03 14:38:10' },
+        0,0,1,1,'98642443',1,'PIERNA',1,' ','',' ',0,0,' ',0)
+        """
+
+        address = 1
+        if purchase.invoice_address.id_tecno:
+            address = int(purchase.invoice_address.id_tecno.split('-')[1])
+
+        date_created = purchase.create_date.strftime('%Y-%m-%d %H:%M:%S')
+        date_created = f"CAST('{date_created}' AS datetime)"
+
+        warehouse = 1
+        if purchase.warehouse.id_tecno:
+            warehouse = purchase.warehouse.id_tecno
+
+        pedido = f"SET DATEFORMAT ymd Insert into Documentos_Ped \
+            (NUMERO_PEDIDO, NIT, DIRECCION_ENTREGA, DIRECCION_FACTURA, VENDEDOR, \
+            FECHA_HORA_PEDIDO, FECHA_HORA_LIMITE_ENTREGA, FECHA_HORA_ENTREGA, \
+            NUMERO_ENTREGAS, CONDICION, DIAS_VALIDEZ, DESCUENTO_PIE, VALOR_TOTAL, \
+            ANULADO, NOTAS, USUARIO, PC, DURACION, CONCEPTO, MONEDA, DESPACHO, \
+            NIT_DESTINO, ABONO, PRIORIDAD, SW, BODEGA, NROOCTERCERO, TELEFONO1, \
+            PORC_PENDIENTE, IDFORMAENVIO, IDTRANSPORTADOR, COMISION_VENDEDOR, \
+            TASA_MONEDA_EXT, CONTACTO_COMPRAS, CONTACTO_PAGOS, CERTIFICADO_COMPLETACION, \
+            PUNTO_FOB, COD_MOTIVO_ANULACIONES, TELEFONO2, EXPORTADO, TIPO_DESTINO, RETENCION_1, \
+            USUARIO_APROBACION, FECHA_APROBACION, IdAlistador, Ultimo_Cambio_Registro, \
+            IdCanal, IdFormaPago) values \
+            ({purchase.number},'{purchase.party.id_number}', {address}, {address}, 0, \
+            {date_created}, {date_created}, {date_created}, \
+            1, 0, 0, 0, {purchase.total_amount}, \
+            1, '{purchase.comment}', 'Cad_Lan4', 'CAD', 0, 0, 1, 'F', \
+            '{purchase.party.id_number}', 0, 'A', {type_order}, {warehouse}, 'T-{purchase.number}', '0', \
+            100, 1, 2, 0, \
+            1, 'Desconocido', 'Desconocido', 0, \
+            ' ', 0, ' ', 'N', ' ', 0,\
+            ' ', {date_created}, 0, {date_created}, \
+            0, 1)"
+        
+        linea = f"SET DATEFORMAT ymd Insert into Documentos_Lin_Ped\
+            (numero_pedido, IdProducto, cantidad, cantidad_despachada,\
+            valor_unitario, porcentaje_iva, porcentaje_descuento,\
+            und, cantidad_und, nota, despacho_virtual, porc_dcto_2,\
+            porc_dcto_3, sw, bodega, fecha_hora_entrega, MaxCantidad,\
+            MinCantidad, DireccionEnvio, IdVendedor, IdCliente, DireccionFactura,\
+            Producto, Linea, Exportado, Numero_Lote, Tipo_Destino, Envase,\
+            Porcentaje_ReteFuente, Serial, Cantidad_Orden) values "
+        
+        lineas = ""
+        cont = 1
+        for line in purchase.lines:
+            quantity = line.quantity
+            uom = 1
+            if line.product.purchase_uom.symbol == 'u':
+                uom = 2
+            lineas += f"({purchase.number}, {line.product.code}, {quantity}, 0,\
+                {line.unit_price}, 0, 0,\
+                '{uom}', 0, '{line.note}', 0, 0,\
+                0, {type_order}, {warehouse}, {date_created}, {quantity},\
+                {quantity}, 1, 1, '{purchase.party.id_number}', 1,\
+                '{line.product.name}', {cont}, 'N', ' ', ' ', 0,\
+                0, ' ', 0)"
+            if cont < len(purchase.lines):
+                lineas +=", "
+            cont += 1
+        linea += lineas
+
+        cnx = Pool().get('conector.configuration')
+        cnx.set_data_rollback([pedido, linea])
+        purchase.order_tecno_sent = True
+        purchase.save()
+        
 class PurchaseLine(metaclass=PoolMeta):
     __name__ = 'purchase.line'
 
