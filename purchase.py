@@ -547,6 +547,169 @@ class Purchase(metaclass=PoolMeta):
         cnx.set_data_rollback([pedido, linea])
         purchase.order_tecno_sent = True
         purchase.save()
+
+
+    @classmethod
+    def _create_shipment(cls, data):
+        if not data:
+            return
+        pool = Pool()
+        Move = pool.get('stock.move')
+        Shipment = pool.get('stock.shipment.in')
+        shipments = []
+        for purchase in data:
+            for shipment in purchase.shipments:
+                Move.delete(shipment.incoming_moves)
+                moves = []
+                for key in data['lines']:
+                    move = Move()
+                    move.from_location = data[key]['from_location']
+                    move.to_location = data[key]['to_location']
+                    move.product = data[key]['product']
+                    move.quantity = data[key]['quantity']
+                    move.unit_price = data[key]['unit_price']
+                    move.currency = shipment.company.currency
+                    moves.append(move)
+                shipment.incoming_moves = moves
+                shipments.append(shipment)
+        Shipment.save(shipments)
+
+
+    @classmethod
+    def _validate_order(cls, lineas):
+        pool = Pool()
+        Purchase = pool.get('purchase.purchase')
+        Product = pool.get('product.product')
+        Location = pool.get('stock.location')
+        result = {
+            'tryton': {},
+            'logs': [],
+            'excepcion': {}
+        }
+        # Se trae las ubicaciones existentes en Tryton
+        _locations = Location.search([
+            'OR',
+            ('type', '=', 'warehouse'), 
+            ('type', '=', 'supplier')
+        ])
+        locations = {}
+        for location in _locations:
+            if 'supplier' not in locations and location.type == 'supplier':
+                locations['supplier'] = location
+                continue
+            id_tecno = location.id_tecno
+            if id_tecno not in locations:
+                locations[id_tecno] = location
+        # Se procede a validar las líneas
+        products = {}
+        tecno = {}
+        for linea in lineas:
+            id_tecno = f"{linea.sw}-{linea.tipo}-{linea.Numero_documento}"
+            if id_tecno in result['excepcion']:
+                continue
+            # Se valida la existencia del producto
+            idproducto = linea.IdProducto
+            if idproducto not in products:
+                product = Product.search([('code', '=', idproducto)])
+                if not product:
+                    msg = f"EXCEPCION - {id_tecno} el producto con codigo {idproducto} no fue encontrado"
+                    result['logs'].append(msg)
+                    result['excepcion'][id_tecno] = 'E'
+                    continue
+                products[idproducto], = product
+            # Se valida la existencia de la bodega
+            bodega = linea.Bodega
+            if bodega not in locations:
+                msg = f"EXCEPCION - {id_tecno} la bodega con id {bodega} no fue encontrada"
+                result['logs'].append(msg)
+                result['excepcion'][id_tecno] = 'E'
+                continue
+            # Se valida el precio del producto
+            valor_unitario = float(linea.Valor_Unitario)
+            if valor_unitario <= 0:
+                msg = f"EXCEPCION - {id_tecno} el valor unitario no puede ser menor o igual a cero. Su valor es: {valor_unitario} "
+                result['logs'].append(msg)
+                result['excepcion'][id_tecno] = 'E'
+                continue
+            # Se valida la cantidad del producto
+            cantidad = linea.Cantidad_Facturada
+            if cantidad <= 0:
+                msg = f"EXCEPCION - {id_tecno} la cantidad no puede ser menor o igual a cero. Su valor es: {cantidad} "
+                result['logs'].append(msg)
+                result['excepcion'][id_tecno] = 'E'
+                continue
+            if products[idproducto].purchase_uom.symbol == 'u':
+                cantidad = int(cantidad)
+            else:
+                cantidad = round(cantidad, 3)
+            # Se procede a almacenar los datos validados
+            line = {
+                'from_location': locations['supplier'],
+                'to_location': locations[bodega].input_location,
+                'product': products[idproducto],
+                'quantity': cantidad,
+                'unit_price': valor_unitario
+            }
+            number = linea.DescuentoOrdenVenta.split('-')[1]
+            if number not in tecno:
+                tecno[number] = {
+                    'id_tecno': id_tecno,
+                    'lines': [line]
+                }
+            else:
+                tecno[number]['lines'].append(line)
+
+        # Se trae todas las ordenes de compra que tecno nos indica faltan por entrar la mercancia
+        purchases = Purchase.search([
+            ('order_tecno', '=', 'yes'),
+            ('order_tecno_sent', '=', True),
+            ('number', 'in', tecno.keys())
+        ])
+        # Se valida las ordenes de compra según su estado de envío 
+        # y se agregan las líneas que van a ser creadas a la variable result
+        generate_shipment = []
+        for purchase in purchases:
+            number = purchase.number
+            if purchase.shipment_state == 'received':
+                id_tecno = tecno[number]['id_tecno']
+                msg = f"REVISAR - {id_tecno} el envío de la orden de compra ya se encuentra finalizado"
+                result['logs'].append(msg)
+                result['excepcion'][id_tecno] = 'T'
+                continue
+            # Se valida si la compra tiene creado algún envío
+            if not purchase.shipments:
+                generate_shipment.append(purchase)
+            # Se almacena la compra y las líneas
+            if number not in result['tryton']:
+                result['tryton'][number] = {
+                    'purchase': purchase,
+                    'lines': tecno[number]['lines']
+                }
+        Purchase.generate_shipment(generate_shipment)
+        # Se valida si la orden de compra no existe en Tryton
+        for number in tecno.keys():
+            id_tecno = tecno[number]['id_tecno']
+            if number not in result['tryton'] and id_tecno not in result['excepcion']:
+                msg = f"EXCEPCION - {id_tecno} no se encontro la orden de compra"
+                result['logs'].append(msg)
+                result['excepcion'][id_tecno] = 'E'
+            
+        return result
+    
+
+    @classmethod
+    def import_order_tecno(cls):
+        pool = Pool()
+        Config = pool.get('conector.configuration')
+        Actualizacion = pool.get('conector.actualizacion')
+        actualizacion = Actualizacion.create_or_update('ENTRADA DE MERCANCIA')
+        lineas = Config.get_documentos_orden()
+        result = cls._validate_order(lineas)
+        cls._create_shipment(result['tryton'])
+        Actualizacion.add_logs(actualizacion, result['logs'])
+        for idt, exportado in result['excepcion'].items():
+            Config.update_exportado(idt, exportado)
+
         
 class PurchaseLine(metaclass=PoolMeta):
     __name__ = 'purchase.line'

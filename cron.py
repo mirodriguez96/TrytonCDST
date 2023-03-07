@@ -58,3 +58,6 @@ class Cron(metaclass=PoolMeta):
         cls.method.selection.append(
             ('production|import_data_production', "Importar producciones"),
             )
+        cls.method.selection.append(
+            ('purchase.purchase|import_order_tecno', "Importar entrada de mercancia"),
+            )

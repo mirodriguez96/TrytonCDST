@@ -13,6 +13,17 @@ except:
     print("Please install it...!")
 
 
+# Paso a paso recomendado para la importación
+# 1. Crear la funcion que importa los datos y crea la actualización
+# 2. Crear la funcion que valida los datos importados
+#   2.1 Ya existe el registro?
+#   2.2 Falta algún dato en Tryton?
+# 3. Funcion que se encarga de crear los registros en Tryton
+#   3.1 _create_model()
+#   3.2 _create_lines()
+#   3.3 Model.save([all])
+
+
 TYPES_FILE = [
     ('parties', 'Parties'),
     ('products', 'Products'),
@@ -223,7 +234,21 @@ class Configuration(ModelSQL, ModelView):
         query = "SELECT * FROM dbo."+table
         data = cls.get_data(query)
         return data
-
+    
+    @classmethod
+    def get_documentos_orden(cls):
+        Config = Pool().get('conector.configuration')
+        config, = Config.search([], order=[('id', 'DESC')], limit=1)
+        fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
+        query = f"SET DATEFORMAT ymd SELECT d.DescuentoOrdenVenta, l.* FROM dbo.Documentos_Lin l\
+            INNER JOIN Documentos d ON d.sw=l.sw AND d.tipo=l.tipo AND d.Numero_documento=l.Numero_Documento\
+            WHERE d.DescuentoOrdenVenta like 'T-%' AND d.fecha_hora >= CAST('{fecha}' AS datetime) \
+            AND d.sw = 12 AND d.exportado != 'T' AND d.exportado != 'E' AND d.exportado != 'X'"
+        if config.end_date:
+            end_date = config.end_date.strftime('%Y-%m-%d %H:%M:%S')
+            query += f" AND fecha_hora < CAST('{end_date}' AS datetime) "
+        data = cls.get_data(query)
+        return data
 
     # Se solicita un archivo para ser codificado o descodificado
     @classmethod
