@@ -309,3 +309,15 @@ msgstr "Configuración"
 msgctxt "model:ir.ui.menu,name:menu_act_config"
 msgid "Configuration"
 msgstr "Configuración"
+
+msgctxt "field:purchase.configuration,type_order_tecno:"
+msgid "Type order TecnoCarnes"
+msgstr "Tipo orden de entrada TecnoCarnes"
+
+msgctxt "field:purchase.purchase,order_tecno:"
+msgid "Order TecnoCarnes"
+msgstr "Orden para TecnoCarnes"
+
+msgctxt "field:purchase.purchase,order_tecno_sent:"
+msgid "Order TecnoCarnes sent"
+msgstr "Orden TecnoCarnes enviada"
