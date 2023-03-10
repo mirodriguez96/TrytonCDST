@@ -655,33 +655,33 @@ class Loan(metaclass=PoolMeta):
                 amount = amount - m.amount
                 m.save()
                 
-    @classmethod
-    def _post(cls, loans):
-        super()._post(loans)
-        pool = Pool()
-        values = []
-        Employee = pool.get('company.employee')
-        MandatoryWage = pool.get('staff.payroll.mandatory_wage')
-        for loan in loans:
-            employee = Employee.search([('party', '=', loan.party),])
-            for emple in employee:
-                for wage in emple.mandatory_wages: 
-                    print(wage)
-                    if wage.id == loan.wage_type.id:
-                        flag = False
-                    elif loan.type == 'external':
-                        party = loan.party_to_pay
-                        flag = True 
-                    else:
-                        flag = True
-                        party = None
-                if flag:
-                    val = {
-                            'employee': emple.id,
-                            'wage_type': loan.wage_type.id,
-                            'party': party,}
-                    values.append(val)
-                    MandatoryWage.create(values)
+    # @classmethod
+    # def _post(cls, loans):
+    #     super()._post(loans)
+    #     pool = Pool()
+    #     values = []
+    #     Employee = pool.get('company.employee')
+    #     MandatoryWage = pool.get('staff.payroll.mandatory_wage')
+    #     for loan in loans:
+    #         employee = Employee.search([('party', '=', loan.party),])
+    #         for emple in employee:
+    #             for wage in emple.mandatory_wages: 
+    #                 print(wage)
+    #                 if wage.id == loan.wage_type.id:
+    #                     flag = False
+    #                 elif loan.type == 'external':
+    #                     party = loan.party_to_pay
+    #                     flag = True 
+    #                 else:
+    #                     flag = True
+    #                     party = None
+    #             if flag:
+    #                 val = {
+    #                         'employee': emple.id,
+    #                         'wage_type': loan.wage_type.id,
+    #                         'party': party,}
+    #                 values.append(val)
+    #                 MandatoryWage.create(values)
             
 class LoanLine(metaclass=PoolMeta):
     __name__ = "staff.loan.line"
