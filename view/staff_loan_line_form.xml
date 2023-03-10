@@ -1,0 +1,7 @@
+<data>
+    <xpath
+        expr="/form/field[@name='origin']" position="after">
+        <label name="adeuda"/>
+        <field name="adeuda"/>
+    </xpath>
+</data>
