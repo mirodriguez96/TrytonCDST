@@ -163,12 +163,14 @@ class Configuration(ModelSQL, ModelView):
         Config = Pool().get('conector.configuration')
         config, = Config.search([], order=[('id', 'DESC')], limit=1)
         fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
-        #query = "SELECT * FROM dbo.Documentos WHERE tipo = 146 AND Numero_documento = 442" #TEST
-        query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND sw = "+sw+" AND exportado != 'T' AND exportado != 'E' AND exportado != 'X' "
+        # query = "SELECT * FROM dbo.Documentos WHERE tipo = null AND Numero_documento = null " #TEST
+        query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos "\
+                f"WHERE fecha_hora >= CAST('{fecha}' AS datetime) AND "\
+                f"sw = {sw} AND exportado != 'T' AND exportado != 'E' AND exportado != 'X' "
         # Se valida si en la configuración de la base de datos, añadieron un valor en la fecha final de importación
         if config.end_date:
             end_date = config.end_date.strftime('%Y-%m-%d %H:%M:%S')
-            query += "AND fecha_hora < CAST('"+end_date+"' AS datetime) "
+            query += f" AND fecha_hora < CAST('{end_date}' AS datetime) "
         query += "ORDER BY fecha_hora ASC"
         data = cls.get_data(query)
         return data
@@ -178,11 +180,14 @@ class Configuration(ModelSQL, ModelView):
         Config = Pool().get('conector.configuration')
         config, = Config.search([], order=[('id', 'DESC')], limit=1)
         fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
-        #query = "SELECT * FROM dbo.Documentos WHERE tipo = 110 AND Numero_documento=127016" #TEST
-        query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND sw = "+sw+" AND tipo = "+tipo+" AND exportado != 'T' AND exportado != 'E' AND exportado != 'X' "
+        # query = "SELECT * FROM dbo.Documentos WHERE tipo = null AND Numero_documento = null" #TEST
+        query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos "\
+                f"WHERE fecha_hora >= CAST('{fecha}' AS datetime) AND "\
+                f"sw = {sw} AND tipo = {tipo} AND exportado != 'T' "\
+                "AND exportado != 'E' AND exportado != 'X' "
         if config.end_date:
             end_date = config.end_date.strftime('%Y-%m-%d %H:%M:%S')
-            query += "AND fecha_hora < CAST('"+end_date+"' AS datetime) "
+            query += f" AND fecha_hora < CAST('{end_date}' AS datetime) "
         query += "ORDER BY fecha_hora ASC"
         data = cls.get_data(query)
         return data
@@ -240,10 +245,10 @@ class Configuration(ModelSQL, ModelView):
         Config = Pool().get('conector.configuration')
         config, = Config.search([], order=[('id', 'DESC')], limit=1)
         fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
-        query = f"SET DATEFORMAT ymd SELECT d.DescuentoOrdenVenta, l.* FROM dbo.Documentos_Lin l\
-            INNER JOIN Documentos d ON d.sw=l.sw AND d.tipo=l.tipo AND d.Numero_documento=l.Numero_Documento\
-            WHERE d.DescuentoOrdenVenta like 'T-%' AND d.fecha_hora >= CAST('{fecha}' AS datetime) \
-            AND d.sw = 12 AND d.exportado != 'T' AND d.exportado != 'E' AND d.exportado != 'X'"
+        query = "SET DATEFORMAT ymd SELECT d.DescuentoOrdenVenta, l.* FROM dbo.Documentos_Lin l "\
+                "INNER JOIN Documentos d ON d.sw=l.sw AND d.tipo=l.tipo AND d.Numero_documento=l.Numero_Documento "\
+                f"WHERE d.DescuentoOrdenVenta like 'T-%' AND d.fecha_hora >= CAST('{fecha}' AS datetime) "\
+                "AND d.sw = 12 AND d.exportado != 'T' AND d.exportado != 'E' AND d.exportado != 'X'"
         if config.end_date:
             end_date = config.end_date.strftime('%Y-%m-%d %H:%M:%S')
             query += f" AND fecha_hora < CAST('{end_date}' AS datetime) "
