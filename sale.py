@@ -319,11 +319,22 @@ class Sale(metaclass=PoolMeta):
                             if impuestol not in impuestos_linea:
                                 impuestos_linea.append(impuestol)
                         elif impuestol.consumo and impuesto_consumo > 0:
-                            #Se busca el impuesto al consumo con el mismo valor para aplicarlo
-                            tax = Tax.search([('consumo', '=', True), ('type', '=', 'fixed'), ('amount', '=', impuesto_consumo), ['OR', ('group.kind', '=', 'sale'), ('group.kind', '=', 'both')]])
+                            # Se busca el impuesto al consumo con el mismo valor para aplicarlo
+                            tax = Tax.search([
+                                ('consumo', '=', True),
+                                ('type', '=', 'fixed'),
+                                ('amount', '=', impuesto_consumo),
+                                ['OR',
+                                 ('group.kind', '=', 'sale'),
+                                 ('group.kind', '=', 'both')
+                                ]
+                            ])
                             if tax:
                                 if len(tax) > 1:
-                                    msg = f"EXCEPCION {id_venta} - Se encontro mas de un impuesto de tipo consumo con el importe igual a {impuesto_consumo} del grupo venta, recuerde que se debe manejar un unico impuesto con esta configuracion"
+                                    msg = f"EXCEPCION: ({id_venta}) "\
+                                        "Se encontro mas de un impuesto de tipo consumo con el "\
+                                        f"importe igual a {impuesto_consumo} del grupo venta, "\
+                                        "recuerde que se debe manejar un unico impuesto con esta configuracion"
                                     logs.append(msg)
                                     to_exception.append(id_venta)
                                     break
@@ -338,6 +349,7 @@ class Sale(metaclass=PoolMeta):
                             if impuestol not in impuestos_linea:
                                 impuestos_linea.append(impuestol)
                     linea.taxes = impuestos_linea
+                    linea.base_price = lin.Valor_Unitario
                     linea.unit_price = lin.Valor_Unitario
                     #Verificamos si hay descuento para la linea de producto y se agrega su respectivo descuento
                     if lin.Porcentaje_Descuento_1 > 0:
@@ -367,20 +379,14 @@ class Sale(metaclass=PoolMeta):
                     context = User.get_preferences()
                 with Transaction().set_context(context, _skip_warnings=True):
                     Sale.quote([sale])
-                    validate_total = cls._validate_total(sale.total_amount, venta)
-                    if not validate_total:
-                        msg = f'EXCEPCION: REVISAR {id_venta} El total de Tryton {sale.total_amount} NO es igual al total de TecnoCarnes {venta.valor_total}'
-                        logs.append(msg)
-                        to_exception.append(id_venta)
-                        continue
                     Sale.confirm([sale])
                     Sale.process([sale])
                     cls.finish_shipment_process(sale)
-                    if sale.invoice_type == 'P':
-                        Sale.post_invoices(sale)
+                    cls._post_invoices(sale, venta, logs, to_exception)
+                    if id_venta in to_exception:
+                        continue
                     pagos = Config.get_tipos_pago(id_venta)
                     if pagos:
-                        Sale.post_invoices(sale)
                         args_statement = {
                             'device': sale_device,
                             'usuario': venta.usuario,
@@ -392,8 +398,6 @@ class Sale(metaclass=PoolMeta):
                         logs.append(msg)
                         to_exception.append(sale.id_tecno)
                         continue
-                    elif sale.invoice_type != 'P':
-                        cls.finish_invoice_process(sale, venta, logs, to_exception)
                 to_created.append(id_venta)
             except Exception as e:
                 msg = f"EXCEPCION {id_venta} - {str(e)}"
@@ -433,7 +437,7 @@ class Sale(metaclass=PoolMeta):
 
     #Se actualiza las facturas y envios con la información de la venta
     @classmethod
-    def finish_invoice_process(cls, sale, venta, logs, to_exception):
+    def _post_invoices(cls, sale, venta, logs, to_exception):
         pool = Pool()
         Invoice = pool.get('account.invoice')
         PaymentLine = pool.get('account.invoice-account.move.line')
@@ -458,16 +462,15 @@ class Sale(metaclass=PoolMeta):
                 invoice.description = tbltipodocto[0].TipoDoctos.replace('\n', ' ').replace('\r', '')
             invoice.save()
             Invoice.validate_invoice([invoice])
-            # total_tryton = abs(invoice.untaxed_amount)
-            # Se almacena el total de la venta traida de TecnoCarnes
-            # total_tecno = 0
-            # valor_total = Decimal(abs(venta.valor_total))
-            # valor_impuesto = Decimal(abs(venta.Valor_impuesto) + abs(venta.Impuesto_Consumo))
-            # if valor_impuesto > 0:
-            #     total_tecno = valor_total - valor_impuesto
-            # else:
-            #     total_tecno = valor_total
-            # diferencia_total = abs(total_tryton - total_tecno)
+            result = cls._validate_total(invoice.total_amount, venta)
+            if not result['value']:
+                msg = f"REVISAR: ({sale.id_tecno}) "\
+                f"El total de Tryton {invoice.total_amount} "\
+                f"es diferente al total de TecnoCarnes {result['total_tecno']} "\
+                f"La diferencia es de {result['diferencia']}"
+                logs.append(msg)
+                to_exception.append(sale.id_tecno)
+                continue
             if venta.sw == 2:
                 dcto_base = str(venta.Tipo_Docto_Base)+'-'+str(venta.Numero_Docto_Base)
                 original_invoice = Invoice.search([('number', '=', dcto_base)])
@@ -477,7 +480,6 @@ class Sale(metaclass=PoolMeta):
                     msg = f"REVISAR: NO SE ENCONTRO LA FACTURA {dcto_base} PARA CRUZAR CON LA DEVOLUCION {invoice.number}"
                     logs.append(msg)
                     to_exception.append(sale.id_tecno)
-            # if diferencia_total < Decimal(6.0):
             Invoice.post_batch([invoice])
             Invoice.post([invoice])
             if invoice.original_invoice:
@@ -488,25 +490,24 @@ class Sale(metaclass=PoolMeta):
                 paymentline.line = invoice.lines_to_pay[0]
                 paymentline.save()
                 Invoice.reconcile_invoice(invoice)
-            # else:
-            #     msg1 = f'REVISAR FACTURA {sale.id_tecno}'
-            #     msg2 = f'No contabilizada diferencia total mayor al rango permitido'
-            #     full_msg = ' - '.join([msg1, msg2])
-            #     logs.append(full_msg)
-            #     invoice.comment = msg2
-            #     invoice.save()
+    
     
     @classmethod
     def _validate_total(cls, total_tryton, venta):
-        result = False
+        result = {
+            'value': False,
+        }
         retencion_causada = abs(venta.retencion_causada)
         total_tecno = abs(venta.valor_total)
         total_tryton = abs(total_tryton)
         total_tecno = total_tecno - retencion_causada
         diferencia = abs(total_tryton - total_tecno)
         if diferencia < Decimal('6.0'):
-            result = True
+            result['value'] = True
+        result['total_tecno'] = total_tecno
+        result['diferencia'] = diferencia
         return result
+
 
     #Función encargada de buscar recibos de caja pagados en TecnoCarnes y pagarlos en Tryton
     @classmethod
