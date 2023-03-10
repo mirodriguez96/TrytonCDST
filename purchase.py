@@ -26,6 +26,9 @@ class Purchase(metaclass=PoolMeta):
                                     )
     order_tecno_sent = fields.Boolean('Order TecnoCarnes sent', readonly=True)
 
+    # @staticmethod
+    # def default_order_tecno():
+    #     return 'no'
 
     @classmethod
     def import_data_purchase(cls):
@@ -101,6 +104,7 @@ class Purchase(metaclass=PoolMeta):
                 purchase.number = tipo_doc+'-'+str(numero_doc)
                 purchase.id_tecno = id_compra
                 purchase.description = compra.notas.replace('\n', ' ').replace('\r', '')
+                purchase.order_tecno = 'no'
                 #Se trae la fecha de la compra y se adapta al formato correcto para Tryton
                 fecha = str(compra.fecha_hora).split()[0].split('-')
                 fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
@@ -203,7 +207,6 @@ class Purchase(metaclass=PoolMeta):
                     #Se verifica si el impuesto al consumo fue aplicado
                     impuesto_consumo = lin.Impuesto_Consumo
                     #A continuación se verifica las retenciones e impuesto al consumo
-                    not_impoconsumo = False
                     impuestos_linea = []
                     for impuestol in line.taxes:
                         clase_impuesto = impuestol.classification_tax_tecno
@@ -221,24 +224,31 @@ class Purchase(metaclass=PoolMeta):
                             tax = Tax.search([('consumo', '=', True), ('type', '=', 'fixed'), ('amount', '=', impuesto_consumo), ['OR', ('group.kind', '=', 'purchase'), ('group.kind', '=', 'both')]])
                             if tax:
                                 if len(tax) > 1:
-                                    msg = f"EXCEPCION {id_compra} - Se encontro mas de un impuesto de tipo consumo con el importe igual a {impuesto_consumo} del grupo compras, recuerde que se debe manejar un unico impuesto con esta configuracion"
+                                    msg = f"EXCEPCION: {id_compra} - Se encontro mas de un impuesto de tipo consumo con el importe igual a {impuesto_consumo} del grupo compras, recuerde que se debe manejar un unico impuesto con esta configuracion"
                                     logs.append(msg)
                                     to_exception.append(id_compra)
+                                    break
                                 tax, = tax
                                 impuestos_linea.append(tax)
                             else:
-                                msg = f"{id_compra} No se encontró el impuesto fijo al consumo con valor {str(impuesto_consumo)}"
+                                msg = f"EXCEPCION: {id_compra} No se encontró el impuesto fijo al consumo con valor {str(impuesto_consumo)}"
                                 logs.append(msg)
-                                not_impoconsumo = True
+                                to_exception.append(id_compra)
                                 break
                         elif clase_impuesto != '05' and clase_impuesto != '06' and clase_impuesto != '07' and not impuestol.consumo:
                             if impuestol not in impuestos_linea:
                                 impuestos_linea.append(impuestol)
-                    if not_impoconsumo:
-                        not_product = True
+                    if id_compra in to_exception:
                         break
                     line.taxes = impuestos_linea
+                    # line.gross_unit_price = lin.Valor_Unitario
                     line.unit_price = lin.Valor_Unitario
+                    #Verificamos si hay descuento para la linea de producto y se agrega su respectivo descuento
+                    if lin.Porcentaje_Descuento_1 > 0:
+                        porcentaje = lin.Porcentaje_Descuento_1/100
+                        line.gross_unit_price = lin.Valor_Unitario
+                        line.discount = Decimal(str(porcentaje))
+                        line.on_change_discount()
                     line.save()
                 if id_compra in to_exception:
                     continue
