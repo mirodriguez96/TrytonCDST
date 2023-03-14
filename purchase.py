@@ -245,7 +245,7 @@ class Purchase(metaclass=PoolMeta):
                     line.unit_price = lin.Valor_Unitario
                     #Verificamos si hay descuento para la linea de producto y se agrega su respectivo descuento
                     if lin.Porcentaje_Descuento_1 > 0:
-                        porcentaje = lin.Porcentaje_Descuento_1/100
+                        porcentaje = round((lin.Porcentaje_Descuento_1/100), 3)
                         line.gross_unit_price = lin.Valor_Unitario
                         line.discount = Decimal(str(porcentaje))
                         line.on_change_discount()
