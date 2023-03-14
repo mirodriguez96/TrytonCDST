@@ -725,3 +725,11 @@ class CDSSaleIncomeDailyReport(Report):
         report_context['payments_electronic'] = payments_electronic_
         report_context['payments'] = pagos
         return report_context
+
+class LoanFormatReport(Report):
+    __name__ = 'staff.loan.loan_format_report'
+    
+    @classmethod
+    def get_context(cls, records, header, data):
+        report_context = super().get_context(records, header, data)
+        return report_context
