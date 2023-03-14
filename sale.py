@@ -647,9 +647,68 @@ class Sale(metaclass=PoolMeta):
                 Sale.do_reconcile([sale])
         return 'ok'
 
-    # Función creada con base al asistente forzar a borrador del módulo sale_pos de presik
+    # Función encargada de obtener los ids de los registros a eliminar
     @classmethod
-    def force_draft(cls, sales):
+    def _get_delete_sales(cls, sales):
+        ids_tecno = []
+        to_delete = {
+            'sale': [],
+            'reconciliation': [],
+            'move': [],
+            'invoice': [],
+            'stock_move': [],
+            'shipment': [],
+            'shipment_return': [],
+            'statement_line': []
+        }
+        for sale in sales:
+            if sale.id_tecno:
+                ids_tecno.append(sale.id_tecno)
+            else:
+                raise UserError("Error Conector", f"No se encontró el id_tecno para {sale}")
+            # Se procede a seleccionar las facturas de la venta
+            for invoice in sale.invoices:
+                if hasattr(invoice, 'electronic_state') and \
+                    invoice.electronic_state == 'submitted':
+                        raise UserError('account_col.msg_with_electronic_invoice')
+                if invoice.state == 'paid':
+                    for line in invoice.move.lines:
+                        if line.reconciliation and line.reconciliation.id not in to_delete['reconciliation']:
+                            to_delete['reconciliation'].append(line.reconciliation.id)
+                if invoice.move:
+                    if invoice.move.id not in to_delete['move']:
+                        to_delete['move'].append(invoice.move.id)
+                if invoice.id not in to_delete['invoice']:
+                    to_delete['invoice'].append(invoice.id)
+            # Se procede a seleccionar los envíos y movimientos de inventario de la venta
+            for line in sale.lines:
+                for move in line.moves:
+                    if move.id not in to_delete['stock_move']:
+                        to_delete['stock_move'].append(move.id)
+            for shipment in sale.shipments:
+                if shipment.id not in to_delete['shipment']:
+                    to_delete['shipment'].append(shipment.id)
+                for move in shipment.inventory_moves:
+                    if move.id not in to_delete['stock_move']:
+                        to_delete['stock_move'].append(move.id)
+            for shipment in sale.shipment_returns:
+                if shipment.id not in to_delete['shipment_return']:
+                    to_delete['shipment_return'].append(shipment.id)
+                for move in shipment.inventory_moves:
+                    if move.id not in to_delete['stock_move']:
+                        to_delete['stock_move'].append(move.id)
+            # Se procede a seleccionar las lineas de pago (POS)
+            for line in sale.payments:
+                if line.id not in to_delete['statement_line']:
+                    to_delete['statement_line'].append(line.id)
+            if sale.id not in to_delete['sale']:
+                to_delete['sale'].append(sale.id)
+        return ids_tecno, to_delete
+
+    # Función creada con base al asistente force_draft del módulo sale_pos de presik
+    # Esta función se encarga de eliminar los registros mediante cursor
+    @classmethod
+    def _delete_sales(cls, to_delete):
         sale_table = Table('sale_sale')
         invoice_table = Table('account_invoice')
         move_table = Table('account_move')
@@ -657,107 +716,79 @@ class Sale(metaclass=PoolMeta):
         statement_line = Table('account_statement_line')
         shipment_table = Table('stock_shipment_out')
         shipment_return_table = Table('stock_shipment_out_return')
+        reconciliation_table = Table('account_move_reconciliation')
         cursor = Transaction().connection.cursor()
-
-        for sale in sales:
-            for invoice in sale.invoices:
-                if hasattr(invoice, 'electronic_state') and \
-                    invoice.electronic_state == 'submitted':
-                        raise UserError('account_col.msg_with_electronic_invoice')
-                if invoice.state == 'paid':
-                    invoice.unreconcile_move(invoice.move)
-                if invoice.move:
-                    cursor.execute(*move_table.update(
-                        columns=[move_table.state],
-                        values=['draft'],
-                        where=move_table.id == invoice.move.id)
-                    )
-                    cursor.execute(*move_table.delete(
-                        where=move_table.id == invoice.move.id)
-                    )
-                cursor.execute(*invoice_table.update(
-                    columns=[invoice_table.state, invoice_table.number],
-                    values=['validate', None],
-                    where=invoice_table.id == invoice.id)
+        # Se procede a realizar la eliminación de todos los registros
+        print(to_delete)
+        if to_delete['reconciliation']:
+            cursor.execute(*reconciliation_table.delete(
+                where=reconciliation_table.id.in_(to_delete['reconciliation']))
+            )
+        if to_delete['move']:
+            cursor.execute(*move_table.update(
+                columns=[move_table.state],
+                values=['draft'],
+                where=move_table.id.in_(to_delete['move']))
+            )
+            cursor.execute(*move_table.delete(
+                where=move_table.id.in_(to_delete['move']))
                 )
-                cursor.execute(*invoice_table.delete(
-                    where=invoice_table.id == invoice.id)
+        if to_delete['invoice']:
+            cursor.execute(*invoice_table.update(
+                columns=[invoice_table.state, invoice_table.number],
+                values=['validate', None],
+                where=invoice_table.id.in_(to_delete['invoice']))
+            )
+            cursor.execute(*invoice_table.delete(
+                where=invoice_table.id.in_(to_delete['invoice']))
+            )
+        if to_delete['stock_move']:
+            cursor.execute(*stock_move_table.update(
+                columns=[stock_move_table.state],
+                values=['draft'],
+                where=stock_move_table.id.in_(to_delete['stock_move'])
+            ))
+            cursor.execute(*stock_move_table.delete(
+                where=stock_move_table.id.in_(to_delete['stock_move']))
+            )
+        if to_delete['shipment']:
+            cursor.execute(*shipment_table.update(
+                columns=[shipment_table.state],
+                values=['draft'],
+                where=shipment_table.id.in_(to_delete['shipment'])
+            ))
+            cursor.execute(*shipment_table.delete(
+                where=shipment_table.id.in_(to_delete['shipment']))
+            )
+        if to_delete['shipment_return']:
+            cursor.execute(*shipment_return_table.update(
+                columns=[shipment_return_table.state],
+                values=['draft'],
+                where=shipment_return_table.id.in_(to_delete['shipment_return'])
+            ))
+            cursor.execute(*shipment_return_table.delete(
+                where=shipment_return_table.id.in_(to_delete['shipment_return']))
+            )
+        if to_delete['statement_line']:
+            cursor.execute(*statement_line.delete(
+                where=statement_line.id.in_(to_delete['statement_line']))
                 )
-            #Se pasa a estado borrador la venta
+        if to_delete['sale']:
             cursor.execute(*sale_table.update(
                 columns=[sale_table.state, sale_table.shipment_state, sale_table.invoice_state],
                 values=['draft', 'none', 'none'],
-                where=sale_table.id == sale.id)
+                where=sale_table.id.in_(to_delete['sale']))
             )
-            # The stock moves must be delete
-            stock_moves = [m.id for line in sale.lines for m in line.moves]
-            shipments = []
-            for shipment in sale.shipments:
-                shipments.append(shipment.id)
-                for inventory_move in shipment.inventory_moves:
-                    stock_moves.append(inventory_move.id)
-            shipment_returns = []
-            for shipment in sale.shipment_returns:
-                shipment_returns.append(shipment.id)
-                for inventory_move in shipment.inventory_moves:
-                    stock_moves.append(inventory_move.id)
-            if stock_moves:
-                cursor.execute(*stock_move_table.update(
-                    columns=[stock_move_table.state],
-                    values=['draft'],
-                    where=stock_move_table.id.in_(stock_moves)
-                ))
-                #Eliminación de los movimientos
-                cursor.execute(*stock_move_table.delete(
-                    where=stock_move_table.id.in_(stock_moves))
-                )
+            cursor.execute(*sale_table.delete(where=sale_table.id.in_(to_delete['sale'])))
 
-            if shipments:
-                cursor.execute(*shipment_table.update(
-                    columns=[shipment_table.state],
-                    values=['draft'],
-                    where=shipment_table.id.in_(shipments)
-                ))
-                #Eliminación de los envíos
-                cursor.execute(*shipment_table.delete(
-                    where=shipment_table.id.in_(shipments))
-                )
-
-            if shipment_returns:
-                cursor.execute(*shipment_return_table.update(
-                    columns=[shipment_return_table.state],
-                    values=['draft'],
-                    where=shipment_return_table.id.in_(shipment_returns)
-                ))
-                #Eliminación de las devoluciones de envíos
-                cursor.execute(*shipment_return_table.delete(
-                    where=shipment_return_table.id.in_(shipment_returns))
-                )
-            
-            #Se verifica si tiene lineas de pago (POS) y se eliminan
-            if sale.payments:
-                for payment in sale.payments:
-                    cursor.execute(*statement_line.delete(
-                            where=statement_line.id == payment.id)
-                        )
-
-
+    # Función encargada de eliminar y marcar para importar ventas de importadas de TecnoCarnes
     @classmethod
     def delete_imported_sales(cls, sales):
-        sale_table = Table('sale_sale')
-        cursor = Transaction().connection.cursor()
-        Conexion = Pool().get('conector.configuration')
-        ids_tecno = []
-        for sale in sales:
-            if sale.id_tecno:
-                ids_tecno.append(sale.id_tecno)
-            else:
-                raise UserError("Error: ", f"No se encontró el id_tecno de {sale}")
-            cls.force_draft([sale])
-            #Se elimina la venta
-            cursor.execute(*sale_table.delete(where=sale_table.id == sale.id))
+        Cnxn = Pool().get('conector.configuration')
+        ids_tecno, to_delete = cls._get_delete_sales(sales)
+        cls._delete_sales(to_delete)
         for idt in ids_tecno:
-            Conexion.update_exportado(idt, 'N')
+            Cnxn.update_exportado(idt, 'N')
 
 
 class SaleLine(metaclass=PoolMeta):
