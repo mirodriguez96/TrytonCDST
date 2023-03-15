@@ -103,6 +103,12 @@ class Voucher(ModelSQL, ModelView):
                     logs.append(msg)
                     exceptions.append(id_tecno)
                     continue
+                # REVISAR ¿CUANDO HAY MAS DE 1 FORMA DE PAGO?
+                if len(tipo_pago) != 1:
+                    msg = f"EXCEPCION {id_tecno} - se esperaba 1 forma de pago y se obtuvo {len(tipo_pago)}"
+                    logs.append(msg)
+                    exceptions.append(id_tecno)
+                    continue
                 #for pago in tipo_pago: 
                 paymode = PayMode.search([('id_tecno', '=', tipo_pago[0].forma_pago)])
                 if not paymode:
@@ -110,13 +116,6 @@ class Voucher(ModelSQL, ModelView):
                     logs.append(msg)
                     exceptions.append(id_tecno)
                     continue
-                else:
-                    # REVISAR ¿CUANDO HAY MAS DE 1 FORMA DE PAGO?
-                    if len(paymode) != 1:
-                        msg = f"EXCEPCION {id_tecno} - se esperaba 1 forma de pago y se obtuvo {len(paymode)}"
-                        logs.append(msg)
-                        exceptions.append(id_tecno)
-                        continue
                 print('VOUCHER EGRESO:', id_tecno)
                 fecha_date = cls.convert_fecha_tecno(doc.fecha_hora)
                 voucher = Voucher()
