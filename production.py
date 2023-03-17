@@ -29,7 +29,7 @@ class Production(metaclass=PoolMeta):
         valor_parametro = parametro[0].Valor.split(',')
         data = []
         for tipo in valor_parametro:
-            result = Config.get_documentos_tipo('12', tipo)
+            result = Config.get_documentos_tipo(None, tipo)
             if result:
                 data += result
         if not data:

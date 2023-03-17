@@ -180,11 +180,11 @@ class Configuration(ModelSQL, ModelView):
         Config = Pool().get('conector.configuration')
         config, = Config.search([], order=[('id', 'DESC')], limit=1)
         fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
-        # query = "SELECT * FROM dbo.Documentos WHERE tipo = null AND Numero_documento = null" #TEST
-        query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos "\
-                f"WHERE fecha_hora >= CAST('{fecha}' AS datetime) AND "\
-                f"sw = {sw} AND tipo = {tipo} AND exportado != 'T' "\
-                "AND exportado != 'E' AND exportado != 'X' "
+        #query = "SELECT * FROM dbo.Documentos WHERE tipo = 110 AND Numero_documento=127016" #TEST
+        if not sw:
+            query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND tipo = "+tipo+" AND exportado != 'T' AND exportado != 'E' AND exportado != 'X' "
+        else:
+            query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND sw = "+sw+" AND tipo = "+tipo+" AND exportado != 'T' AND exportado != 'E' AND exportado != 'X' "
         if config.end_date:
             end_date = config.end_date.strftime('%Y-%m-%d %H:%M:%S')
             query += f" AND fecha_hora < CAST('{end_date}' AS datetime) "
