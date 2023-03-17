@@ -13,6 +13,17 @@ except:
     print("Please install it...!")
 
 
+# Paso a paso recomendado para la importación
+# 1. Crear la funcion que importa los datos y crea la actualización
+# 2. Crear la funcion que valida los datos importados
+#   2.1 Ya existe el registro?
+#   2.2 Falta algún dato en Tryton?
+# 3. Funcion que se encarga de crear los registros en Tryton
+#   3.1 _create_model()
+#   3.2 _create_lines()
+#   3.3 Model.save([all])
+
+
 TYPES_FILE = [
     ('parties', 'Parties'),
     ('products', 'Products'),
@@ -96,6 +107,22 @@ class Configuration(ModelSQL, ModelView):
             cursor.execute(query)
         cnxn.close()
 
+    @classmethod
+    def set_data_rollback(cls, queries):
+        try:
+            cnxn = cls.conexion()
+            cnxn.autocommit = False
+            for query in queries:
+                cnxn.cursor().execute(query)
+        except pyodbc.DatabaseError as err:
+            cnxn.rollback()
+            raise UserError('database error', err)
+        else:
+            cnxn.commit()
+        finally:
+            cnxn.autocommit = True
+
+
     #Se marca en la tabla dbo.Documentos como exportado a Tryton
     @classmethod
     def update_exportado(cls, id, e):
@@ -136,12 +163,14 @@ class Configuration(ModelSQL, ModelView):
         Config = Pool().get('conector.configuration')
         config, = Config.search([], order=[('id', 'DESC')], limit=1)
         fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
-        #query = "SELECT * FROM dbo.Documentos WHERE tipo = 146 AND Numero_documento = 442" #TEST
-        query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND sw = "+sw+" AND exportado != 'T' AND exportado != 'E' AND exportado != 'X' "
+        # query = "SELECT * FROM dbo.Documentos WHERE tipo = null AND Numero_documento = null " #TEST
+        query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos "\
+                f"WHERE fecha_hora >= CAST('{fecha}' AS datetime) AND "\
+                f"sw = {sw} AND exportado != 'T' AND exportado != 'E' AND exportado != 'X' "
         # Se valida si en la configuración de la base de datos, añadieron un valor en la fecha final de importación
         if config.end_date:
             end_date = config.end_date.strftime('%Y-%m-%d %H:%M:%S')
-            query += "AND fecha_hora < CAST('"+end_date+"' AS datetime) "
+            query += f" AND fecha_hora < CAST('{end_date}' AS datetime) "
         query += "ORDER BY fecha_hora ASC"
         data = cls.get_data(query)
         return data
@@ -158,7 +187,7 @@ class Configuration(ModelSQL, ModelView):
             query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND sw = "+sw+" AND tipo = "+tipo+" AND exportado != 'T' AND exportado != 'E' AND exportado != 'X' "
         if config.end_date:
             end_date = config.end_date.strftime('%Y-%m-%d %H:%M:%S')
-            query += "AND fecha_hora < CAST('"+end_date+"' AS datetime) "
+            query += f" AND fecha_hora < CAST('{end_date}' AS datetime) "
         query += "ORDER BY fecha_hora ASC"
         data = cls.get_data(query)
         return data
@@ -210,7 +239,21 @@ class Configuration(ModelSQL, ModelView):
         query = "SELECT * FROM dbo."+table
         data = cls.get_data(query)
         return data
-
+    
+    @classmethod
+    def get_documentos_orden(cls):
+        Config = Pool().get('conector.configuration')
+        config, = Config.search([], order=[('id', 'DESC')], limit=1)
+        fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
+        query = "SET DATEFORMAT ymd SELECT d.DescuentoOrdenVenta, l.* FROM dbo.Documentos_Lin l "\
+                "INNER JOIN Documentos d ON d.sw=l.sw AND d.tipo=l.tipo AND d.Numero_documento=l.Numero_Documento "\
+                f"WHERE d.DescuentoOrdenVenta like 'T-%' AND d.fecha_hora >= CAST('{fecha}' AS datetime) "\
+                "AND d.sw = 12 AND d.exportado != 'T' AND d.exportado != 'E' AND d.exportado != 'X'"
+        if config.end_date:
+            end_date = config.end_date.strftime('%Y-%m-%d %H:%M:%S')
+            query += f" AND fecha_hora < CAST('{end_date}' AS datetime) "
+        data = cls.get_data(query)
+        return data
 
     # Se solicita un archivo para ser codificado o descodificado
     @classmethod

@@ -103,6 +103,12 @@ class Voucher(ModelSQL, ModelView):
                     logs.append(msg)
                     exceptions.append(id_tecno)
                     continue
+                # REVISAR ¿CUANDO HAY MAS DE 1 FORMA DE PAGO?
+                if len(tipo_pago) != 1:
+                    msg = f"EXCEPCION {id_tecno} - se esperaba 1 forma de pago y se obtuvo {len(tipo_pago)}"
+                    logs.append(msg)
+                    exceptions.append(id_tecno)
+                    continue
                 #for pago in tipo_pago: 
                 paymode = PayMode.search([('id_tecno', '=', tipo_pago[0].forma_pago)])
                 if not paymode:
@@ -110,13 +116,6 @@ class Voucher(ModelSQL, ModelView):
                     logs.append(msg)
                     exceptions.append(id_tecno)
                     continue
-                else:
-                    # REVISAR ¿CUANDO HAY MAS DE 1 FORMA DE PAGO?
-                    if len(paymode) != 1:
-                        msg = f"EXCEPCION {id_tecno} - se esperaba 1 forma de pago y se obtuvo {len(paymode)}"
-                        logs.append(msg)
-                        exceptions.append(id_tecno)
-                        continue
                 print('VOUCHER EGRESO:', id_tecno)
                 fecha_date = cls.convert_fecha_tecno(doc.fecha_hora)
                 voucher = Voucher()
@@ -274,7 +273,7 @@ class Voucher(ModelSQL, ModelView):
                     multingreso.id_tecno = id_tecno
                     # Se crea una lista con las formas de pago (transacciones)
                     to_transactions = []
-                    doble_fp = False
+                    # doble_fp = False
                     for pago in tipo_pago:
                         paymode = PayMode.search([('id_tecno', '=', pago.forma_pago)])
                         if not paymode:
@@ -282,14 +281,14 @@ class Voucher(ModelSQL, ModelView):
                             logs.append(msg)
                             exceptions.append(id_tecno)
                             break
-                        for existr in to_transactions:
-                            if existr.payment_mode == paymode[0]:
-                                existr.amount += Decimal(pago.valor)
-                                doble_fp = True
-                                continue
-                        if doble_fp:
-                            doble_fp = False
-                            continue
+                        # for existr in to_transactions:
+                        #     if existr.payment_mode == paymode[0]:
+                        #         existr.amount += Decimal(pago.valor) #
+                        #         doble_fp = True
+                        #         continue
+                        # if doble_fp:
+                        #     doble_fp = False
+                        #     continue
                         transaction = Transaction()
                         transaction.description = 'IMPORTACION TECNO'
                         transaction.amount = Decimal(pago.valor)

@@ -5,7 +5,6 @@ from trytond.pool import Pool
 from trytond.transaction import Transaction
 from trytond.exceptions import UserError, UserWarning
 from sql import Table
-import datetime
 
 _EXPORTADO = [
     ('N', '(N) SIN IMPORTAR'),
@@ -24,76 +23,34 @@ class FixBugsConector(Wizard):
 
     def transition_fix_bugs_conector(self):
         pool = Pool()
-        User = pool.get('res.user')
-        with Transaction().set_user(1):
-            context = User.get_preferences()
-        with Transaction().set_context(context):
-            Voucher = pool.get('account.voucher')
-            Invoice = pool.get('account.invoice')
-            PaymentLine = pool.get('account.invoice-account.move.line')
-            date = datetime.date(2022, 11, 1)
-            vouchers = Voucher.search([('voucher_type', '=', 'receipt'), ('state', '=', 'posted'), ('date', '>=', date),('description', 'like', 'MULTI-INGRESO%')])
-            log=[]
-            log2= [445423,439340]
-            exito=[]
-            for voucher in vouchers:
-                print(voucher)
-                for lines in voucher.lines:
-                    if lines.account.code == '13050505':
-                        if lines.move_line:#linea de asiento
-                            move_line_voucher = None
-                            if lines.move_line.move_origin.id in log2:
-                                continue
-                            if not voucher.move:
-                                print('not voucher.move '+ str(voucher))
-                            else:
-                                for mline in voucher.move.lines:
-                                    print(mline.reference, lines.move_line.description)
-                                    if mline.account == lines.move_line.account  and mline.party == lines.move_line.party and mline.credit > 0:
-                                        move_line_voucher = mline
-                            if not move_line_voucher:
-                                continue
-                            if lines.move_line.move_origin:#origen del asiento
-                                invoice = lines.move_line.move_origin
-                                print(invoice)
-                                print(move_line_voucher)
-                                if lines.move_line.move_origin.payment_lines:
-                                    exists_payment = False
-                                    for payment in invoice.payment_lines:
-                                        if payment == move_line_voucher:
-                                            exists_payment = True
-                                        # print('payment.move_origin.number: ' +str(payment.move_origin.number))
-                                        # print('voucher.number: ' +str(voucher.number))
-                                        # if voucher.number == payment.move_origin.number:
-                                        #     continue
-                                        # elif voucher.number == payment.move_origin.reference:
-                                        #     continue
-                                        # else:
-                                        #     print('linea del asiento diferente: ' +str(invoice.number))
-                                        #     print('voucher: ' +str(voucher.number))
-                                    if not exists_payment:
-                                        msg = f"NO EXISTE EL PAGO {voucher} PARA LA FACTURA {lines.move_line.move_origin}"
-                                        log.append(msg)
-                                        pass
-                                else:
-                                    try:
-                                        paymentline = PaymentLine()
-                                        paymentline.invoice = invoice #numero de la factura
-                                        paymentline.invoice_account = invoice.account #cuenta de la factura
-                                        paymentline.invoice_party = invoice.party#tercero de la factura
-                                        paymentline.line = move_line_voucher #coincida tercero,cuenta y referencia del asiento del comprobante
-                                        paymentline.save()
-                                        Invoice.process([invoice])
-                                        invoice.save()
-                                        print('termina procesado')
-                                        exito.append(invoice.number)
-                                    except Exception as e:
-                                        msg = f"EXCEPCION {lines.move_line.move_origin.number} {str(e)}"
-                                        log.append(msg)
-                                        pass   
-        print(log)  
-        print(exito)      
-        Transaction().commit()
+        Warning = pool.get('res.user.warning')
+        warning_name = 'warning_fix_bugs_conector'
+        if Warning.check(warning_name):
+            raise UserWarning(warning_name, "No continue si desconoce el funcionamiento interno del asistente.")
+        
+        cnx = pool.get('conector.configuration')
+        MultiRevenue = pool.get('account.multirevenue')
+        Transaction = pool.get('account.multirevenue.transaction')
+        PayMode = pool.get('account.voucher.paymode')
+        multi = MultiRevenue.search([])
+
+        to_save = []
+        for mr in multi:
+            print(mr)
+            to_transactions = []
+            pagos = cnx.get_tipos_pago(mr.id_tecno)
+            for pago in pagos:
+                paymode, = PayMode.search([('id_tecno', '=', pago.forma_pago)])
+                transaction = Transaction()
+                transaction.description = 'IMPORTACION TECNO (fix)'
+                transaction.amount = Decimal(pago.valor)
+                transaction.date = mr.date
+                transaction.payment_mode = paymode
+                to_transactions.append(transaction)
+            mr.transactions = to_transactions
+            to_save.append(mr)
+        MultiRevenue.save(to_save)
+
         return 'end'
 
 class DocumentsForImportParameters(ModelView):
@@ -486,7 +443,48 @@ class ConfirmLinesBankstatement(Wizard):
             lineas = []
             for Statement in BankStatement.browse(ids):
                 for line in Statement.lines:
-                     if line.state != 'confirmed':
+                    if line.state != 'confirmed':
                         lineas.append(line)
-                BankStatementLines.confirm(lineas)
+            BankStatementLines.confirm(lineas)
+        return 'end'
+
+
+class GroupMultirevenueLines(Wizard):
+    __name__ = 'account.bank_statement.group_multirevenue_lines'
+    start_state = 'run'
+    run = StateTransition()
+
+    def transition_run(self):
+        pool = Pool()
+        BankStatement = pool.get('account.bank_statement')
+        BankStatementLine = pool.get('account.bank_statement.line')
+        ids = Transaction().context['active_ids']
+        if ids:
+            for statement in BankStatement.browse(ids):
+                lines = BankStatementLine.search([
+                    ('statement', '=', statement.id),
+                    ('statement.state', '=', 'draft'),
+                    ('description', 'like', 'MULTI-INGRESO%')])
+                to_group = {}
+                lines_group = {}
+                to_save = []
+                to_delete = []
+                for line in lines:
+                    # payment_mode = line.bank_move_lines[0].move_origin.payment_mode
+                    reference = line.bank_move_lines[0].move_origin.reference
+                    # key = (reference, payment_mode)
+                    if reference not in to_group.keys():
+                        to_group[reference] = list(line.bank_move_lines)
+                        lines_group[reference] = line
+                    else:
+                        to_group[reference] += list(line.bank_move_lines)
+                        to_delete.append(line)
+                for reference, lines in to_group.items():
+                    description = f"MULTI-INGRESO {reference}"
+                    lines_group[reference].description = description
+                    lines_group[reference].bank_move_lines = lines
+                    to_save.append(lines_group[reference])
+
+                BankStatementLine.save(to_save)
+                BankStatementLine.delete(to_delete)
         return 'end'

@@ -274,8 +274,6 @@ msgctxt "field:staff.payroll_payslip_send.start,subject:"
 msgid "Subject"
 msgstr "Asunto"
 
-
-
 msgctxt "wizard_button:staff.payroll.payslip_send,start,end:"
 msgid "Cancel"
 msgstr "Cancelar"
@@ -296,3 +294,30 @@ msgctxt "field:account.tax.rule.line,additional_taxes:"
 msgid "Additional Taxes"
 msgstr "Impuestos adicionales"
 
+msgctxt "model:ir.action,name:act_group_multirevenue_lines"
+msgid "Group MultiRevenue Lines"
+msgstr "Agrupar líneas (Multi-Ingreso)"
+
+msgctxt "model:ir.action,name:act_confirm_lines"
+msgid "Confirm lines bank statement"
+msgstr "Confirmar líneas de extracto"
+
+msgctxt "model:ir.action,name:act_config"
+msgid "Configuration"
+msgstr "Configuración"
+
+msgctxt "model:ir.ui.menu,name:menu_act_config"
+msgid "Configuration"
+msgstr "Configuración"
+
+msgctxt "field:purchase.configuration,type_order_tecno:"
+msgid "Type order TecnoCarnes"
+msgstr "Tipo orden de entrada TecnoCarnes"
+
+msgctxt "field:purchase.purchase,order_tecno:"
+msgid "Order TecnoCarnes"
+msgstr "Orden para TecnoCarnes"
+
+msgctxt "field:purchase.purchase,order_tecno_sent:"
+msgid "Order TecnoCarnes sent"
+msgstr "Orden TecnoCarnes enviada"

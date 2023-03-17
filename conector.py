@@ -1,7 +1,7 @@
 from trytond.model import ModelSQL, ModelView, fields
 from trytond.transaction import Transaction
 from trytond.pool import Pool
-from sql import Table
+# from sql import Table
 import datetime
 
 
@@ -53,6 +53,10 @@ class Actualizacion(ModelSQL, ModelView):
     # y si no existen, se almacena en el campo logs de la actualizacion dada
     @classmethod
     def add_logs(cls, actualizacion, logs):
+        if not logs:
+            actualizacion.name = actualizacion.name
+            actualizacion.save()
+            return
         now = datetime.datetime.now() - datetime.timedelta(hours=5)
         logs_result = []
         registros = ""
@@ -70,16 +74,16 @@ class Actualizacion(ModelSQL, ModelView):
         actualizacion.logs = registros
         actualizacion.save()
 
-    @classmethod
-    def reset_writedate(cls, name):
-        conector_actualizacion = Table('conector_actualizacion')
-        cursor = Transaction().connection.cursor()
-        #Se elimina la fecha de última modificación para que se actualicen los terceros desde (primer importe) una fecha mayor rango
-        cursor.execute(*conector_actualizacion.update(
-                columns=[conector_actualizacion.write_date],
-                values=[None],
-                where=conector_actualizacion.name == name)
-            )
+    # @classmethod
+    # def reset_writedate(cls, name):
+    #     conector_actualizacion = Table('conector_actualizacion')
+    #     cursor = Transaction().connection.cursor()
+    #     # Se elimina la fecha de última modificación para que se actualicen los terceros desde (primer importe) una fecha mayor rango
+    #     cursor.execute(*conector_actualizacion.update(
+    #             columns=[conector_actualizacion.write_date],
+    #             values=[None],
+    #             where=conector_actualizacion.name == name)
+    #         )
     
     # Se consulta en la base de datos de SQLSERVER por la cantidad de documentos
     # que se van a importar
@@ -88,7 +92,11 @@ class Actualizacion(ModelSQL, ModelView):
         conexion, = Config.search([], order=[('id', 'DESC')], limit=1)
         fecha = conexion.date
         fecha = fecha.strftime('%Y-%m-%d %H:%M:%S')
-        consult = "SET DATEFORMAT ymd SELECT COUNT(*) FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime)"
+        consult = "SET DATEFORMAT ymd SELECT COUNT(*) FROM dbo.Documentos "\
+            f"WHERE fecha_hora >= CAST('{fecha}' AS datetime)"
+        if conexion.end_date:
+            end_date = conexion.end_date.strftime('%Y-%m-%d %H:%M:%S')
+            consult += f" AND fecha_hora < CAST('{end_date}' AS datetime) "
         if self.name == 'VENTAS':
             consult += " AND (sw = 1 or sw = 2)"
         elif self.name == 'COMPRAS':
@@ -115,23 +123,51 @@ class Actualizacion(ModelSQL, ModelView):
     # Se consulta la cantidad de documentos (registros) que hay almacenados en Tryton
     # que han sido importados por el modulo conector
     def getter_imported(self, name):
+        Config = Pool().get('conector.configuration')
+        config, = Config.search([], order=[('id', 'DESC')], limit=1)
+        # fecha = config.date
+        query = "SELECT COUNT(*) FROM "
         quantity = None
         cursor = Transaction().connection.cursor()
         if self.name == 'VENTAS':
-            cursor.execute("SELECT COUNT(*) FROM sale_sale WHERE id_tecno LIKE '1-%' OR id_tecno LIKE '2-%'")
+            query += f"sale_sale WHERE sale_date >= '{config.date}' "\
+                "AND (id_tecno LIKE '1-%' OR id_tecno LIKE '2-%') "
+            if config.end_date:
+                query += f" AND sale_date < '{config.end_date}' "
+            cursor.execute(query)
         elif self.name == 'COMPRAS':
-            cursor.execute("SELECT COUNT(*) FROM purchase_purchase WHERE id_tecno LIKE '3-%' OR id_tecno LIKE '4-%'")
+            query += f"purchase_purchase WHERE purchase_date >= '{config.date}' "\
+                    "AND (id_tecno LIKE '3-%' OR id_tecno LIKE '4-%') "
+            if config.end_date:
+                query += f" AND purchase_date < '{config.end_date}' "
+            cursor.execute(query)
         elif self.name == 'COMPROBANTES DE INGRESO':
-            cursor.execute("SELECT COUNT(*) FROM account_voucher WHERE id_tecno LIKE '5-%'")
+            query = "SELECT COUNT(*) FROM account_voucher "\
+                    f"WHERE date >= '{config.date}' AND id_tecno LIKE '5-%' "
+            if config.end_date:
+                query += f" AND date < '{config.end_date}' "
+            cursor.execute(query)
             quantity = int(cursor.fetchone()[0])
-            cursor.execute("SELECT COUNT(*) FROM account_multirevenue WHERE id_tecno LIKE '5-%'")
+            query = "SELECT COUNT(*) FROM account_multirevenue "\
+                    f"WHERE date >= '{config.date}' AND id_tecno LIKE '5-%' "
+            if config.end_date:
+                query += f" AND date < '{config.end_date}' "
+            cursor.execute(query)
             quantity2 = int(cursor.fetchone()[0])
             quantity += quantity2
             return quantity
         elif self.name == 'COMPROBANTES DE EGRESO':
-            cursor.execute("SELECT COUNT(*) FROM account_voucher WHERE id_tecno LIKE '6-%'")
+            query += f"account_voucher WHERE date >= '{config.date}' "\
+                "AND id_tecno LIKE '6-%' "
+            if config.end_date:
+                query += f" AND date < '{config.end_date}' "
+            cursor.execute(query)
         elif self.name == 'PRODUCCION':
-            cursor.execute("SELECT COUNT(*) FROM production WHERE id_tecno LIKE '12-%'")
+            query += f"production WHERE planned_date >= '{config.date}' "\
+                "AND id_tecno LIKE '12-%' "
+            if config.end_date:
+                query += f" AND planned_date < '{config.end_date}' "
+            cursor.execute(query)
         else:
             return quantity
         result = cursor.fetchone()
@@ -144,7 +180,11 @@ class Actualizacion(ModelSQL, ModelView):
         Config = Pool().get('conector.configuration')
         conexion, = Config.search([], order=[('id', 'DESC')], limit=1)
         fecha = conexion.date.strftime('%Y-%m-%d %H:%M:%S')
-        consult = "SET DATEFORMAT ymd SELECT COUNT(*) FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado = 'E'"
+        consult = "SET DATEFORMAT ymd SELECT COUNT(*) FROM dbo.Documentos "\
+            f"WHERE fecha_hora >= CAST('{fecha}' AS datetime) AND exportado = 'E'"
+        if conexion.end_date:
+            end_date = conexion.end_date.strftime('%Y-%m-%d %H:%M:%S')
+            consult += f" AND fecha_hora < CAST('{end_date}' AS datetime) "
         if self.name == 'VENTAS':
             consult += " AND (sw = 1 or sw = 2)"
         elif self.name == 'COMPRAS':
@@ -166,7 +206,11 @@ class Actualizacion(ModelSQL, ModelView):
         Config = Pool().get('conector.configuration')
         conexion, = Config.search([], order=[('id', 'DESC')], limit=1)
         fecha = conexion.date.strftime('%Y-%m-%d %H:%M:%S')
-        consult = "SET DATEFORMAT ymd SELECT COUNT(*) FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado = 'X'"
+        consult = "SET DATEFORMAT ymd SELECT COUNT(*) FROM dbo.Documentos "\
+            f"WHERE fecha_hora >= CAST('{fecha}' AS datetime) AND exportado = 'X'"
+        if conexion.end_date:
+            end_date = conexion.end_date.strftime('%Y-%m-%d %H:%M:%S')
+            consult += f" AND fecha_hora < CAST('{end_date}' AS datetime) "
         if self.name == 'VENTAS':
             consult += " AND (sw = 1 or sw = 2)"
         elif self.name == 'COMPRAS':
@@ -189,7 +233,12 @@ class Actualizacion(ModelSQL, ModelView):
         conexion, = Config.search([], order=[('id', 'DESC')], limit=1)
         fecha = conexion.date
         fecha = fecha.strftime('%Y-%m-%d %H:%M:%S')
-        consult = "SET DATEFORMAT ymd SELECT COUNT(*) FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado != 'T' AND exportado != 'E' AND exportado != 'X'"
+        consult = "SET DATEFORMAT ymd SELECT COUNT(*) FROM dbo.Documentos "\
+            f"WHERE fecha_hora >= CAST('{fecha}' AS datetime) "\
+            "AND exportado != 'T' AND exportado != 'E' AND exportado != 'X'"
+        if conexion.end_date:
+            end_date = conexion.end_date.strftime('%Y-%m-%d %H:%M:%S')
+            consult += f" AND fecha_hora < CAST('{end_date}' AS datetime) "
         if self.name == 'VENTAS':
             consult += " AND (sw = 1 or sw = 2)"
         elif self.name == 'COMPRAS':
@@ -282,7 +331,9 @@ class Actualizacion(ModelSQL, ModelView):
             return
         config, = Config.search([], order=[('id', 'DESC')], limit=1)
         fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
-        consultc = f"SELECT CONCAT(sw,'-',tipo,'-',numero_documento) FROM Documentos WHERE {cond} AND fecha_hora >= CAST('"+fecha+"' AS datetime) AND exportado = 'T' AND tipo<>0 ORDER BY tipo,numero_documento"
+        consultc = "SELECT CONCAT(sw,'-',tipo,'-',numero_documento) FROM Documentos "\
+            f"WHERE {cond} AND fecha_hora >= CAST('{fecha}' AS datetime) "\
+            "AND exportado = 'T' AND tipo<>0 ORDER BY tipo,numero_documento"
         result_tecno = Config.get_data(consultc)
         result_tecno = [r[0] for r in result_tecno]
         list_difference = [r for r in result_tecno if r not in result_tryton]
@@ -290,7 +341,9 @@ class Actualizacion(ModelSQL, ModelView):
         logs = []
         for falt in list_difference:
             lid = falt.split('-')
-            Config.set_data(f"UPDATE dbo.Documentos SET exportado = 'N' WHERE sw = {lid[0]} AND tipo = {lid[1]} AND Numero_documento = {lid[2]}")
+            query = "UPDATE dbo.Documentos SET exportado = 'N' "\
+                f"WHERE sw = {lid[0]} AND tipo = {lid[1]} AND Numero_documento = {lid[2]}"
+            Config.set_data(query)
             logs.append(f"DOCUMENTO FALTANTE: {falt}")
         actualizacion, = Actualizacion.search([('name', '=', name)])
-        cls.add_logs(actualizacion, logs) 
+        cls.add_logs(actualizacion, logs)

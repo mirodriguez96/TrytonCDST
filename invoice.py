@@ -97,7 +97,7 @@ class Invoice(metaclass=PoolMeta):
                     if not party:
                         msg = f'EXCEPCION: NO SE ENCONTRO EL TERCERO {nit_cedula} DE LA NOTA {id_tecno}'
                         logs.append(msg)
-                        actualizacion.reset_writedate('TERCEROS')
+                        # actualizacion.reset_writedate('TERCEROS')
                         to_exception.append(id_tecno)
                         continue
                     party = party[0]
