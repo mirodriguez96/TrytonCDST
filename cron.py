@@ -61,3 +61,9 @@ class Cron(metaclass=PoolMeta):
         cls.method.selection.append(
             ('purchase.purchase|import_order_tecno', "Importar entrada de mercancia"),
             )
+        cls.method.selection.append(
+            ('account.voucher|_check_cross_vouchers', "Validar cruce de comprobantes"),
+            )
+        cls.method.selection.append(
+            ('account.invoice|_check_cross_invoices', "Validar cruce de facturas"),
+            )
