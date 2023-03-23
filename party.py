@@ -79,13 +79,17 @@ class Party(metaclass=PoolMeta):
                 TipoPersona = cls.person_type(tercero.TipoPersona.strip())
                 ciiu = tercero.IdActividadEconomica
                 regime_tax = cls.tax_regime(tercero)
-                exists = Party.search(['AND',
+                exists = Party.search([
                     ('id_number', '=', nit_cedula),
                     ['OR', ('active', '=', True), ('active', '=', False)]
                 ])
                 #Ahora verificamos si el tercero existe en tryton
                 if exists:
                     exists, = exists
+                    if not exists.active:
+                        msg = f"El tercero {nit_cedula} esta marcado como inactivo"
+                        values['logs'].append(msg)
+                        continue
                     ultimo_cambio = tercero.Ultimo_Cambio_Registro
                     if not ultimo_cambio:
                         continue
@@ -187,7 +191,8 @@ class Party(metaclass=PoolMeta):
             except Exception as e:
                 msg = f"EXCEPCION TERCERO {nit_cedula} : {str(e)}"
                 values['logs'].append(msg)
-        Party.create(values['to_create'])
+        if values['to_create']:
+            Party.create(values['to_create'])
         #Se almacena los registros y finaliza el importe
         Actualizacion.add_logs(actualizacion, values['logs'])
         print("FINISH TERCEROS")
@@ -268,7 +273,8 @@ class Party(metaclass=PoolMeta):
             except Exception as e:
                 msg = f"EXCEPCION {nit} : {str(e)}"
                 values['logs'].append(msg)
-        Address.create(values['to_create'])
+        if values['to_create']:
+            Address.create(values['to_create'])
         # Se almacena los registros y finaliza el importe
         Actualizacion.add_logs(actualizacion, values['logs'])
         print("FINISH DIRECCION TERCEROS")

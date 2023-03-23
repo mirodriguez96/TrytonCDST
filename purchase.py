@@ -109,13 +109,19 @@ class Purchase(metaclass=PoolMeta):
                 fecha = str(compra.fecha_hora).split()[0].split('-')
                 fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
                 purchase.purchase_date = fecha_date
-                party = Party.search([('id_number', '=', compra.nit_Cedula.replace('\n',""))])
+                party = Party.search([
+                    ('id_number', '=', compra.nit_Cedula.replace('\n',"")),
+                    ['OR', ('active', '=', True), ('active', '=', False)]
+                ])
                 if not party:
                     msg = f"EXCEPCION {id_compra} - No se encontró el tercero con id {compra.nit_Cedula}"
                     logs.append(msg)
                     to_exception.append(id_compra)
                     continue
                 party = party[0]
+                if not party.active:
+                    party.active = True
+                    party.save()
                 purchase.party = party
                 #Se busca una dirección del tercero para agregar en la factura y envio
                 address = Address.search([('party', '=', party.id)], limit=1)
@@ -517,14 +523,14 @@ class Purchase(metaclass=PoolMeta):
             ({purchase.number},'{purchase.party.id_number}', {address}, {address}, 0, \
             {date_created}, {date_created}, {date_created}, \
             1, 0, 0, 0, {purchase.total_amount}, \
-            1, '{purchase.comment}', 'Cad_Lan4', 'CAD', 0, 0, 1, 'F', \
+            1, '{purchase.comment}', 'Cad_Lan4', 'CAD', 0, 0, 1, 'N', \
             '{purchase.party.id_number}', 0, 'A', {type_order}, {warehouse}, 'T-{purchase.number}', '0', \
             100, 1, 2, 0, \
             1, 'Desconocido', 'Desconocido', 0, \
             ' ', 0, ' ', 'N', ' ', 0,\
             ' ', {date_created}, 0, {date_created}, \
             0, 1)"
-        
+        # breakpoint()
         linea = f"SET DATEFORMAT ymd Insert into Documentos_Lin_Ped\
             (numero_pedido, IdProducto, cantidad, cantidad_despachada,\
             valor_unitario, porcentaje_iva, porcentaje_descuento,\
@@ -543,18 +549,20 @@ class Purchase(metaclass=PoolMeta):
                 uom = 2
             lineas += f"({purchase.number}, {line.product.code}, {quantity}, 0,\
                 {line.unit_price}, 0, 0,\
-                '{uom}', 0, '{line.note}', 0, 0,\
+                '{uom}', 1, '{line.note}', 0, 0,\
                 0, {type_order}, {warehouse}, {date_created}, {quantity},\
                 {quantity}, 1, 1, '{purchase.party.id_number}', 1,\
                 '{line.product.name}', {cont}, 'N', ' ', ' ', 0,\
-                0, ' ', 0)"
+                0, ' ', {quantity})"
             if cont < len(purchase.lines):
                 lineas +=", "
             cont += 1
         linea += lineas
 
+        consecutivo = f"UPDATE consecutivos SET siguiente = {purchase.number} WHERE tipo = {type_order}"
+
         cnx = Pool().get('conector.configuration')
-        cnx.set_data_rollback([pedido, linea])
+        cnx.set_data_rollback([pedido, linea, consecutivo])
         purchase.order_tecno_sent = True
         purchase.save()
 

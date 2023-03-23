@@ -89,13 +89,19 @@ class Voucher(ModelSQL, ModelView):
                     logs.append(msg1)
                     continue
                 nit_cedula = doc.nit_Cedula.replace('\n',"")
-                party = Party.search([('id_number', '=', nit_cedula)])
+                party = Party.search([
+                    ('id_number', '=', nit_cedula),
+                    ['OR', ('active', '=', True), ('active', '=', False)]
+                ])
                 if not party:
                     msg = f"REVISAR {id_tecno} - El tercero {nit_cedula} no existe en tryton"
                     logs.append(msg)
                     exceptions.append(id_tecno)
                     continue
                 party, = party
+                if not party.active:
+                    party.active = True
+                    party.save()
                 tipo_pago = Config.get_tipos_pago(id_tecno)
                 if not tipo_pago:
                     msg = f"NO SE ENCONTRO FORMA(S) DE PAGO EN TECNOCARNES (DOCUMENTOS_CHE) PARA EL DOCUMENTO {id_tecno}"
@@ -246,13 +252,19 @@ class Voucher(ModelSQL, ModelView):
                     exceptions.append(id_tecno)
                     continue
                 nit_cedula = doc.nit_Cedula.replace('\n',"")
-                tercero = Party.search([('id_number', '=', nit_cedula)])
+                tercero = Party.search([
+                    ('id_number', '=', nit_cedula),
+                    ['OR', ('active', '=', True), ('active', '=', False)]
+                ])
                 if not tercero:
                     msg = f"REVISAR {id_tecno} - El tercero {nit_cedula} no existe en tryton"
                     logs.append(msg)
                     exceptions.append(id_tecno)
                     continue
                 tercero, = tercero
+                if not tercero.active:
+                    tercero.active = True
+                    tercero.save()
                 #Se obtiene la forma de pago, según la tabla Documentos_Che de TecnoCarnes
                 tipo_pago = Config.get_tipos_pago(id_tecno)
                 if not tipo_pago:
@@ -756,7 +768,7 @@ class Voucher(ModelSQL, ModelView):
                 if move_line.reference == line.reference and \
                     (move_line.account.type.receivable or move_line.account.type.payable):
                     return move_line
-        logs = []
+        # logs = []
         invoice_numbers = []
         lines_invoice = {}
         for line in lines:
