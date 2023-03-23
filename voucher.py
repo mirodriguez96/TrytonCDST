@@ -89,14 +89,19 @@ class Voucher(ModelSQL, ModelView):
                     logs.append(msg1)
                     continue
                 nit_cedula = doc.nit_Cedula.replace('\n',"")
-                party = Party.search([('id_number', '=', nit_cedula)])
+                party = Party.search([
+                    ('id_number', '=', nit_cedula),
+                    ['OR', ('active', '=', True), ('active', '=', False)]
+                ])
                 if not party:
                     msg = f"REVISAR {id_tecno} - El tercero {nit_cedula} no existe en tryton"
                     logs.append(msg)
-                    Party.import_parties_tecno()
-                    # exceptions.append(id_tecno)
+                    exceptions.append(id_tecno)
                     continue
                 party, = party
+                if not party.active:
+                    party.active = True
+                    party.save()
                 tipo_pago = Config.get_tipos_pago(id_tecno)
                 if not tipo_pago:
                     msg = f"NO SE ENCONTRO FORMA(S) DE PAGO EN TECNOCARNES (DOCUMENTOS_CHE) PARA EL DOCUMENTO {id_tecno}"
@@ -247,14 +252,19 @@ class Voucher(ModelSQL, ModelView):
                     exceptions.append(id_tecno)
                     continue
                 nit_cedula = doc.nit_Cedula.replace('\n',"")
-                tercero = Party.search([('id_number', '=', nit_cedula)])
+                tercero = Party.search([
+                    ('id_number', '=', nit_cedula),
+                    ['OR', ('active', '=', True), ('active', '=', False)]
+                ])
                 if not tercero:
                     msg = f"REVISAR {id_tecno} - El tercero {nit_cedula} no existe en tryton"
                     logs.append(msg)
-                    Party.import_parties_tecno()
-                    # exceptions.append(id_tecno)
+                    exceptions.append(id_tecno)
                     continue
                 tercero, = tercero
+                if not tercero.active:
+                    tercero.active = True
+                    tercero.save()
                 #Se obtiene la forma de pago, según la tabla Documentos_Che de TecnoCarnes
                 tipo_pago = Config.get_tipos_pago(id_tecno)
                 if not tipo_pago:
@@ -724,6 +734,89 @@ class Voucher(ModelSQL, ModelView):
         # Se marca en la base de datos de importación como NO exportado y se elimina
         for idt in ids_tecno:
             Conexion.update_exportado(idt, 'N')
+
+
+    @staticmethod
+    def _check_cross_vouchers():
+        pool = Pool()
+        Line = pool.get('account.voucher.line')
+        Invoice = pool.get('account.invoice')
+        MoveLine = pool.get('account.move.line')
+        # Actualizacion = pool.get('conector.actualizacion')
+        # actualizacion = Actualizacion.create_or_update(f'CRUCE DE COMPROBANTES')
+        """
+        Se realiza la búsqueda de las líneas de comprobantes que no tengan
+        factura (línea de asiento) asociada para asignarse y luego conciliar
+        """
+        lines = Line.search([
+            ('voucher.state', '=', 'posted'),
+            ('reference', 'like', '%-%'),
+            # ('voucher.id_tecno', '!=', None),
+            ('move_line', '=', None),
+            [
+                'OR',
+                ('account.type.receivable', '=', True),
+                ('account.type.payable', '=', True)
+            ]
+        ])
+        """
+        funcion encargada de obtener en las líneas del asiento 
+        la perteneciente la línea del comprobante
+        """
+        def _get_move_line(line):
+            for move_line in line.voucher.move.lines:
+                if move_line.reference == line.reference and \
+                    (move_line.account.type.receivable or move_line.account.type.payable):
+                    return move_line
+        # logs = []
+        invoice_numbers = []
+        lines_invoice = {}
+        for line in lines:
+            if line.reference not in invoice_numbers:
+                invoice_numbers.append(line.reference)
+            if line.reference in lines_invoice:
+                move_line = _get_move_line(line)
+                lines_invoice[line.reference]['lines'].append(line)
+                lines_invoice[line.reference]['move_lines'].append(move_line)
+            else:
+                move_line = _get_move_line(line)
+                lines_invoice[line.reference] = {
+                    'lines': [line],
+                    'move_lines': [move_line]
+                }
+        invoices = Invoice.search([
+            ('number', 'in', invoice_numbers),
+            ('state', '=', 'posted'),
+        ])
+        to_save = []
+        for invoice in invoices:
+            lines_invoice[invoice.number]['invoice'] = invoice
+            line_invoice = invoice.lines_to_pay
+            lines = lines_invoice[invoice.number]['lines']
+            Line.write(lines, {'move_line': line_invoice[0].id})
+            move_lines = lines_invoice[invoice.number]['move_lines']
+            payment_lines = list(invoice.payment_lines)
+            for line in move_lines:
+                if line and line not in payment_lines:
+                    payment_lines.append(line)
+            if len(payment_lines) > len(invoice.payment_lines):
+                # print(invoice, payment_lines)
+                invoice.payment_lines = payment_lines
+                to_save.append(invoice)
+        Invoice.save(to_save)
+        for reference in lines_invoice:
+            if 'invoice' in lines_invoice[reference]:
+                # print(lines_invoice[reference])
+                lines = lines_invoice[reference]['move_lines']
+                for line in lines_invoice[reference]['invoice'].lines_to_pay:
+                    lines.append(line)
+                amount = Decimal('0.0')
+                for line in lines:
+                    amount += line.debit - line.credit
+                if not amount:
+                    # print('reconcile: ', lines)
+                    MoveLine.reconcile(lines)
+        # Actualizacion.add_logs(actualizacion, logs)
 
 
 # Se añaden campos relacionados con las retenciones aplicadas en TecnoCarnes

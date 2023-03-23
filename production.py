@@ -115,6 +115,7 @@ class Production(metaclass=PoolMeta):
                                 Template.write([producto.template], {'producible': True})
                             production['product'] = producto.id
                             production['quantity'] = abs(cantidad)
+                            production['uom'] = producto.default_uom.id
                         entradas.append(transf)
                     #Salida (+1)
                     elif cantidad > 0:

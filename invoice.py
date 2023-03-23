@@ -10,7 +10,7 @@ import datetime
 
 from .it_supplier_noova import SendElectronicInvoice
 
-
+_ZERO = Decimal('0.0')
 
 ELECTRONIC_STATES = [
     ('none', 'None'),
@@ -293,6 +293,75 @@ class Invoice(metaclass=PoolMeta):
                 _ = SendElectronicInvoice(invoice, invoice.authorization)
             else:
                 invoice.get_message('El campo proveedor de autorización no ha sido seleccionado')
+
+
+    @staticmethod
+    def _check_cross_invoices():
+        pool = Pool()
+        Invoice = pool.get('account.invoice')
+        MoveLine = pool.get('account.move.line')
+        Reconciliation = pool.get('account.move.reconciliation')
+        Actualizacion = pool.get('conector.actualizacion')
+        actualizacion = Actualizacion.create_or_update(f'CRUCE DE FACTURAS')
+        logs = []
+        cursor = Transaction().connection.cursor()
+        query = "SELECT id FROM account_invoice WHERE state = 'posted' \
+            AND number != reference AND number like '%-%' AND reference like '%-%'"
+        cursor.execute(query)
+        invoices_id = cursor.fetchall()
+        _ids = []
+        for invoice in invoices_id:
+            _ids.append(invoice[0])
+        invoices = Invoice.browse(_ids)
+
+        cross = {}
+        numbers = []
+        for inv in invoices:
+            if inv.reference not in cross:
+                cross[inv.reference] = [inv]
+                numbers.append(inv.reference)
+            else:
+                cross[inv.reference].append(inv)
+
+        origin_invoices = Invoice.search([
+            ('number', 'in', numbers),
+            ('state', 'in', ['posted', 'paid'])
+        ])
+        to_save = []
+        for origin in origin_invoices:
+            if origin.state == 'paid':
+                msg = f"LA FACTURA CON ID {origin} YA SE ENCUENTRA EN ESTADO PAGADA "\
+                    f"PERO LA(S) FACTURA(S) CRUCE CON ID {cross[origin.number]} "\
+                    "SE ENCUENTRAN AUN EN ESTADO CONTABILIZADO"
+                logs.append(msg)
+                continue
+            lines_to_pay = []
+            for inv in cross[origin.number]:
+                lines_to_pay += list(inv.lines_to_pay)
+            payment_lines = list(origin.payment_lines)
+            for line in lines_to_pay:
+                if line not in payment_lines:
+                    payment_lines.append(line)
+            if len(payment_lines) > len(origin.payment_lines):
+                all_lines = list(origin.lines_to_pay) + payment_lines
+                reconciliations = []
+                amount = _ZERO
+                for line in all_lines:
+                    if line.reconciliation:
+                        reconciliations.append(line.reconciliation)
+                    amount += line.debit - line.credit
+                if amount >= _ZERO:
+                    origin.payment_lines = payment_lines
+                    to_save.append(origin)
+                    if amount == _ZERO:
+                        Reconciliation.delete(reconciliations)
+                        MoveLine.reconcile(all_lines)
+                else:
+                    msg = f"LA FACTURA CON ID {origin} TIENE UN PAGO MAYOR "\
+                        f"POR LA(S) FACTURA(S) CRUCE {cross[origin.number]}"
+                    logs.append(msg)
+        Invoice.save(to_save)
+        Actualizacion.add_logs(actualizacion, logs)
 
 
 class UpdateInvoiceTecno(Wizard):
