@@ -251,7 +251,7 @@ class Purchase(metaclass=PoolMeta):
                     line.unit_price = lin.Valor_Unitario
                     #Verificamos si hay descuento para la linea de producto y se agrega su respectivo descuento
                     if lin.Porcentaje_Descuento_1 > 0:
-                        porcentaje = round((lin.Porcentaje_Descuento_1/100), 3)
+                        porcentaje = round((lin.Porcentaje_Descuento_1/100), 4)
                         line.gross_unit_price = lin.Valor_Unitario
                         line.discount = Decimal(str(porcentaje))
                         line.on_change_discount()
@@ -573,24 +573,32 @@ class Purchase(metaclass=PoolMeta):
             return
         pool = Pool()
         Move = pool.get('stock.move')
-        Shipment = pool.get('stock.shipment.in')
-        shipments = []
-        for purchase in data:
-            for shipment in purchase.shipments:
+        # Shipment = pool.get('stock.shipment.in')
+        # to_save = []
+        for number in data:
+            for shipment in data[number]['purchase'].shipments:
+                print(shipment)
                 Move.delete(shipment.incoming_moves)
-                moves = []
-                for key in data['lines']:
-                    move = Move()
-                    move.from_location = data[key]['from_location']
-                    move.to_location = data[key]['to_location']
-                    move.product = data[key]['product']
-                    move.quantity = data[key]['quantity']
-                    move.unit_price = data[key]['unit_price']
-                    move.currency = shipment.company.currency
-                    moves.append(move)
-                shipment.incoming_moves = moves
-                shipments.append(shipment)
-        Shipment.save(shipments)
+                shipment.save()
+                # moves = []
+                for dict in data[number]['lines']:
+                    print(dict)
+                #     move = Move()
+                #     move.from_location = dict['from_location']
+                #     move.to_location = dict['to_location']
+                #     move.product = dict['product']
+                #     move.uom = dict['uom']
+                #     move.quantity = dict['quantity']
+                #     move.unit_price = dict['unit_price']
+                #     # move.origin = data[number]['origin']
+                #     move.currency = shipment.company.currency
+                #     moves.append(move)
+                # breakpoint()
+                # print(shipment, moves)
+                # shipment.moves = (list(getattr(shipment, 'moves', [])) + moves)
+                # shipment.save()
+        #         to_save.append(shipment)
+        # Shipment.save(to_save)
 
 
     @classmethod
@@ -622,7 +630,7 @@ class Purchase(metaclass=PoolMeta):
         products = {}
         tecno = {}
         for linea in lineas:
-            id_tecno = f"{linea.sw}-{linea.tipo}-{linea.Numero_documento}"
+            id_tecno = f"{linea.sw}-{linea.tipo}-{linea.Numero_Documento}" 
             if id_tecno in result['excepcion']:
                 continue
             # Se valida la existencia del producto
@@ -636,7 +644,7 @@ class Purchase(metaclass=PoolMeta):
                     continue
                 products[idproducto], = product
             # Se valida la existencia de la bodega
-            bodega = linea.Bodega
+            bodega = str(linea.Bodega)
             if bodega not in locations:
                 msg = f"EXCEPCION - {id_tecno} la bodega con id {bodega} no fue encontrada"
                 result['logs'].append(msg)
@@ -650,7 +658,7 @@ class Purchase(metaclass=PoolMeta):
                 result['excepcion'][id_tecno] = 'E'
                 continue
             # Se valida la cantidad del producto
-            cantidad = linea.Cantidad_Facturada
+            cantidad = float(linea.Cantidad_Facturada)
             if cantidad <= 0:
                 msg = f"EXCEPCION - {id_tecno} la cantidad no puede ser menor o igual a cero. Su valor es: {cantidad} "
                 result['logs'].append(msg)
@@ -665,6 +673,7 @@ class Purchase(metaclass=PoolMeta):
                 'from_location': locations['supplier'],
                 'to_location': locations[bodega].input_location,
                 'product': products[idproducto],
+                'uom': products[idproducto].purchase_uom,
                 'quantity': cantidad,
                 'unit_price': valor_unitario
             }
@@ -701,9 +710,11 @@ class Purchase(metaclass=PoolMeta):
             if number not in result['tryton']:
                 result['tryton'][number] = {
                     'purchase': purchase,
-                    'lines': tecno[number]['lines']
+                    'lines': tecno[number]['lines'],
+                    # 'origin': str(purchase.lines[0])
                 }
         Purchase.generate_shipment(generate_shipment)
+        # Purchase.save(generate_shipment)
         # Se valida si la orden de compra no existe en Tryton
         for number in tecno.keys():
             id_tecno = tecno[number]['id_tecno']
