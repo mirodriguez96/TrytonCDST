@@ -106,11 +106,11 @@ class Actualizacion(ModelSQL, ModelView):
         elif self.name == 'COMPROBANTES DE EGRESO':
             consult += " AND sw = 6"
         elif self.name == 'PRODUCCION':
-            consult += " AND sw = 12 AND ("
+            consult += " AND ("
             parametro = Config.get_data_parametros('177')
             valor_parametro = parametro[0].Valor.split(',')
             for tipo in valor_parametro:
-                consult += "tipo = "+str(tipo)
+                consult += f"tipo = {tipo}"
                 if (valor_parametro.index(tipo)+1) < len(valor_parametro):
                     consult += " OR "
             consult += ")"
@@ -194,7 +194,14 @@ class Actualizacion(ModelSQL, ModelView):
         elif self.name == 'COMPROBANTES DE EGRESO':
             consult += " AND sw = 6"
         elif self.name == 'PRODUCCION':
-            consult += " AND sw = 12"
+            consult += " AND ("
+            parametro = Config.get_data_parametros('177')
+            valor_parametro = parametro[0].Valor.split(',')
+            for tipo in valor_parametro:
+                consult += f"tipo = {tipo}"
+                if (valor_parametro.index(tipo)+1) < len(valor_parametro):
+                    consult += " OR "
+            consult += ")"
         else:
             return None
         result = conexion.get_data(consult)
@@ -220,7 +227,14 @@ class Actualizacion(ModelSQL, ModelView):
         elif self.name == 'COMPROBANTES DE EGRESO':
             consult += " AND sw = 6"
         elif self.name == 'PRODUCCION':
-            consult += " AND sw = 12"
+            consult += " AND ("
+            parametro = Config.get_data_parametros('177')
+            valor_parametro = parametro[0].Valor.split(',')
+            for tipo in valor_parametro:
+                consult += f"tipo = {tipo}"
+                if (valor_parametro.index(tipo)+1) < len(valor_parametro):
+                    consult += " OR "
+            consult += ")"
         else:
             return None
         result = conexion.get_data(consult)
@@ -248,7 +262,7 @@ class Actualizacion(ModelSQL, ModelView):
         elif self.name == 'COMPROBANTES DE EGRESO':
             consult += " AND sw = 6"
         elif self.name == 'PRODUCCION':
-            consult += " AND sw = 12 AND ("
+            consult += " AND ("
             parametro = Config.get_data_parametros('177')
             valor_parametro = parametro[0].Valor.split(',')
             for tipo in valor_parametro:
@@ -302,7 +316,7 @@ class Actualizacion(ModelSQL, ModelView):
             consultv = "SELECT id_tecno FROM production WHERE id_tecno is not null"
             cursor.execute(consultv)
             result = cursor.fetchall()
-            cond = "sw=12 AND ("
+            cond = "("
             parametro = Config.get_data_parametros('177')
             valor_parametro = parametro[0].Valor.split(',')
             for tipo in valor_parametro:
