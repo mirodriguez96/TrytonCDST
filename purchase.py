@@ -26,9 +26,15 @@ class Purchase(metaclass=PoolMeta):
                                     )
     order_tecno_sent = fields.Boolean('Order TecnoCarnes sent', readonly=True)
 
-    # @staticmethod
-    # def default_order_tecno():
-    #     return 'no'
+    @classmethod
+    def copy(cls, purchases, default=None):
+        if default is None:
+            default = {}
+        else:
+            default = default.copy()
+        # default.setdefault('order_tecno', 'no')
+        default.setdefault('order_tecno_sent', False)
+        return super(Purchase, cls).copy(purchases, default=default)
 
     @classmethod
     def import_data_purchase(cls):
@@ -51,7 +57,7 @@ class Purchase(metaclass=PoolMeta):
         actualizacion = Actualizacion.create_or_update('COMPRAS')
         if not data:
             actualizacion.save()
-            print('FINISH COMPRAS PREMA')
+            print('FINISH COMPRAS')
             return
         Invoice = pool.get('account.invoice')
         Purchase = pool.get('purchase.purchase')
@@ -573,32 +579,49 @@ class Purchase(metaclass=PoolMeta):
             return
         pool = Pool()
         Move = pool.get('stock.move')
-        # Shipment = pool.get('stock.shipment.in')
-        # to_save = []
+        Shipment = pool.get('stock.shipment.in')
+        # Se procede a crear los envíos segun la compra
+        to_save = []
         for number in data:
-            for shipment in data[number]['purchase'].shipments:
-                print(shipment)
-                Move.delete(shipment.incoming_moves)
-                shipment.save()
-                # moves = []
-                for dict in data[number]['lines']:
-                    print(dict)
-                #     move = Move()
-                #     move.from_location = dict['from_location']
-                #     move.to_location = dict['to_location']
-                #     move.product = dict['product']
-                #     move.uom = dict['uom']
-                #     move.quantity = dict['quantity']
-                #     move.unit_price = dict['unit_price']
-                #     # move.origin = data[number]['origin']
-                #     move.currency = shipment.company.currency
-                #     moves.append(move)
-                # breakpoint()
-                # print(shipment, moves)
-                # shipment.moves = (list(getattr(shipment, 'moves', [])) + moves)
-                # shipment.save()
-        #         to_save.append(shipment)
-        # Shipment.save(to_save)
+            purchase  = data[number]['purchase']
+            if purchase.shipments:
+                continue
+            line_moves = {}
+            for line in purchase.lines:
+                if line.moves and line.product not in line_moves:
+                    for m in line.moves:
+                        if not m.shipment:
+                            line_moves[line.product] = m
+            # Se crea el envío
+            shipment = Shipment(
+                warehouse=purchase.warehouse.id,
+                supplier=purchase.party.id,
+                company=purchase.company.id,
+                effective_date=data[number]['date'],
+                planned_date=data[number]['date'],
+                )
+            moves = []
+            for dict in data[number]['lines']:
+                if dict['product'] in line_moves:
+                    move = line_moves[dict['product']]
+                    move.quantity = dict['quantity']
+                    move.unit_price = dict['unit_price']
+                else:
+                    move = Move()
+                    move.from_location = dict['from_location']
+                    move.to_location = dict['to_location']
+                    move.product = dict['product']
+                    move.uom = dict['uom']
+                    move.quantity = dict['quantity']
+                    move.unit_price = dict['unit_price']
+                    move.currency = purchase.company.currency
+                moves.append(move)
+            shipment.moves = (list(getattr(shipment, 'moves', [])) + moves)
+            shipment.reference = purchase.reference
+            to_save.append(shipment)
+        Shipment.save(to_save)
+        Shipment.receive(to_save)
+        Shipment.done(to_save)
 
 
     @classmethod
@@ -610,8 +633,9 @@ class Purchase(metaclass=PoolMeta):
         result = {
             'tryton': {},
             'logs': [],
-            'excepcion': {}
+            'exportado': {}
         }
+        excepcion = []
         # Se trae las ubicaciones existentes en Tryton
         _locations = Location.search([
             'OR',
@@ -631,16 +655,17 @@ class Purchase(metaclass=PoolMeta):
         tecno = {}
         for linea in lineas:
             id_tecno = f"{linea.sw}-{linea.tipo}-{linea.Numero_Documento}" 
-            if id_tecno in result['excepcion']:
+            if id_tecno in excepcion:
                 continue
             # Se valida la existencia del producto
-            idproducto = linea.IdProducto
+            idproducto = str(linea.IdProducto)
             if idproducto not in products:
                 product = Product.search([('code', '=', idproducto)])
                 if not product:
                     msg = f"EXCEPCION - {id_tecno} el producto con codigo {idproducto} no fue encontrado"
                     result['logs'].append(msg)
-                    result['excepcion'][id_tecno] = 'E'
+                    excepcion.append(id_tecno)
+                    result['exportado'][id_tecno] = 'E'
                     continue
                 products[idproducto], = product
             # Se valida la existencia de la bodega
@@ -648,21 +673,24 @@ class Purchase(metaclass=PoolMeta):
             if bodega not in locations:
                 msg = f"EXCEPCION - {id_tecno} la bodega con id {bodega} no fue encontrada"
                 result['logs'].append(msg)
-                result['excepcion'][id_tecno] = 'E'
+                excepcion.append(id_tecno)
+                result['exportado'][id_tecno] = 'E'
                 continue
             # Se valida el precio del producto
             valor_unitario = float(linea.Valor_Unitario)
             if valor_unitario <= 0:
                 msg = f"EXCEPCION - {id_tecno} el valor unitario no puede ser menor o igual a cero. Su valor es: {valor_unitario} "
                 result['logs'].append(msg)
-                result['excepcion'][id_tecno] = 'E'
+                excepcion.append(id_tecno)
+                result['exportado'][id_tecno] = 'E'
                 continue
             # Se valida la cantidad del producto
             cantidad = float(linea.Cantidad_Facturada)
             if cantidad <= 0:
                 msg = f"EXCEPCION - {id_tecno} la cantidad no puede ser menor o igual a cero. Su valor es: {cantidad} "
                 result['logs'].append(msg)
-                result['excepcion'][id_tecno] = 'E'
+                excepcion.append(id_tecno)
+                result['exportado'][id_tecno] = 'E'
                 continue
             if products[idproducto].purchase_uom.symbol == 'u':
                 cantidad = int(cantidad)
@@ -679,8 +707,11 @@ class Purchase(metaclass=PoolMeta):
             }
             number = linea.DescuentoOrdenVenta.split('-')[1]
             if number not in tecno:
+                fecha = str(linea.Fecha_Documento).split()[0].split('-')
+                _date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
                 tecno[number] = {
                     'id_tecno': id_tecno,
+                    'date': _date,
                     'lines': [line]
                 }
             else:
@@ -694,34 +725,31 @@ class Purchase(metaclass=PoolMeta):
         ])
         # Se valida las ordenes de compra según su estado de envío 
         # y se agregan las líneas que van a ser creadas a la variable result
-        generate_shipment = []
         for purchase in purchases:
             number = purchase.number
-            if purchase.shipment_state == 'received':
+            if purchase.shipments:
                 id_tecno = tecno[number]['id_tecno']
-                msg = f"REVISAR - {id_tecno} el envío de la orden de compra ya se encuentra finalizado"
+                msg = f"EXCEPCION - {id_tecno} el envío de la orden de compra ya se encuentra creado"
                 result['logs'].append(msg)
-                result['excepcion'][id_tecno] = 'T'
+                excepcion.append(id_tecno)
+                result['exportado'][id_tecno] = 'E'
                 continue
-            # Se valida si la compra tiene creado algún envío
-            if not purchase.shipments:
-                generate_shipment.append(purchase)
             # Se almacena la compra y las líneas
             if number not in result['tryton']:
                 result['tryton'][number] = {
                     'purchase': purchase,
+                    'date': tecno[number]['date'],
                     'lines': tecno[number]['lines'],
-                    # 'origin': str(purchase.lines[0])
                 }
-        Purchase.generate_shipment(generate_shipment)
-        # Purchase.save(generate_shipment)
+                result['exportado'][tecno[number]['id_tecno']] = 'T'
         # Se valida si la orden de compra no existe en Tryton
         for number in tecno.keys():
             id_tecno = tecno[number]['id_tecno']
-            if number not in result['tryton'] and id_tecno not in result['excepcion']:
+            if number not in result['tryton'] and id_tecno not in excepcion:
                 msg = f"EXCEPCION - {id_tecno} no se encontro la orden de compra"
                 result['logs'].append(msg)
-                result['excepcion'][id_tecno] = 'E'
+                excepcion.append(id_tecno)
+                result['exportado'][id_tecno] = 'E'
             
         return result
     
@@ -736,7 +764,7 @@ class Purchase(metaclass=PoolMeta):
         result = cls._validate_order(lineas)
         cls._create_shipment(result['tryton'])
         Actualizacion.add_logs(actualizacion, result['logs'])
-        for idt, exportado in result['excepcion'].items():
+        for idt, exportado in result['exportado'].items():
             Config.update_exportado(idt, exportado)
 
         
