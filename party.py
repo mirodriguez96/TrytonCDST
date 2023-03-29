@@ -2,6 +2,7 @@ import datetime
 from trytond.model import fields
 from trytond.pool import Pool, PoolMeta
 from trytond.pyson import Eval
+from trytond.transaction import Transaction
 
 RECEIVABLE_PAYABLE_TECNO = {}
 
@@ -60,10 +61,13 @@ class Party(metaclass=PoolMeta):
         # Se trae los terceros que cumplan con la fecha establecida
         fecha_actualizacion = Actualizacion.get_fecha_actualizacion(actualizacion)
         terceros_db = Config.get_tblterceros(fecha_actualizacion)
+        if not terceros_db:
+            return
         values = {
             'to_create': [],
             'logs': [],
         }
+        parties = cls._get_party_documentos(terceros_db, 'nit_cedula')
         # Comenzamos a recorrer los terceros traidos por la consulta
         for tercero in terceros_db:
             try:
@@ -79,42 +83,40 @@ class Party(metaclass=PoolMeta):
                 TipoPersona = cls.person_type(tercero.TipoPersona.strip())
                 ciiu = tercero.IdActividadEconomica
                 regime_tax = cls.tax_regime(tercero)
-                exists = Party.search([
-                    ('id_number', '=', nit_cedula),
-                    ['OR', ('active', '=', True), ('active', '=', False)]
-                ])
-                #Ahora verificamos si el tercero existe en tryton
-                if exists:
-                    exists, = exists
-                    if not exists.active:
-                        msg = f"El tercero {nit_cedula} esta marcado como inactivo"
-                        values['logs'].append(msg)
-                        continue
+                party = None
+                if nit_cedula in parties['active']:
+                    party = parties['active'][nit_cedula]
+                elif nit_cedula in parties['inactive']:
+                    msg = f"El tercero {nit_cedula} esta marcado como inactivo"
+                    values['logs'].append(msg)
+                    continue
+                # Ahora verificamos si el tercero existe en tryton
+                if party:
                     ultimo_cambio = tercero.Ultimo_Cambio_Registro
                     if not ultimo_cambio:
                         continue
                     create_date = None
                     write_date = None
                     #LA HORA DEL SISTEMA DE TRYTON TIENE UNA DIFERENCIA HORARIA DE 5 HORAS CON LA DE TECNO
-                    if exists.write_date:
-                        write_date = (exists.write_date - datetime.timedelta(hours=5))
+                    if party.write_date:
+                        write_date = (party.write_date - datetime.timedelta(hours=5))
                     else:
-                        create_date = (exists.create_date - datetime.timedelta(hours=5))
+                        create_date = (party.create_date - datetime.timedelta(hours=5))
                     #Ahora vamos a verificar si el cambio más reciente fue hecho en la bd sqlserver para actualizarlo
                     if (write_date and ultimo_cambio > write_date) or (not write_date and ultimo_cambio > create_date):
-                        exists.type_document = tipo_identificacion
-                        exists.name = nombre
-                        exists.first_name = PrimerNombre
-                        exists.second_name = SegundoNombre
-                        exists.first_family_name = PrimerApellido
-                        exists.second_family_name = SegundoApellido
-                        exists.type_person = TipoPersona
-                        if exists.type_person == 'persona_juridica':
-                            exists.declarante = True
+                        party.type_document = tipo_identificacion
+                        party.name = nombre
+                        party.first_name = PrimerNombre
+                        party.second_name = SegundoNombre
+                        party.first_family_name = PrimerApellido
+                        party.second_family_name = SegundoApellido
+                        party.type_person = TipoPersona
+                        if party.type_person == 'persona_juridica':
+                            party.declarante = True
                         #Verificación e inserción codigo ciiu
                         if ciiu and ciiu != 0:
-                            exists.ciiu_code = ciiu
-                        exists.regime_tax = regime_tax
+                            party.ciiu_code = ciiu
+                        party.regime_tax = regime_tax
                         contact_mail = Mcontact.search([('id_tecno', '=', nit_cedula+'-mail')])
                         if contact_mail:
                             contact_mail, = contact_mail
@@ -124,7 +126,7 @@ class Party(metaclass=PoolMeta):
                             contact_mail = Mcontact()
                             contact_mail.type = 'email'
                             contact_mail.value = mail
-                            contact_mail.party = exists
+                            contact_mail.party = party
                             contact_mail.save()
                         contact_tel = Mcontact.search([('id_tecno', '=', nit_cedula+'-tel')])
                         if contact_tel:
@@ -138,9 +140,9 @@ class Party(metaclass=PoolMeta):
                             contact_tel.type = 'other'
                             contact_tel.value = telefono
                             contact_tel.name = 'telefono'
-                            contact_tel.party = exists
+                            contact_tel.party = party
                             contact_tel.save()
-                        exists.save()
+                        party.save()
                 else:
                     # Creando tercero junto con sus direcciones y metodos de contactos
                     party = {
@@ -370,6 +372,41 @@ class Party(metaclass=PoolMeta):
         elif tercero.IdTipoContribuyente == 1 or tercero.IdTipoContribuyente == 4:
             regime_tax = 'gran_contribuyente'
         return regime_tax
+    
+    @classmethod
+    def _get_party_documentos(cls, documentos, nombre_variable):
+        Party = Pool().get('party.party')
+        cursor = Transaction().connection.cursor()
+        # Se procede a validar los terceros existentes y activos
+        ids_number = []
+        for obj in documentos:
+            nit_cedula = getattr(obj, nombre_variable)
+            nit_cedula = nit_cedula.replace('\n',"")
+            ids_number.append(nit_cedula)
+        if len(ids_number) > 1:
+            ids_number = tuple(ids_number)
+            query = f"SELECT id, id_number, active FROM party_party WHERE id_number in {ids_number}"
+        else:
+            id_number, = ids_number
+            query = f"SELECT id, id_number, active FROM party_party WHERE id_number = '{id_number}'"
+        cursor.execute(query)
+        result = cursor.fetchall()
+        """ 
+        Se crea un diccionario dónde se almacenara los terceros existentes
+        de acuerdo a su estado correspondiente activo o inactivo
+        """
+        parties = {
+            'active': {},
+            'inactive': []
+        }
+        for r in result:
+            if r[2]:
+                parties['active'][r[1]] = Party(r[0])
+            else:
+                if nombre_variable == 'nit_Cedula':
+                    cursor.execute(f"UPDATE party_party SET active = True WHERE id = {r[0]}")
+                parties['inactive'].append(r[1])    
+        return parties
 
 #Herencia del party.address e insercción del campo id_tecno
 class PartyAddress(metaclass=PoolMeta):

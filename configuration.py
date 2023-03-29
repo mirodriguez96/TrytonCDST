@@ -180,7 +180,7 @@ class Configuration(ModelSQL, ModelView):
         Config = Pool().get('conector.configuration')
         config, = Config.search([], order=[('id', 'DESC')], limit=1)
         fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
-        #query = "SELECT * FROM dbo.Documentos WHERE tipo = 110 AND Numero_documento=127016" #TEST
+        # query = "SELECT * FROM dbo.Documentos WHERE tipo = null AND Numero_documento = null" #TEST
         if not sw:
             query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND tipo = "+tipo+" AND exportado != 'T' AND exportado != 'E' AND exportado != 'X' "
         else:

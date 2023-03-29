@@ -57,6 +57,7 @@ class Voucher(ModelSQL, ModelView):
         # cls.force_draft_voucher(to_delete)
         # Voucher.delete(to_delete)
 
+        parties = Party._get_party_documentos(documentos, 'nit_Cedula')
         for doc in documentos:
             try:
                 tipo_numero = f"{doc.tipo}-{doc.Numero_documento}"
@@ -89,19 +90,15 @@ class Voucher(ModelSQL, ModelView):
                     logs.append(msg1)
                     continue
                 nit_cedula = doc.nit_Cedula.replace('\n',"")
-                party = Party.search([
-                    ('id_number', '=', nit_cedula),
-                    ['OR', ('active', '=', True), ('active', '=', False)]
-                ])
+                party = None
+                if nit_cedula in parties['active']:
+                    party = parties['active'][nit_cedula]
                 if not party:
-                    msg = f"REVISAR {id_tecno} - El tercero {nit_cedula} no existe en tryton"
-                    logs.append(msg)
-                    exceptions.append(id_tecno)
+                    if nit_cedula not in parties['inactive']:
+                        msg = f"REVISAR {id_tecno} - El tercero {nit_cedula} no existe en tryton"
+                        logs.append(msg)
+                        exceptions.append(id_tecno)
                     continue
-                party, = party
-                if not party.active:
-                    party.active = True
-                    party.save()
                 tipo_pago = Config.get_tipos_pago(id_tecno)
                 if not tipo_pago:
                     msg = f"NO SE ENCONTRO FORMA(S) DE PAGO EN TECNOCARNES (DOCUMENTOS_CHE) PARA EL DOCUMENTO {id_tecno}"
@@ -209,6 +206,7 @@ class Voucher(ModelSQL, ModelView):
         actualizacion = Actualizacion.create_or_update('COMPROBANTES DE INGRESO')
         documentos_db = Config.get_documentos_tecno('5')
         account_type = 'account.type.receivable'
+        parties = Party._get_party_documentos(documentos_db, 'nit_Cedula')
         for doc in documentos_db:
             try:
                 sw = str(doc.sw)
@@ -252,19 +250,15 @@ class Voucher(ModelSQL, ModelView):
                     exceptions.append(id_tecno)
                     continue
                 nit_cedula = doc.nit_Cedula.replace('\n',"")
-                tercero = Party.search([
-                    ('id_number', '=', nit_cedula),
-                    ['OR', ('active', '=', True), ('active', '=', False)]
-                ])
-                if not tercero:
-                    msg = f"REVISAR {id_tecno} - El tercero {nit_cedula} no existe en tryton"
-                    logs.append(msg)
-                    exceptions.append(id_tecno)
+                party = None
+                if nit_cedula in parties['active']:
+                    party = parties['active'][nit_cedula]
+                if not party:
+                    if nit_cedula not in parties['inactive']:
+                        msg = f"REVISAR {id_tecno} - El tercero {nit_cedula} no existe en tryton"
+                        logs.append(msg)
+                        exceptions.append(id_tecno)
                     continue
-                tercero, = tercero
-                if not tercero.active:
-                    tercero.active = True
-                    tercero.save()
                 #Se obtiene la forma de pago, según la tabla Documentos_Che de TecnoCarnes
                 tipo_pago = Config.get_tipos_pago(id_tecno)
                 if not tipo_pago:
@@ -278,7 +272,7 @@ class Voucher(ModelSQL, ModelView):
                     print('MULTI-INGRESO:', id_tecno)
                     multingreso = MultiRevenue()
                     multingreso.code = tipo+'-'+nro
-                    multingreso.party = tercero
+                    multingreso.party = party
                     multingreso.date = fecha_date
                     multingreso.id_tecno = id_tecno
                     # Se crea una lista con las formas de pago (transacciones)
@@ -312,7 +306,7 @@ class Voucher(ModelSQL, ModelView):
                     to_lines = []
                     for factura in facturas:
                         reference = factura.tipo_aplica+'-'+str(factura.numero_aplica)
-                        move_line = cls.get_moveline(reference, tercero, logs, account_type)
+                        move_line = cls.get_moveline(reference, party, logs, account_type)
                         if move_line:
                             valor_pagado = Decimal(factura.valor + factura.descuento + factura.retencion + (factura.ajuste*-1) + factura.retencion_iva + factura.retencion_ica)
                             if valor_pagado and valor_pagado > 0:
@@ -359,7 +353,7 @@ class Voucher(ModelSQL, ModelView):
                     voucher.id_tecno = id_tecno
                     voucher.number = tipo+'-'+nro
                     voucher.reference = tipo+'-'+nro
-                    voucher.party = tercero
+                    voucher.party = party
                     voucher.payment_mode = paymode[0]
                     voucher.on_change_payment_mode()
                     voucher.voucher_type = 'receipt'

@@ -80,6 +80,7 @@ class Sale(metaclass=PoolMeta):
         to_created = []
         to_exception = []
         not_import = []
+        parties = Party._get_party_documentos(data, 'nit_Cedula')
         #Procedemos a realizar una venta
         for venta in data:
             try:
@@ -132,18 +133,15 @@ class Sale(metaclass=PoolMeta):
                 fecha = str(venta.fecha_hora).split()[0].split('-')
                 fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
                 nit_cedula = venta.nit_Cedula.replace('\n',"")
-                party = Party.search([
-                    ('id_number', '=', nit_cedula),
-                    ['OR', ('active', '=', True), ('active', '=', False)]
-                ])
+                party = None
+                if nit_cedula in parties['active']:
+                    party = parties['active'][nit_cedula]
                 if not party:
-                    msg2 = f'REVISAR {id_venta} - No se encontro el tercero {nit_cedula}'
-                    logs.append(msg2)
+                    if nit_cedula not in parties['inactive']:
+                        msg2 = f'REVISAR {id_venta} - No se encontro el tercero {nit_cedula}'
+                        logs.append(msg2)
+                        to_exception.append(id_venta)
                     continue
-                party = party[0]
-                if not party.active:
-                    party.active = True
-                    party.save()
                 #Se indica a que bodega pertenece
                 id_tecno_bodega = venta.bodega
                 bodega = Location.search([('id_tecno', '=', id_tecno_bodega)])
@@ -407,16 +405,16 @@ class Sale(metaclass=PoolMeta):
                 logs.append(msg)
                 to_exception.append(id_venta)
         Actualizacion.add_logs(actualizacion, logs)
-        for idt in to_created:
-            if idt not in to_exception:
-                Config.update_exportado(idt, 'T')
-                # print('creado...', idt) #TEST
-        for idt in to_exception:
-            Config.update_exportado(idt, 'E')
-            # print('excepcion...', idt) #TEST
-        for idt in not_import:
-            Config.update_exportado(idt, 'X')
-            # print('not_import...', idt) #TEST
+        # for idt in to_created:
+        #     if idt not in to_exception:
+        #         Config.update_exportado(idt, 'T')
+        #         # print('creado...', idt) #TEST
+        # for idt in to_exception:
+        #     Config.update_exportado(idt, 'E')
+        #     # print('excepcion...', idt) #TEST
+        # for idt in not_import:
+        #     Config.update_exportado(idt, 'X')
+        #     # print('not_import...', idt) #TEST
         print('FINISH VENTAS')
 
 

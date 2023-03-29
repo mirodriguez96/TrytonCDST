@@ -78,7 +78,8 @@ class Purchase(metaclass=PoolMeta):
         to_created = [] # lista utilizada para almacenar los documentos que se importaron correctamente
         to_exception = [] # lista utilizada para almacenar los documentos que tuvieron alguna excepcion en el proceso de la importación
         not_import = [] # lista utilizada para almacenar los documentos que NO se deben importar (anulados)
-        #Procedemos a realizar la compra
+        parties = Party._get_party_documentos(data, 'nit_Cedula')
+        # Procedemos a realizar la compra
         for compra in data:
             sw = compra.sw
             numero_doc = compra.Numero_documento
@@ -115,19 +116,16 @@ class Purchase(metaclass=PoolMeta):
                 fecha = str(compra.fecha_hora).split()[0].split('-')
                 fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
                 purchase.purchase_date = fecha_date
-                party = Party.search([
-                    ('id_number', '=', compra.nit_Cedula.replace('\n',"")),
-                    ['OR', ('active', '=', True), ('active', '=', False)]
-                ])
+                nit_cedula = compra.nit_Cedula.replace('\n',"")
+                party = None
+                if nit_cedula in parties['active']:
+                    party = parties['active'][nit_cedula]
                 if not party:
-                    msg = f"EXCEPCION {id_compra} - No se encontró el tercero con id {compra.nit_Cedula}"
-                    logs.append(msg)
-                    to_exception.append(id_compra)
+                    if nit_cedula not in parties['inactive']:
+                        msg = f"EXCEPCION {id_compra} - No se encontró el tercero con id {nit_cedula}"
+                        logs.append(msg)
+                        to_exception.append(id_compra)
                     continue
-                party = party[0]
-                if not party.active:
-                    party.active = True
-                    party.save()
                 purchase.party = party
                 #Se busca una dirección del tercero para agregar en la factura y envio
                 address = Address.search([('party', '=', party.id)], limit=1)

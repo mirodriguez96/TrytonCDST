@@ -77,6 +77,7 @@ class Invoice(metaclass=PoolMeta):
         created = []
         to_exception = []
         not_import = []
+        parties = Party._get_party_documentos(documentos, 'nit_Cedula')
         with Transaction().set_context(_skip_warnings=True):
             for nota in documentos:
                 id_tecno = str(nota.sw)+'-'+nota.tipo+'-'+str(nota.Numero_documento)
@@ -93,14 +94,15 @@ class Invoice(metaclass=PoolMeta):
                         not_import.append(id_tecno)
                         continue
                     nit_cedula = nota.nit_Cedula.replace('\n',"")
-                    party = Party.search([('id_number', '=', nit_cedula)])
+                    party = None
+                    if nit_cedula in parties['active']:
+                        party = parties['active'][nit_cedula]
                     if not party:
-                        msg = f'EXCEPCION: NO SE ENCONTRO EL TERCERO {nit_cedula} DE LA NOTA {id_tecno}'
-                        logs.append(msg)
-                        # actualizacion.reset_writedate('TERCEROS')
-                        to_exception.append(id_tecno)
+                        if nit_cedula not in parties['inactive']:
+                            msg = f'EXCEPCION: NO SE ENCONTRO EL TERCERO {nit_cedula} DE LA NOTA {id_tecno}'
+                            logs.append(msg)
+                            to_exception.append(id_tecno)
                         continue
-                    party = party[0]
                     plazo_pago = PaymentTerm.search([('id_tecno', '=', nota.condicion)])
                     if not plazo_pago:
                         msg = f'EXCEPCION: PLAZO {nota.condicion} NO EXISTE PARA LA NOTA {id_tecno}'
