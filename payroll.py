@@ -558,6 +558,41 @@ class Payroll(metaclass=PoolMeta):
                         raise UserError('staff_event.msg_error_on_analytic_account', wage)
         self.save()
         
+    def process_loans_to_pay(self, LoanLine, PayrollLine, MoveLine):
+        #super(Payroll, self).process_loans_to_pay(self, LoanLine, PayrollLine, MoveLine)
+        dom = [
+            ('loan.party', '=', self.employee.party.id),
+            ('loan.wage_type', '!=', None),
+            ('maturity_date', '<=', self.end),
+            ('state', 'in', ['pending', 'partial']),
+        ]
+        lines_loan = LoanLine.search(dom)
+        for m, r in zip(lines_loan, range(len(lines_loan))):
+            party = m.loan.party_to_pay if m.loan.party_to_pay else None
+            move_lines = MoveLine.search([
+                ('origin', 'in', ['staff.loan.line,' + str(m)]),
+            ])
+            wage_type = m.loan.wage_type
+            amount = m.amount
+            to_create = {
+                    'origin': m,
+                    'party': party,
+                    'quantity': 1,
+                    'uom': wage_type.uom,
+                    'unit_value': amount,
+                    'move_lines': [('add', move_lines)],
+                    'wage_type': wage_type,
+                    'description': wage_type.name,
+                    'payroll': self,
+                    'receipt':wage_type.receipt,
+                    'sequence': wage_type.sequence,
+                }
+
+            line, = PayrollLine.create([to_create])
+            print(line)
+            LoanLine.write([m], {'state': 'paid', 'origin': line})
+
+
 class PayrollReport(CompanyReport):
     __name__ = 'staff.payroll'
     
