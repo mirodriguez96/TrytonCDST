@@ -375,6 +375,8 @@ class Party(metaclass=PoolMeta):
     
     @classmethod
     def _get_party_documentos(cls, documentos, nombre_variable):
+        if not documentos:
+            return None
         Party = Pool().get('party.party')
         cursor = Transaction().connection.cursor()
         # Se procede a validar los terceros existentes y activos
