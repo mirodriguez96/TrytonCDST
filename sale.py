@@ -405,16 +405,16 @@ class Sale(metaclass=PoolMeta):
                 logs.append(msg)
                 to_exception.append(id_venta)
         Actualizacion.add_logs(actualizacion, logs)
-        # for idt in to_created:
-        #     if idt not in to_exception:
-        #         Config.update_exportado(idt, 'T')
-        #         # print('creado...', idt) #TEST
-        # for idt in to_exception:
-        #     Config.update_exportado(idt, 'E')
-        #     # print('excepcion...', idt) #TEST
-        # for idt in not_import:
-        #     Config.update_exportado(idt, 'X')
-        #     # print('not_import...', idt) #TEST
+        for idt in to_created:
+            if idt not in to_exception:
+                Config.update_exportado(idt, 'T')
+                # print('creado...', idt) #TEST
+        for idt in to_exception:
+            Config.update_exportado(idt, 'E')
+            # print('excepcion...', idt) #TEST
+        for idt in not_import:
+            Config.update_exportado(idt, 'X')
+            # print('not_import...', idt) #TEST
         print('FINISH VENTAS')
 
 

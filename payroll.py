@@ -159,6 +159,8 @@ class PayrollPaymentReportBcl(Report):
             values = values.copy()
             values['employee'] = payroll.employee.party.name
             type_document = payroll.employee.party.type_document
+            if type_document not in _TYPE_DOCUMENT:
+                raise UserError('error: type_document', f'{type_document} not found for type_document bancolombia')
             values['type_document'] = _TYPE_DOCUMENT[type_document]
             values['id_number'] = payroll.employee.party.id_number
             bank_code_sap = None
