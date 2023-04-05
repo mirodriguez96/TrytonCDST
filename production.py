@@ -97,6 +97,9 @@ class Production(metaclass=PoolMeta):
                         to_exception.append(id_tecno)
                         break
                     producto, = producto
+                    # Se valida si el producto esta creado en unidades para eliminar sus decimales
+                    if producto.default_uom.symbol.upper() == 'U':
+                        cantidad = float(int(cantidad))
                     transf = {
                         'product': producto.id,
                         'quantity': abs(cantidad),
