@@ -67,3 +67,6 @@ class Cron(metaclass=PoolMeta):
         cls.method.selection.append(
             ('account.invoice|_check_cross_invoices', "Validar cruce de facturas"),
             )
+        cls.method.selection.append(
+            ('conector.actualizacion|_missing_documents', "Validar documentos faltantes"),
+            )

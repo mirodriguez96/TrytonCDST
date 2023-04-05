@@ -361,3 +361,14 @@ class Actualizacion(ModelSQL, ModelView):
             logs.append(f"DOCUMENTO FALTANTE: {falt}")
         actualizacion, = Actualizacion.search([('name', '=', name)])
         cls.add_logs(actualizacion, logs)
+
+
+    @classmethod
+    def _missing_documents(cls):
+        print("RUN missing documents")
+        cursor = Transaction().connection.cursor()
+        cursor.execute("SELECT name FROM conector_actualizacion")
+        result = cursor.fetchall()
+        for r in result:
+            cls.revisa_secuencia_imp(r[0])
+        print("FINISH missing documents")
