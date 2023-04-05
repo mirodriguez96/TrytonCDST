@@ -6,6 +6,7 @@ from decimal import Decimal
 import datetime
 from sql import Table
 
+_ZERO = Decimal('0.0')
 
 #Heredamos del modelo sale.sale para agregar el campo id_tecno
 class Voucher(ModelSQL, ModelView):
@@ -732,12 +733,14 @@ class Voucher(ModelSQL, ModelView):
 
     @staticmethod
     def _check_cross_vouchers():
+        print('RUN validar cruce de comprobantes')
         pool = Pool()
         Line = pool.get('account.voucher.line')
         Invoice = pool.get('account.invoice')
         MoveLine = pool.get('account.move.line')
-        # Actualizacion = pool.get('conector.actualizacion')
-        # actualizacion = Actualizacion.create_or_update(f'CRUCE DE COMPROBANTES')
+        Reconciliation = pool.get('account.move.reconciliation')
+        Actualizacion = pool.get('conector.actualizacion')
+        actualizacion = Actualizacion.create_or_update(f'CRUCE DE COMPROBANTES')
         """
         Se realiza la búsqueda de las líneas de comprobantes que no tengan
         factura (línea de asiento) asociada para asignarse y luego conciliar
@@ -745,7 +748,6 @@ class Voucher(ModelSQL, ModelView):
         lines = Line.search([
             ('voucher.state', '=', 'posted'),
             ('reference', 'like', '%-%'),
-            # ('voucher.id_tecno', '!=', None),
             ('move_line', '=', None),
             [
                 'OR',
@@ -762,12 +764,9 @@ class Voucher(ModelSQL, ModelView):
                 if move_line.reference == line.reference and \
                     (move_line.account.type.receivable or move_line.account.type.payable):
                     return move_line
-        # logs = []
-        invoice_numbers = []
+        logs = []
         lines_invoice = {}
         for line in lines:
-            if line.reference not in invoice_numbers:
-                invoice_numbers.append(line.reference)
             if line.reference in lines_invoice:
                 move_line = _get_move_line(line)
                 lines_invoice[line.reference]['lines'].append(line)
@@ -779,38 +778,45 @@ class Voucher(ModelSQL, ModelView):
                     'move_lines': [move_line]
                 }
         invoices = Invoice.search([
-            ('number', 'in', invoice_numbers),
+            ('number', 'in', lines_invoice.keys()),
             ('state', '=', 'posted'),
         ])
+
         to_save = []
         for invoice in invoices:
-            lines_invoice[invoice.number]['invoice'] = invoice
-            line_invoice = invoice.lines_to_pay
+            lines_to_pay = invoice.lines_to_pay
+            # Se añade a las líneas del comprobante la línea de asienton de la factura
             lines = lines_invoice[invoice.number]['lines']
-            Line.write(lines, {'move_line': line_invoice[0].id})
+            Line.write(lines, {'move_line': lines_to_pay[0].id})
+            # Se procede a agregar las líneas del comprobante junto con las líneas de pago de la factura
             move_lines = lines_invoice[invoice.number]['move_lines']
             payment_lines = list(invoice.payment_lines)
             for line in move_lines:
                 if line and line not in payment_lines:
                     payment_lines.append(line)
             if len(payment_lines) > len(invoice.payment_lines):
+                all_lines = list(lines_to_pay) + payment_lines
                 # print(invoice, payment_lines)
-                invoice.payment_lines = payment_lines
-                to_save.append(invoice)
-        Invoice.save(to_save)
-        for reference in lines_invoice:
-            if 'invoice' in lines_invoice[reference]:
-                # print(lines_invoice[reference])
-                lines = lines_invoice[reference]['move_lines']
-                for line in lines_invoice[reference]['invoice'].lines_to_pay:
-                    lines.append(line)
-                amount = Decimal('0.0')
-                for line in lines:
+                reconciliations = []
+                amount = _ZERO
+                for line in all_lines:
+                    if line.reconciliation:
+                        reconciliations.append(line.reconciliation)
                     amount += line.debit - line.credit
-                if not amount:
-                    # print('reconcile: ', lines)
-                    MoveLine.reconcile(lines)
-        # Actualizacion.add_logs(actualizacion, logs)
+                # Se procede a validar si el total a pagar de la factura es valido
+                if amount >= _ZERO:
+                    invoice.payment_lines = payment_lines
+                    to_save.append(invoice)
+                    if amount == _ZERO:
+                        Reconciliation.delete(reconciliations)
+                        MoveLine.reconcile(all_lines)
+                else:
+                    msg = f"LA FACTURA CON ID {invoice} TIENE UN PAGO MAYOR "\
+                        f"AL INTENTAR AGREGAR LA(S) LINEA(S) CRUCE {move_lines}"
+                    logs.append(msg)
+        Invoice.save(to_save)
+        Actualizacion.add_logs(actualizacion, logs)
+        print('FINISH validar cruce de comprobantes')
 
 
 # Se añaden campos relacionados con las retenciones aplicadas en TecnoCarnes

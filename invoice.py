@@ -299,6 +299,7 @@ class Invoice(metaclass=PoolMeta):
 
     @staticmethod
     def _check_cross_invoices():
+        print('RUN validar cruce de facturas')
         pool = Pool()
         Invoice = pool.get('account.invoice')
         MoveLine = pool.get('account.move.line')
@@ -307,7 +308,7 @@ class Invoice(metaclass=PoolMeta):
         actualizacion = Actualizacion.create_or_update(f'CRUCE DE FACTURAS')
         logs = []
         cursor = Transaction().connection.cursor()
-        query = "SELECT id FROM account_invoice WHERE state = 'posted' \
+        query = "SELECT id FROM account_invoice WHERE state = 'posted' AND invoice_type != '92' \
             AND number != reference AND number like '%-%' AND reference like '%-%'"
         cursor.execute(query)
         invoices_id = cursor.fetchall()
@@ -364,6 +365,7 @@ class Invoice(metaclass=PoolMeta):
                     logs.append(msg)
         Invoice.save(to_save)
         Actualizacion.add_logs(actualizacion, logs)
+        print('FINISH validar cruce de facturas')
 
 
 class UpdateInvoiceTecno(Wizard):
