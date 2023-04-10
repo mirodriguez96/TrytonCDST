@@ -393,7 +393,7 @@ class ElectronicPayroll(object):
                 if 'LHorasExtras' not in subelements.keys():
                     subelements['LHorasExtras'] = []
                 hr = {
-                'Nvcom_cant': rvalue(line.quantity, 0),
+                'Nvcom_cant': rvalue(line.quantity, 2),
                 'Nvcom_pago': rvalue(line.amount, 2),
                 'Nvhor_tipo': concept,
                 'Nvhor_porc': str(EXTRAS[concept]['percentaje'])
@@ -405,18 +405,13 @@ class ElectronicPayroll(object):
                     subelements['LVacaciones'] = []
                 if concept == 'VacacionesComunes':
                     for l in line.lines_payroll:
-                        #quantity = Decimal(1.25 / 30) * l.quantity
-                        #print(l.quantity)
                         e ={
-                            #"FechaInicio":str(l.start_date),
-                            #"FechaFin":str(l.end_date),
                             "Nvcom_cant": rvalue(l.quantity, 2),
                             "Nvcom_pago": rvalue(l.amount, 2),
                             "Nvvac_tipo": "1"
                         }
                         subelements['LVacaciones'].append(e)
                 else:
-                    #quantity = Decimal(1.25 / 30) * line.quantity
                     e = {
                         "Nvcom_cant":rvalue(line.quantity, 2),
                         "Nvcom_pago":rvalue(line.amount, 2),
@@ -428,7 +423,7 @@ class ElectronicPayroll(object):
                 if 'Primas' not in subelements.keys():
                     subelements['Primas'] = {}
                 if concept == 'PrimasS':
-                    subelements['Primas']['Nvpri_cant'] = rvalue(line.quantity, 0)
+                    subelements['Primas']['Nvpri_cant'] = rvalue(line.quantity, 2)
                     subelements['Primas']['Nvpri_pago'] = rvalue(line.amount, 2)
                 else:
                     subelements['Primas']['Nvpri_pagn'] = rvalue(line.amount, 2)
@@ -449,7 +444,7 @@ class ElectronicPayroll(object):
                         e = {
                             'Nvcom_fini': str(l.start_date),
                             'Nvcom_ffin': str(l.end_date),
-                            'Nvcom_cant': rvalue(l.quantity, 0),
+                            'Nvcom_cant': rvalue(l.quantity, 2),
                             'Nvcom_pago': rvalue(l.amount, 2),
                             'Nvinc_tipo': TIPO_INCAPACIDAD[concept]
                         }
@@ -459,7 +454,7 @@ class ElectronicPayroll(object):
                 if 'LLicencias' not in subelements.keys():
                     subelements['LLicencias'] = []
                     for l in line.lines_payroll:
-                        tpo = '3'
+                        tipo = '3'
                         if concept == 'LicenciaMP':
                             tipo = '1'
                         if concept == 'LicenciaR':
@@ -467,8 +462,8 @@ class ElectronicPayroll(object):
                         e = {
                             'Nvcom_fini': str(l.start_date),
                             'Nvcom_ffin': str(l.end_date),
-                            'Nvcom_cant': rvalue(l.quantity, 0),
-                            'Nvlic_tipo': tpo
+                            'Nvcom_cant': rvalue(l.quantity, 2),
+                            'Nvlic_tipo': tipo
                         }
                         if concept != 'LicenciaNR':
                             e['Nvcom_pago'] = rvalue(l.amount, 2)
