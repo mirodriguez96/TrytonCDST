@@ -48,6 +48,7 @@ def register():
         purchase.Purchase,
         purchase.PurchaseLine,
         invoice.Invoice,
+        invoice.InvoiceLine,
         tax.Tax,
         tax.MiddleModel,
         tax.TaxRuleLine,

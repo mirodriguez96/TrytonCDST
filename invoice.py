@@ -21,6 +21,28 @@ ELECTRONIC_STATES = [
     ('accepted', 'Accepted'),
 ]
 
+_SW = {
+    '27': {
+        'name': 'NOTA CREDITO COMPRAS',
+        'type': 'in',
+        'type_note': 'credit',
+    },
+    '28': {
+        'name': 'NOTA DEBITO COMPRAS',
+        'type': 'in',
+        'type_note': 'debit',
+    },
+    '31': {
+        'name': 'NOTA DEBITO',
+        'type': 'out',
+        'type_note': 'debit',
+    },
+    '32': {
+        'name': 'NOTA CREDITO',
+        'type': 'out',
+        'type_note': 'credit',
+    },
+}
 
 class Invoice(metaclass=PoolMeta):
     'Invoice'
@@ -42,232 +64,395 @@ class Invoice(metaclass=PoolMeta):
         reconciliations = [l.reconciliation for l in move.lines if l.reconciliation]
         if reconciliations:
             Reconciliation.delete(reconciliations)
+
+
+    # Metodo encargado de validar los datos (importados) requeridos para la creación de la factura
+    def _validate_documentos_tecno(documentos):
+        data = {
+            'exportado': {},
+            'logs': [],
+            'tryton': {},
+        }
+        pool = Pool()
+        Config = pool.get('conector.configuration')
+        AccountConfiguration = pool.get('account.configuration')(1)
+        Invoice = pool.get('account.invoice')
+        Line = pool.get('account.invoice.line')
+        Party = pool.get('party.party')
+        PaymentTerm = pool.get('account.invoice.payment_term')
+        Product = pool.get('product.product')
+        Tax = pool.get('account.tax')
+        _type = None
+        _type_note = None
+        # Se valida si el módulo centro de operaciones está activo y es requerido en la línea de la factura
+        operation_center = hasattr(Line, 'operation_center')
+        if operation_center:
+            OperationCenter = pool.get('company.operation_center')
+            operation_center = OperationCenter.search([], order=[('id', 'DESC')], limit=1)
+            if not operation_center:
+                data['logs'].append('SE REQUIERE LA CREACION DE UN CENTRO DE OPERACION')
+                return data
+            data['operation_center'], = operation_center
+        # Se comienza a recorrer los registros importados
+        tecno = {}
+        for doc in documentos:
+            id_tecno = f"{doc.sw}-{doc.tipo}-{doc.Numero_documento}"
+            if doc.anulado.upper() == 'S':
+                msg = f"Documento {id_tecno} anulado en TecnoCarnes"
+                data['logs'].append(msg)
+                data['exportado'][id_tecno] = 'X'
+                continue
+            if id_tecno not in tecno:
+                tecno[id_tecno] = doc
+            if not _type:
+                _type = _SW[str(doc.sw)]['type']
+            if not _type_note:
+                _type_note = _SW[str(doc.sw)]['type_note']
+        if not tecno:
+            return data
+        # Se trae todos los terceros necesarios para los documentos
+        parties = Party._get_party_documentos(documentos, 'nit_Cedula')
+        # Se consulta los plazos de pago existentes para posteriormente ser usados
+        payment_term = {}
+        for payment in PaymentTerm.search([('id_tecno', '!=', None)]):
+            if payment.id_tecno not in payment_term:
+                payment_term[payment.id_tecno] = payment
+        # Se busca las facturas existentes
+        invoices = Invoice.search([
+            ('id_tecno', 'in', tecno.keys()),
+        ])
+        for inv in invoices:
+            id_tecno = inv.id_tecno
+            msg = f"EL DOCUMENTO {id_tecno} YA EXISTE EN TRYTON"
+            data['exportado'][id_tecno] = 'T'
+            anulado = tecno[id_tecno].anulado
+            if anulado.upper() == 'S':
+                msg = f"EL DOCUMENTO {id_tecno} FUE ANULADO EN TecnoCarnes (eliminar)"
+                data['exportado'][id_tecno] = 'X'
+            # Se elimina del diccionario de los documentos por validar
+            del tecno[id_tecno]
+            data['logs'].append(msg)
+        # Se importa las lineas de los documentos
+        documentos_lin = Config.get_documentos_lin(tuple(tecno.keys()))
+        lineas_tecno = {}
+        productos_lin = {}
+        impuesto_consumo = {}
+        for linea in documentos_lin:
+            id_tecno = f"{linea.sw}-{linea.tipo}-{linea.Numero_Documento}"
+            if id_tecno not in lineas_tecno:
+                lineas_tecno[id_tecno] = [linea]
+            else:
+                lineas_tecno[id_tecno].append(linea)
+            id_producto = str(linea.IdProducto)
+            if id_producto not in productos_lin:
+                productos_lin[id_producto] = None
+            if linea.Impuesto_Consumo > 0:
+                if linea.Impuesto_Consumo not in impuesto_consumo:
+                    impuesto_consumo[linea.Impuesto_Consumo] = None
+        # Se hace una consulta por todos los productos de las lineas y se guarda
+        products = Product.search(
+            ['OR', 
+             ('id_tecno', 'in', productos_lin.keys()), 
+             ('code', 'in', productos_lin.keys())
+             ])
+        for product in products:
+            productos_lin[product.code] = product
+        # Se consulta los impuestos de tipo consumo
+        if impuesto_consumo:
+            if _type == 'out':
+                kind = 'sale'
+            else:
+                kind = 'purchase'
+            doamin_consumo = [
+                ('consumo', '=', True), 
+                ('type', '=', 'fixed'), 
+                ('amount', 'in', impuesto_consumo.keys()),
+                ['OR',
+                 ('group.kind', '=', kind),
+                 ('group.kind', '=', 'both'),
+                ],
+            ]
+            _taxes = Tax.search(doamin_consumo)
+            for tax in _taxes:
+                impuesto_consumo[tax.amount] = tax
+            for value in impuesto_consumo:
+                if not impuesto_consumo[value]:
+                    msg = f"No se encontro el impuesto al consumo con valor fijo de {value} para {kind}"
+                    data['logs'].append(msg)
+                    return data
+        ################################
+        # Se realiza la validacion de los demas campos y se almacena los valores
+        for id_tecno, doc in tecno.items():
+            try:
+                if id_tecno in data['exportado']:
+                    continue
+                if id_tecno not in lineas_tecno:
+                    msg = f"EXCEPCION: {id_tecno} - NO SE ENCONTRARON LINEAS PARA EL DOCUMENTO"
+                    data['logs'].append(msg)
+                    data['exportado'][id_tecno] = 'E'
+                    continue
+                nit_cedula = doc.nit_Cedula.replace('\n',"")
+                party = None
+                if nit_cedula in parties['active']:
+                    party = parties['active'][nit_cedula]
+                if not party:
+                    if nit_cedula not in parties['inactive']:
+                        msg = f"EXCEPCION: NO SE ENCONTRO EL TERCERO {nit_cedula} DEL DOCUMENTO {id_tecno}"
+                        data['logs'].append(msg)
+                        data['exportado'][id_tecno] = 'E'
+                    continue
+                condicion = str(doc.condicion)
+                if condicion not in payment_term:
+                    msg = f"EXCEPCION: NO SE ENCONTRO EL PLAZO {condicion} DEL DOCUMENTO {id_tecno}"
+                    data['logs'].append(msg)
+                    data['exportado'][id_tecno] = 'E'
+                    continue
+                account = None
+                if _type == 'out':
+                    if party.account_receivable:
+                        account = party.account_receivable
+                    elif AccountConfiguration.default_account_receivable:
+                        account = AccountConfiguration.default_account_receivable
+                elif _type == 'in':
+                    if party.account_payable:
+                        account = party.account_payable
+                    elif AccountConfiguration.default_account_payable:
+                        account = AccountConfiguration.default_account_payable
+                if not account:
+                    msg = f"EXCEPCION: {id_tecno} Hace falta la configuración de las cuentas por defecto pagar/cobrar"
+                    data['logs'].append(msg).append(msg)
+                    data['exportado'][id_tecno] = 'E'
+                    continue
+                fecha = str(doc.fecha_hora).split()[0].split('-')
+                invoice_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
+                description = (doc.notas).replace('\n', ' ').replace('\r', '')
+                retencion_rete = False
+                if doc.retencion_causada > 0:
+                    if doc.retencion_iva == 0 and doc.retencion_ica == 0:
+                        retencion_rete = True
+                    elif (doc.retencion_iva + doc.retencion_ica) != doc.retencion_causada:
+                        retencion_rete = True
+                invoice = {
+                    'number': f"{doc.tipo}-{doc.Numero_documento}",
+                    'dcto_base': f"{doc.Tipo_Docto_Base}-{doc.Numero_Docto_Base}",
+                    'party': party,
+                    'payment_term': payment_term[condicion],
+                    'invoice_date': invoice_date,
+                    'description': description,
+                    'account': account,
+                    'retencion_rete': retencion_rete,
+                    'retencion_iva': doc.retencion_iva,
+                    'retencion_ica': doc.retencion_ica,
+                    'retencion_causada': doc.retencion_causada,
+                    'valor_total': doc.valor_total,
+                    'type': _type,
+                    'type_note': _type_note,
+                }
+                data['tryton'][id_tecno] = {
+                    'invoice': invoice
+                }
+            except Exception as ex:
+                msg = f"EXCEPCION: {id_tecno} - {ex}"
+                data['logs'].append(msg)
+                data['exportado'][id_tecno] = 'E'
+        ################################
+        # Se procede a validar los valores de las lineas del documento
+        for id_tecno, lineas in lineas_tecno.items():
+            if id_tecno in data['exportado']:
+                continue
+            for linea in lineas:
+                try:
+                    id_producto = str(linea.IdProducto)
+                    if not productos_lin[id_producto]:
+                        msg = f"EXCEPCION: El producto con código {id_producto} no se encontro, revisar si esta inactivo"
+                        data['logs'].append(msg).append(msg)
+                        data['exportado'][id_tecno] = 'E'
+                        break
+                    if _type_note == 'credit':
+                        quantity = abs(round(linea.Cantidad_Facturada, 3)) * -1
+                    else:
+                        quantity = abs(round(linea.Cantidad_Facturada, 3))
+                    line = {
+                        'product': productos_lin[id_producto],
+                        'quantity': quantity,
+                        'unit_price': linea.Valor_Unitario,
+                    }
+                    # Se verifica si la línea tiene descuento y se agrega su valor
+                    if linea.Porcentaje_Descuento_1 > 0:
+                        descuento = (linea.Valor_Unitario * Decimal(linea.Porcentaje_Descuento_1)) / 100
+                        line['discount'] = Decimal(linea.Valor_Unitario - descuento)
+                    if linea.Impuesto_Consumo > 0:
+                        line['impuesto_consumo'] = impuesto_consumo[linea.Impuesto_Consumo]
+                    if 'lines' not in data['tryton'][id_tecno]:
+                        data['tryton'][id_tecno]['lines'] = [line]
+                    else:
+                        data['tryton'][id_tecno]['lines'].append(line)
+                except Exception as ex:
+                    msg = f"EXCEPCION: {id_tecno} - {ex}"
+                    data['logs'].append(msg)
+                    data['exportado'][id_tecno] = 'E'
+        return data
     
+
+    @classmethod
+    def _create_lines_tecno(cls, data, id_tecno):
+        Line = Pool().get('account.invoice.line')
+        lineas = data['tryton'][id_tecno]['lines']
+        _type = data['tryton'][id_tecno]['invoice']['type']
+        lines = []
+        for linea in lineas:
+            line = Line()
+            line.product = linea['product']
+            line.quantity = linea['quantity']
+            line.unit_price = linea['unit_price']
+            if 'operation_center' in data:
+                line.operation_center = data['operation_center']
+            line.on_change_product()
+            taxes = []
+            for tax in line.taxes:
+                if tax in taxes:
+                    continue
+                if _type == 'in':
+                    kind = 'purchase'
+                else:
+                    kind = 'sale'
+                if tax.group.kind != 'both' and tax.group.kind != kind:
+                    continue
+                classification = tax.classification_tax_tecno
+                if classification in ['05', '06', '07']:
+                    if data['tryton'][id_tecno]['invoice']['retencion_iva'] > 0:
+                        taxes.append(tax)
+                    elif data['tryton'][id_tecno]['invoice']['retencion_ica'] > 0:
+                        taxes.append(tax)
+                    elif data['tryton'][id_tecno]['invoice']['retencion_rete']:
+                        taxes.append(tax)
+                elif tax.consumo and 'impuesto_consumo' in lineas:
+                    taxes.append(lineas['impuesto_consumo'])
+                elif not tax.consumo:
+                    taxes.append(tax)
+            line.taxes = taxes
+            if 'discount' in linea:
+                line.unit_price = linea['discount']
+                line.on_change_product()
+                line.gross_unit_price = linea['unit_price']
+            if _type == 'in':
+                line.account = line.product.account_category.account_expense
+            lines.append(line)
+        return lines
+
+
+    @classmethod
+    def _create_invoice_tecno(cls, data):
+        if not data['tryton']:
+            return data
+        Invoice = Pool().get('account.invoice')
+        to_save = []
+        for id_tecno, values in data['tryton'].items():
+            inv = values['invoice']
+            invoice = Invoice()
+            invoice.id_tecno = id_tecno
+            invoice.party = inv['party']
+            # Se usa el on_change para traer la dirección del tercero
+            invoice.on_change_party()
+            invoice.invoice_date = inv['invoice_date']
+            invoice.number = inv['number']
+            invoice.reference = inv['dcto_base']
+            # if inv['type_note'] == 'credit':
+            #     invoice.reference = inv['dcto_base']
+            # else:
+            #     invoice.comment = inv['dcto_base']
+            invoice.description = inv['description']
+            invoice.account = inv['account']
+            invoice.type = inv['type']
+            if inv['type'] == 'out':
+                invoice.invoice_type = 'C'
+            invoice.on_change_type()
+            invoice.payment_term = inv['payment_term']
+            invoice.lines = cls._create_lines_tecno(data, id_tecno)
+            invoice.on_change_lines()
+            to_save.append(invoice)
+        with Transaction().set_context(_skip_warnings=True):
+            Invoice.save(to_save)
+            Invoice.validate_invoice(to_save)
+            to_post = []
+            for invoice in to_save:
+                documento = data['tryton'][invoice.id_tecno]['invoice']
+                result = cls._validate_total_tecno(invoice.total_amount, documento)
+                if not result['value']:
+                    msg = f"REVISAR: ({invoice.id_tecno}) "\
+                    f"El total de Tryton {invoice.total_amount} "\
+                    f"es diferente al total de TecnoCarnes {result['total_tecno']} "\
+                    f"La diferencia es de {result['diferencia']}"
+                    data['logs'].append(msg)
+                else:
+                    to_post.append(invoice)
+                data['exportado'][invoice.id_tecno] = 'T'
+            Invoice.post(to_post)
+            if inv['type_note'] == 'credit':
+                cls._check_cross_invoices(to_post)
+        return data
+    
+
     # Función encargada de importar notas débito y crédito de TecnoCarnes
     @classmethod
-    def import_notas_tecno(cls, nota_tecno):
-        print(f'RUN NOTAS DE {nota_tecno}')
+    def _import_notas_tecno(cls, sw):
+        print(f"RUN {_SW[sw]['name']}")
         pool = Pool()
         Config = pool.get('conector.configuration')
         Actualizacion = pool.get('conector.actualizacion')
-        actualizacion = Actualizacion.create_or_update(f'NOTAS DE {nota_tecno}')
-        if nota_tecno == "CREDITO":
-            # Obtenemos las notas de credito de TecnoCarnes
-            documentos = Config.get_documentos_tecno('32')
-        else:
-            # Obtenemos las notas de debito de TecnoCarnes
-            documentos = Config.get_documentos_tecno('31')
+        actualizacion = Actualizacion.create_or_update(_SW[sw]['name'])
+        documentos = Config.get_documentos_tecno(sw)
         if not documentos:
-            #actualizacion.save()
-            print(f"FINISH NOTAS DE {nota_tecno}")
+            print(f"FINISH {_SW[sw]['name']}")
             return
-        ###
-        Module = pool.get('ir.module')
-        Tax = pool.get('account.tax')
-        Party = pool.get('party.party')
-        Invoice = pool.get('account.invoice')
-        Line = pool.get('account.invoice.line')
-        Product = pool.get('product.product')
-        PaymentTerm = pool.get('account.invoice.payment_term')
-        Configuration = pool.get('account.configuration')(1)
-        operation_center = Module.search([('name', '=', 'company_operation'), ('state', '=', 'activated')])
-        if operation_center:
-            operation_center = pool.get('company.operation_center')(1)
-        logs = []
-        created = []
-        to_exception = []
-        not_import = []
-        parties = Party._get_party_documentos(documentos, 'nit_Cedula')
-        with Transaction().set_context(_skip_warnings=True):
-            for nota in documentos:
-                id_tecno = str(nota.sw)+'-'+nota.tipo+'-'+str(nota.Numero_documento)
-                try:
-                    invoice = Invoice.search([('id_tecno', '=', id_tecno)])
-                    if invoice:
-                        msg = f"LA NOTA {id_tecno} YA EXISTE EN TRYTON"
-                        logs.append(msg)
-                        created.append(id_tecno)
-                        continue
-                    if nota.anulado == 'S':
-                        msg = f"{id_tecno} Documento anulado en TecnoCarnes"
-                        logs.append(msg)
-                        not_import.append(id_tecno)
-                        continue
-                    nit_cedula = nota.nit_Cedula.replace('\n',"")
-                    party = None
-                    if nit_cedula in parties['active']:
-                        party = parties['active'][nit_cedula]
-                    if not party:
-                        if nit_cedula not in parties['inactive']:
-                            msg = f'EXCEPCION: NO SE ENCONTRO EL TERCERO {nit_cedula} DE LA NOTA {id_tecno}'
-                            logs.append(msg)
-                            to_exception.append(id_tecno)
-                        continue
-                    plazo_pago = PaymentTerm.search([('id_tecno', '=', nota.condicion)])
-                    if not plazo_pago:
-                        msg = f'EXCEPCION: PLAZO {nota.condicion} NO EXISTE PARA LA NOTA {id_tecno}'
-                        logs.append(msg)
-                        to_exception.append(id_tecno)
-                        continue
-                    plazo_pago = plazo_pago[0]
-                    #print(id_tecno)
-                    fecha = str(nota.fecha_hora).split()[0].split('-')
-                    fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
-                    invoice = Invoice()
-                    invoice.id_tecno = id_tecno
-                    invoice.party = party
-                    invoice.cufe = '0'
-                    invoice.on_change_party() #Se usa para traer la dirección del tercero
-                    invoice.invoice_date = fecha_date
-                    invoice.number = nota.tipo+'-'+str(nota.Numero_documento)
-                    dcto_base = str(nota.Tipo_Docto_Base)+'-'+str(nota.Numero_Docto_Base)
-                    invoice.reference = dcto_base
-                    description = (nota.notas).replace('\n', ' ').replace('\r', '')
-                    if description:
-                        invoice.description = description
-                    invoice.type = 'out'
-                    if nota_tecno == "CREDITO":
-                        invoice.invoice_type = '91'
-                        invoice.operation_type = '22'
-                    else:
-                        invoice.invoice_type = '92'
-                        invoice.operation_type = '32'
-                    if party.account_receivable:
-                        invoice.account = party.account_receivable
-                    elif Configuration.default_account_receivable:
-                        invoice.account = Configuration.default_account_receivable
-                    else:
-                        msg = f'EXCEPCION: LA NOTA {id_tecno} NO SE CREO POR FALTA DE CUENTA POR COBRAR EN EL TERCERO Y LA CONFIGURACION CONTABLE POR DEFECTO'
-                        logs.append(msg)
-                        to_exception.append(id_tecno)
-                        continue
-                    invoice.payment_term = plazo_pago
-                    original_invoice = Invoice.search([('number', '=', dcto_base)])
-                    if original_invoice:
-                        original_invoice = original_invoice[0]
-                        invoice.original_invoice = original_invoice
-                        invoice.date_document_reference = original_invoice.invoice_date
-                        invoice.type_invoice_reference = original_invoice.invoice_type
-                    else:
-                        msg = f'EL DOCUMENTO {dcto_base} AL QUE HACE REFERENCIA LA NOTA {id_tecno} NO FUE ENCONTRADO'
-                        logs.append(msg)
-                    invoice.comment = f"NOTA DE {nota_tecno} DE LA FACTURA {dcto_base}"
-                    invoice.number_document_reference = dcto_base
-                    invoice.cufe_document_reference = '0'
-                    invoice.on_change_type()
-                    retencion_rete = False
-                    if nota.retencion_causada > 0:
-                        if nota.retencion_iva == 0 and nota.retencion_ica == 0:
-                            retencion_rete = True
-                        elif (nota.retencion_iva + nota.retencion_ica) != nota.retencion_causada:
-                            retencion_rete = True
-                    to_lines = []
-                    lineas_tecno = Config.get_lineasd_tecno(id_tecno)
-                    for linea in lineas_tecno:
-                        product = Product.search([('id_tecno', '=', linea.IdProducto)])
-                        if not product:
-                            msg = f"EXCEPCION: NO SE ENCONTRO EL PRODUCTO {linea.IdProducto}"
-                            logs.append(msg)
-                            to_lines = []
-                            break
-                        if nota_tecno == "CREDITO":
-                            cantidad = abs(round(linea.Cantidad_Facturada, 3)) * -1
-                        else:
-                            cantidad = abs(round(linea.Cantidad_Facturada, 3))
-                        line = Line()
-                        line.product = product[0]
-                        line.quantity = cantidad
-                        line.unit_price = linea.Valor_Unitario
-                        if operation_center:
-                            line.operation_center = operation_center
-                        line.on_change_product()
-                        tax_line = []
-                        not_impoconsumo = False
-                        for impuestol in line.taxes:
-                            clase_impuesto = impuestol.classification_tax_tecno
-                            if clase_impuesto == '05' and nota.retencion_iva > 0:
-                                if impuestol not in tax_line:
-                                    tax_line.append(impuestol)
-                            elif clase_impuesto == '06' and retencion_rete:
-                                if impuestol not in tax_line:
-                                    tax_line.append(impuestol)
-                            elif clase_impuesto == '07' and nota.retencion_ica > 0:
-                                if impuestol not in tax_line:
-                                    tax_line.append(impuestol)
-                            elif impuestol.consumo and linea.Impuesto_Consumo > 0:
-                                #Se busca el impuesto al consumo con el mismo valor para aplicarlo
-                                tax = Tax.search([('consumo', '=', True), ('type', '=', 'fixed'), ('amount', '=', linea.Impuesto_Consumo)])
-                                if tax:
-                                    tax_line.append(tax[0])
-                                else:
-                                    msg = f'EXCEPCION: NO SE ENCONTRO EL IMPUESTO FIJO DE TIPO CONSUMO CON VALOR DE {linea.Impuesto_Consumo} EN EL DOCUMENTO {id_tecno}'
-                                    logs.append(msg)
-                                    to_exception.append(id_tecno)
-                                    not_impoconsumo = True
-                                    continue
-                            elif clase_impuesto != '05' and clase_impuesto != '06' and clase_impuesto != '07' and not impuestol.consumo:
-                                if impuestol not in tax_line:
-                                    tax_line.append(impuestol)
-                        if not_impoconsumo:
-                            to_lines = []
-                            break
-                        line.taxes = tax_line
-                        if linea.Porcentaje_Descuento_1 > 0:
-                            descuento = (linea.Valor_Unitario * Decimal(linea.Porcentaje_Descuento_1)) / 100
-                            line.unit_price = Decimal(linea.Valor_Unitario - descuento)
-                            line.on_change_product()
-                            line.gross_unit_price = linea.Valor_Unitario 
-                            #line.discount = Decimal(linea.Porcentaje_Descuento_1/100)
-                        to_lines.append(line)
-                    if to_lines:
-                        invoice.lines = to_lines
-                    else:
-                        msg = f"EXCEPCION: NO SE CREARON LINEAS PARA LA NOTA {id_tecno}"
-                        logs.append(msg)
-                        to_exception.append(id_tecno)
-                        continue
-                    invoice.on_change_lines()
-                    invoice.save()
-                    Invoice.validate_invoice([invoice])
-                    total_tryton = abs(invoice.untaxed_amount)
-                    valor_total = Decimal(abs(nota.valor_total))
-                    valor_impuesto = Decimal(abs(nota.Valor_impuesto) + abs(nota.Impuesto_Consumo)) # + abs(nota.retencion_causada))
-                    if valor_impuesto > 0:
-                        total_tecno = valor_total - valor_impuesto
-                    else:
-                        total_tecno = valor_total
-                    diferencia_total = abs(total_tryton - total_tecno)
-                    if diferencia_total < Decimal(6.0):
-                        Invoice.post([invoice])
-                    else:
-                        msg = f"NO SE CONTABILIZO LA NOTA {id_tecno} YA QUE LA DIFERENCIA ENTRE EL TOTAL DE TRYTON Y TECNOCARNES ES DE {diferencia_total}"
-                        logs.append(msg)
-                    created.append(id_tecno)
-                except Exception as ex:
-                    msg = f"EXCEPCION {id_tecno} - {ex}"
-                    logs.append(msg)
-                    to_exception.append(id_tecno)
-        actualizacion.add_logs(actualizacion, logs)
-        for idt in created:
-            Config.update_exportado(idt, 'T')
-            # print('creado...', idt) #TEST
-        for idt in to_exception:
-            Config.update_exportado(idt, 'E')
-            # print('excepcion...', idt) #TEST
-        for idt in not_import:
-            Config.update_exportado(idt, 'X')
-        print(f"FINISH NOTAS DE {nota_tecno}")
+        # Se procede a validar los documentos importados de TecnoCarnes
+        data = cls._validate_documentos_tecno(documentos)
+        # Se procede a crear las facturas que hayan cumplido con la validación
+        data = cls._create_invoice_tecno(data)
+        # Se marca los documentos en Tecnocarnes de acuerdo a las diferentes excepciones
+        for idt, exportado in data['exportado'].items():
+            Config.update_exportado(idt, exportado)
+        Actualizacion.add_logs(actualizacion, data['logs'])
+        print(f"FINISH {_SW[sw]['name']}")
 
 
-    #Nota de crédito
+    # Metodo encargado de validar el total de la factura en Tryton y TecnoCarnes
+    @classmethod
+    def _validate_total_tecno(cls, total_tryton, documento):
+        result = {
+            'value': False,
+        }
+        retencion_causada = abs(documento['retencion_causada'])
+        total_tecno = abs(documento['valor_total'])
+        total_tryton = abs(total_tryton)
+        total_tecno = total_tecno - retencion_causada
+        diferencia = abs(total_tryton - total_tecno)
+        if diferencia < Decimal('6.0'):
+            result['value'] = True
+        result['total_tecno'] = total_tecno
+        result['diferencia'] = diferencia
+        return result
+
+
+    # Nota de crédito
     @classmethod
     def import_credit_note(cls):
-        cls.import_notas_tecno('CREDITO')
+        cls._import_notas_tecno('32')
 
-    #Nota de débito
+    # Nota de débito
     @classmethod
     def import_debit_note(cls):
-        cls.import_notas_tecno('DEBITO')
+        cls._import_notas_tecno('31')
+
+    # Nota de crédito de compras
+    @classmethod
+    def import_credit_note_purchase(cls):
+        cls._import_notas_tecno('27')
+
+    # Nota de débito de compras
+    @classmethod
+    def import_debit_note_purchase(cls):
+        cls._import_notas_tecno('28')
 
 
     @classmethod
@@ -283,6 +468,10 @@ class Invoice(metaclass=PoolMeta):
                     Eval('state') != 'validated',
                 )}
             },)
+    
+    @classmethod
+    def check_duplicated_reference(cls, invoice):
+        pass
 
     # Boton (función) que sirve para enviar los documentos soporte al proveedor tecnologico
     @classmethod
@@ -298,7 +487,7 @@ class Invoice(metaclass=PoolMeta):
 
 
     @staticmethod
-    def _check_cross_invoices():
+    def _check_cross_invoices(invoices=None):
         print('RUN validar cruce de facturas')
         pool = Pool()
         Invoice = pool.get('account.invoice')
@@ -307,15 +496,17 @@ class Invoice(metaclass=PoolMeta):
         Actualizacion = pool.get('conector.actualizacion')
         actualizacion = Actualizacion.create_or_update(f'CRUCE DE FACTURAS')
         logs = []
-        cursor = Transaction().connection.cursor()
-        query = "SELECT id FROM account_invoice WHERE state = 'posted' AND invoice_type != '92' \
-            AND number != reference AND number like '%-%' AND reference like '%-%'"
-        cursor.execute(query)
-        invoices_id = cursor.fetchall()
-        _ids = []
-        for invoice in invoices_id:
-            _ids.append(invoice[0])
-        invoices = Invoice.browse(_ids)
+        if not invoices:
+            cursor = Transaction().connection.cursor()
+            # (FIX) CONSULTA SOLO PARA NOTAS CREDITO
+            query = "SELECT id FROM account_invoice WHERE state = 'posted' AND invoice_type != '92' \
+                AND number != reference AND number like '%-%' AND reference like '%-%'"
+            cursor.execute(query)
+            invoices_id = cursor.fetchall()
+            _ids = []
+            for invoice in invoices_id:
+                _ids.append(invoice[0])
+            invoices = Invoice.browse(_ids)
 
         cross = {}
         numbers = []
@@ -366,6 +557,22 @@ class Invoice(metaclass=PoolMeta):
         Invoice.save(to_save)
         Actualizacion.add_logs(actualizacion, logs)
         print('FINISH validar cruce de facturas')
+
+
+class InvoiceLine(metaclass=PoolMeta):
+    __name__ = 'account.invoice.line'
+
+    @classmethod
+    def __setup__(cls):
+        super(InvoiceLine, cls).__setup__()
+
+    def _get_latin_move_lines(self, amount, type_, account_stock_method):
+        result = super(InvoiceLine, self)._get_latin_move_lines(amount, type_, account_stock_method)
+        if self.invoice.id_tecno:
+            id_tecno = self.invoice.id_tecno.split('-')
+            if id_tecno[0] in _SW:
+                return []
+        return result
 
 
 class UpdateInvoiceTecno(Wizard):

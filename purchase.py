@@ -294,7 +294,6 @@ class Purchase(metaclass=PoolMeta):
                         continue
                 for invoice in purchase.invoices:
                     invoice.number = purchase.number
-                    invoice.reference = purchase.number
                     invoice.invoice_date = fecha_date
                     #Se agrega en la descripcion el nombre del tipo de documento de la tabla en sqlserver
                     desc = Config.get_tbltipodoctos(tipo_doc)
@@ -303,6 +302,7 @@ class Purchase(metaclass=PoolMeta):
                     original_invoice = None
                     if compra.sw == 4:
                         dcto_base = str(compra.Tipo_Docto_Base)+'-'+str(compra.Numero_Docto_Base)
+                        invoice.reference = dcto_base
                         invoice.comment = f"DEVOLUCION DE LA FACTURA {dcto_base}"
                         original_invoice = Invoice.search([('number', '=', dcto_base)])
                         if original_invoice:

@@ -198,6 +198,17 @@ class Configuration(ModelSQL, ModelView):
         query = "SELECT * FROM dbo.Documentos_Lin WHERE sw = "+lista[0]+" AND tipo = "+lista[1]+" AND Numero_Documento = "+lista[2]+" order by seq"
         data = cls.get_data(query)
         return data
+    
+    @classmethod
+    def get_documentos_lin(cls, ids):
+        cond = "IN"
+        if len(ids) == 1:
+            ids = f"'{ids[0]}'"
+            cond = "="
+        query = "SELECT * FROM dbo.Documentos_Lin "\
+            f"WHERE CONCAT(sw,'-',tipo,'-',Numero_Documento) {cond} {ids} order by seq"
+        data = cls.get_data(query)
+        return data
 
     @classmethod
     def get_data_parametros(cls, id):

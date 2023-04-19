@@ -56,6 +56,12 @@ class Cron(metaclass=PoolMeta):
             ('account.invoice|import_debit_note', "Importar Notas de Débito"),
             )
         cls.method.selection.append(
+            ('account.invoice|import_credit_note_purchase', "Importar notas de crédito para compras"),
+            )
+        cls.method.selection.append(
+            ('account.invoice|import_debit_note_purchase', "Importar notas de débito para compras"),
+            )
+        cls.method.selection.append(
             ('production|import_data_production', "Importar producciones"),
             )
         cls.method.selection.append(

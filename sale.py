@@ -453,7 +453,6 @@ class Sale(metaclass=PoolMeta):
         for invoice in sale.invoices:
             invoice.accounting_date = sale.sale_date
             invoice.number = sale.number
-            invoice.reference = sale.reference
             invoice.invoice_date = sale.sale_date
             invoice.invoice_type = 'C'
             tipo_numero = sale.number.split('-')
@@ -462,6 +461,16 @@ class Sale(metaclass=PoolMeta):
             if tbltipodocto:
                 invoice.description = tbltipodocto[0].TipoDoctos.replace('\n', ' ').replace('\r', '')
             invoice.save()
+            if venta.sw == 2:
+                dcto_base = str(venta.Tipo_Docto_Base)+'-'+str(venta.Numero_Docto_Base)
+                invoice.reference = dcto_base
+                original_invoice = Invoice.search([('number', '=', dcto_base)])
+                if original_invoice:
+                    invoice.original_invoice = original_invoice[0]
+                else:
+                    msg = f"REVISAR: NO SE ENCONTRO LA FACTURA {dcto_base} PARA CRUZAR CON LA DEVOLUCION {invoice.number}"
+                    logs.append(msg)
+                    to_exception.append(sale.id_tecno)
             Invoice.validate_invoice([invoice])
             result = cls._validate_total(invoice.total_amount, venta)
             if not result['value']:
@@ -472,15 +481,6 @@ class Sale(metaclass=PoolMeta):
                 logs.append(msg)
                 to_exception.append(sale.id_tecno)
                 continue
-            if venta.sw == 2:
-                dcto_base = str(venta.Tipo_Docto_Base)+'-'+str(venta.Numero_Docto_Base)
-                original_invoice = Invoice.search([('number', '=', dcto_base)])
-                if original_invoice:
-                    invoice.original_invoice = original_invoice[0]
-                else:
-                    msg = f"REVISAR: NO SE ENCONTRO LA FACTURA {dcto_base} PARA CRUZAR CON LA DEVOLUCION {invoice.number}"
-                    logs.append(msg)
-                    to_exception.append(sale.id_tecno)
             Invoice.post_batch([invoice])
             Invoice.post([invoice])
             if invoice.original_invoice:
