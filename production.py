@@ -2,6 +2,7 @@ from trytond.model import fields
 from trytond.pool import Pool, PoolMeta
 from decimal import Decimal
 import datetime
+from trytond.exceptions import UserError
 
 
 #Heredamos del modelo sale.sale para agregar el campo id_tecno
@@ -97,6 +98,8 @@ class Production(metaclass=PoolMeta):
                         to_exception.append(id_tecno)
                         break
                     producto, = producto
+                    if not producto.account_category.account_stock:
+                        raise UserError('msg_missing_account_stock', producto.rec_name)
                     # Se valida si el producto esta creado en unidades para eliminar sus decimales
                     if producto.default_uom.symbol.upper() == 'U':
                         cantidad = float(int(cantidad))
@@ -262,6 +265,8 @@ class Production(metaclass=PoolMeta):
         # instruccion que muestra error de tipo en caso que el movimiento de existencia no sea de entrada o salida
         assert type_.startswith('in_') or type_.startswith('out_'), 'wrong type'
         # se comienza a crear la línea de asiento
+        if not smove.product.account_category.account_stock:
+            raise UserError('msg_missing_account_stock', smove.product.rec_name)
         move_line = AccountMoveLine(account=smove.product.account_category.account_stock, party=smove.company.party)
         if ((type_ in {'in_production', 'in_warehouse'}) and smove.product.cost_price_method != 'fixed'):
             unit_price = smove.unit_price
