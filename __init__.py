@@ -25,6 +25,7 @@ def register():
     Pool.register(
         account.Account,
         account.BalanceStockStart,
+        account.AnalyticAccountEntry,
         company.Company,
         conector.Actualizacion,
         party.Party,

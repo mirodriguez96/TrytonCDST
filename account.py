@@ -205,3 +205,18 @@ class BalanceStock(Wizard):
         action['res_id'] = [move.id]
         action['views'].reverse()
         return action, {}
+
+
+class AnalyticAccountEntry(metaclass=PoolMeta):
+    'Analytic Account Entry'
+    __name__ = 'analytic.account.entry'
+
+    """
+    Se hereda la función get_analytic_lines para pasarle la fecha efectiva
+    del asiento, para que la línea analitica no tome por defecto Date.today()
+    """
+    def get_analytic_lines(self, line, date):
+        if hasattr(line, 'move'):
+            date = line.move.date or line.move.post_date
+        analytic_lines = super(AnalyticAccountEntry, self).get_analytic_lines(line, date)
+        return analytic_lines
