@@ -321,3 +321,35 @@ msgstr "Orden para TecnoCarnes"
 msgctxt "field:purchase.purchase,order_tecno_sent:"
 msgid "Order TecnoCarnes sent"
 msgstr "Orden TecnoCarnes enviada"
+
+msgctxt "field:account.bank_statement,bank_lines:"
+msgid "Bank lines"
+msgstr "Líneas del banco"
+
+msgctxt "field:account.bank_statement.line,bank_line:"
+msgid "Bank line"
+msgstr "Línea del banco"
+
+msgctxt "field:account.bank_statement.bank_line,statement_line:"
+msgid "Statement line"
+msgstr "Línea del extracto"
+
+msgctxt "field:account.bank_statement.bank_line,date:"
+msgid "Date"
+msgstr "Fecha"
+
+msgctxt "field:account.bank_statement.bank_line,description:"
+msgid "Description"
+msgstr "Descripción"
+
+msgctxt "field:account.bank_statement.bank_line,amount:"
+msgid "Amount"
+msgstr "Valor"
+
+msgctxt "model:ir.action,name:act_create_bank_line"
+msgid "Upload Bank lines"
+msgstr "Subir líneas del banco"
+
+msgctxt "field:account.bank_statement.create_bank_line.parameters,file:"
+msgid "File"
+msgstr "Archivo"
