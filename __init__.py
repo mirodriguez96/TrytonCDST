@@ -117,4 +117,5 @@ def register():
         payroll.LiquidationPaymentReportBcl,
         payroll.PayrollReport,
         report.LoanFormatReport,
+        payroll.PayrollExo2276,
         module='conector', type_='report')

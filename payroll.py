@@ -723,3 +723,24 @@ class Loan(metaclass=PoolMeta):
 class LoanLine(metaclass=PoolMeta):
     __name__ = "staff.loan.line"
     adeuda = fields.Numeric('Adeuda', digits=(16, 2))
+
+
+class PayrollExo2276(metaclass=PoolMeta):
+    __name__ = "staff.payroll_exo2276.report"
+
+    @classmethod
+    def _prepare_lines(cls, payrolls, vals, party_id):
+        result = super(PayrollExo2276, cls)._prepare_lines(payrolls, vals, party_id)
+        payroll_ids = [payroll.id for payroll in payrolls]
+        Lines = Pool().get('staff.payroll.line')
+        lines = Lines.search([
+            ('payroll', 'in', payroll_ids),
+            ('payroll.employee.party', '=', party_id),
+            ('wage_type.type_concept', 'like', 'incapacity%'),
+        ])
+
+        result['incapacity'] = 0
+        for line in lines:
+            result['incapacity'] += line.amount
+
+        return  result
