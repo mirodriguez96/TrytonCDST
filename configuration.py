@@ -681,14 +681,16 @@ class Configuration(ModelSQL, ModelView):
     def import_csv_product_costs(cls, lineas):
         pool = Pool()
         Product = pool.get('product.product')
-        ProductTemplate = pool.get('product.template')
+        Template = pool.get('product.template')
+        AverageCost = Pool().get('product.average_cost')
         ModifyCost = pool.get('product.modify_cost_price', type='wizard')
         _id, _, _ = ModifyCost.create()
         modify_cost = ModifyCost(_id)
-        RecomputeCost = pool.get('product.recompute_cost_price', type='wizard')
-        _id, _, _ = RecomputeCost.create()
-        recompute_cost_price = RecomputeCost(_id)
-        today = datetime.date.today()
+        # RecomputeCost = pool.get('product.recompute_cost_price', type='wizard')
+        # _id, _, _ = RecomputeCost.create()
+        # recompute_cost_price = RecomputeCost(_id)
+        # today = datetime.date.today()
+        to_create = []
         for linea in lineas:
             linea = linea.strip()
             if not linea:
@@ -697,7 +699,7 @@ class Configuration(ModelSQL, ModelView):
             if len(linea) != 3:
                 raise UserError('Error plantilla', ' code_product | cost | date ')
             code_product = linea[0]
-            template = ProductTemplate.search([('code', '=', code_product)])
+            template = Template.search([('code', '=', code_product)])
             if not template:
                 raise UserError("ERROR PRODUCTO", f"No se encontro el producto con código {code_product}")
             product, = Product.search([('template', '=', template[0])])
@@ -711,10 +713,18 @@ class Configuration(ModelSQL, ModelView):
             modify_cost.start.date = date
             modify_cost.start.cost_price = cost
             modify_cost.transition_modify()
-            recompute_cost_price.model = Product
-            recompute_cost_price.records = [product]
-            recompute_cost_price.start.from_ = today
-            recompute_cost_price.transition_recompute()
+            # recompute_cost_price.model = Product
+            # recompute_cost_price.records = [product]
+            # recompute_cost_price.start.from_ = today
+            # recompute_cost_price.transition_recompute()
+            # Se procede a crear el AverageCost
+            average_cost = {
+                "product": product.id,
+                "effective_date": date,
+                "cost_price": cost,
+            }
+            to_create.append(average_cost)
+        AverageCost.create(to_create)
 
     # Funcion encargada de cargar el inventario
     @classmethod

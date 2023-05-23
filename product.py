@@ -1,6 +1,7 @@
 from trytond.model import fields
 from trytond.pool import Pool, PoolMeta
 import datetime
+from trytond.transaction import Transaction
 
 
 class Product(metaclass=PoolMeta):
@@ -116,6 +117,25 @@ class Product(metaclass=PoolMeta):
         Actualizacion.add_logs(actualizacion, logs)
         print('FINISH PRODUCTOS')
 
+    # En este metodo se busca el costo más reciente cargado en el sistema
+    def arbitrary_cost(self, date):
+        Revision = Pool().get('product.cost_price.revision')
+        revision = Revision.search([
+            ('product', '=', self.id),
+            ('date', '<=', date),
+        ], order=[('create_date', 'DESC')], limit=1)
+        print(' product revision >>>> ', revision)
+        if revision:
+            return revision[0].cost_price
+        AverageCost = Pool().get('product.average_cost')
+        avg_product = AverageCost.search([
+            ('product', '=', self.id),
+            ('effective_date', '<=', date),
+        ], order=[('create_date', 'DESC')], limit=1)
+        print(' product avg_product >>>> ', avg_product)
+        if avg_product:
+            return avg_product[0].cost_price
+        return self.cost_price
 
     #Función encargada de retornar que tipo de producto será un al realizar la equivalencia con el manejo de inventario de la bd de TecnoCarnes
     @classmethod

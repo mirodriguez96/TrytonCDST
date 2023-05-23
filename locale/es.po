@@ -353,3 +353,31 @@ msgstr "Subir líneas del banco"
 msgctxt "field:account.bank_statement.create_bank_line.parameters,file:"
 msgid "File"
 msgstr "Archivo"
+
+msgctxt "field:account.fiscalyear.balance_stock.start,journal:"
+msgid "Journal"
+msgstr "Diario"
+
+msgctxt "field:account.fiscalyear.balance_stock.start,fiscalyear:"
+msgid "Fiscal Year"
+msgstr "Año fiscal"
+
+msgctxt "field:account.fiscalyear.balance_stock.start,date:"
+msgid "Date"
+msgstr "Fecha"
+
+msgctxt "field:account.fiscalyear.balance_stock.start,type:"
+msgid "Type"
+msgstr "Tipo"
+
+msgctxt "field:account.fiscalyear.balance_stock.start,arbitrary_cost:"
+msgid "Arbitrary cost"
+msgstr "Costo arbitrario"
+
+msgctxt "wizard_button:account.fiscalyear.balance_stock,start,balance:"
+msgid "Create Move"
+msgstr "Crear asiento"
+
+msgctxt "wizard_button:account.fiscalyear.balance_stock,start,end:"
+msgid "Cancel"
+msgstr "Cancelar"
