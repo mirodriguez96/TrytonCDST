@@ -57,7 +57,7 @@ class BalanceStockStart(ModelView):
             ],
         depends=['fiscalyear_start_date', 'fiscalyear_end_date'])
     type = fields.Selection(TYPES_PRODUCT, 'Type', required=True)
-    arbitrary_cost = fields.Boolean('Arbitrary cost')
+    # arbitrary_cost = fields.Boolean('Arbitrary cost')
 
     @classmethod
     def default_journal(cls, **pattern):
@@ -140,8 +140,8 @@ class BalanceStock(Wizard):
                         raise UserError('msg_error_balance_stock', f'{product} account_stock_missing')
                     stock_account = product.account_category.account_stock
                     cost_price = product.avg_cost_price
-                    if self.satrt.arbitrary_cost:
-                        cost_price = product.arbitrary_cost(self.start.date)
+                    # if self.start.arbitrary_cost:
+                    #     cost_price = Decimal(product.arbitrary_cost(self.start.date))
                     balances[stock_account] += (Decimal(product.quantity) * cost_price) or Decimal(0)
                     stock_accounts.add(stock_account.id)
             current_balances = {}
