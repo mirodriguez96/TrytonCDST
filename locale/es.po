@@ -381,3 +381,23 @@ msgstr "Crear asiento"
 msgctxt "wizard_button:account.fiscalyear.balance_stock,start,end:"
 msgid "Cancel"
 msgstr "Cancelar"
+
+msgctxt "wizard_button:account.payment_bank,start,end:"
+msgid "Cancel"
+msgstr "Cancelar"
+
+msgctxt "wizard_button:account.payment_bank,start,print_:"
+msgid "Print"
+msgstr "Imprimir"
+
+msgctxt "field:account.payment_bank.start,company:"
+msgid "Company"
+msgstr "Empresa"
+
+msgctxt "field:account.payment_bank.start,report:"
+msgid "Report"
+msgstr "Reporte"
+
+msgctxt "model:ir.action,name:act_report_payment"
+msgid "Generate Payment Bank"
+msgstr "Generar Pagos para Banco"

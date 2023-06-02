@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<tryton>
+    <data>
+      <record model="ir.action.wizard" id="act_report_payment">
+            <field name="name">Generate Payment Bank</field>
+            <field name="wiz_name">account.payment_bank</field>
+      </record>
+
+      <record model="ir.action.keyword" id="act_report_payment_keyword">
+            <field name="keyword">form_action</field>
+            <field name="model">account.payment.group,-1</field>
+            <field name="action" ref="act_report_payment"/>
+      </record>  
+
+      <record model="ir.ui.view" id="payment_bank_start_view_form">
+            <field name="model">account.payment_bank.start</field>
+            <field name="type">form</field>
+            <field name="name">payment_bank_start_view_form</field>
+      </record>
+
+
+      <!-- Reportes BANCOS -->
+      <record model="ir.action.report" id="report_payment_1007">
+            <field name="name">Bancolombia Payments Format</field>
+            <field name="model">account.payment.group</field>
+            <field name="report_name">account.payment_bank.report</field>
+            <field name="report">conector/reports/payments_bancolombia_sap.fods</field>
+            <field name="template_extension">ods</field>
+            <field name="translatable">False</field>
+      </record>
+
+    </data>
+</tryton>
