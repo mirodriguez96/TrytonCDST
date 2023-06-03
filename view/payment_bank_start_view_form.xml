@@ -7,4 +7,12 @@ this repository contains the full copyright notices and license terms. -->
     <field name="company" widget="selection"/>
     <label name="report"/>
     <field name="report" widget="selection"/>
+    <label name="sequence"/>
+    <field name="sequence"/>
+    <label name="type_bank_account"/>
+    <field name="type_bank_account" widget="selection"/>
+    <label name="type_transaction"/>
+    <field name="type_transaction" widget="selection"/>
+    <label name="payment_type"/>
+    <field name="payment_type" widget="selection"/>
 </form>

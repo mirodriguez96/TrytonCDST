@@ -33,6 +33,11 @@ BANCOS = {
 
 }
 
+_TYPES_BANK_ACCOUNT = [
+    ('S', 'S'),
+    ('D', 'D')
+]
+
 BENEFICIARY_TYPE = {
 '12' : '4',
 '13' : '1',
@@ -40,6 +45,18 @@ BENEFICIARY_TYPE = {
 '31' : '3',
 '41' : '5',
 }
+_TYPES_PAYMENT = [
+    ('220', ' Pago a Proveedores'),
+    ('225', 'Pago de Nómina'),
+    ('238', 'Pagos Terceros'),
+    ('239', 'Abono Obligaciones con el Banco'),
+    ('240', 'Pagos Cuenta Maestra'),
+    ('250', 'Subsidios'),
+    ('320', 'Credipago a Proveedores'),
+    ('325', 'Credipago Nómina'),
+    ('820', 'Pago Nómina Efectivo (Pago desde Transporte de Efectivo)'),
+    ('920', 'Pago Proveedores Efectivo (Pago desde Transporte de Efectivo)')
+]
 
 TRANSACTION_TYPE = {
 '23' :'Pre-notificación cuenta corriente',
@@ -53,6 +70,14 @@ TRANSACTION_TYPE = {
 '53': 'Pre-notificación depósito electrónico'
 }
 
+_TYPE_TRANSACTION = [
+    ('25', 'Pago en efectivo'),
+    ('27', 'Abono a cuenta corriente'),
+    ('36', 'Pago cheque gerencia'),
+    ('37', 'Abono a cuenta de ahorros'),
+    ('40', 'Efectivo seguro (visa pagos o tarjeta prepago)'),
+]
+
 
 class PaymentBankGroupStart(ModelView):
     'Payment Bank Group Start'
@@ -60,6 +85,11 @@ class PaymentBankGroupStart(ModelView):
     company = fields.Many2One('company.company', 'Company', required=True)
     report = fields.Many2One('ir.action.report', 'Report',
             domain=[('report_name', 'ilike', 'account.payment_bank%')], required=True)
+    sequence = fields.Char('Sequence', required=True)
+    type_bank_account = fields.Selection(_TYPES_BANK_ACCOUNT, 'Type of account to be debited', required=True)
+    type_transaction = fields.Selection(_TYPE_TRANSACTION, 'Type of transaction', required=True)
+    payment_type = fields.Selection(_TYPES_PAYMENT, 'Type payment', required=True)
+
     @staticmethod
     def default_company():
         return Transaction().context.get('company')
@@ -80,6 +110,10 @@ class PaymentBankGroup(Wizard):
             'ids': Transaction().context.get('active_ids'),
             'company': self.start.company.id,
             'report': self.start.report.id,
+            'sequence': self.start.sequence,
+            'type_bank_account': self.start.type_bank_account,
+            'type_transaction': self.start.type_transaction,
+            'payment_type': self.start.payment_type,
         }
 
         action['report'] = self.start.report.report
