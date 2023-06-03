@@ -8,35 +8,10 @@ from trytond.pool import Pool
 from trytond.model.exceptions import ValidationError
 
 
-BANCOS = {
-'BANCAMIA S.A.'	:	'1059',
-'BANCO AGRARIO'	:	'1040',
-'BANCO AV VILLAS'	:	'1052',
-'BANCO CAJA SOCIAL BCSC SA'	:	'1032'	,
-'BANCO COLPATRIA'	:	'1019'	,
-'BANCO DAVIVIENDA SA'	:	'1051'	,
-'BANCO DE BOGOTA'	:	'1001'	,
-'BANCO  DE  OCCIDENTE S.A.'	:	'1023'	,
-'BANCO FALABELLA S.A.'	:	'1062'	,
-'BANCO FINANDINA S.A.'	:	'1063'	,
-'BANCO GNB SUDAMERIS S.A.'	:	'1012'	,
-'BANCO MUNDO MUJER S.A.'	:	'1047'	,
-'BANCO PICHINCHA S.A.'	:	'1060'	,
-'BANCO POPULAR S.A.'	:	'1002'	,
-'BANCO SANTANDER DE NEGOCIOS COLOMBIA S. A'	:	'1065'	,
-'BANCO SERFINANZA S.A'	:	'1069'	,
-'BANCO W S.A.'	:	'1053'	,
-'BANCOLOMBIA'	:	'1007'	,
-'BANCOOMEVA'	:	'1061'	,
-'BBVA COLOMBIA'	:	'1013'	,
-'CITIBANK'	:	'1009'	,
-
+_TYPES_BANK_ACCOUNT = {
+    'Cuenta de Ahorros': 'S',
+    'Cuenta Corriente': 'D',
 }
-
-_TYPES_BANK_ACCOUNT = [
-    ('S', 'S'),
-    ('D', 'D')
-]
 
 BENEFICIARY_TYPE = {
 '12' : '4',
@@ -86,7 +61,6 @@ class PaymentBankGroupStart(ModelView):
     report = fields.Many2One('ir.action.report', 'Report',
             domain=[('report_name', 'ilike', 'account.payment_bank%')], required=True)
     sequence = fields.Char('Sequence', required=True)
-    type_bank_account = fields.Selection(_TYPES_BANK_ACCOUNT, 'Type of account to be debited', required=True)
     type_transaction = fields.Selection(_TYPE_TRANSACTION, 'Type of transaction', required=True)
     payment_type = fields.Selection(_TYPES_PAYMENT, 'Type payment', required=True)
 
@@ -111,7 +85,6 @@ class PaymentBankGroup(Wizard):
             'company': self.start.company.id,
             'report': self.start.report.id,
             'sequence': self.start.sequence,
-            'type_bank_account': self.start.type_bank_account,
             'type_transaction': self.start.type_transaction,
             'payment_type': self.start.payment_type,
         }
@@ -188,8 +161,11 @@ class PaymentBankGroupReport(Report):
                         raise ValidationError(message=None, description="")
 
                 party_amount += 1
-                
-                
+
+        for i in _TYPES_BANK_ACCOUNT.keys():
+            if i == company[0].get('party.').get('bank_account_type'):
+                company[0]['party.']['bank_account_type'] = _TYPES_BANK_ACCOUNT.get(i)
+
         report_context['records'] = record_dict.values()
         report_context['company'] = company[0]
         return report_context

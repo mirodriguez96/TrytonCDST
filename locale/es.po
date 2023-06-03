@@ -401,3 +401,19 @@ msgstr "Reporte"
 msgctxt "model:ir.action,name:act_report_payment"
 msgid "Generate Payment Bank"
 msgstr "Generar Pagos para Banco"
+
+msgctxt "field:account.payment_bank.start,sequence:"
+msgid "Sequence"
+msgstr "Secuencia"
+
+msgctxt "field:account.payment_bank.start,type_transaction:"
+msgid "Type of transaction"
+msgstr "Tipo de transacción"
+
+msgctxt "field:account.payment_bank.start,payment_type:"
+msgid "Type payment"
+msgstr "Tipo de pago"
+
+msgctxt "model:ir.action,name:report_payment_1007"
+msgid "Bancolombia Payments Format"
+msgstr "Formato de Pagos Bancolombia"
