@@ -417,3 +417,7 @@ msgstr "Tipo de pago"
 msgctxt "model:ir.action,name:report_payment_1007"
 msgid "Bancolombia Payments Format"
 msgstr "Formato de Pagos Bancolombia"
+
+msgctxt "field:account.payment_bank.start,tarjet:"
+msgid "Bank Account"
+msgstr "Cuenta Bancaria"

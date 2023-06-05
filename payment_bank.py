@@ -61,7 +61,7 @@ class PaymentBankGroupStart(ModelView):
     report = fields.Many2One('ir.action.report', 'Report',
                              domain=[('report_name', 'ilike', 'account.payment_bank%')], required=True)
     sequence = fields.Char('Sequence', required=True)
-    tarjet = fields.Many2One('bank.account', 'bank', domain=[(
+    tarjet = fields.Many2One('bank.account', 'Bank Account', domain=[(
         'owners', '=', Eval('company'))], depends=['company'], required=True)
     type_transaction = fields.Selection(
         _TYPE_TRANSACTION, 'Type of transaction', required=True)
@@ -93,6 +93,7 @@ class PaymentBankGroup(Wizard):
             'payment_type': self.start.payment_type,
             'tarjet': self.start.tarjet.numbers[0].number,
         }
+
 
 
         action['report'] = self.start.report.report
