@@ -46,6 +46,7 @@ class BankStatementLineRelation(ModelSQL):
     "Bank Statement Line Relation"
     __name__ = 'account.bank_statement.line-bank_line'
     
+    
     origin = fields.Many2One('account.bank_statement.line','Origin')
     target = fields.Many2One('account.bank_statement.bank_line','Target')
 
@@ -94,14 +95,6 @@ class CreateBankLine(Wizard):
             Button('Create', 'create_bank_line', 'tryton-go-next',
                 default=True)])
     create_bank_line = StateTransition()
-    # open_exemplaries = StateAction('library.act_exemplary')
-
-    # @classmethod
-    # def __setup__(cls):
-    #     super().__setup__()
-    #     cls._error_messages.update({
-    #             'invalid_model': 'This action should be started from a bank_statement',
-    #             })
 
     def default_parameters(self, name):
         if Transaction().context.get('active_model', '') != 'account.bank_statement':
@@ -129,14 +122,14 @@ class CreateBankLine(Wizard):
             if not line:
                 continue
             line = line.split(';')
-            print(line)
+            # print(line)
             if len(line) != 3:
                 raise UserError('invalid_template', 'date;description;amount')
             try:
                 date = line[0].strip().split()[0].split('-')
                 date = datetime.date(int(date[0]), int(date[1]), int(date[2]))
                 description = line[1].strip()
-                amount = Decimal(line[2])
+                amount = Decimal(line[2]) 
             except Exception as e:
                 raise UserError('invalid_template', str(e))
             bank_line = {
@@ -146,20 +139,33 @@ class CreateBankLine(Wizard):
                 'amount': amount,
             }
             to_create.append(bank_line)
+
+
         bank_lines = BankLine.create(to_create)
+        
+         
         lines = Line.search([
             ('statement', '=', _id),
             ('state', '=', 'draft')
         ])
+    
+        
+        
+
         relation = []
-        for bank_line in bank_lines:
-            for line in lines:
-                if line not in relation and bank_line.date == line.date and \
+        tosave = []
+        for line in lines:
+            for bank_line in bank_lines:
+                if bank_line not in relation and bank_line.date == line.date and \
                     bank_line.amount == line.moves_amount:
                     line.bank_line = bank_line
                     line.state = 'confirmed'
-                    relation.append(line)
-        Line.save(relation)
+                    tosave.append(line)
+                    relation.append(bank_line)
+
+                    
+        Line.save(tosave)
+
         return 'end'
     
 
