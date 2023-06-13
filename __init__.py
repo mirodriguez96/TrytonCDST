@@ -21,6 +21,7 @@ from . import account
 from . import payroll
 from . import cron
 from . import statement
+from . import payment_bank
 
 def register():
     Pool.register(
@@ -77,6 +78,7 @@ def register():
         statement.BankStatementBankLine,
         statement.BankStatementLineRelation,
         statement.CreateBankLineParameters,
+        payment_bank.PaymentBankGroupStart,
         module='conector', type_='model')
 
     Pool.register(
@@ -108,6 +110,7 @@ def register():
         wiz.ConfirmLinesBankstatement,
         wiz.GroupMultirevenueLines,
         statement.CreateBankLine,
+        payment_bank.PaymentBankGroup,
         module='conector', type_='wizard')
 
     Pool.register(
@@ -118,4 +121,7 @@ def register():
         payroll.PayrollReport,
         report.LoanFormatReport,
         payroll.PayrollExo2276,
+        payment_bank.PaymentBankGroupReport,
+        payment_bank.BankReportBancolombia,
+        # payment_bank.BankReportBancamia,
         module='conector', type_='report')
