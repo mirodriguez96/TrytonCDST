@@ -541,8 +541,8 @@ class Payroll(metaclass=PoolMeta):
         super(Payroll, cls).__setup__()
 
     # Se hereda y modifica la función preliquidation para añadir las cuentas analiticas en las liquidaciones que la tenga
-    def set_preliquidation(self, extras, discounts=None):
-        super(Payroll, self).set_preliquidation(extras, discounts)
+    def set_preliquidation(self, config, extras, discounts=None, cache_wage_dict=None):
+        super(Payroll, self).set_preliquidation(config, extras, discounts, cache_wage_dict)
         PayrollLine = Pool().get('staff.payroll.line')
         if not hasattr(PayrollLine, 'analytic_accounts'):
             return
