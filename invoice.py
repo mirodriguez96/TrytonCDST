@@ -81,9 +81,13 @@ class Invoice(metaclass=PoolMeta):
         Party = pool.get('party.party')
         PaymentTerm = pool.get('account.invoice.payment_term')
         Product = pool.get('product.product')
+        id_company = Transaction().context.get('company')
+        company = pool.get('company.company')(id_company)
         Tax = pool.get('account.tax')
         _type = None
         _type_note = None
+        _sw = None
+        santa_rita = False
         # Se valida si el módulo centro de operaciones está activo y es requerido en la línea de la factura
         operation_center = hasattr(Line, 'operation_center')
         if operation_center:
@@ -108,8 +112,12 @@ class Invoice(metaclass=PoolMeta):
                 _type = _SW[str(doc.sw)]['type']
             if not _type_note:
                 _type_note = _SW[str(doc.sw)]['type_note']
+            if not _sw:
+                _sw = str(doc.sw)
         if not tecno:
             return data
+        if company.party.id_number == '900715776' and (_sw == '27' or _sw == '28'):
+            santa_rita = True
         # Se trae todos los terceros necesarios para los documentos
         parties = Party._get_party_documentos(documentos, 'nit_Cedula')
         # Se consulta los plazos de pago existentes para posteriormente ser usados
@@ -272,6 +280,8 @@ class Invoice(metaclass=PoolMeta):
                         quantity = abs(round(linea.Cantidad_Facturada, 3)) * -1
                     else:
                         quantity = abs(round(linea.Cantidad_Facturada, 3))
+                    if santa_rita:
+                        quantity = quantity * -1
                     line = {
                         'product': productos_lin[id_producto],
                         'quantity': quantity,
@@ -558,6 +568,73 @@ class Invoice(metaclass=PoolMeta):
         Actualizacion.add_logs(actualizacion, logs)
         print('FINISH validar cruce de facturas')
 
+    # Función encargada de obtener los ids de los registros a eliminar
+    @classmethod
+    def _get_delete_invoices(cls, invoices):
+        ids_tecno = []
+        to_delete = {
+            'reconciliation': [],
+            'move': [],
+            'invoice': [],
+        }
+        for invoice in invoices:
+            ids_tecno.append(invoice.id_tecno)
+            if hasattr(invoice, 'electronic_state') and \
+                invoice.electronic_state == 'submitted':
+                    raise UserError('account_col.msg_with_electronic_invoice')
+            if invoice.state == 'paid':
+                for line in invoice.move.lines:
+                    if line.reconciliation and line.reconciliation.id not in to_delete['reconciliation']:
+                        to_delete['reconciliation'].append(line.reconciliation.id)
+            if invoice.move:
+                if invoice.move.id not in to_delete['move']:
+                    to_delete['move'].append(invoice.move.id)
+            if invoice.id not in to_delete['invoice']:
+                to_delete['invoice'].append(invoice.id)
+        return ids_tecno, to_delete
+
+    # Función creada con base al asistente force_draft del módulo sale_pos de presik
+    # Esta función se encarga de eliminar los registros mediante cursor
+    @classmethod
+    def _delete_invoices(cls, to_delete):
+        invoice_table = Table('account_invoice')
+        move_table = Table('account_move')
+        reconciliation_table = Table('account_move_reconciliation')
+        cursor = Transaction().connection.cursor()
+        # Se procede a realizar la eliminación de todos los registros
+        print(to_delete)
+        if to_delete['reconciliation']:
+            cursor.execute(*reconciliation_table.delete(
+                where=reconciliation_table.id.in_(to_delete['reconciliation']))
+            )
+        if to_delete['move']:
+            cursor.execute(*move_table.update(
+                columns=[move_table.state],
+                values=['draft'],
+                where=move_table.id.in_(to_delete['move']))
+            )
+            cursor.execute(*move_table.delete(
+                where=move_table.id.in_(to_delete['move']))
+                )
+        if to_delete['invoice']:
+            cursor.execute(*invoice_table.update(
+                columns=[invoice_table.state, invoice_table.number],
+                values=['validate', None],
+                where=invoice_table.id.in_(to_delete['invoice']))
+            )
+            cursor.execute(*invoice_table.delete(
+                where=invoice_table.id.in_(to_delete['invoice']))
+            )
+
+    # Función encargada de eliminar y marcar para importar ventas de importadas de TecnoCarnes
+    @classmethod
+    def delete_imported_notes(cls, invoices):
+        Cnxn = Pool().get('conector.configuration')
+        ids_tecno, to_delete = cls._get_delete_invoices(invoices)
+        cls._delete_invoices(to_delete)
+        for idt in ids_tecno:
+            Cnxn.update_exportado(idt, 'N')
+
 
 class InvoiceLine(metaclass=PoolMeta):
     __name__ = 'account.invoice.line'
@@ -591,11 +668,17 @@ class UpdateInvoiceTecno(Wizard):
 
         to_delete_sales = []
         to_delete_purchases = []
+        to_delete_note = []
         for invoice in Invoice.browse(ids):
             rec_name = invoice.rec_name
             party_name = invoice.party.name
             rec_party = rec_name+' de '+party_name
             if invoice.number and '-' in invoice.number:
+                if invoice.id_tecno:
+                    sw = invoice.id_tecno.split('-')[0]
+                    if sw in _SW.keys():
+                        to_delete_note.append(invoice)
+                        continue
                 if invoice.type == 'out':
                     sale = Sale.search([('number', '=', invoice.number)])
                     if sale:
@@ -606,8 +689,12 @@ class UpdateInvoiceTecno(Wizard):
                         to_delete_purchases.append(purchase[0])
             else:
                 raise UserError("Revisa el número de la factura (tipo-numero): ", rec_party)
-        Sale.delete_imported_sales(to_delete_sales)
-        Purchase.delete_imported_purchases(to_delete_purchases)
+        if to_delete_sales:
+            Sale.delete_imported_sales(to_delete_sales)
+        if to_delete_purchases:
+            Purchase.delete_imported_purchases(to_delete_purchases)
+        if to_delete_note:
+            Invoice.delete_imported_notes(to_delete_note)
         return 'end'
 
     def end(self):
