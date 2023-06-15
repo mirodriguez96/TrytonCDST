@@ -305,13 +305,15 @@ class Invoice(metaclass=PoolMeta):
     
 
     @classmethod
-    def _create_lines_tecno(cls, data, id_tecno):
+    def _create_lines_tecno(cls, data, invoice):
         Line = Pool().get('account.invoice.line')
+        id_tecno = invoice.id_tecno
         lineas = data['tryton'][id_tecno]['lines']
         _type = data['tryton'][id_tecno]['invoice']['type']
         lines = []
         for linea in lineas:
             line = Line()
+            line.invoice = invoice
             line.product = linea['product']
             line.quantity = linea['quantity']
             line.unit_price = linea['unit_price']
@@ -378,7 +380,7 @@ class Invoice(metaclass=PoolMeta):
                 invoice.invoice_type = 'C'
             invoice.on_change_type()
             invoice.payment_term = inv['payment_term']
-            invoice.lines = cls._create_lines_tecno(data, id_tecno)
+            invoice.lines = cls._create_lines_tecno(data, invoice)
             invoice.on_change_lines()
             to_save.append(invoice)
         with Transaction().set_context(_skip_warnings=True):
