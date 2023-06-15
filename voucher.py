@@ -120,7 +120,8 @@ class Voucher(ModelSQL, ModelView):
                     exceptions.append(id_tecno)
                     continue
                 print('VOUCHER EGRESO:', id_tecno)
-                fecha_date = cls.convert_fecha_tecno(doc.fecha_hora)
+                # fecha_date = cls.convert_fecha_tecno(doc.fecha_hora)
+                fecha_date = cls.convert_fecha_tecno(tipo_pago[0].fecha)
                 voucher = Voucher()
                 voucher.id_tecno = id_tecno
                 voucher.number = tipo_numero
@@ -267,10 +268,10 @@ class Voucher(ModelSQL, ModelView):
                     logs.append(msg)
                     exceptions.append(id_tecno)
                     continue            
-                fecha_date = cls.convert_fecha_tecno(doc.fecha_hora)
                 # Comprobante con mas de 1 forma de pago (MULTI-INGRESO)
                 if len(tipo_pago) > 1:
                     print('MULTI-INGRESO:', id_tecno)
+                    fecha_date = cls.convert_fecha_tecno(doc.fecha_hora)
                     multingreso = MultiRevenue()
                     multingreso.code = tipo+'-'+nro
                     multingreso.party = party
@@ -294,6 +295,7 @@ class Voucher(ModelSQL, ModelView):
                         # if doble_fp:
                         #     doble_fp = False
                         #     continue
+                        fecha_date = cls.convert_fecha_tecno(pago.fecha)
                         transaction = Transaction()
                         transaction.description = 'IMPORTACION TECNO'
                         transaction.amount = Decimal(pago.valor)
@@ -350,6 +352,7 @@ class Voucher(ModelSQL, ModelView):
                         logs.append(msg)
                         exceptions.append(id_tecno)
                         continue
+                    fecha_date = cls.convert_fecha_tecno(tipo_pago[0].fecha)
                     voucher = Voucher()
                     voucher.id_tecno = id_tecno
                     voucher.number = tipo+'-'+nro
