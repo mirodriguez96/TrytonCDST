@@ -310,28 +310,35 @@ class Purchase(metaclass=PoolMeta):
                         else:
                             msg = f"NO SE ENCONTRO LA FACTURA {dcto_base} PARA CRUZAR CON LA DEVOLUCION {invoice.number}"
                             logs.append(msg)
-                    #Verificamos que el total de la tabla en sqlserver coincidan o tengan una diferencia menor a 4 decimales, para contabilizar la factura
-                    total_tryton = Decimal(abs(invoice.total_amount))
-                    total_tecno = Decimal(abs(compra.valor_total))
-                    retencion_causada = Decimal(abs(compra.retencion_causada))
-                    total_tecno = total_tecno - retencion_causada
-                    diferencia_total = abs(total_tryton - total_tecno)
-                    if diferencia_total < Decimal(6.0):
-                        with Transaction().set_context(_skip_warnings=True):
-                            Invoice.validate_invoice([invoice])
-                            Invoice.post_batch([invoice])
-                            Invoice.post([invoice])
-                            if original_invoice:
-                                # payment_lines = invoice.payment_lines + (invoice.lines_to_pay[0])
-                                # original_invoice.payment_lines = payment_lines
-                                paymentline = PaymentLine()
-                                paymentline.invoice = original_invoice
-                                paymentline.invoice_account = invoice.account
-                                paymentline.invoice_party = invoice.party
-                                paymentline.line = invoice.lines_to_pay[0]
-                                paymentline.save()
-                                Invoice.process([original_invoice])
                     invoice.save()
+                    #Verificamos que el total de la tabla en sqlserver coincidan o tengan una diferencia menor a 4 decimales, para contabilizar la factura
+                    ttecno = {
+                        'retencion_causada': compra.retencion_causada,
+                        'valor_total': compra.valor_total,
+                    }
+                    result = Invoice._validate_total_tecno(invoice.total_amount, ttecno)
+                    if not result['value']:
+                        msg = f"REVISAR: ({id_compra}) "\
+                        f"El total de Tryton {invoice.total_amount} "\
+                        f"es diferente al total de TecnoCarnes {result['total_tecno']} "\
+                        f"La diferencia es de {result['diferencia']}"
+                        logs.append(msg)
+                        to_exception.append(id_compra)
+                        continue
+                    with Transaction().set_context(_skip_warnings=True):
+                        Invoice.validate_invoice([invoice])
+                        Invoice.post_batch([invoice])
+                        Invoice.post([invoice])
+                        if original_invoice:
+                            # payment_lines = invoice.payment_lines + (invoice.lines_to_pay[0])
+                            # original_invoice.payment_lines = payment_lines
+                            paymentline = PaymentLine()
+                            paymentline.invoice = original_invoice
+                            paymentline.invoice_account = invoice.account
+                            paymentline.invoice_party = invoice.party
+                            paymentline.line = invoice.lines_to_pay[0]
+                            paymentline.save()
+                            Invoice.process([original_invoice])
                 to_created.append(id_compra)
             except Exception as e:
                 msg = f"EXCEPCION {id_compra} - {str(e)}"
