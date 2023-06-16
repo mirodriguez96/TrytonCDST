@@ -58,15 +58,26 @@ class PaymentBankGroupStart(ModelView):
     'Payment Bank Group Start'
     __name__ = 'account.payment_bank.start'
     company = fields.Many2One('company.company', 'Company', required=True)
+    party = fields.Function(fields.Many2One('party.party', 'Party Bank'), 'on_change_with_party')
     report = fields.Many2One('ir.action.report', 'Report',
                              domain=[('report_name', 'ilike', 'account.payment_bank%')], required=True)
     sequence = fields.Char('Sequence', required=True)
+    
     tarjet = fields.Many2One('bank.account', 'Bank Account', domain=[(
-        'owners', '=', Eval('company'))], depends=['company'], required=True)
+        'owners', '=', Eval('party'))], depends=['party'], required=True)
     type_transaction = fields.Selection(
         _TYPE_TRANSACTION, 'Type of transaction', required=True)
     payment_type = fields.Selection(
         _TYPES_PAYMENT, 'Type payment', required=True)
+    
+
+    @fields.depends('company')
+    def on_change_with_party(self, name=None):
+        res = None
+        if self.company:
+            res = self.company.party.id
+        return res
+        
 
     @staticmethod
     def default_company():
@@ -91,8 +102,9 @@ class PaymentBankGroup(Wizard):
             'sequence': self.start.sequence,
             'type_transaction': self.start.type_transaction,
             'payment_type': self.start.payment_type,
-            'tarjet': self.start.tarjet.numbers[0].number,
+            'tarjet': self.start.tarjet,
         }
+        print(data)
 
 
 
