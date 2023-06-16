@@ -332,14 +332,17 @@ class Invoice(metaclass=PoolMeta):
                     continue
                 classification = tax.classification_tax_tecno
                 if classification in ['05', '06', '07']:
-                    if data['tryton'][id_tecno]['invoice']['retencion_iva'] > 0:
+                    if classification == '05' and \
+                        data['tryton'][id_tecno]['invoice']['retencion_iva'] > 0:
                         taxes.append(tax)
-                    elif data['tryton'][id_tecno]['invoice']['retencion_ica'] > 0:
+                    elif classification == '07' and \
+                        data['tryton'][id_tecno]['invoice']['retencion_ica'] > 0:
                         taxes.append(tax)
-                    elif data['tryton'][id_tecno]['invoice']['retencion_rete']:
+                    elif classification == '06' and \
+                        data['tryton'][id_tecno]['invoice']['retencion_rete']:
                         taxes.append(tax)
-                elif tax.consumo and 'impuesto_consumo' in lineas:
-                    taxes.append(lineas['impuesto_consumo'])
+                elif tax.consumo and 'impuesto_consumo' in linea:
+                    taxes.append(linea['impuesto_consumo'])
                 elif not tax.consumo:
                     taxes.append(tax)
             line.taxes = taxes
