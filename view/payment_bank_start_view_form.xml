@@ -4,7 +4,7 @@ this repository contains the full copyright notices and license terms. -->
 
 <form>
     <label name="company"/>
-    <field name="company" widget="selection"/>
+    <field name="company"/>
     <label name="report"/>
     <field name="report" widget="selection"/>
     <label name="sequence"/>
