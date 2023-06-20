@@ -102,8 +102,11 @@ class PaymentBankGroup(Wizard):
             'sequence': self.start.sequence,
             'type_transaction': self.start.type_transaction,
             'payment_type': self.start.payment_type,
-            'tarjet': self.start.tarjet,
+            'tarjet': self.start.tarjet.numbers[0].number,
         }
+
+        
+        print (self.start.tarjet.numbers[0].number)
         print(data)
 
 
