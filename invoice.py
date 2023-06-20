@@ -86,8 +86,6 @@ class Invoice(metaclass=PoolMeta):
         Tax = pool.get('account.tax')
         _type = None
         _type_note = None
-        _sw = None
-        santa_rita = False
         # Se valida si el módulo centro de operaciones está activo y es requerido en la línea de la factura
         operation_center = hasattr(Line, 'operation_center')
         if operation_center:
@@ -112,12 +110,13 @@ class Invoice(metaclass=PoolMeta):
                 _type = _SW[str(doc.sw)]['type']
             if not _type_note:
                 _type_note = _SW[str(doc.sw)]['type_note']
-            if not _sw:
-                _sw = str(doc.sw)
+                if company.party.id_number == '900715776':
+                    if str(doc.sw) == '27':
+                        _type_note = _SW['28']['type_note']
+                    elif str(doc.sw) == '28':
+                        _type_note = _SW['27']['type_note']
         if not tecno:
             return data
-        if company.party.id_number == '900715776' and (_sw == '27' or _sw == '28'):
-            santa_rita = True
         # Se trae todos los terceros necesarios para los documentos
         parties = Party._get_party_documentos(documentos, 'nit_Cedula')
         # Se consulta los plazos de pago existentes para posteriormente ser usados
@@ -280,8 +279,6 @@ class Invoice(metaclass=PoolMeta):
                         quantity = abs(round(linea.Cantidad_Facturada, 3)) * -1
                     else:
                         quantity = abs(round(linea.Cantidad_Facturada, 3))
-                    if santa_rita:
-                        quantity = quantity * -1
                     line = {
                         'product': productos_lin[id_producto],
                         'quantity': quantity,
@@ -558,7 +555,10 @@ class Invoice(metaclass=PoolMeta):
                 for line in all_lines:
                     if line.reconciliation:
                         reconciliations.append(line.reconciliation)
-                    amount += line.debit - line.credit
+                    if origin.type == 'out':
+                        amount += line.debit - line.credit
+                    elif origin.type == 'in':
+                        amount += line.credit - line.debit
                 if amount >= _ZERO:
                     origin.payment_lines = payment_lines
                     to_save.append(origin)
