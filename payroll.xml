@@ -86,6 +86,20 @@ this repository contains the full copyright notices and license terms. -->
         </record>
         <menuitem parent="staff.menu_assitants" id="menu_payslip_send"
             action="wizard_payroll_payslip_send"/>
+
+
+        <!--interfaz para el envio del certificados de ingresos y retenciones-->
+        <record model="ir.ui.view" id="payroll_certificates_send_view_form">
+            <field name="model">staff.payroll_certificates_send.start</field>
+            <field name="type">form</field>
+            <field name="name">certificates_send_form</field>
+        </record>
+        <record model="ir.action.wizard" id="wizard_payroll_certificates_send">
+            <field name="name">Certificate Send</field>
+            <field name="wiz_name">staff.payroll.certificates_send</field>
+        </record>
+        <menuitem parent="staff.menu_assitants" id="menu_certificates_send"
+            action="wizard_payroll_certificates_send"/>
         
         <!--interfaz para el envio del comprobante de liquidacion-->
         <record model="ir.ui.view" id="payroll_settlement_send_view_form">

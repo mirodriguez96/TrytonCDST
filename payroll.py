@@ -378,6 +378,226 @@ class SettlementSendStart(ModelView):
     def default_kind():
         return 'contract'
 
+
+
+
+
+class IncomeWithholdings(metaclass=PoolMeta):
+    __name__ = 'staff.payroll.income_withholdings_report'
+
+    @classmethod
+    def get_domain_payroll(cls, data=None):
+        dom = super(IncomeWithholdings, cls).get_domain_payroll(data)
+        if data['employees']:
+            dom.append(('employee', 'in', data['employees']))
+        return dom
+
+
+class CertificateOfIncomeAndWithholdingSendStart(ModelView):
+    'Certificate Send Start'
+    __name__ = 'staff.payroll_certificates_send.start'
+    company = fields.Many2One('company.company', 'Company', required=True)
+    fiscalyear = fields.Many2One('account.fiscalyear', 'Fiscal Year',
+                                 required=True)
+    employees = fields.Many2Many('company.employee', None, None, 'Employees',required=True)
+
+    @staticmethod
+    def default_company():
+        return Transaction().context.get('company')
+    
+    @staticmethod
+    def default_fiscalyear():
+        FiscalYear = Pool().get('account.fiscalyear')
+        return FiscalYear.find(
+            Transaction().context.get('company'), exception=False)
+
+
+class SendCertificateOfIncomeAndWithholding(Wizard):
+    'Certificate Send'
+    __name__ = 'staff.payroll.certificates_send'
+    start = StateView('staff.payroll_certificates_send.start',
+        'conector.payroll_certificates_send_view_form', [
+        Button('Cancel', 'end', 'tryton-cancel'),
+        Button('Send', 'send_', 'tryton-ok', default=True),
+    ])
+    send_ = StateTransition()
+
+
+    def transition_send_(self):
+        pool = Pool()
+        model_name = 'company.employee'
+        # Email = pool.get('ir.email')
+        ActionReport = pool.get('ir.action.report')
+        report, = ActionReport.search([('report_name', '=', 'staff.payroll.income_withholdings_report')])
+        reports = [report.id]
+        nameCompany = self.start.company.party.name
+        Nit = self.start.company.party.id_number
+        company = self.start.company.id
+        start_date = self.start.fiscalyear.start_date
+        end_date = self.start.fiscalyear.end_date
+        year = self.start.fiscalyear.name
+
+        for employe in self.start.employees:
+            body = f"""<html>
+            <body>
+            <h2>Certificado de Ingreso y Retención</h2>
+
+            <p>Estimado(a) {employe.party.name}</p>
+
+            <p>Adjunto encontrarás el certificado de ingreso y retención correspondiente al {year}.</p>
+
+            <p>Atentamente,<br>
+            {nameCompany} <br>
+            {Nit}
+            </p>
+            </body>
+            <p>________________________________________________________________________________________</p>
+            <p><small>
+            Estimado Usuario,
+            <br><br>
+
+            Respetamos tu privacidad y queremos asegurarte que cualquier información personal que proporciones será tratada de manera confidencial. Este correo electrónico y cualquier archivo adjunto son confidenciales y están destinados únicamente para el destinatario mencionado.<br>
+            La información contenida en este correo electrónico es para uso exclusivo del destinatario y puede contener información privilegiada, confidencial o legalmente protegida. Si has recibido este correo electrónico por error, te pedimos que lo notifiques al remitente de inmediato y elimines cualquier copia del mensaje y los archivos adjuntos de tu sistema.<br>
+            Ten en cuenta que la transmisión de información a través de Internet no es completamente segura. Aunque nos esforzamos por proteger tu información personal, no podemos garantizar la seguridad de los datos enviados por correo electrónico. Por lo tanto, te recomendamos que evites enviar información sensible a través de este medio.<br>
+            Si tienes alguna duda o preocupación relacionada con la privacidad, no dudes en ponerte en contacto con nosotros. Apreciamos tu confianza y estamos comprometidos en proteger tu privacidad y seguridad.
+            <br><br>
+
+            Atentamente,
+            <br>
+            {nameCompany}
+            <br>
+            {Nit}
+            </small></p>
+
+            </html>"""
+
+            dic = {
+                'ids': [],
+                'company': company,
+                'start_period': start_date,
+                'end_period': end_date,
+                'employees': [employe.id],
+                'action_id': reports[0]
+            }
+
+            #subject = self.start.subject
+            #email = ''
+            email = employe.party.email
+            #recipients_secondary = ''
+            #if self.start.cc:
+            #    recipients_secondary = self.start.cc
+            record = [model_name,employe.id]
+            try:
+                send_mail_certificate(to=email, cc='', bcc='', subject='Envio de prueba', body=body,
+                    files=None, record=record, reports=reports, attachments=None, dic=dic)
+            except Exception as e:
+                        raise UserError(f'No mail sent, check employee email {employe.rec_name}', str(e))
+
+
+        return 'end'
+
+
+# Copia funcion 'send' del modelo 'ir.email' modificando para enviar de forma individual (no transactional) el envio de certificados de ingresos y retencion
+def send_mail_certificate(to='', cc='', bcc='', subject='', body='',
+            files=None, record=None, reports=None, attachments=None, dic=None):
+    pool = Pool()
+    Email = pool.get('ir.email')
+    User = pool.get('res.user')
+    ActionReport = pool.get('ir.action.report')
+    Attachment = pool.get('ir.attachment')
+    transaction = Transaction()
+    Model = pool.get(record[0])
+    records = Model(record[1])
+    user = User(transaction.user)
+    body_html = HTML_EMAIL % {
+        'subject': subject,
+        'body': body,
+        'signature': user.signature or '',
+        }
+    content = MIMEMultipart('alternative')
+    if html2text:
+        body_text = HTML_EMAIL % {
+            'subject': subject,
+            'body': body,
+            'signature': '',
+            }
+        converter = html2text.HTML2Text()
+        body_text = converter.handle(body_text)
+        if user.signature:
+            body_text += '\n-- \n' + converter.handle(user.signature)
+        part = MIMEText(body_text, 'plain', _charset='utf-8')
+        content.attach(part)
+    part = MIMEText(body_html, 'html', _charset='utf-8')
+    content.attach(part)
+    if files or reports or attachments:
+        msg = MIMEMultipart('mixed')
+        msg.attach(content)
+        if files is None:
+            files = []
+        else:
+            files = list(files)
+        for report_id in (reports or []):
+            report = ActionReport(report_id)
+            Report = pool.get(report.report_name, type='report')
+            ext, content, _, title = Report.execute(
+                [record[1]], dic)
+            name = '%s.%s' % (title, ext)
+            if isinstance(content, str):
+                content = content.encode('utf-8')
+            files.append((name, content))
+        if attachments:
+            files += [
+                (a.name, a.data) for a in Attachment.browse(attachments)]
+        for name, data in files:
+            mimetype, _ = mimetypes.guess_type(name)
+            if mimetype:
+                attachment = MIMENonMultipart(*mimetype.split('/'))
+                attachment.set_payload(data)
+                encode_base64(attachment)
+            else:
+                attachment = MIMEApplication(data)
+            attachment.add_header(
+                'Content-Disposition', 'attachment',
+                filename=('utf-8', '', name))
+            msg.attach(attachment)
+    else:
+        msg = content
+    msg['From'] = from_ = config.get('email', 'from')
+    if user.email:
+        if user.name:
+            user_email = formataddr((user.name, user.email))
+        else:
+            user_email = user.email
+        msg['Behalf-Of'] = user_email
+        msg['Reply-To'] = user_email
+    msg['To'] = ', '.join(formataddr(a) for a in getaddresses([to]))
+    msg['Cc'] = ', '.join(formataddr(a) for a in getaddresses([cc]))
+    msg['Subject'] = Header(subject, 'utf-8')
+    to_addrs = list(filter(None, map(
+                str.strip,
+                _get_emails(to) + _get_emails(cc) + _get_emails(bcc))))
+    sendmail(
+        from_, to_addrs, msg, server=None, strict=True)
+    email = Email(
+        recipients=to,
+        recipients_secondary=cc,
+        recipients_hidden=bcc,
+        addresses=[{'address': a} for a in to_addrs],
+        subject=subject,
+        body=body,
+        resource=records)
+    email.save()
+    with Transaction().set_context(_check_access=False):
+        attachments_ = []
+        for name, data in files:
+            attachments_.append(
+                Attachment(resource=email, name=name, data=data))
+        Attachment.save(attachments_)
+    
+    return email
+
+
+
 # Asistente encargado de recolectar las nóminas y enviarlas por email
 class SettlementSend(Wizard):
     'Settlement Send'
@@ -427,7 +647,9 @@ class SettlementSend(Wizard):
             else:
                 pass
         return 'end'
-    
+
+
+
 # Copia funcion 'send' del modelo 'ir.email' modificando para enviar de forma individual (no transactional)
 def send_mail(to='', cc='', bcc='', subject='', body='',
             files=None, record=None, reports=None, attachments=None):

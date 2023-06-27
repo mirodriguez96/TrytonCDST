@@ -79,6 +79,7 @@ def register():
         statement.BankStatementLineRelation,
         statement.CreateBankLineParameters,
         payment_bank.PaymentBankGroupStart,
+        payroll.CertificateOfIncomeAndWithholdingSendStart,
         module='conector', type_='model')
 
     Pool.register(
@@ -111,6 +112,7 @@ def register():
         wiz.GroupMultirevenueLines,
         statement.CreateBankLine,
         payment_bank.PaymentBankGroup,
+        payroll.SendCertificateOfIncomeAndWithholding,
         module='conector', type_='wizard')
 
     Pool.register(

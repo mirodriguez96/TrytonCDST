@@ -421,3 +421,27 @@ msgstr "Formato de Pagos Bancolombia"
 msgctxt "field:account.payment_bank.start,tarjet:"
 msgid "Bank Account"
 msgstr "Cuenta Bancaria"
+
+msgctxt "model:ir.ui.menu,name:menu_certificates_send"
+msgid "Certificate Send"
+msgstr "Enviar Soporte Certificado Ingresos y Retenciones"
+
+msgctxt "model:ir.action,name:wizard_payroll_certificates_send"
+msgid "Certificate Send"
+msgstr "Enviar Soporte Certificado Ingresos y Retenciones"
+
+msgctxt "field:staff.payroll_certificates_send.start,company:"
+msgid "Company"
+msgstr "Empresa"
+
+msgctxt "field:staff.payroll_certificates_send.start,fiscalyear:"
+msgid "Fiscal Year"
+msgstr "Año Fiscal"
+
+msgctxt "field:staff.payroll_certificates_send.start,employees:"
+msgid "Employees"
+msgstr "Empleados"
+
+msgctxt "wizard_button:staff.payroll_certificates_send,start,send_:"
+msgid "Send"
+msgstr "Enviar"
