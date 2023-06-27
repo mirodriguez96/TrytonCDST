@@ -244,11 +244,9 @@ class DeleteAccountType(Wizard):
         warning_name = 'warning_delete_account_type'
         if Warning.check(warning_name):
             raise UserWarning(warning_name, "Se van a quitar los tipos a las cuentas que lo tenga y que tengan hijos.")
-        to_delete = []
         if ids:
-            for account in Account.browse(ids):
-                to_delete.append(account)
-        Account.delete_account_type(to_delete)
+            accounts = Account.browse(ids)
+            Account.delete_account_type(accounts)
         return 'end'
     
     def end(self):

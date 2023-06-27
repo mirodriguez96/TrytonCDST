@@ -22,6 +22,7 @@ from . import payroll
 from . import cron
 from . import statement
 from . import payment_bank
+from . import loan
 
 def register():
     Pool.register(
@@ -79,6 +80,7 @@ def register():
         statement.BankStatementLineRelation,
         statement.CreateBankLineParameters,
         payment_bank.PaymentBankGroupStart,
+        loan.LoanLine,
         payroll.CertificateOfIncomeAndWithholdingSendStart,
         module='conector', type_='model')
 
