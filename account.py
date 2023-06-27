@@ -29,9 +29,8 @@ class Account(metaclass=PoolMeta):
             if account.code and len(account.code) > 6 and account.type:
                 if account.parent and account.parent not in parents:
                     parents.append(account.parent)
-        for parent in parents:
-            if parent.type:
-                Account.write([parent], {'type': None})
+        if parents:
+            Account.write(parents, {'type': None})
 
 
 class BalanceStockStart(ModelView):
