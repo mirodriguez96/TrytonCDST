@@ -22,6 +22,11 @@ from email.utils import formataddr, getaddresses
 from trytond.modules.company import CompanyReport
 from trytond.sendmail import sendmail
 from trytond.config import config
+from trytond.pyson import Id
+from trytond.i18n import gettext
+from .exceptions import (
+MissingSecuenceCertificate,
+ )
 
 try:
     import html2text
@@ -73,6 +78,15 @@ _TYPE_TRANSACTION = [
     ('37', 'Abono a cuenta de ahorros'),
     ('40', 'Efectivo seguro (visa pagos o tarjeta prepago)'),
 ]
+
+class Configuration(metaclass=PoolMeta):
+    __name__ = "staff.configuration"
+
+    staff_certificate_sequence = fields.Many2One('ir.sequence',
+        'Certificate Sequence', required=True, domain=[
+            ('sequence_type', '=',
+                Id('staff_payroll', 'sequence_type_payroll'))]
+        )
 
 class Bank(metaclass=PoolMeta):
     'Bank'
@@ -379,26 +393,13 @@ class SettlementSendStart(ModelView):
         return 'contract'
 
 
-
-
-
-class IncomeWithholdings(metaclass=PoolMeta):
-    __name__ = 'staff.payroll.income_withholdings_report'
-
-    @classmethod
-    def get_domain_payroll(cls, data=None):
-        dom = super(IncomeWithholdings, cls).get_domain_payroll(data)
-        if data['employees']:
-            dom.append(('employee', 'in', data['employees']))
-        return dom
-
-
 class CertificateOfIncomeAndWithholdingSendStart(ModelView):
     'Certificate Send Start'
     __name__ = 'staff.payroll_certificates_send.start'
     company = fields.Many2One('company.company', 'Company', required=True)
     fiscalyear = fields.Many2One('account.fiscalyear', 'Fiscal Year',
                                  required=True)
+    subject = fields.Char('Subject', size=60, required=True)
     employees = fields.Many2Many('company.employee', None, None, 'Employees',required=True)
 
     @staticmethod
@@ -436,6 +437,7 @@ class SendCertificateOfIncomeAndWithholding(Wizard):
         start_date = self.start.fiscalyear.start_date
         end_date = self.start.fiscalyear.end_date
         year = self.start.fiscalyear.name
+        subject = self.start.subject
 
         for employe in self.start.employees:
             body = f"""<html>
@@ -484,11 +486,11 @@ class SendCertificateOfIncomeAndWithholding(Wizard):
             #email = ''
             email = employe.party.email
             #recipients_secondary = ''
-            #if self.start.cc:
+            #if self.start.cc:s
             #    recipients_secondary = self.start.cc
-            record = [model_name,employe.id]
+            record = [model_name,employe]
             try:
-                send_mail_certificate(to=email, cc='', bcc='', subject='Envio de prueba', body=body,
+                send_mail_certificate(to=email, cc='', bcc='', subject=subject, body=body,
                     files=None, record=record, reports=reports, attachments=None, dic=dic)
             except Exception as e:
                         raise UserError(f'No mail sent, check employee email {employe.rec_name}', str(e))
@@ -496,10 +498,33 @@ class SendCertificateOfIncomeAndWithholding(Wizard):
 
         return 'end'
 
+# Funcion que agrega el consecutivo a los certificados de ingresos y retenciones
+# def get_number_sequence():
+#         pool = Pool()
+#         Configuration = pool.get('staff.configuration')
+#         configuration = Configuration(1)
+#         if not configuration.staff_certificate_sequence:
+#             raise MissingSecuenceCertificate(gettext('conector.msg_sequence_missing'))
+#         seq = configuration.staff_certificate_sequence.get()
+#         return seq
+
+# def get_number_sequence_certificate(seq):
+#         pool = Pool()
+#         Configuration = pool.get('staff.configuration')
+#         configuration = Configuration(1)
+#         print('get_number_sequence_certificate')
+#         cursor = Transaction().connection.cursor()
+#         sequence = configuration.staff_certificate_sequence
+#         print(sequence)
+#         nextNUmber = (int(seq) + 1)
+#         cursor.execute(f"UPDATE ir_sequence SET number_next_internal = {nextNUmber} WHERE id = {sequence.id}")
+#         return 'OK'
+        
 
 # Copia funcion 'send' del modelo 'ir.email' modificando para enviar de forma individual (no transactional) el envio de certificados de ingresos y retencion
 def send_mail_certificate(to='', cc='', bcc='', subject='', body='',
             files=None, record=None, reports=None, attachments=None, dic=None):
+    
     pool = Pool()
     Email = pool.get('ir.email')
     User = pool.get('res.user')
@@ -507,8 +532,9 @@ def send_mail_certificate(to='', cc='', bcc='', subject='', body='',
     Attachment = pool.get('ir.attachment')
     transaction = Transaction()
     Model = pool.get(record[0])
-    records = Model(record[1])
+    records = Model(record[1]) 
     user = User(transaction.user)
+    # seq = get_number_sequence()
     body_html = HTML_EMAIL % {
         'subject': subject,
         'body': body,
@@ -539,9 +565,11 @@ def send_mail_certificate(to='', cc='', bcc='', subject='', body='',
         for report_id in (reports or []):
             report = ActionReport(report_id)
             Report = pool.get(report.report_name, type='report')
+            # dic['party_index'] = seq
             ext, content, _, title = Report.execute(
-                [record[1]], dic)
+                [record[1].id], dic)
             name = '%s.%s' % (title, ext)
+            # get_number_sequence_certificate(seq)
             if isinstance(content, str):
                 content = content.encode('utf-8')
             files.append((name, content))

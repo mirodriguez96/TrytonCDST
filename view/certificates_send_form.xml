@@ -6,5 +6,7 @@ this repository contains the full copyright notices and license terms. -->
     <field name="company" widget="selection"/>
     <label name="fiscalyear"/>
     <field name="fiscalyear"/>
+    <label name="subject"/>
+    <field name="subject"/>
     <field name="employees" colspan="4"/>
 </form>

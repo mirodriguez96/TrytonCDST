@@ -82,6 +82,7 @@ def register():
         payment_bank.PaymentBankGroupStart,
         loan.LoanLine,
         payroll.CertificateOfIncomeAndWithholdingSendStart,
+        payroll.Configuration,
         module='conector', type_='model')
 
     Pool.register(

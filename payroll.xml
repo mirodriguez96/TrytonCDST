@@ -4,6 +4,13 @@ this repository contains the full copyright notices and license terms. -->
 <tryton>
     <data>
 
+        <!-- Campo para secuencia de certificado de ingresos y retenciones
+        <record model="ir.ui.view" id="staff_configuration_view_form">
+            <field name="model">staff.configuration</field>
+            <field name="inherit" ref="staff.staff_configuration_view_form"/>
+            <field name="name">configuration_form</field>
+        </record> -->
+
         <!-- Views Definitions -->
         <record model="ir.ui.view" id="staff_event_view_form">
             <field name="model">staff.event</field>

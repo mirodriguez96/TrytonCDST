@@ -1,0 +1,82 @@
+<?xml version="1.0"?>
+<!-- This file is part of Tryton.  The COPYRIGHT file at the top level of
+this repository contains the full copyright notices and license terms. -->
+<tryton>
+    <data grouped="1">
+        <record model="ir.message" id="msg_party_not_exists">
+            <field name="text">The party with document "%s" not exists!</field>
+        </record>
+        <record model="ir.message" id="msg_department_not_exists">
+            <field name="text">The department with name "%s" not exists!</field>
+        </record>
+        <record model="ir.message" id="msg_project_not_exists">
+            <field name="text">The project with name "%s" not exists</field>
+        </record>
+        <record model="ir.message" id="msg_category_not_exists">
+            <field name="text">The category with name "%s" not exists!</field>
+        </record>
+        <record model="ir.message" id="msg_analytic_account_not_exists">
+            <field name="text">The analytic account with name "%s" not exists!</field>
+        </record>
+        <record model="ir.message" id="msg_employee_without_salary">
+            <field name="text">The employee does not have salary!</field>
+        </record>
+        <record model="ir.message" id="msg_wrong_start_end">
+            <field name="text">The date end can not smaller than date start</field>
+        </record>
+        <record model="ir.message" id="msg_sequence_missing">
+            <field name="text">Sequence Certificate is missing!</field>
+        </record>
+        <record model="ir.message" id="msg_payroll_not_posted">
+            <field name="text">The employee has payrolls does not posted!</field>
+        </record>
+        <record model="ir.message" id="msg_error_dates">
+            <field name="text">The dates for employee is wrong "%s"!</field>
+        </record>
+        <record model="ir.message" id="msg_liquidation_with_move">
+            <field name="text">The liquidation Nro "%s" have move!</field>
+        </record>
+        <record model="ir.message" id="msg_type_concept_not_exists">
+            <field name="text">The type concept "(%s)" no exists</field>
+        </record>
+        <record model="ir.message" id="msg_period_without_contract">
+            <field name="text">The period selected without contract for the employee "%(employee)s"!</field>
+        </record>
+        <record model="ir.message" id="msg_error_report">
+            <field name="text">Error "(%s)"! </field>
+        </record>
+        <record model="ir.message" id="msg_template_not_exist">
+            <field name="text">Missing template selection in the configuration</field>
+        </record>
+        <record model="ir.message" id="msg_dont_contract">
+            <field name="text">Missing contract in this liquidation</field>
+        </record>
+
+        <record model="ir.message" id="msg_move_created">
+            <field name="text">Move "%(s)"created. \n</field>
+        </record>
+        <record model="ir.message" id="msg_missing_party">
+            <field name="text">Missing party in mandatory wage "%(wage)s" for employee "%(employee)s"</field>
+        </record>
+
+        <record model="ir.message" id="msg_delete_cancel">
+            <field name="text">Liquidation "%(liquidation)s" must be cancelled before deletion.</field>
+        </record>
+        <record model="ir.message" id="msg_existing_move">
+            <field name="text">Liquidation "%(liquidation)s" has a move, must be deleted before deletion.</field>
+        </record>
+        <record model="ir.message" id="msg_cannot_duplicate_record">
+            <field name="text">You can't duplicate this record.</field>
+        </record>
+        <record model="ir.message" id="msg_duplicate_liquidation">
+            <field name="text">You have a liquidation with id "%(liquidation)s"  in state "%(state)s".</field>
+        </record>
+        <record model="ir.message" id="msg_dont_send_email">
+            <field name="text">No mail sent, check employee email for "%(employee)s" in parties/parties/</field>
+        </record>
+        <record model="ir.message" id="msg_dont_get_employees">
+            <field name="text">Don`t get employees for create payrolls</field>
+        </record>
+
+    </data>
+</tryton>
