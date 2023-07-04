@@ -83,7 +83,6 @@ def register():
         payment_bank.PaymentBankGroupStart,
         loan.LoanLine,
         payroll.CertificateOfIncomeAndWithholdingSendStart,
-        payroll.Configuration,
         account.AccountAsset,
         module='conector', type_='model')
 
