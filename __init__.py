@@ -24,6 +24,7 @@ from . import statement
 from . import payment_bank
 from . import loan
 
+
 def register():
     Pool.register(
         account.Account,
@@ -83,6 +84,7 @@ def register():
         loan.LoanLine,
         payroll.CertificateOfIncomeAndWithholdingSendStart,
         payroll.Configuration,
+        account.AccountAsset,
         module='conector', type_='model')
 
     Pool.register(

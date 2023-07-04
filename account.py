@@ -223,3 +223,28 @@ class AnalyticAccountEntry(metaclass=PoolMeta):
             date = line.move.date or line.move.post_date
         analytic_lines = super(AnalyticAccountEntry, self).get_analytic_lines(line, date)
         return analytic_lines
+
+
+class AccountAsset(metaclass=PoolMeta):
+    __name__ = 'account.asset'
+    
+    accumulated_depreciation = fields.Function(fields.Numeric(
+            "Accumulated depreciation",
+            digits=(16, Eval('currency_digits', 2)),
+            depends=['currency_digits']),
+        'get_depreciating_value')
+
+
+    @classmethod
+    def default_accumulated_depreciation(cls):
+        return Decimal(0)
+
+    @fields.depends('id')
+    def get_depreciating_value(self, name=None):
+        cursor = Transaction().connection.cursor()
+        cursor.execute(f"SELECT accumulated_depreciation FROM account_asset_line  WHERE asset = {self.id} and move = (select  max(move) from account_asset_line WHERE asset = {self.id});")
+        response = cursor.fetchall()
+        if response:
+            return response[0][0]
+        else:
+            return Decimal(0)

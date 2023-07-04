@@ -5,6 +5,7 @@ from trytond.exceptions import UserError
 from trytond.model.exceptions import ValidationError
 
 
+
 class ImportDataEmployeeError(ValidationError):
     pass
 
@@ -19,7 +20,7 @@ class RecordDuplicateError(UserError):
     pass
 
 
-class LiquidationMoveError(UserError):
+class NotificationEmail(UserWarning):
     pass
 
 

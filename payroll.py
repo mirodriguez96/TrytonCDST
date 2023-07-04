@@ -79,14 +79,6 @@ _TYPE_TRANSACTION = [
     ('40', 'Efectivo seguro (visa pagos o tarjeta prepago)'),
 ]
 
-class Configuration(metaclass=PoolMeta):
-    __name__ = "staff.configuration"
-
-    staff_certificate_sequence = fields.Many2One('ir.sequence',
-        'Certificate Sequence', required=True, domain=[
-            ('sequence_type', '=',
-                Id('staff_payroll', 'sequence_type_payroll'))]
-        )
 
 class Bank(metaclass=PoolMeta):
     'Bank'
@@ -401,6 +393,7 @@ class CertificateOfIncomeAndWithholdingSendStart(ModelView):
                                  required=True)
     subject = fields.Char('Subject', size=60, required=True)
     employees = fields.Many2Many('company.employee', None, None, 'Employees',required=True)
+    cc = fields.Char('Cc', help='separate emails with commas')
 
     @staticmethod
     def default_company():
@@ -438,6 +431,10 @@ class SendCertificateOfIncomeAndWithholding(Wizard):
         end_date = self.start.fiscalyear.end_date
         year = self.start.fiscalyear.name
         subject = self.start.subject
+        recipients_secondary = ''
+        if self.start.cc:
+            recipients_secondary = self.start.cc
+
 
         for employe in self.start.employees:
             body = f"""<html>
@@ -482,16 +479,12 @@ class SendCertificateOfIncomeAndWithholding(Wizard):
                 'action_id': reports[0]
             }
 
-            #subject = self.start.subject
-            #email = ''
             email = employe.party.email
-            #recipients_secondary = ''
-            #if self.start.cc:s
-            #    recipients_secondary = self.start.cc
             record = [model_name,employe]
             try:
-                send_mail_certificate(to=email, cc='', bcc='', subject=subject, body=body,
+                send_mail_certificate(to=email, cc=recipients_secondary, bcc='', subject=subject, body=body,
                     files=None, record=record, reports=reports, attachments=None, dic=dic)
+                
             except Exception as e:
                         raise UserError(f'No mail sent, check employee email {employe.rec_name}', str(e))
 

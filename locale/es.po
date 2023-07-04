@@ -442,6 +442,10 @@ msgctxt "field:staff.payroll_certificates_send.start,employees:"
 msgid "Employees"
 msgstr "Empleados"
 
-msgctxt "wizard_button:staff.payroll_certificates_send,start,send_:"
+msgctxt "field:staff.payroll_certificates_send.start,subject:"
+msgid "Subject"
+msgstr "Asunto"
+
+msgctxt "wizard_button:staff.payroll.certificates_send,start,send_:"
 msgid "Send"
 msgstr "Enviar"
