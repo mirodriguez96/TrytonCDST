@@ -72,15 +72,13 @@ def register():
         payroll.SettlementSendStart,
         cron.Cron,
         wiz.DocumentsForImportParameters,
-        payroll.Loan,
-        payroll.LoanLine,
         statement.BankStatement,
         statement.BankStatementLine,
         statement.BankStatementBankLine,
         statement.BankStatementLineRelation,
         statement.CreateBankLineParameters,
         payment_bank.PaymentBankGroupStart,
-        loan.LoanLine,
+        loan.Loan,
         payroll.CertificateOfIncomeAndWithholdingSendStart,
         module='conector', type_='model')
 

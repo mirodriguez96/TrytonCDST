@@ -1,6 +1,4 @@
 from decimal import Decimal
-from datetime import date
-import calendar
 from trytond.model import ModelView, fields
 from trytond.pool import Pool, PoolMeta
 from trytond.wizard import (
@@ -813,7 +811,6 @@ class Payroll(metaclass=PoolMeta):
                 }
 
             line, = PayrollLine.create([to_create])
-            print(line)
             LoanLine.write([m], {'state': 'paid', 'origin': line})
 
 
@@ -847,105 +844,6 @@ class PayrollReport(CompanyReport):
             keys.total_cost = amount
         return report_context
     
-class Loan(metaclass=PoolMeta):
-    __name__ = "staff.loan"
-    
-    @classmethod
-    def refresh(cls,loans):   
-        super().refresh(loans)
-        pool = Pool()
-        LoanLine = pool.get('staff.loan.line')
-        line_to_create = []
-        for loan in loans:
-            contador = len(loan.lines)
-            flag = False
-            flag1 = False
-            amount=loan.amount
-            for m in loan.lines:
-                if flag:
-                    m.amount += diferencia
-                contador -= 1
-
-                if flag1:
-                    m.amount = diferencia
-                
-                if contador == 0: 
-                    days_of_month = sorted(set(d.day_of_month for d in loan.days_of_month))
-                    month = m.maturity_date
-                    for d in days_of_month:
-                        try:
-                            date_ = date(month.year, month.month, d)
-                        except:
-                            _,last_day = calendar.monthrange(month.year, month.month)
-                            date_ = date(month.year, month.month, last_day)
-                      
-                if m.origin:
-                    diferencia = m.amount - m.origin.unit_value 
-                    
-                    if diferencia == 0:
-                        m.adeuda = 0
-                    elif diferencia > 0:
-                        if not flag:
-                            
-                            m.amount = m.origin.unit_value 
-                            m.adeuda = diferencia
-                        if contador == 0 and diferencia != 0:
-                            
-                            line_to_create.append({
-                            'loan': loan.id,
-                            'maturity_date': date_,
-                            'amount': diferencia,
-                            'state': 'pending',
-                            })
-                            LoanLine.create(line_to_create)
-                            contador =+ 1
-                        diferencia = abs(diferencia / contador)
-                        diferencia = round(diferencia, 2) 
-                        flag = True 
-                    elif diferencia < 0:
-                        
-                        diferencia = abs(diferencia)
-                        diferencia = amount - m.origin.unit_value
-                        m.amount = m.origin.unit_value
-                        flag1 = True
-                        diferencia = abs(diferencia / contador)
-                        diferencia = round(diferencia, 2)
-                        
-                amount = amount - m.amount
-                m.save()
-                
-    # @classmethod
-    # def _post(cls, loans):
-    #     super()._post(loans)
-    #     pool = Pool()
-    #     values = []
-    #     Employee = pool.get('company.employee')
-    #     MandatoryWage = pool.get('staff.payroll.mandatory_wage')
-    #     for loan in loans:
-    #         employee = Employee.search([('party', '=', loan.party),])
-    #         for emple in employee:
-    #             for wage in emple.mandatory_wages: 
-    #                 print(wage)
-    #                 if wage.id == loan.wage_type.id:
-    #                     flag = False
-    #                 elif loan.type == 'external':
-    #                     party = loan.party_to_pay
-    #                     flag = True 
-    #                 else:
-    #                     flag = True
-    #                     party = None
-    #             if flag:
-    #                 val = {
-    #                         'employee': emple.id,
-    #                         'wage_type': loan.wage_type.id,
-    #                         'party': party,}
-    #                 values.append(val)
-    #                 MandatoryWage.create(values)
-            
-class LoanLine(metaclass=PoolMeta):
-    __name__ = "staff.loan.line"
-    adeuda = fields.Numeric('Adeuda', digits=(16, 2))
-
 
 class PayrollExo2276(metaclass=PoolMeta):
     __name__ = "staff.payroll_exo2276.report"
