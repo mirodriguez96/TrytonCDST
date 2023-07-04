@@ -483,20 +483,22 @@ class Invoice(metaclass=PoolMeta):
                 )}
             },)
     
-    @classmethod
-    def check_duplicated_reference(cls, invoice):
-        today = datetime.date.today()
-        target_date = today - datetime.timedelta(days=90)
-        if invoice.reference:
-            duplicates = cls.search_read([
-                ('reference', '=', invoice.reference),
-                ('party', '=', invoice.party.id),
-                ('invoice_date', '>=', target_date),
-            ], fields_names=['reference'])
-            if len(duplicates) >= 2:
-                raise UserError(gettext(
-                    'account_col.msg_duplicated_reference_invoice')
-                    )
+    # @classmethod
+    # def check_duplicated_reference(cls, invoice):
+    #     today = datetime.date.today()
+    #     target_date = today - datetime.timedelta(days=90)
+    #     if invoice.reference:
+    #         duplicates = cls.search_read([
+    #             ('reference', '=', invoice.reference),
+    #             ('party', '=', invoice.party.id),
+    #             ('invoice_date', '>=', target_date),
+    #         ], fields_names=['reference'])
+    #         if len(duplicates) >= 2:
+    #             raise UserError(gettext(
+    #                 'account_col.msg_duplicated_reference_invoice')
+    #                 )
+
+
 
     # Boton (función) que sirve para enviar los documentos soporte al proveedor tecnologico
     @classmethod
