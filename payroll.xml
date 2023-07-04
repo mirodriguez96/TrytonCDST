@@ -25,13 +25,6 @@ this repository contains the full copyright notices and license terms. -->
             <field name="name">bank_form</field>
         </record>
 
-        <!--interfaz para el campo nuevo de lineas de prestamo-->
-        <record model="ir.ui.view" id="staff_loan_line_view_form1">
-            <field name="model">staff.loan.line</field>
-            <field name="inherit" ref="staff_loan.staff_loan_line_view_form"/>
-            <field name="name">staff_loan_line_form</field>
-        </record>
-
         <!--interfaz para el campo nuevo de la liquidacion-->
         <record model="ir.ui.view" id="liquidation_view_form1">
             <field name="model">staff.liquidation</field>
