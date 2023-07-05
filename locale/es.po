@@ -54,6 +54,10 @@ msgctxt "model:ir.action,name:act_payrollelectronic_cdst"
 msgid "Send supplier it"
 msgstr "Enviar al proveedor tecnologico"
 
+msgctxt "view:staff.payroll.electronic:"
+msgid "Submit to supplier"
+msgstr "Enviar al proveedor"
+
 msgctxt "model:ir.action,name:act_add_operation_center"
 msgid "Add operation center"
 msgstr "Añadir centro de operaciones"

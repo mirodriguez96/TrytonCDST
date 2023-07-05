@@ -11,6 +11,13 @@ this repository contains the full copyright notices and license terms. -->
             <field name="name">configuration_form</field>
         </record> -->
 
+        <!-- vista form para las nominas electonicas -->
+        <record model="ir.ui.view" id="electronic_payroll_view_form">
+            <field name="model">staff.payroll.electronic</field>
+            <field name="inherit" ref="electronic_payroll.electronic_payroll_view_form"/>
+            <field name="name">electronic_payroll_form</field>
+        </record>
+
         <!-- Views Definitions -->
         <record model="ir.ui.view" id="staff_event_view_form">
             <field name="model">staff.event</field>

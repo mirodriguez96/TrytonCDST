@@ -4,10 +4,11 @@ from trytond.pool import Pool, PoolMeta
 from trytond.wizard import (
     Wizard, StateView, Button, StateReport, StateTransition
 )
-from trytond.pyson import Eval
+from trytond.pyson import Eval, Or
 from trytond.transaction import Transaction
 from trytond.report import Report
 from trytond.exceptions import UserError
+from . it_supplier_noova import ElectronicPayrollCdst
 
 import mimetypes
 from email.encoders import encode_base64
@@ -885,3 +886,41 @@ class PayrollExo2276(metaclass=PoolMeta):
             result['incapacity'] += line.amount
 
         return  result
+    
+
+class PayrollElectronic(metaclass=PoolMeta):
+    'Staff Payroll Electronic'
+    __name__ = 'staff.payroll.electronic'
+
+    @classmethod
+    def __setup__(cls):
+        super(PayrollElectronic, cls).__setup__()
+        cls._buttons.update({
+            'submit': {
+                'invisible': True,
+            },
+            'force_response': {
+                'invisible': True,
+            },
+            'send_email': {
+                'invisible': True,
+            },
+            'submit_noova': {
+                'invisible': Or(
+                    Eval('electronic_state') == 'authorized',
+                    Eval('state') != 'processed',
+                )},
+        })
+
+    @classmethod
+    @ModelView.button
+    def submit_noova(cls, records):
+        for payroll in records:
+            if payroll.validate_for_send():
+                pool = Pool()
+                Configuration = pool.get('staff.configuration')
+                configuration = Configuration(1)
+                _ = ElectronicPayrollCdst(payroll, configuration)
+            else:
+                payroll.get_message('Nomina no valida para enviar')
+    
