@@ -1,4 +1,6 @@
+import datetime
 from decimal import Decimal
+from trytond.i18n import gettext
 from trytond.pool import PoolMeta, Pool
 from trytond.model import fields, ModelView
 from trytond.pyson import Eval, Or, And
@@ -6,7 +8,7 @@ from trytond.wizard import Wizard, StateTransition
 from trytond.transaction import Transaction
 from trytond.exceptions import UserError, UserWarning
 from sql import Table
-import datetime
+
 
 from .it_supplier_noova import SendElectronicInvoice
 
@@ -481,9 +483,22 @@ class Invoice(metaclass=PoolMeta):
                 )}
             },)
     
-    @classmethod
-    def check_duplicated_reference(cls, invoice):
-        pass
+    # @classmethod
+    # def check_duplicated_reference(cls, invoice):
+    #     today = datetime.date.today()
+    #     target_date = today - datetime.timedelta(days=90)
+    #     if invoice.reference:
+    #         duplicates = cls.search_read([
+    #             ('reference', '=', invoice.reference),
+    #             ('party', '=', invoice.party.id),
+    #             ('invoice_date', '>=', target_date),
+    #         ], fields_names=['reference'])
+    #         if len(duplicates) >= 2:
+    #             raise UserError(gettext(
+    #                 'account_col.msg_duplicated_reference_invoice')
+    #                 )
+
+
 
     # Boton (función) que sirve para enviar los documentos soporte al proveedor tecnologico
     @classmethod
