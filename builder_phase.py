@@ -411,6 +411,13 @@ class ElectronicPayroll(object):
                             "Nvvac_tipo": "1"
                         }
                         subelements['LVacaciones'].append(e)
+                    if not line.lines_payroll:
+                        e ={
+                            "Nvcom_cant": rvalue(line.quantity, 2),
+                            "Nvcom_pago": rvalue(line.amount, 2),
+                            "Nvvac_tipo": "1"
+                        }
+                        subelements['LVacaciones'].append(e)
                 else:
                     e = {
                         "Nvcom_cant":rvalue(line.quantity, 2),
