@@ -295,6 +295,7 @@ class Purchase(metaclass=PoolMeta):
                 for invoice in purchase.invoices:
                     invoice.number = purchase.number
                     invoice.invoice_date = fecha_date
+                    invoice.description = purchase.description
                     #Se agrega en la descripcion el nombre del tipo de documento de la tabla en sqlserver
                     desc = Config.get_tbltipodoctos(tipo_doc)
                     if desc:
