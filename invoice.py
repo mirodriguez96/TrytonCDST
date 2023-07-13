@@ -1,6 +1,5 @@
 import datetime
 from decimal import Decimal
-from trytond.i18n import gettext
 from trytond.pool import PoolMeta, Pool
 from trytond.model import fields, ModelView
 from trytond.pyson import Eval, Or, And
@@ -141,6 +140,8 @@ class Invoice(metaclass=PoolMeta):
             # Se elimina del diccionario de los documentos por validar
             del tecno[id_tecno]
             data['logs'].append(msg)
+        if not tecno:
+            return data
         # Se importa las lineas de los documentos
         documentos_lin = Config.get_documentos_lin(tuple(tecno.keys()))
         lineas_tecno = {}
