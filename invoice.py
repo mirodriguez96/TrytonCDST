@@ -1,5 +1,6 @@
 import datetime
 from decimal import Decimal
+from trytond.i18n import gettext
 from trytond.pool import PoolMeta, Pool
 from trytond.model import fields, ModelView
 from trytond.pyson import Eval, Or, And
@@ -403,7 +404,7 @@ class Invoice(metaclass=PoolMeta):
                     to_post.append(invoice)
                 data['exportado'][invoice.id_tecno] = 'T'
             Invoice.post(to_post)
-            if inv['type_note'] == 'credit':
+            if inv['type_note'] == 'credit' and to_post:
                 cls._check_cross_invoices(to_post)
         return data
     
@@ -484,21 +485,22 @@ class Invoice(metaclass=PoolMeta):
                 )}
             },)
     
-    # @classmethod
-    # def check_duplicated_reference(cls, invoice):
-    #     today = datetime.date.today()
-    #     target_date = today - datetime.timedelta(days=90)
-    #     if invoice.reference:
-    #         duplicates = cls.search_read([
-    #             ('reference', '=', invoice.reference),
-    #             ('party', '=', invoice.party.id),
-    #             ('invoice_date', '>=', target_date),
-    #         ], fields_names=['reference'])
-    #         if len(duplicates) >= 2:
-    #             raise UserError(gettext(
-    #                 'account_col.msg_duplicated_reference_invoice')
-    #                 )
-
+    @classmethod
+    def check_duplicated_reference(cls, invoice):
+        if invoice.total_amount < 0:
+            return
+        today = datetime.date.today()
+        target_date = today - datetime.timedelta(days=90)
+        if invoice.reference:
+            duplicates = cls.search_read([
+                ('reference', '=', invoice.reference),
+                ('party', '=', invoice.party.id),
+                ('invoice_date', '>=', target_date),
+            ], fields_names=['reference'])
+            if len(duplicates) >= 2:
+                raise UserError(gettext(
+                    'account_col.msg_duplicated_reference_invoice')
+                    )
 
 
     # Boton (función) que sirve para enviar los documentos soporte al proveedor tecnologico
