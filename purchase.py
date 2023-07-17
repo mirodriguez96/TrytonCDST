@@ -295,11 +295,10 @@ class Purchase(metaclass=PoolMeta):
                 for invoice in purchase.invoices:
                     invoice.number = purchase.number
                     invoice.invoice_date = fecha_date
-                    invoice.description = purchase.description
                     #Se agrega en la descripcion el nombre del tipo de documento de la tabla en sqlserver
-                    desc = Config.get_tbltipodoctos(tipo_doc)
-                    if desc:
-                        invoice.description = desc[0].TipoDoctos.replace('\n', ' ').replace('\r', '')
+                    # desc = Config.get_tbltipodoctos(tipo_doc)
+                    # if desc:
+                    #     invoice.description = desc[0].TipoDoctos.replace('\n', ' ').replace('\r', '')
                     original_invoice = None
                     if compra.sw == 4:
                         dcto_base = str(compra.Tipo_Docto_Base)+'-'+str(compra.Numero_Docto_Base)
@@ -683,7 +682,7 @@ class Purchase(metaclass=PoolMeta):
                 result['exportado'][id_tecno] = 'E'
                 continue
             # Se valida el precio del producto
-            valor_unitario = float(linea.Valor_Unitario)
+            valor_unitario = Decimal(linea.Valor_Unitario)
             if valor_unitario <= 0:
                 msg = f"EXCEPCION - {id_tecno} el valor unitario no puede ser menor o igual a cero. Su valor es: {valor_unitario} "
                 result['logs'].append(msg)
@@ -709,7 +708,7 @@ class Purchase(metaclass=PoolMeta):
                 'product': products[idproducto],
                 'uom': products[idproducto].purchase_uom,
                 'quantity': cantidad,
-                'unit_price': valor_unitario
+                'unit_price': round(valor_unitario, 2)
             }
             number = linea.DescuentoOrdenVenta.split('-')[1]
             if number not in tecno:
