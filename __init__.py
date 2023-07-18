@@ -83,6 +83,7 @@ def register():
         loan.Loan,
         payroll.CertificateOfIncomeAndWithholdingSendStart,
         account.AccountAsset,
+        wiz.AuxiliaryBookStart,
         module='conector', type_='model')
 
     Pool.register(
