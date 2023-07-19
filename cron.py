@@ -76,6 +76,6 @@ class Cron(metaclass=PoolMeta):
         cls.method.selection.append(
             ('conector.actualizacion|_missing_documents', "Validar documentos faltantes"),
             )
-        cls.method.selection.append(
-            ('account.voucher|_reconcile_multipayment', 'Conciliar multipagos'),
-        )
+        # cls.method.selection.append(
+        #     ('account.voucher|_reconcile_multipayment', 'Conciliar multipagos'),
+        # )

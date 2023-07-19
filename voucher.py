@@ -834,44 +834,44 @@ class Voucher(ModelSQL, ModelView):
         print('FINISH validar cruce de comprobantes')
 
 
-    def _reconcile_lines(self, to_reconcile):
-        if self.voucher_type == 'multipayment' and\
-            len(self.lines) > 200:
-            return
-        super(Voucher, self)._reconcile_lines(to_reconcile)
+    # def _reconcile_lines(self, to_reconcile):
+    #     if self.voucher_type == 'multipayment' and\
+    #         len(self.lines) > 200:
+    #         return
+    #     super(Voucher, self)._reconcile_lines(to_reconcile)
 
 
-    @classmethod
-    def _reconcile_multipayment(cls):
-        MoveLine = Pool().get('account.move.line')
-        multipayments = cls.search([
-            ('voucher_type', '=', 'multipayment'),
-            ('state', '=', 'posted')
-        ])
-        print(multipayments)
-        for m in multipayments:
-            if not m.to_reconcile:
-                continue
-            print(m.number)
-            for line in m.lines:
-                if not line.move_line:
-                    continue
-                sl = line.move_line
-                if sl.reconciliation:
-                    continue
-                to_reconcile = []
-                move_lines = MoveLine.search([
-                    ('reconciliation', '=', None),
-                    ('move', '=', m.move.id),
-                    ('account', '=', sl.account.id),
-                    ('party', '=', sl.party.id),
-                    ('debit', '=', sl.credit),
-                ])
-                if move_lines:
-                    to_reconcile = [sl, move_lines[0]]
-                if to_reconcile:
-                    print('to reconcile lines', to_reconcile)
-                    MoveLine.reconcile(to_reconcile)
+    # @classmethod
+    # def _reconcile_multipayment(cls):
+    #     MoveLine = Pool().get('account.move.line')
+    #     multipayments = cls.search([
+    #         ('voucher_type', '=', 'multipayment'),
+    #         ('state', '=', 'posted')
+    #     ])
+    #     print(multipayments)
+    #     for m in multipayments:
+    #         if not m.to_reconcile:
+    #             continue
+    #         print(m.number)
+    #         for line in m.lines:
+    #             if not line.move_line:
+    #                 continue
+    #             sl = line.move_line
+    #             if sl.reconciliation:
+    #                 continue
+    #             to_reconcile = []
+    #             move_lines = MoveLine.search([
+    #                 ('reconciliation', '=', None),
+    #                 ('move', '=', m.move.id),
+    #                 ('account', '=', sl.account.id),
+    #                 ('party', '=', sl.party.id),
+    #                 ('debit', '=', sl.credit),
+    #             ])
+    #             if move_lines:
+    #                 to_reconcile = [sl, move_lines[0]]
+    #             if to_reconcile:
+    #                 print('to reconcile lines', to_reconcile)
+    #                 MoveLine.reconcile(to_reconcile)
 
 
 # Se añaden campos relacionados con las retenciones aplicadas en TecnoCarnes
