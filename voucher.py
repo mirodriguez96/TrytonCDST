@@ -853,10 +853,7 @@ class Voucher(ModelSQL, ModelView):
             if not m.to_reconcile:
                 continue
             print(m.number)
-            # move_lines = list(m.move.lines)
-            # cont = -1
             for line in m.lines:
-                # cont += 1
                 if not line.move_line:
                     continue
                 sl = line.move_line
@@ -872,14 +869,6 @@ class Voucher(ModelSQL, ModelView):
                 ])
                 if move_lines:
                     to_reconcile = [sl, move_lines[0]]
-                # for ml in move_lines:
-                #     print(len(move_lines))
-                #     if sl.account != ml.account or sl.party != ml.party:
-                #         continue
-                #     if (sl.debit - sl.credit) + (ml.debit - ml.credit) == 0:
-                #         to_reconcile = [sl, ml]
-                #         move_lines.remove(ml)
-                #         break
                 if to_reconcile:
                     print('to reconcile lines', to_reconcile)
                     MoveLine.reconcile(to_reconcile)
