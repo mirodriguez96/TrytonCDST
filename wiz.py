@@ -1,7 +1,7 @@
 from decimal import Decimal
 from trytond.model import ModelView, fields
 from trytond.wizard import Wizard, StateTransition, StateView, Button
-from trytond.pool import Pool, PoolMeta
+from trytond.pool import Pool
 from trytond.transaction import Transaction
 from trytond.exceptions import UserError, UserWarning
 from sql import Table
@@ -486,32 +486,3 @@ class GroupMultirevenueLines(Wizard):
                 BankStatementLine.save(to_save)
                 BankStatementLine.delete(to_delete)
         return 'end'
-    
-
-class AuxiliaryBookStart(metaclass=PoolMeta):
-    'Auxiliary Book Start'
-    __name__ = 'account_col.print_auxiliary_book.start'
-
-    @classmethod
-    def __setup__(cls):
-        super(AuxiliaryBookStart, cls).__setup__()
-        cls.start_period.states.update({
-            'required': True,
-        })
-        cls.end_period.states.update({
-            'invisible': True,
-        })
-        cls.start_account.states.update({
-            'required': True,
-        })
-        cls.end_account.states.update({
-            'invisible': True,
-        })
-
-    @fields.depends('start_period')
-    def on_change_start_period(self):
-        self.end_period = self.start_period
-
-    @fields.depends('start_account')
-    def on_change_start_account(self):
-        self.end_account = self.start_account
