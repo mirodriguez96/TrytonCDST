@@ -64,6 +64,7 @@ def register():
         report.PayrollExportStart,
         report.CDSSaleIncomeDailyStart,
         payroll.Bank,
+        payroll.WageType,
         payroll.PayrollPaymentStartBcl,
         payroll.StaffEvent,
         payroll.Payroll,

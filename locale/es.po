@@ -453,3 +453,19 @@ msgstr "Asunto"
 msgctxt "wizard_button:staff.payroll.certificates_send,start,send_:"
 msgid "Send"
 msgstr "Enviar"
+
+msgctxt "model:ir.model.button,string:test_conexion"
+msgid "Test"
+msgstr "Probar conexión"
+
+msgctxt "model:ir.model.button,string:importfile"
+msgid "File Import"
+msgstr "Importar archivo"
+
+msgctxt "model:ir.model.button,string:invoice_cancel_button"
+msgid "Create liquidation"
+msgstr "Crear liquidación"
+
+msgctxt "field:conector.configuration,enhabled:"
+msgid "Enhabled"
+msgstr "Habilitado"

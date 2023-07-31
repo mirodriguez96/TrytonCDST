@@ -13,6 +13,8 @@
     <label name="end_date"/>
     <field name="end_date"/>
     <button string="Test" name="test_conexion" colspan="2"/>
+    <label name="enhabled"/>
+    <field name="enhabled"/>
 
     <notebook colspan="6">
       <page string="Import" id="file_import">

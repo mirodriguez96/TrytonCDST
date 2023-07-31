@@ -6,4 +6,7 @@ this repository contains the full copyright notices and license terms. -->
         <label name="analytic_account"/>
         <field name="analytic_account"/>
     </xpath>
+    <xpath expr="/form/group[@id='state_buttons']/group[@id='buttons']/button[@name='draft']" position="after">
+        <button name="create_liquidation" string="Create liquidation" icon="tryton-refresh"/>
+    </xpath>
 </data>

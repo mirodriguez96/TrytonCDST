@@ -55,6 +55,7 @@ class Configuration(ModelSQL, ModelView):
     access_exit_timestamp = fields.Char('Finaliza de laborar', help="Example: Salir")
     access_start_rest = fields.Char('Inicia a descansar', help="Example: Descansando")
     access_end_rest = fields.Char('Finaliza de descansar', help="Example: Retornar")
+    enhabled = fields.Function(fields.Boolean('Enhabled'), 'get_enhabled')
 
 
     @classmethod
@@ -65,6 +66,26 @@ class Configuration(ModelSQL, ModelView):
                 'importfile': {},
                 })
 
+    # Se retorna la configuracion a trabajar
+    @classmethod
+    def get_configuration(cls):
+        configuration = None
+        last_record = cls.search([], order=[('id', 'DESC')], limit=1)
+        if last_record and last_record[0].enhabled:
+            configuration, = last_record
+        return configuration
+
+    # Se valida si esta habilitada la conexión para importar datos
+    def get_enhabled(self, name):
+        try:
+            parametro = self.get_data_parametros("181")
+            if parametro:
+                if parametro[0].Valor.strip() == 'S':
+                    return False
+            return True
+        except Exception as e:
+            print(e)
+            return False
 
     #Función que prueba la conexión a la base de datos sqlserver
     @classmethod
@@ -77,8 +98,7 @@ class Configuration(ModelSQL, ModelView):
     #Función encargada de establecer conexión con respecto a la configuración
     @classmethod
     def conexion(cls):
-        Config = Pool().get('conector.configuration')
-        last_record = Config.search([], order=[('id', 'DESC')], limit=1)
+        last_record = cls.search([], order=[('id', 'DESC')], limit=1)
         if last_record:
             record, = last_record
             #Las conexiones utilizadas en un bloque with se confirmarán al final del bloque si no se generan errores y se revertirán de lo contrario

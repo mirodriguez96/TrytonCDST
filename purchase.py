@@ -51,6 +51,9 @@ class Purchase(metaclass=PoolMeta):
     def import_tecnocarnes(cls, swt):
         pool = Pool()
         Config = pool.get('conector.configuration')
+        configuration = Config.get_configuration()
+        if not configuration:
+            return
         Actualizacion = pool.get('conector.actualizacion')
         data = Config.get_documentos_tecno(swt)
         #Se crea o actualiza la fecha de importación

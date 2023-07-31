@@ -134,6 +134,9 @@ class Party(metaclass=PoolMeta):
                             contact_tel.type = 'other'
                             contact_tel.value = telefono
                             contact_tel.name = 'telefono'
+                            if len(telefono) == 10:
+                                contact_tel.type = 'phone'
+                                contact_tel.value = '+57 '+telefono
                             contact_tel.save()
                         elif len(telefono) > 4:
                             contact_tel = Mcontact()
@@ -141,6 +144,9 @@ class Party(metaclass=PoolMeta):
                             contact_tel.value = telefono
                             contact_tel.name = 'telefono'
                             contact_tel.party = party
+                            if len(telefono) == 10:
+                                contact_tel.type = 'phone'
+                                contact_tel.value = '+57 '+telefono
                             contact_tel.save()
                         party.save()
                 else:
@@ -178,6 +184,9 @@ class Party(metaclass=PoolMeta):
                             'name': 'telefono',
                             'value': telefono
                         }
+                        if len(telefono) == 10:
+                            phone['type'] = 'phone'
+                            phone['value'] = '+57 '+telefono
                         contacts.append(phone)
                     if len(mail) > 4:
                         email = {

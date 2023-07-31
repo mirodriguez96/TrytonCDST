@@ -13,18 +13,18 @@ class Voucher(ModelSQL, ModelView):
     'Voucher'
     __name__ = 'account.voucher'
     id_tecno = fields.Char('Id Tabla Sqlserver', required=False)
-    to_reconcile = fields.Function(fields.Boolean('To Reconcile'), 'getter_to_reconcile')
+    # to_reconcile = fields.Function(fields.Boolean('To Reconcile'), 'getter_to_reconcile')
 
-    def getter_to_reconcile(self, name):
-        if self.voucher_type != 'multipayment'\
-            or self.state != 'posted'\
-            or not self.move or len(self.lines) < 200:
-            return False
-        for line in self.move.lines:
-            if line.account != self.account\
-                and line.reconciliation:
-                return False
-        return True
+    # def getter_to_reconcile(self, name):
+    #     if self.voucher_type != 'multipayment'\
+    #         or self.state != 'posted'\
+    #         or not self.move or len(self.lines) < 200:
+    #         return False
+    #     for line in self.move.lines:
+    #         if line.account != self.account\
+    #             and line.reconciliation:
+    #             return False
+    #     return True
 
     # Función encargada de importar los recibos (comprobantes) de egreso
     @classmethod
@@ -32,6 +32,9 @@ class Voucher(ModelSQL, ModelView):
         print("RUN COMPROBANTES DE EGRESO")
         pool = Pool()
         Config = pool.get('conector.configuration')
+        configuration = Config.get_configuration()
+        if not configuration:
+            return
         Actualizacion = pool.get('conector.actualizacion')
         Voucher = pool.get('account.voucher')
         Line = pool.get('account.voucher.line')
@@ -203,6 +206,9 @@ class Voucher(ModelSQL, ModelView):
         print("RUN COMPROBANTES DE INGRESO")
         pool = Pool()
         Config = pool.get('conector.configuration')
+        configuration = Config.get_configuration()
+        if not configuration:
+            return
         Actualizacion = pool.get('conector.actualizacion')
         #Module = pool.get('ir.module')
         Voucher = pool.get('account.voucher')

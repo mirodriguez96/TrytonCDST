@@ -415,6 +415,9 @@ class Invoice(metaclass=PoolMeta):
         print(f"RUN {_SW[sw]['name']}")
         pool = Pool()
         Config = pool.get('conector.configuration')
+        configuration = Config.get_configuration()
+        if not configuration:
+            return
         Actualizacion = pool.get('conector.actualizacion')
         actualizacion = Actualizacion.create_or_update(_SW[sw]['name'])
         documentos = Config.get_documentos_tecno(sw)

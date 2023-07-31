@@ -1,13 +1,16 @@
 from decimal import Decimal
+from datetime import timedelta
+
 from trytond.model import ModelView, fields
 from trytond.pool import Pool, PoolMeta
 from trytond.wizard import (
     Wizard, StateView, Button, StateReport, StateTransition
 )
-from trytond.pyson import Eval, Or
+from trytond.pyson import Eval, Or, Not
 from trytond.transaction import Transaction
 from trytond.report import Report
-from trytond.exceptions import UserError
+from trytond.exceptions import UserError, UserWarning
+
 from . it_supplier_noova import ElectronicPayrollCdst
 
 import mimetypes
@@ -21,11 +24,11 @@ from email.utils import formataddr, getaddresses
 from trytond.modules.company import CompanyReport
 from trytond.sendmail import sendmail
 from trytond.config import config
-from trytond.pyson import Id
-from trytond.i18n import gettext
-from .exceptions import (
-MissingSecuenceCertificate,
- )
+# from trytond.pyson import Id
+# from trytond.i18n import gettext
+# from .exceptions import (
+# MissingSecuenceCertificate,
+#  )
 
 try:
     import html2text
@@ -84,9 +87,87 @@ class Bank(metaclass=PoolMeta):
     __name__ = 'bank'
     bank_code_sap = fields.Char('Bank code SAP', help='bank code used for the bancolombia payment template')
 
+class WageType(metaclass=PoolMeta):
+    __name__ = 'staff.wage_type'
+    non_working_days = fields.Boolean('Non-working days', 
+                                      states={'invisible': (Eval('type_concept') != 'holidays')
+                                              })
+
 class Liquidation(metaclass=PoolMeta):
     __name__ = "staff.liquidation"
     sended_mail = fields.Boolean('Sended Email')
+
+    # Funcion encargada de contar los días festivos
+    def count_holidays(self, start_date, end_date):
+        sundays = 0
+        day = timedelta(days=1)
+        # Iterar sobre todas las fechas dentro del rango
+        current_date = start_date
+        while current_date <= end_date:
+            if current_date.weekday() == 6:  # 6 representa el domingo
+                sundays += 1
+            current_date += day
+        Holiday = Pool().get('staff.holidays')
+        holidays = Holiday.search([
+            ('holiday', '>=', start_date),
+            ('holiday', '<=', end_date),
+        ], count=True)
+        return sundays + holidays
+    
+    def _validate_holidays_lines(self, event):
+        amount_day = (self.contract.salary / 30)
+        # amount = amount_day * event.days_of_vacations
+        holidays = self.count_holidays(event.start_date, event.end_date)
+        workdays = event.days_of_vacations - holidays
+        # breakpoint()
+        amount_workdays = round(amount_day * workdays, 2)
+        amount_holidays = round(amount_day * holidays, 2)
+        line, = self.lines
+        move_lines = []
+        value = 0
+        for move_line in line.move_lines:
+            value += move_line.credit
+            move_lines.append(move_line)
+            if value > amount_workdays:
+                break
+        line.move_lines = move_lines
+        if value != amount_workdays:
+            Adjustment = Pool().get('staff.liquidation.line_adjustment')
+            adjustment = amount_workdays - value
+            if adjustment > 0:
+                adjustment_account = line.wage.credit_account
+            else:
+                adjustment_account = line.wage.debit_account
+            line.adjustments = [Adjustment(
+                    account=adjustment_account,
+                    amount=adjustment,
+                    description=line.description
+                )]
+            line.amount = amount_workdays
+            line.days = workdays
+        line.save()
+        if amount_holidays > 0:
+            WageType = Pool().get('staff.wage_type')
+            wage_type  = WageType.search([('non_working_days', '=', True)], limit=1)
+            if not wage_type:
+                raise UserError('Wage Type', 'missing wage_type (non_working_days)')
+            wage_type, = wage_type
+            value = {
+                'sequence': wage_type.sequence,
+                'wage': wage_type.id,
+                'description': wage_type.name,
+                'amount': amount_holidays,
+                'account': wage_type.debit_account,
+                'days': holidays,
+                'adjustments': [('create', [{
+                    'account': wage_type.debit_account.id,
+                    'amount': amount_holidays,
+                    'description': wage_type.debit_account.name,
+                }])]
+            }
+            self.write([self], {'lines': [('create', [value])]})
+
+
 
 class PayrollPaymentStartBcl(ModelView):
     'Payroll Payment Start'
@@ -774,6 +855,60 @@ def send_mail(to='', cc='', bcc='', subject='', body='',
 class StaffEvent(metaclass=PoolMeta):
     __name__ = "staff.event"
     analytic_account = fields.Char('Analytic account code', states={'readonly': (Eval('state') != 'draft')})
+
+    @fields.depends('contract', 'days_of_vacations')
+    def on_change_with_amount(self):
+        if self.contract and self.days_of_vacations:
+            amount = round(self.contract.salary / 30, 2) 
+            return amount
+        else:
+            return self.amount
+
+    @classmethod
+    def __setup__(cls):
+        super(StaffEvent, cls).__setup__()
+        cls._buttons.update({
+            'create_liquidation': {
+                'invisible': Or(
+                    Eval('state') != 'done',
+                    Not(Eval('is_vacations')),
+                ),
+            }
+        })
+
+    @classmethod
+    @ModelView.button
+    def create_liquidation(cls, records):
+        pool = Pool()
+        Warning = pool.get('res.user.warning')
+        Liquidation = pool.get('staff.liquidation')
+        Period = pool.get('staff.payroll.period')
+        for event in records:
+            warning_name = 'mywarning,%s' % event
+            if Warning.check(warning_name):
+                raise UserWarning(warning_name, f"Se creara una liquidacion de vacaciones")
+            liquidation = Liquidation()
+            liquidation.employee = event.employee
+            liquidation.contract = event.contract
+            liquidation.kind = 'holidays'
+            start_period = Period.search([
+                ('start', '>=', event.contract.start_date),
+                ('end', '<=', event.contract.start_date)
+            ])
+            if not start_period:
+                start_period = Period.search([], order=[('end', 'ASC')], limit=1)
+            liquidation.start_period = start_period[0]
+            end_period, = Period.search([
+                ('start', '<=', event.start_date),
+                ('end', '>=', event.start_date)
+            ])
+            liquidation.end_period = end_period
+            liquidation.liquidation_date = event.event_date
+            liquidation.account = event.category.wage_type.debit_account
+            liquidation.save()
+            # Se procesa la liquidación
+            Liquidation.compute_liquidation([liquidation])
+            liquidation._validate_holidays_lines(event)
 
 class Payroll(metaclass=PoolMeta):
     __name__ = "staff.payroll"

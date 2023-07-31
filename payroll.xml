@@ -32,6 +32,13 @@ this repository contains the full copyright notices and license terms. -->
             <field name="name">bank_form</field>
         </record>
 
+        <!-- herencia de la vista form para los tipos de pago -->
+        <record model="ir.ui.view" id="wage_type_view_form">
+            <field name="model">staff.wage_type</field>
+            <field name="inherit" ref="staff_payroll.wage_type_view_form"/>
+            <field name="name">wage_type_form</field>
+        </record>
+
         <!--interfaz para el campo nuevo de la liquidacion-->
         <record model="ir.ui.view" id="liquidation_view_form1">
             <field name="model">staff.liquidation</field>
