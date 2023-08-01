@@ -26,6 +26,9 @@ class Party(metaclass=PoolMeta):
         '''
         pool = Pool()
         Config = pool.get('conector.configuration')
+        configuration = Config.get_configuration()
+        if not configuration:
+            return None
         value = 0
         now = datetime.datetime.now()
         date_time = datetime.datetime(now.year, now.month, now.day, now.hour, now.minute)
