@@ -20,7 +20,19 @@ msgstr "Contraseña"
 
 msgctxt "field:conector.configuration,date:"
 msgid "Date"
-msgstr "Fecha a importar"
+msgstr "Fecha inicial"
+
+msgctxt "field:conector.configuration,end_date:"
+msgid "End Date"
+msgstr "Fecha final"
+
+msgctxt "field:conector.configuration,file:"
+msgid "File"
+msgstr "Archivo"
+
+msgctxt "field:conector.configuration,type_file:"
+msgid "Type file"
+msgstr "Tipo de archivo"
 
 msgctxt "field:conector.actualizacion,name:"
 msgid "Update"
@@ -454,15 +466,15 @@ msgctxt "wizard_button:staff.payroll.certificates_send,start,send_:"
 msgid "Send"
 msgstr "Enviar"
 
-msgctxt "model:ir.model.button,string:test_conexion"
+msgctxt "view:conector.configuration:"
 msgid "Test"
 msgstr "Probar conexión"
 
-msgctxt "model:ir.model.button,string:importfile"
+msgctxt "view:conector.configuration:"
 msgid "File Import"
 msgstr "Importar archivo"
 
-msgctxt "model:ir.model.button,string:invoice_cancel_button"
+msgctxt "view:staff.event:"
 msgid "Create liquidation"
 msgstr "Crear liquidación"
 
