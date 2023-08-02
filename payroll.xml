@@ -127,5 +127,28 @@ this repository contains the full copyright notices and license terms. -->
         </record>
         <menuitem parent="staff.menu_assitants" id="menu_settlement_send"
             action="wizard_payroll_settlement_send"/>
+
+        <!-- # Rests # -->
+        <record model="ir.ui.view" id="access_view_form">
+          <field name="model">staff.access</field>
+          <field name="inherit" ref="staff_access.access_view_form"/>
+          <field name="name">access_form</field>
+        </record>
+
+        <!-- ############### -->
+        <!-- # Model:Rests # -->
+        <!-- ############### -->
+        <record model="ir.ui.view" id="rests_view_form">
+          <field name="model">staff.access.rests</field>
+          <field name="type">form</field>
+          <field name="name">rests_form</field>
+        </record> 
+        
+        <record model="ir.ui.view" id="rests_view_tree">
+          <field name="model">staff.access.rests</field>
+          <field name="type">tree</field>
+          <field name="name">rests_tree</field>
+        </record> 
+        
     </data>
 </tryton>

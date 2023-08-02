@@ -1,7 +1,7 @@
 from decimal import Decimal
 from datetime import timedelta
 
-from trytond.model import ModelView, fields
+from trytond.model import ModelSQL, ModelView, fields
 from trytond.pool import Pool, PoolMeta
 from trytond.wizard import (
     Wizard, StateView, Button, StateReport, StateTransition
@@ -1059,3 +1059,42 @@ class PayrollElectronic(metaclass=PoolMeta):
             else:
                 payroll.get_message('Nomina no valida para enviar')
     
+
+class StaffAccessRests(ModelSQL, ModelView):
+    'Staff Access Rests'
+    __name__ = 'staff.access.rests'
+    access = fields.Many2One('staff.access', 'rests', 'Rests', required=True)
+    start = fields.DateTime('Start')
+    end = fields.DateTime('End')
+    amount = fields.Function(fields.Numeric('Amount', digits=(3, 2)), 'on_change_with_amount')
+    pay = fields.Boolean('Pay')
+
+    @fields.depends('start', 'end')
+    def on_change_with_amount(self, name=None):
+        if self.start and self.end:
+            # if self.start <  self.access.enter_timestamp \
+            #     or self.start > self.access.exit_timestamp \
+            #     or self.end < self.start:
+            #     raise UserError("Date rest", "invalid_date")
+            return self.compute_timedelta(self.start, self.end)
+        return None
+
+    def compute_timedelta(self, start, end):
+       delta = end - start
+       res = float(delta.seconds) / 3600
+       res = Decimal(str(round(res, 2)))
+       return res
+    
+
+class StaffAccess(metaclass=PoolMeta):
+    __name__ = 'staff.access'
+    rests = fields.One2Many('staff.access.rests', 'access', 'Rests')
+
+    #
+    @fields.depends('rests')
+    def on_change_rests(self):
+        amount = 0
+        for rest in self.rests:
+            if rest.amount and not rest.pay:
+                amount += rest.amount
+        self.rest = amount

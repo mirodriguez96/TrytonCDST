@@ -73,6 +73,8 @@ def register():
         payroll.LiquidationPaymentStartBcl,
         payroll.SettlementSendStart,
         payroll.PayrollElectronic,
+        payroll.StaffAccessRests,
+        payroll.StaffAccess,
         cron.Cron,
         wiz.DocumentsForImportParameters,
         statement.BankStatement,

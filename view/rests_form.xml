@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<form>
+    <group col='6' colspan="4" id="time_rests">
+        <group col='3' id="start_rests">
+            <label name="start"/>
+            <field name="start" widget="date"/>
+            <field name="start" widget="time"/>
+        </group>
+        <group col='3' id="end_rests">
+            <label name="end"/>
+            <field name="end" widget="date"/>
+            <field name="end" widget="time"/>
+        </group>
+    </group>
+    <label name="amount"/>
+    <field name="amount"/>
+    <label name="pay"/>
+    <field name="pay"/>
+</form>

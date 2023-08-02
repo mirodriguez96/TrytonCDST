@@ -481,3 +481,23 @@ msgstr "Crear liquidación"
 msgctxt "field:conector.configuration,enhabled:"
 msgid "Enhabled"
 msgstr "Habilitado"
+
+msgctxt "field:staff.access,rests:"
+msgid "Rests"
+msgstr "Descansos"
+
+msgctxt "field:staff.access.rests,start:"
+msgid "Start"
+msgstr "Inicio"
+
+msgctxt "field:staff.access.rests,end:"
+msgid "End"
+msgstr "Final"
+
+msgctxt "field:staff.access.rests,amount:"
+msgid "Amount"
+msgstr "Cantidad (Hr)"
+
+msgctxt "field:staff.access.rests,pay:"
+msgid "Pay"
+msgstr "Pagar"
