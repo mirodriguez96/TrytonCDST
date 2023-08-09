@@ -1,8 +1,8 @@
-from trytond.model import Workflow, ModelView, ModelSQL, fields
+from trytond.model import ModelView, ModelSQL, fields
 from trytond.pool import PoolMeta, Pool
 from trytond.pyson import Eval
 from trytond.model import Unique
-from trytond.wizard import Wizard, StateView, StateTransition, StateAction
+from trytond.wizard import Wizard, StateView, StateTransition
 from trytond.wizard import Button
 from trytond.transaction import Transaction
 from trytond.exceptions import UserError
@@ -31,6 +31,7 @@ class BankStatementLine(metaclass=PoolMeta):
                                'target', 'Bank line',
                                 domain=[
                                     ('statement', '=', Eval('statement')),
+                                    # ('statement_line', '=', None),
                                 ], depends=['statement']
                                 )
     
@@ -62,7 +63,7 @@ class BankStatementLineRelation(ModelSQL):
         ]
 
 
-class BankStatementBankLine(Workflow, ModelSQL, ModelView):
+class BankStatementBankLine(ModelSQL, ModelView):
     'Bank Statement Bank_line'
     __name__ = 'account.bank_statement.bank_line'
     _rec_name = 'description'
@@ -81,7 +82,20 @@ class BankStatementBankLine(Workflow, ModelSQL, ModelView):
                                     ], depends=['statement']
                                     )
     
+    @classmethod
+    def delete(cls, instances):
+        cls.update_statement_line(instances)
+        super(BankStatementBankLine, cls).delete(instances)
 
+    @classmethod
+    def update_statement_line(cls, instances):
+        to_save = []
+        for line in instances:
+            if line.statement_line:
+                line.statement_line.state = 'draft'
+                to_save.append(line.statement_line)
+        Line = Pool().get('account.bank_statement.line')
+        Line.save(to_save)
 
 # Asistente para cargar el extracto bancario en archivo plano
 class CreateBankLine(Wizard):
@@ -106,13 +120,11 @@ class CreateBankLine(Wizard):
     def transition_create_bank_line(self):
         if (not self.parameters.file):
             raise UserError('invalid_model', 'This action should be started from a bank_statement')
-
         # BankStatement = Pool().get('account.bank_statement')
         Line = Pool().get('account.bank_statement.line')
         BankLine = Pool().get('account.bank_statement.bank_line')
         _id = Transaction().context['active_id']
         # bank_statement = BankStatement(_id)
-
         file = self.parameters.file.decode()
         file_lines = file.split('\n')
         # Se comienza a recorrer las líneas del archivo cargado
@@ -139,33 +151,22 @@ class CreateBankLine(Wizard):
                 'amount': amount,
             }
             to_create.append(bank_line)
-
-
         bank_lines = BankLine.create(to_create)
-        
-         
         lines = Line.search([
             ('statement', '=', _id),
             ('state', '=', 'draft')
         ])
-    
-        
-        
-
-        relation = []
-        tosave = []
+        to_save = []
         for line in lines:
             for bank_line in bank_lines:
-                if bank_line not in relation and bank_line.date == line.date and \
+                if bank_line.date == line.date and \
                     bank_line.amount == line.moves_amount:
                     line.bank_line = bank_line
                     line.state = 'confirmed'
-                    tosave.append(line)
-                    relation.append(bank_line)
-
-                    
-        Line.save(tosave)
-
+                    to_save.append(line)
+                    bank_lines.remove(bank_line)
+                    break
+        Line.save(to_save)
         return 'end'
     
 
