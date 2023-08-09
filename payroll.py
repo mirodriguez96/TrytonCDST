@@ -118,7 +118,7 @@ class Liquidation(metaclass=PoolMeta):
         amount_day = (self.contract.salary / 30)
         # amount = amount_day * event.days_of_vacations
         holidays = self.count_holidays(event.start_date, event.end_date)
-        workdays = event.days_of_vacations - holidays
+        workdays = event.days - holidays
         # breakpoint()
         amount_workdays = round(amount_day * workdays, 2)
         amount_holidays = round(amount_day * holidays, 2)
