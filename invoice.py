@@ -478,6 +478,12 @@ class Invoice(metaclass=PoolMeta):
     def __setup__(cls):
         super(Invoice, cls).__setup__()
         cls._buttons.update({
+            'submit': {
+                'invisible': True
+            },
+            'send_email': {
+                'invisible': True
+            },
             'send_support_document': {
                 'invisible': Or(
                     And(Eval('type') != 'out', ~Eval('equivalent_invoice')),
