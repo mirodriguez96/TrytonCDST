@@ -881,6 +881,7 @@ class StaffEvent(metaclass=PoolMeta):
     def create_liquidation(cls, records):
         pool = Pool()
         Warning = pool.get('res.user.warning')
+        Configuration = pool.get('staff.configuration')(1)
         Liquidation = pool.get('staff.liquidation')
         Period = pool.get('staff.payroll.period')
         for event in records:
@@ -904,7 +905,8 @@ class StaffEvent(metaclass=PoolMeta):
             ])
             liquidation.end_period = end_period
             liquidation.liquidation_date = event.event_date
-            liquidation.account = event.category.wage_type.debit_account
+            liquidation.description = event.description
+            liquidation.account = Configuration.liquidation_account
             liquidation.save()
             # Se procesa la liquidación
             Liquidation.compute_liquidation([liquidation])

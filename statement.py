@@ -35,12 +35,10 @@ class BankStatementLine(metaclass=PoolMeta):
                                 ], depends=['statement']
                                 )
     
-    @fields.depends('bank_line')
-    def on_change_bank_line(self):
-        if self.bank_line:
-            self.state = 'confirmed'
-        else:
-            self.state = 'draft'
+    # @fields.depends('bank_line')
+    # def on_change_bank_line(self):
+    #     if self.bank_line and self.state == 'draft':
+    #         self.state = 'confirmed'
     
 
 class BankStatementLineRelation(ModelSQL):
