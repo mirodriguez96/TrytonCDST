@@ -11,7 +11,7 @@ from . import electronic_payroll_wizard
 from . import company
 from . import payment_term
 from . import purchase
-from . import location
+from . import stock
 from . import invoice
 from . import tax
 from . import production
@@ -42,7 +42,7 @@ def register():
         sale.Statement,
         sale_device.SaleDevice,
         sale_device.Journal,
-        location.Location,
+        stock.Location,
         configuration.Configuration,
         voucher.Voucher,
         voucher.MultiRevenue,
@@ -131,5 +131,5 @@ def register():
         payroll.PayrollExo2276,
         payment_bank.PaymentBankGroupReport,
         payment_bank.BankReportBancolombia,
-        # payment_bank.BankReportBancamia,
+        stock.ShipmentDetailedReport,
         module='conector', type_='report')

@@ -202,13 +202,13 @@ class Configuration(ModelSQL, ModelView):
         fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
         # query = "SELECT * FROM dbo.Documentos WHERE tipo = null AND Numero_documento = null" #TEST
         if not sw:
-            query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND tipo = "+tipo+" AND exportado != 'T' AND exportado != 'E' AND exportado != 'X' "
+            query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE Fecha_Hora_Factura >= CAST('"+fecha+"' AS datetime) AND tipo = "+tipo+" AND exportado != 'T' AND exportado != 'E' AND exportado != 'X' "
         else:
-            query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE fecha_hora >= CAST('"+fecha+"' AS datetime) AND sw = "+sw+" AND tipo = "+tipo+" AND exportado != 'T' AND exportado != 'E' AND exportado != 'X' "
+            query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE Fecha_Hora_Factura >= CAST('"+fecha+"' AS datetime) AND sw = "+sw+" AND tipo = "+tipo+" AND exportado != 'T' AND exportado != 'E' AND exportado != 'X' "
         if config.end_date:
             end_date = config.end_date.strftime('%Y-%m-%d %H:%M:%S')
-            query += f" AND fecha_hora < CAST('{end_date}' AS datetime) "
-        query += "ORDER BY fecha_hora ASC"
+            query += f" AND Fecha_Hora_Factura < CAST('{end_date}' AS datetime) "
+        query += "ORDER BY Fecha_Hora_Factura ASC"
         data = cls.get_data(query)
         return data
 
@@ -923,230 +923,230 @@ class Configuration(ModelSQL, ModelView):
     @classmethod
     def import_csv_access_biometric(cls, lineas):
         print('INICIA')
-        pool = Pool()
-        Access = pool.get('staff.access')
-        # Rest = pool.get('staff_access_extratime.rests')
-        Employee = pool.get('company.employee')
-        Config = pool.get('conector.configuration')
-        configuration, = Config.search([], order=[('id', 'DESC')], limit=1)
-        to_create = {}
-        _events = {
-            configuration.access_enter_timestamp: 'enter_timestamp',
-            configuration.access_exit_timestamp: 'exit_timestamp',
-            configuration.access_start_rest: 'start_rest',
-            configuration.access_end_rest: 'end_rest',
-        }
-        first = True
-        for linea in lineas:
-            linea = linea.strip()
-            if not linea:
-                continue            
-            linea = linea.split(';')
-            if len(linea) != 14:
-                raise UserError('Error template access_biometric', 'employee;datetime(d/m/y h:m);event')
-            # Se verifica que es la primera linea (encabezado) para omitirla
-            if first:
-                first = False
-                continue
-            code = linea[2].strip()
-            if not code or code == '':
-                continue
-            employee = Employee.search([('code', '=', code)])
-            if not employee:
-                continue
-                # raise UserError('error employee_code', f'employee code {code} not found')
-            employee, = employee
-            if not employee.contract.position:
-                raise UserError('employee', f'employee position {employee.rec_name} not found')
-            if employee not in to_create.keys():
-                to_create[employee] = {}
-            _year = linea[5].strip()
-            _month = linea[6].strip()
-            _day = linea[7].strip()
-            _hour = linea[8].strip()
-            _minute = linea[9].strip()
-            _date_time = _day+'/'+_month+'/'+_year+' '+_hour+':'+_minute
-            try:
-               _datetime = datetime.datetime.strptime(_date_time, '%d/%m/%Y %H:%M')
-               _datetime = (_datetime + datetime.timedelta(hours=5))
-               _date = datetime.date(_datetime.year, _datetime.month, _datetime.day)
-            except Exception as e:
-               raise UserError('error datetime', e)
+    #     pool = Pool()
+    #     Access = pool.get('staff.access')
+    #     # Rest = pool.get('staff_access_extratime.rests')
+    #     Employee = pool.get('company.employee')
+    #     Config = pool.get('conector.configuration')
+    #     configuration, = Config.search([], order=[('id', 'DESC')], limit=1)
+    #     to_create = {}
+    #     _events = {
+    #         configuration.access_enter_timestamp: 'enter_timestamp',
+    #         configuration.access_exit_timestamp: 'exit_timestamp',
+    #         configuration.access_start_rest: 'start_rest',
+    #         configuration.access_end_rest: 'end_rest',
+    #     }
+    #     first = True
+    #     for linea in lineas:
+    #         linea = linea.strip()
+    #         if not linea:
+    #             continue            
+    #         linea = linea.split(';')
+    #         if len(linea) != 14:
+    #             raise UserError('Error template access_biometric', 'employee;datetime(d/m/y h:m);event')
+    #         # Se verifica que es la primera linea (encabezado) para omitirla
+    #         if first:
+    #             first = False
+    #             continue
+    #         code = linea[2].strip()
+    #         if not code or code == '':
+    #             continue
+    #         employee = Employee.search([('code', '=', code)])
+    #         if not employee:
+    #             continue
+    #             # raise UserError('error employee_code', f'employee code {code} not found')
+    #         employee, = employee
+    #         if not employee.contract.position:
+    #             raise UserError('employee', f'employee position {employee.rec_name} not found')
+    #         if employee not in to_create.keys():
+    #             to_create[employee] = {}
+    #         _year = linea[5].strip()
+    #         _month = linea[6].strip()
+    #         _day = linea[7].strip()
+    #         _hour = linea[8].strip()
+    #         _minute = linea[9].strip()
+    #         _date_time = _day+'/'+_month+'/'+_year+' '+_hour+':'+_minute
+    #         try:
+    #            _datetime = datetime.datetime.strptime(_date_time, '%d/%m/%Y %H:%M')
+    #            _datetime = (_datetime + datetime.timedelta(hours=5))
+    #            _date = datetime.date(_datetime.year, _datetime.month, _datetime.day)
+    #         except Exception as e:
+    #            raise UserError('error datetime', e)
             
-            if _date not in to_create[employee].keys():
-                to_create[employee][_date] = {}
+    #         if _date not in to_create[employee].keys():
+    #             to_create[employee][_date] = {}
 
-            _event = linea[11].strip() 
-            _event = _events.get(_event)
-            # En caso de no existir el evento se registra como un inicio de descanso
-            if not _event:
-                _event = 'start_rest'
+    #         _event = linea[11].strip() 
+    #         _event = _events.get(_event)
+    #         # En caso de no existir el evento se registra como un inicio de descanso
+    #         if not _event:
+    #             _event = 'start_rest'
 
-            if _event not in to_create[employee][_date].keys():
-                to_create[employee][_date][_event] = []
+    #         if _event not in to_create[employee][_date].keys():
+    #             to_create[employee][_date][_event] = []
 
-            to_create[employee][_date][_event].append(_datetime)
-            # to_create[employee][_date][_event].sort() #Se va ordenando la lista (FIX)
+    #         to_create[employee][_date][_event].append(_datetime)
+    #         # to_create[employee][_date][_event].sort() #Se va ordenando la lista (FIX)
 
-        # to_save = []
-        for empleoyee in to_create.keys():
-            for date in to_create[empleoyee].keys():
-                start_time = datetime.datetime.combine(date, datetime.datetime.min.time())
-                end_time = datetime.datetime.combine(date, datetime.time(23,59,59))
-                rests = cls.get_access_rests(to_create[empleoyee][date])
-                if 'enter_timestamp' not in to_create[empleoyee][date].keys():
-                    if 'exit_timestamp' not in to_create[empleoyee][date].keys():
-                        access = Access()
-                        access.employee = empleoyee
-                        access.enter_timestamp = start_time
-                        access.exit_timestamp = end_time
-                        access.rests = rests
-                        access.state = 'open'
-                        access.rest = access.on_change_with_rest()
-                        access.save()
-                        # to_save.append(access)
-                        continue
-                    # Si tiene exit_timestamp
-                    to_create[empleoyee][date]['exit_timestamp'].sort()
-                    for exit_timestamp in to_create[empleoyee][date]['exit_timestamp']:
-                        access = Access()
-                        access.employee = empleoyee
-                        access.enter_timestamp = exit_timestamp
-                        access.exit_timestamp = exit_timestamp
-                        access.rests = cls.validate_access_rests(rests, access)
-                        access.rest = access.on_change_with_rest()
-                        access.state = 'open'
-                        access.save()
-                        # to_save.append(access)
-                    continue
-                to_create[empleoyee][date]['enter_timestamp'].sort()
-                if 'exit_timestamp' in to_create[empleoyee][date].keys():
-                    to_create[empleoyee][date]['exit_timestamp'].sort()
-                for enter_timestamp in to_create[empleoyee][date]['enter_timestamp']:
-                    access = Access()
-                    access.employee = empleoyee
-                    access.enter_timestamp = enter_timestamp
-                    access.exit_timestamp = None
-                    if 'exit_timestamp' in to_create[empleoyee][date].keys() and to_create[empleoyee][date]['exit_timestamp']:
-                        i = 0
-                        for exit_timestamp in to_create[empleoyee][date]['exit_timestamp']:
-                            # Se valida que el registro a asignar como hora de salida sea mayor a la de entrada
-                            if exit_timestamp >= enter_timestamp:
-                                exit_timestamp = to_create[empleoyee][date]['exit_timestamp'].pop(i)
-                                access.exit_timestamp = exit_timestamp
-                                break
-                            i += 1
-                    access.rests = cls.validate_access_rests(rests, access)
-                    cls.validate_access(access)
-                    access.rest = access.on_change_with_rest()
-                    access.save()
-                    # to_save.append(access)
-                if 'exit_timestamp' in to_create[empleoyee][date].keys() and to_create[empleoyee][date]['exit_timestamp']:
-                    for exit_timestamp in to_create[empleoyee][date]['exit_timestamp']:
-                        access = Access()
-                        access.employee = empleoyee
-                        # En caso de tener registro de salida pero no entrada, se asigna la misma hora de salida como entrada
-                        access.enter_timestamp = exit_timestamp
-                        access.exit_timestamp = exit_timestamp
-                        access.rests = cls.validate_access_rests(rests, access)
-                        cls.validate_access(access)
-                        access.rest = access.on_change_with_rest()
-                        access.save()
-                        # to_save.append(access)
-        # Access.save(to_save)
-        print('FIN')
-
-
-    @classmethod
-    def get_access_rests(cls, events):
-        Rest = Pool().get('staff_access_extratime.rests')
-        rests = []
-        if 'start_rest' not in events.keys():
-            if 'end_rest' in events.keys():
-                events['end_rest'].sort()
-                for end_rest in events['end_rest']:
-                    rest = Rest()
-                    rest.start_rest = None
-                    rest.end_rest = end_rest
-                    rest.rest_paid = True
-                    rest.rest = rest.on_change_with_rest()
-                    rest.save()
-                    rests.append(rest)
-            return rests
-        if 'end_rest' not in events.keys():
-            events['start_rest'].sort()
-            for start_rest in events['start_rest']:
-                rest = Rest()
-                rest.start_rest = start_rest
-                rest.end_rest = None
-                rest.rest_paid = True
-                rest.rest = rest.on_change_with_rest()
-                rest.save()
-                rests.append(rest)
-            return rests
-        # SI tiene start_rest y end_rest
-        events['start_rest'].sort()
-        events['end_rest'].sort()
-        for start_rest in events['start_rest']:
-            rest = Rest()
-            rest.start_rest = start_rest
-            rest.end_rest = None
-            if events['end_rest']:
-                end_rest = events['end_rest'].pop(0)
-                rest.end_rest = end_rest
-            rest.rest_paid = True
-            rest.rest = rest.on_change_with_rest()
-            rest.save()
-            rests.append(rest)
-        for end_rest in events['end_rest']:
-            rest = Rest()
-            rest.start_rest = None
-            rest.end_rest = end_rest
-            rest.rest_paid = True
-            rest.rest = rest.on_change_with_rest()
-            rest.save()
-            rests.append(rest)
-        return rests
-
-    @classmethod
-    def validate_access_rests(cls, rests, access):
-        result = []
-        for rest in rests:
-            if access.enter_timestamp and access.exit_timestamp and access.enter_timestamp == access.exit_timestamp:
-                result.append(rest)
-                continue
-            if rest.start_rest and rest.end_rest:
-                if access.exit_timestamp and rest.start_rest > access.enter_timestamp and rest.end_rest < access.exit_timestamp:
-                    result.append(rest)
-                elif not access.exit_timestamp and rest.start_rest > access.enter_timestamp:
-                    result.append(rest)
-            elif rest.start_rest:
-                # No tiene end_rest
-                if access.exit_timestamp and rest.start_rest > access.enter_timestamp and rest.start_rest < access.exit_timestamp:
-                    result.append(rest)
-                elif not access.exit_timestamp and rest.start_rest > access.enter_timestamp:
-                    result.append(rest)
-            else:
-                # No tiene start_rest
-                if access.exit_timestamp and rest.end_rest > access.enter_timestamp and rest.end_rest < access.exit_timestamp:
-                    result.append(rest)
-                elif not access.exit_timestamp and rest.end_rest > access.enter_timestamp:
-                    result.append(rest)
-        result_rests = []
-        for rest in rests:
-            if rest not in result:
-                result_rests.append(rest)
-        rests = result_rests
-        return result
+    #     # to_save = []
+    #     for empleoyee in to_create.keys():
+    #         for date in to_create[empleoyee].keys():
+    #             start_time = datetime.datetime.combine(date, datetime.datetime.min.time())
+    #             end_time = datetime.datetime.combine(date, datetime.time(23,59,59))
+    #             rests = cls.get_access_rests(to_create[empleoyee][date])
+    #             if 'enter_timestamp' not in to_create[empleoyee][date].keys():
+    #                 if 'exit_timestamp' not in to_create[empleoyee][date].keys():
+    #                     access = Access()
+    #                     access.employee = empleoyee
+    #                     access.enter_timestamp = start_time
+    #                     access.exit_timestamp = end_time
+    #                     access.rests = rests
+    #                     access.state = 'open'
+    #                     access.rest = access.on_change_with_rest()
+    #                     access.save()
+    #                     # to_save.append(access)
+    #                     continue
+    #                 # Si tiene exit_timestamp
+    #                 to_create[empleoyee][date]['exit_timestamp'].sort()
+    #                 for exit_timestamp in to_create[empleoyee][date]['exit_timestamp']:
+    #                     access = Access()
+    #                     access.employee = empleoyee
+    #                     access.enter_timestamp = exit_timestamp
+    #                     access.exit_timestamp = exit_timestamp
+    #                     access.rests = cls.validate_access_rests(rests, access)
+    #                     access.rest = access.on_change_with_rest()
+    #                     access.state = 'open'
+    #                     access.save()
+    #                     # to_save.append(access)
+    #                 continue
+    #             to_create[empleoyee][date]['enter_timestamp'].sort()
+    #             if 'exit_timestamp' in to_create[empleoyee][date].keys():
+    #                 to_create[empleoyee][date]['exit_timestamp'].sort()
+    #             for enter_timestamp in to_create[empleoyee][date]['enter_timestamp']:
+    #                 access = Access()
+    #                 access.employee = empleoyee
+    #                 access.enter_timestamp = enter_timestamp
+    #                 access.exit_timestamp = None
+    #                 if 'exit_timestamp' in to_create[empleoyee][date].keys() and to_create[empleoyee][date]['exit_timestamp']:
+    #                     i = 0
+    #                     for exit_timestamp in to_create[empleoyee][date]['exit_timestamp']:
+    #                         # Se valida que el registro a asignar como hora de salida sea mayor a la de entrada
+    #                         if exit_timestamp >= enter_timestamp:
+    #                             exit_timestamp = to_create[empleoyee][date]['exit_timestamp'].pop(i)
+    #                             access.exit_timestamp = exit_timestamp
+    #                             break
+    #                         i += 1
+    #                 access.rests = cls.validate_access_rests(rests, access)
+    #                 cls.validate_access(access)
+    #                 access.rest = access.on_change_with_rest()
+    #                 access.save()
+    #                 # to_save.append(access)
+    #             if 'exit_timestamp' in to_create[empleoyee][date].keys() and to_create[empleoyee][date]['exit_timestamp']:
+    #                 for exit_timestamp in to_create[empleoyee][date]['exit_timestamp']:
+    #                     access = Access()
+    #                     access.employee = empleoyee
+    #                     # En caso de tener registro de salida pero no entrada, se asigna la misma hora de salida como entrada
+    #                     access.enter_timestamp = exit_timestamp
+    #                     access.exit_timestamp = exit_timestamp
+    #                     access.rests = cls.validate_access_rests(rests, access)
+    #                     cls.validate_access(access)
+    #                     access.rest = access.on_change_with_rest()
+    #                     access.save()
+    #                     # to_save.append(access)
+    #     # Access.save(to_save)
+    #     print('FIN')
 
 
-    @classmethod
-    def validate_access(cls, access):
-        state = 'close'
-        if access.enter_timestamp and access.exit_timestamp and access.enter_timestamp != access.exit_timestamp:
-            for rest in access.rests:
-                if not rest.start_rest or not rest.end_rest:
-                    state = 'open'
-        else:
-            state = 'open'
-        access.state = state
+    # @classmethod
+    # def get_access_rests(cls, events):
+    #     Rest = Pool().get('staff_access_extratime.rests')
+    #     rests = []
+    #     if 'start_rest' not in events.keys():
+    #         if 'end_rest' in events.keys():
+    #             events['end_rest'].sort()
+    #             for end_rest in events['end_rest']:
+    #                 rest = Rest()
+    #                 rest.start_rest = None
+    #                 rest.end_rest = end_rest
+    #                 rest.rest_paid = True
+    #                 rest.rest = rest.on_change_with_rest()
+    #                 rest.save()
+    #                 rests.append(rest)
+    #         return rests
+    #     if 'end_rest' not in events.keys():
+    #         events['start_rest'].sort()
+    #         for start_rest in events['start_rest']:
+    #             rest = Rest()
+    #             rest.start_rest = start_rest
+    #             rest.end_rest = None
+    #             rest.rest_paid = True
+    #             rest.rest = rest.on_change_with_rest()
+    #             rest.save()
+    #             rests.append(rest)
+    #         return rests
+    #     # SI tiene start_rest y end_rest
+    #     events['start_rest'].sort()
+    #     events['end_rest'].sort()
+    #     for start_rest in events['start_rest']:
+    #         rest = Rest()
+    #         rest.start_rest = start_rest
+    #         rest.end_rest = None
+    #         if events['end_rest']:
+    #             end_rest = events['end_rest'].pop(0)
+    #             rest.end_rest = end_rest
+    #         rest.rest_paid = True
+    #         rest.rest = rest.on_change_with_rest()
+    #         rest.save()
+    #         rests.append(rest)
+    #     for end_rest in events['end_rest']:
+    #         rest = Rest()
+    #         rest.start_rest = None
+    #         rest.end_rest = end_rest
+    #         rest.rest_paid = True
+    #         rest.rest = rest.on_change_with_rest()
+    #         rest.save()
+    #         rests.append(rest)
+    #     return rests
+
+    # @classmethod
+    # def validate_access_rests(cls, rests, access):
+    #     result = []
+    #     for rest in rests:
+    #         if access.enter_timestamp and access.exit_timestamp and access.enter_timestamp == access.exit_timestamp:
+    #             result.append(rest)
+    #             continue
+    #         if rest.start_rest and rest.end_rest:
+    #             if access.exit_timestamp and rest.start_rest > access.enter_timestamp and rest.end_rest < access.exit_timestamp:
+    #                 result.append(rest)
+    #             elif not access.exit_timestamp and rest.start_rest > access.enter_timestamp:
+    #                 result.append(rest)
+    #         elif rest.start_rest:
+    #             # No tiene end_rest
+    #             if access.exit_timestamp and rest.start_rest > access.enter_timestamp and rest.start_rest < access.exit_timestamp:
+    #                 result.append(rest)
+    #             elif not access.exit_timestamp and rest.start_rest > access.enter_timestamp:
+    #                 result.append(rest)
+    #         else:
+    #             # No tiene start_rest
+    #             if access.exit_timestamp and rest.end_rest > access.enter_timestamp and rest.end_rest < access.exit_timestamp:
+    #                 result.append(rest)
+    #             elif not access.exit_timestamp and rest.end_rest > access.enter_timestamp:
+    #                 result.append(rest)
+    #     result_rests = []
+    #     for rest in rests:
+    #         if rest not in result:
+    #             result_rests.append(rest)
+    #     rests = result_rests
+    #     return result
+
+
+    # @classmethod
+    # def validate_access(cls, access):
+    #     state = 'close'
+    #     if access.enter_timestamp and access.exit_timestamp and access.enter_timestamp != access.exit_timestamp:
+    #         for rest in access.rests:
+    #             if not rest.start_rest or not rest.end_rest:
+    #                 state = 'open'
+    #     else:
+    #         state = 'open'
+    #     access.state = state
