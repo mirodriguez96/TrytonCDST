@@ -232,6 +232,7 @@ class PayrollPaymentReportBcl(Report):
         report_context = super().get_context(records, header,  data)
         pool = Pool()
         user = pool.get('res.user')(Transaction().user)
+        Warning = Pool().get('res.user.warning')
         Payroll = pool.get('staff.payroll')
         clause = [('state', '=', 'posted')]
         if data['period']:
@@ -241,6 +242,7 @@ class PayrollPaymentReportBcl(Report):
         payrolls = Payroll.search(clause)
         new_objects = []
         values = {}
+        id_numbers = []
         for payroll in payrolls:
             values = values.copy()
             values['employee'] = payroll.employee.party.name
@@ -249,6 +251,11 @@ class PayrollPaymentReportBcl(Report):
                 raise UserError('error: type_document', f'{type_document} not found for type_document bancolombia')
             values['type_document'] = _TYPE_DOCUMENT[type_document]
             values['id_number'] = payroll.employee.party.id_number
+            if values['id_number'] in id_numbers:
+                warning_name = f"warning_payment_report_bancolombia,{values['id_number']}"
+                if Warning.check(warning_name):
+                    raise UserWarning(warning_name, f"Hay más de 1 nómina para el empleado {values['employee']}.")
+            id_numbers.append(values['id_number'])
             bank_code_sap = None
             if payroll.employee.party.bank_accounts:
                 bank_code_sap = payroll.employee.party.bank_accounts[0].bank.bank_code_sap
@@ -855,6 +862,21 @@ def send_mail(to='', cc='', bcc='', subject='', body='',
 class StaffEvent(metaclass=PoolMeta):
     __name__ = "staff.event"
     analytic_account = fields.Char('Analytic account code', states={'readonly': (Eval('state') != 'draft')})
+
+    # @fields.depends('employee', 'contract')
+    def on_change_employee(self):
+        super(StaffEvent, self).on_change_employee()
+        MandatoryWage = Pool().get('staff.payroll.mandatory_wage')
+        if not hasattr(MandatoryWage, 'analytic_account'):
+            return
+        analytic_code = None
+        if self.employee:
+            for mw in self.employee.mandatory_wages:
+                if mw.analytic_account:
+                    analytic_code = mw.analytic_account.code
+                    break
+        self.analytic_account = analytic_code
+
 
     @fields.depends('contract', 'days_of_vacations')
     def on_change_with_amount(self):
