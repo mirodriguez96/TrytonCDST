@@ -33,6 +33,22 @@ class Account(metaclass=PoolMeta):
             Account.write(parents, {'type': None})
 
 
+class Move(metaclass=PoolMeta):
+    __name__ = 'account.move'
+
+    @classmethod
+    def _get_origin(cls):
+        return super(Move, cls)._get_origin() + ['production']
+    
+
+class MoveLine(metaclass=PoolMeta):
+    __name__ = 'account.move.line'
+
+    @classmethod
+    def _get_origin(cls):
+        return super()._get_origin() + ['stock.move']
+
+
 class BalanceStockStart(ModelView):
     'Balance Stock Start'
     __name__ = 'account.fiscalyear.balance_stock.start'

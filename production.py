@@ -226,14 +226,17 @@ class Production(metaclass=PoolMeta):
         account_move.period = period
         account_move.date = rec.planned_date
         account_move.description = f"Production {rec.number}"
+        account_move.origin = str(rec)
         account_move_lines = []
         for move in rec.inputs:
             move_line = cls._get_account_stock_move(move)
             if move_line:
+                move_line.origin = str(move)
                 account_move_lines.append(move_line)
         for move in rec.outputs:
             move_line = cls._get_account_stock_move(move)
             if move_line:
+                move_line.origin = str(move)
                 account_move_lines.append(move_line)
         diff = 0
         for line in account_move_lines:

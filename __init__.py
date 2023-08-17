@@ -28,6 +28,8 @@ from . import loan
 def register():
     Pool.register(
         account.Account,
+        account.Move,
+        account.MoveLine,
         account.BalanceStockStart,
         account.AnalyticAccountEntry,
         company.Company,
