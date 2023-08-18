@@ -139,7 +139,7 @@ class Party(metaclass=PoolMeta):
                             contact_tel.name = 'telefono'
                             if len(telefono) == 10:
                                 contact_tel.type = 'phone'
-                                contact_tel.value = '+57 '+telefono
+                                contact_tel.value = '+57'+telefono
                             contact_tel.save()
                         elif len(telefono) > 4:
                             contact_tel = Mcontact()
@@ -149,7 +149,7 @@ class Party(metaclass=PoolMeta):
                             contact_tel.party = party
                             if len(telefono) == 10:
                                 contact_tel.type = 'phone'
-                                contact_tel.value = '+57 '+telefono
+                                contact_tel.value = '+57'+telefono
                             contact_tel.save()
                         party.save()
                 else:
@@ -189,7 +189,7 @@ class Party(metaclass=PoolMeta):
                         }
                         if len(telefono) == 10:
                             phone['type'] = 'phone'
-                            phone['value'] = '+57 '+telefono
+                            phone['value'] = '+57'+telefono
                         contacts.append(phone)
                     if len(mail) > 4:
                         email = {
@@ -237,6 +237,7 @@ class Party(metaclass=PoolMeta):
             'logs': [],
         }
         country_code, = Country.search([('code', '=', '169')])
+        print(country_code)
         for dir in direcciones_db:
             try:
                 nit = (dir.nit).replace('\n',"")
