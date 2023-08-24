@@ -20,7 +20,19 @@ msgstr "Contraseña"
 
 msgctxt "field:conector.configuration,date:"
 msgid "Date"
-msgstr "Fecha a importar"
+msgstr "Fecha inicial"
+
+msgctxt "field:conector.configuration,end_date:"
+msgid "End Date"
+msgstr "Fecha final"
+
+msgctxt "field:conector.configuration,file:"
+msgid "File"
+msgstr "Archivo"
+
+msgctxt "field:conector.configuration,type_file:"
+msgid "Type file"
+msgstr "Tipo de archivo"
 
 msgctxt "field:conector.actualizacion,name:"
 msgid "Update"
@@ -53,6 +65,10 @@ msgstr "Registros"
 msgctxt "model:ir.action,name:act_payrollelectronic_cdst"
 msgid "Send supplier it"
 msgstr "Enviar al proveedor tecnologico"
+
+msgctxt "view:staff.payroll.electronic:"
+msgid "Submit to supplier"
+msgstr "Enviar al proveedor"
 
 msgctxt "model:ir.action,name:act_add_operation_center"
 msgid "Add operation center"
@@ -449,3 +465,99 @@ msgstr "Asunto"
 msgctxt "wizard_button:staff.payroll.certificates_send,start,send_:"
 msgid "Send"
 msgstr "Enviar"
+
+msgctxt "view:conector.configuration:"
+msgid "Test"
+msgstr "Probar conexión"
+
+msgctxt "view:conector.configuration:"
+msgid "File Import"
+msgstr "Importar archivo"
+
+msgctxt "view:staff.event:"
+msgid "Create liquidation"
+msgstr "Crear liquidación"
+
+msgctxt "field:conector.configuration,enhabled:"
+msgid "Enhabled"
+msgstr "Habilitado"
+
+msgctxt "field:staff.access,rests:"
+msgid "Rests"
+msgstr "Descansos"
+
+msgctxt "field:staff.access.rests,start:"
+msgid "Start"
+msgstr "Inicio"
+
+msgctxt "field:staff.access.rests,end:"
+msgid "End"
+msgstr "Final"
+
+msgctxt "field:staff.access.rests,amount:"
+msgid "Amount"
+msgstr "Cantidad (Hr)"
+
+msgctxt "field:staff.access.rests,pay:"
+msgid "Pay"
+msgstr "Pagar"
+
+msgctxt "view:account.invoice:"
+msgid "Send document"
+msgstr "Enviar documento"
+
+msgctxt "field:staff.event,analytic_account:"
+msgid "Analytic account code"
+msgstr "Código de cuenta analítica"
+
+msgctxt "wizard_button:conector.actualizacion.imported_document_asistend,start,importfile:"
+msgid "Import"
+msgstr "Importar"
+
+msgctxt "wizard_button:conector.actualizacion.imported_document_asistend,start,end:"
+msgid "Cancel"
+msgstr "Cancelar"
+
+msgctxt "field:conector.actualizacion.imported_document,file:"
+msgid "File"
+msgstr "Archivo"
+
+msgctxt "field:conector.actualizacion.imported_document,type_file:"
+msgid "Type file"
+msgstr "Tipo de documento"
+
+msgctxt "model:ir.action,name:act_imported_document"
+msgid "imported documents"
+msgstr "Importar Documentos"
+
+msgctxt "selection:conector.actualizacion.imported_document,type_file:"
+msgid "Parties"
+msgstr "Terceros"
+
+msgctxt "selection:conector.actualizacion.imported_document,type_file:"
+msgid "Products"
+msgstr "Productos"
+
+msgctxt "selection:conector.actualizacion.imported_document,type_file:"
+msgid "Balances"
+msgstr "Saldos iniciales"
+
+msgctxt "selection:conector.actualizacion.imported_document,type_file:"
+msgid "Accounts"
+msgstr "Cuentas contables"
+
+msgctxt "selection:conector.actualizacion.imported_document,type_file:"
+msgid "Update Accounts"
+msgstr "Actualizar cuentas contables"
+
+msgctxt "selection:conector.actualizacion.imported_document,type_file:"
+msgid "Product costs"
+msgstr "Precio de costo de productos"
+
+msgctxt "selection:conector.actualizacion.imported_document,type_file:"
+msgid "Inventory"
+msgstr "Inventario"
+
+msgctxt "selection:conector.actualizacion.imported_document,type_file:"
+msgid "Bank Account"
+msgstr "Cuentas de banco"

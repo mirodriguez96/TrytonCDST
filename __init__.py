@@ -11,7 +11,7 @@ from . import electronic_payroll_wizard
 from . import company
 from . import payment_term
 from . import purchase
-from . import location
+from . import stock
 from . import invoice
 from . import tax
 from . import production
@@ -28,6 +28,8 @@ from . import loan
 def register():
     Pool.register(
         account.Account,
+        account.Move,
+        account.MoveLine,
         account.BalanceStockStart,
         account.AnalyticAccountEntry,
         company.Company,
@@ -42,7 +44,7 @@ def register():
         sale.Statement,
         sale_device.SaleDevice,
         sale_device.Journal,
-        location.Location,
+        stock.Location,
         configuration.Configuration,
         voucher.Voucher,
         voucher.MultiRevenue,
@@ -64,6 +66,7 @@ def register():
         report.PayrollExportStart,
         report.CDSSaleIncomeDailyStart,
         payroll.Bank,
+        payroll.WageType,
         payroll.PayrollPaymentStartBcl,
         payroll.StaffEvent,
         payroll.Payroll,
@@ -71,6 +74,9 @@ def register():
         payroll.Liquidation,
         payroll.LiquidationPaymentStartBcl,
         payroll.SettlementSendStart,
+        payroll.PayrollElectronic,
+        payroll.StaffAccessRests,
+        payroll.StaffAccess,
         cron.Cron,
         wiz.DocumentsForImportParameters,
         statement.BankStatement,
@@ -82,6 +88,8 @@ def register():
         loan.Loan,
         payroll.CertificateOfIncomeAndWithholdingSendStart,
         account.AccountAsset,
+        account.AuxiliaryBookStartCDS,
+        conector.ImportedDocument,
         module='conector', type_='model')
 
     Pool.register(
@@ -115,6 +123,8 @@ def register():
         statement.CreateBankLine,
         payment_bank.PaymentBankGroup,
         payroll.SendCertificateOfIncomeAndWithholding,
+        account.PrintAuxiliaryBookCDS,
+        conector.ImportedDocumentWizard,
         module='conector', type_='wizard')
 
     Pool.register(
@@ -127,5 +137,6 @@ def register():
         payroll.PayrollExo2276,
         payment_bank.PaymentBankGroupReport,
         payment_bank.BankReportBancolombia,
-        # payment_bank.BankReportBancamia,
+        stock.ShipmentDetailedReport,
+        account.AuxiliaryBookCDS,
         module='conector', type_='report')
