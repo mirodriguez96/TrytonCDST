@@ -286,6 +286,20 @@ class Configuration(ModelSQL, ModelView):
         data = cls.get_data(query)
         return data
 
+    @classmethod
+    def get_biometric_access_transactions(cls, event_time=None):
+        if event_time:
+            tomorrow = event_time + datetime.timedelta(days=1)
+            # event_time = datetime.datetime(1111, 1, 1, 1, 1, 1)
+            query = f"SET DATEFORMAT ymd SELECT * FROM TblDatosBiometrico "\
+                f"WHERE Fecha_Hora_Marcacion >= '{event_time}' AND Fecha_Hora_Marcacion < '{tomorrow}' "\
+                "ORDER BY Nit_cedula, Fecha_Hora_Marcacion ASC"
+        else:
+            query = "SELECT * FROM TblDatosBiometrico ORDER BY Nit_cedula, Fecha_Hora_Marcacion ASC"
+        print(query)
+        data = cls.get_data(query)
+        return data
+
     # Se solicita un archivo para ser codificado o descodificado
     @classmethod
     def encode_file(cls, file, process='encode'):

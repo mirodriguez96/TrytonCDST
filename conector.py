@@ -1,7 +1,7 @@
 from trytond.model import ModelSQL, ModelView, fields
 from trytond.transaction import Transaction
 from trytond.pool import Pool
-# from sql import Table
+# from conexion import Conexion
 import datetime
 
 
@@ -372,3 +372,118 @@ class Actualizacion(ModelSQL, ModelView):
         for r in result:
             cls.revisa_secuencia_imp(r[0])
         print("FINISH missing documents")
+
+
+    # Biometric access
+    @classmethod
+    def import_biometric_access(cls):
+        print("RUN import_biometric_access")
+        pool = Pool()
+        Configuration = pool.get('conector.configuration')
+        configuration = Configuration.get_configuration()
+        if not configuration:
+            return
+        
+        today = datetime.date.today() - datetime.timedelta(days=1)
+        event_time = datetime.datetime(today.year, today.month, today.day, 0, 0, 0)
+        data = configuration.get_biometric_access_transactions(event_time)
+
+        Access = pool.get('staff.access')
+        Rest = pool.get('staff.access.rests')
+        Employee = pool.get('company.employee')
+        to_save = {}
+        to_rest = {}
+        start_work = None
+        # breakpoint()
+        for d in data:
+            print(d)
+            if d.Nit_cedula not in to_save:
+                employee, = Employee.search([('party.id_number', '=', d.Nit_cedula)])
+                start_work = None
+                to_save[d.Nit_cedula] = Access()
+                to_save[d.Nit_cedula].employee = employee
+                to_save[d.Nit_cedula].payment_method = 'extratime'
+                to_save[d.Nit_cedula].enter_timestamp = None
+                to_save[d.Nit_cedula].exit_timestamp = None
+                to_rest[d.Nit_cedula] = []
+                # rest = Rest()
+                # rest.start = None
+                # rest.end = None
+            access = to_save[d.Nit_cedula]
+
+            #Primera  entrada debe ignorarse porque es hora de ingreso a las instalaciones 	ok
+            #Pimera  salida es entrada a trabajar						ok
+            #Ultima entrada es salida de trabajar						
+            #Ultima salida debe ignorararse porque es hora de salida de las instalaciones
+            #Salida a descanso sin entrada se castiga con entrada= fecha-45, debe valida que no coincida con Entrada a Trabajar
+            #Es salida a descanso si hay entrada a trabajar 
+
+            #entro 7 'debe ignorarse  ok
+            #salio 710 'en access.enter_timestamp ok
+            #entro 10 'rest.start ok
+            #salio 1030'  rest.end ok
+            #entro 6 ' access.exit_timestamp ok
+            #salio 610'debe ignorarse
+
+            datetime_record = d.Fecha_Hora_Marcacion + datetime.timedelta(hours=5)
+            if d.TipoEventoEntraoSale.upper() == 'SALIDA':
+                if not access.enter_timestamp:
+                    access.enter_timestamp = datetime_record # 'Primera Salida es Entrada a Trabajar 
+                    continue
+
+            if d.TipoEventoEntraoSale.upper() == 'ENTRADA':
+                if not start_work: # 'Primera entrada se Ignora, Es ingreso a instalaciones
+                    start_work = datetime_record
+                    continue 
+                else:
+                    access.exit_timestamp = datetime_record # 'ultima entrada 
+            
+            rests = to_rest[d.Nit_cedula]
+
+            if d.TipoEventoEntraoSale.upper() == 'ENTRADA':
+                rest = Rest()
+                rest.start = datetime_record #inicio descanso
+                rest.end = None
+                # rests.append(rest)
+                continue
+
+            if d.TipoEventoEntraoSale.upper() == 'SALIDA':
+                if not access.enter_timestamp:
+                   continue
+                if not 'rest' in locals():
+                    # Si se registra una salida sin una entrada previa, se castiga
+                    rest = Rest()
+                    rest.start = datetime_record - datetime.timedelta(minutes=45)
+                    rest.end = datetime_record
+                    rests.append(rest)
+                    continue
+                if not rest.start:
+                    rest = Rest()
+                    rest.end = datetime_record
+                    rests.append(rest)
+                    continue
+                else:
+                    if not rest.end:
+                        rest.end = datetime_record
+                        rests.append(rest)
+                    continue
+
+        # to_create = []
+        for nit, acess in to_save.items():
+            if not acess.enter_timestamp:
+                continue
+            if acess.exit_timestamp \
+                and acess.enter_timestamp >= acess.exit_timestamp:
+                continue
+            if to_rest[nit]:
+                to_rest[nit].pop()
+                for rest in to_rest[nit]:
+                    rest.access = acess
+                    if rest.start >= rest.end:
+                        rest.start = rest.end - datetime.timedelta(minutes=45)
+                Rest.save(to_rest[nit])
+                acess.rests = to_rest[nit]
+            # to_create.append(acess)
+            acess.on_change_rests()
+            acess.save()
+        # Access.save(to_create)

@@ -509,3 +509,7 @@ msgstr "Enviar documento"
 msgctxt "field:staff.event,analytic_account:"
 msgid "Analytic account code"
 msgstr "Código de cuenta analítica"
+
+msgctxt "selection:ir.cron,method:"
+msgid "Import biometric accesses"
+msgstr "Importar accesos biométricos"
