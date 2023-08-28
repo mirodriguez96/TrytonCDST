@@ -1,5 +1,5 @@
 from decimal import Decimal
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 from trytond.model import ModelSQL, ModelView, fields
 from trytond.pool import Pool, PoolMeta
@@ -1122,3 +1122,43 @@ class StaffAccess(metaclass=PoolMeta):
             if rest.amount and not rest.pay:
                 amount += rest.amount
         self.rest = amount
+
+
+class ImportBiometricRecords(Wizard):
+    'Import Biometric Records'
+    __name__ = 'staff.access.import_biometric_records'
+
+    start_state = 'parameters'
+    parameters = StateView('staff.access.import_biometric_records.parameters',
+        'conector.import_biometric_records_parameters_view_form', [
+            Button('Cancel', 'end', 'tryton-cancel'),
+            Button('Import', 'import_biometric_records', 'tryton-go-next',
+                default=True)])
+    import_biometric_records = StateTransition()
+    
+    def transition_import_biometric_records(self):
+        pool = Pool()
+        Actualizacion = pool.get('conector.actualizacion')
+        Warning = pool.get('res.user.warning')
+        warning_name = 'warning_import_biometric_records'
+        # event_time = datetime.strptime(self.parameters.day, '%Y-%m-%d')
+        # print(event_time)
+        event_time = datetime(
+            self.parameters.day.year,
+            self.parameters.day.month,
+            self.parameters.day.day,
+            0, 0, 0)
+        if Warning.check(warning_name):
+            raise UserWarning(
+                warning_name,
+                f"Se importaran registros del biometrico en la fecha: {event_time}")
+        Actualizacion.import_biometric_access(event_time)
+        return 'end'
+
+
+class ImportBiometricRecordsParameters(ModelView):
+    'Import Biometric Records Parameters'
+    __name__ = 'staff.access.import_biometric_records.parameters'
+
+    day = fields.Date('Day', required=True)
+    

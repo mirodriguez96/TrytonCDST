@@ -77,6 +77,7 @@ def register():
         payroll.PayrollElectronic,
         payroll.StaffAccessRests,
         payroll.StaffAccess,
+        payroll.ImportBiometricRecordsParameters,
         cron.Cron,
         wiz.DocumentsForImportParameters,
         statement.BankStatement,
@@ -121,6 +122,7 @@ def register():
         statement.CreateBankLine,
         payment_bank.PaymentBankGroup,
         payroll.SendCertificateOfIncomeAndWithholding,
+        payroll.ImportBiometricRecords,
         module='conector', type_='wizard')
 
     Pool.register(

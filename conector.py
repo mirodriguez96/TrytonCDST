@@ -1,6 +1,7 @@
 from trytond.model import ModelSQL, ModelView, fields
 from trytond.transaction import Transaction
 from trytond.pool import Pool
+from trytond.exceptions import UserError
 # from conexion import Conexion
 import datetime
 
@@ -376,7 +377,7 @@ class Actualizacion(ModelSQL, ModelView):
 
     # Biometric access
     @classmethod
-    def import_biometric_access(cls):
+    def import_biometric_access(cls, event_time=None):
         print("RUN import_biometric_access")
         pool = Pool()
         Configuration = pool.get('conector.configuration')
@@ -384,8 +385,9 @@ class Actualizacion(ModelSQL, ModelView):
         if not configuration:
             return
         
-        today = datetime.date.today() - datetime.timedelta(days=1)
-        event_time = datetime.datetime(today.year, today.month, today.day, 0, 0, 0)
+        if not event_time:
+            today = datetime.date.today() - datetime.timedelta(days=1)
+            event_time = datetime.datetime(today.year, today.month, today.day, 0, 0, 0)
         data = configuration.get_biometric_access_transactions(event_time)
 
         Access = pool.get('staff.access')
@@ -398,7 +400,10 @@ class Actualizacion(ModelSQL, ModelView):
         for d in data:
             print(d)
             if d.Nit_cedula not in to_save:
-                employee, = Employee.search([('party.id_number', '=', d.Nit_cedula)])
+                employee = Employee.search([('party.id_number', '=', d.Nit_cedula)])
+                if not employee:
+                    raise UserError(f'Could not find employee with id_number = {d.Nit_cedula}')
+                employee, = employee
                 start_work = None
                 to_save[d.Nit_cedula] = Access()
                 to_save[d.Nit_cedula].employee = employee

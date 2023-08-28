@@ -149,6 +149,27 @@ this repository contains the full copyright notices and license terms. -->
           <field name="type">tree</field>
           <field name="name">rests_tree</field>
         </record> 
+
+        <!-- ############################ -->
+        <!-- # Import Biometric Records # -->
+        <!-- ############################ -->
+        <record model="ir.action.wizard" id="act_import_biometric_records">
+            <field name="name">Import Biometric Records</field>
+            <field name="wiz_name">staff.access.import_biometric_records</field>
+        </record>
+        <record model="ir.action.keyword" id="act_import_biometric_records_keyword">
+            <field name="keyword">form_action</field>
+            <field name="model">staff.access,-1</field>
+            <field name="action" ref="act_import_biometric_records"/>
+        </record>
+        <!-- ####################################### -->
+        <!-- # Import Biometric Records Parameters # -->
+        <!-- ####################################### -->
+        <record model="ir.ui.view" id="import_biometric_records_parameters_view_form">
+            <field name="model">staff.access.import_biometric_records.parameters</field>
+            <field name="type">form</field>
+            <field name="name">import_biometric_records_parameters_form</field>
+        </record>
         
     </data>
 </tryton>

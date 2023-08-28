@@ -513,3 +513,19 @@ msgstr "Código de cuenta analítica"
 msgctxt "selection:ir.cron,method:"
 msgid "Import biometric accesses"
 msgstr "Importar accesos biométricos"
+
+msgctxt "model:ir.action,name:act_import_biometric_records"
+msgid "Import Biometric Records"
+msgstr "Importar registros del biométrico"
+
+msgctxt "field:staff.access.import_biometric_records.parameters,day:"
+msgid "Day"
+msgstr "Día"
+
+msgctxt "wizard_button:staff.access.import_biometric_records,parameters,end:"
+msgid "Cancel"
+msgstr "Cancelar"
+
+msgctxt "wizard_button:staff.access.import_biometric_records,parameters,import_biometric_records:"
+msgid "Import"
+msgstr "Importar"
