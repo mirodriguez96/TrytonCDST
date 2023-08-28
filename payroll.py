@@ -1123,6 +1123,16 @@ class StaffAccess(metaclass=PoolMeta):
                 amount += rest.amount
         self.rest = amount
 
+    @classmethod
+    def delete(cls, instances):
+        to_delete = []
+        for instance in instances:
+            if instance.rests:
+                to_delete += list(instance.rests)
+        if to_delete:
+            Rests = Pool().get('staff.access.rests')
+            Rests.delete(to_delete)
+        super(StaffAccess, cls).delete(instances)
 
 class ImportBiometricRecords(Wizard):
     'Import Biometric Records'
