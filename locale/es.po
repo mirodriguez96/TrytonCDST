@@ -529,3 +529,55 @@ msgstr "Cancelar"
 msgctxt "wizard_button:staff.access.import_biometric_records,parameters,import_biometric_records:"
 msgid "Import"
 msgstr "Importar"
+
+msgctxt "wizard_button:conector.actualizacion.imported_document_asistend,start,importfile:"
+msgid "Import"
+msgstr "Importar"
+
+msgctxt "wizard_button:conector.actualizacion.imported_document_asistend,start,end:"
+msgid "Cancel"
+msgstr "Cancelar"
+
+msgctxt "field:conector.actualizacion.imported_document,file:"
+msgid "File"
+msgstr "Archivo"
+
+msgctxt "field:conector.actualizacion.imported_document,type_file:"
+msgid "Type file"
+msgstr "Tipo de documento"
+
+msgctxt "model:ir.action,name:act_imported_document"
+msgid "imported documents"
+msgstr "Importar Documentos"
+
+msgctxt "selection:conector.actualizacion.imported_document,type_file:"
+msgid "Parties"
+msgstr "Terceros"
+
+msgctxt "selection:conector.actualizacion.imported_document,type_file:"
+msgid "Products"
+msgstr "Productos"
+
+msgctxt "selection:conector.actualizacion.imported_document,type_file:"
+msgid "Balances"
+msgstr "Saldos iniciales"
+
+msgctxt "selection:conector.actualizacion.imported_document,type_file:"
+msgid "Accounts"
+msgstr "Cuentas contables"
+
+msgctxt "selection:conector.actualizacion.imported_document,type_file:"
+msgid "Update Accounts"
+msgstr "Actualizar cuentas contables"
+
+msgctxt "selection:conector.actualizacion.imported_document,type_file:"
+msgid "Product costs"
+msgstr "Precio de costo de productos"
+
+msgctxt "selection:conector.actualizacion.imported_document,type_file:"
+msgid "Inventory"
+msgstr "Inventario"
+
+msgctxt "selection:conector.actualizacion.imported_document,type_file:"
+msgid "Bank Account"
+msgstr "Cuentas de banco"

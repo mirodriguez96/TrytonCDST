@@ -16,7 +16,7 @@
     <label name="enhabled"/>
     <field name="enhabled"/>
 
-    <notebook colspan="6">
+    <!-- <notebook colspan="6">
       <page string="Import" id="file_import">
         <label name="type_file"/>
         <field name="type_file"/>
@@ -38,5 +38,5 @@
         <label name="access_end_rest"/>
         <field name="access_end_rest"/>
       </page>
-  </notebook>
+  </notebook> -->
 </form>
