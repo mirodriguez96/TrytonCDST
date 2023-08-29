@@ -720,10 +720,9 @@ class Purchase(metaclass=PoolMeta):
                 tecno[number] = {
                     'id_tecno': id_tecno,
                     'date': _date,
-                    'lines': [line]
+                    'lines': []
                 }
-            else:
-                tecno[number]['lines'].append(line)
+            tecno[number]['lines'].append(line)
 
         # Se trae todas las ordenes de compra que tecno nos indica faltan por entrar la mercancia
         purchases = Purchase.search([
