@@ -586,50 +586,77 @@ class Purchase(metaclass=PoolMeta):
         if not data:
             return
         pool = Pool()
-        Move = pool.get('stock.move')
+        # Move = pool.get('stock.move')
         Shipment = pool.get('stock.shipment.in')
         # Se procede a crear los envíos segun la compra
-        to_save = []
+        # to_save = []
+        to_create = []
         for number in data:
             purchase  = data[number]['purchase']
             if purchase.shipments:
                 continue
-            line_moves = {}
-            for line in purchase.lines:
-                if line.moves and line.product not in line_moves:
-                    for m in line.moves:
-                        if not m.shipment:
-                            line_moves[line.product] = m
+            # line_moves = {}
+            # for line in purchase.lines:
+            #     if line.moves and line.product not in line_moves:
+            #         for m in line.moves:
+            #             if not m.shipment:
+            #                 line_moves[line.product] = m
             # Se crea el envío
-            shipment = Shipment(
-                warehouse=purchase.warehouse.id,
-                supplier=purchase.party.id,
-                company=purchase.company.id,
-                effective_date=data[number]['date'],
-                planned_date=data[number]['date'],
-                )
+            # shipment = Shipment(
+            #     warehouse=purchase.warehouse.id,
+            #     supplier=purchase.party.id,
+            #     company=purchase.company.id,
+            #     effective_date=data[number]['date'],
+            #     planned_date=data[number]['date'],
+            #     )
+            shipment = {
+                'reference': purchase.reference,
+                'warehouse': purchase.warehouse.id,
+                'supplier': purchase.party.id,
+                'company': purchase.company.id,
+                'effective_date': data[number]['date'],
+                'planned_date': data[number]['date'],
+            }
+            purchase_lines = list(purchase.lines)
             moves = []
             for dict in data[number]['lines']:
-                if dict['product'] in line_moves:
-                    move = line_moves[dict['product']]
-                    move.quantity = dict['quantity']
-                    move.unit_price = dict['unit_price']
-                else:
-                    move = Move()
-                    move.from_location = dict['from_location']
-                    move.to_location = dict['to_location']
-                    move.product = dict['product']
-                    move.uom = dict['uom']
-                    move.quantity = dict['quantity']
-                    move.unit_price = dict['unit_price']
-                    move.currency = purchase.company.currency
+                move = {
+                    'from_location': dict['from_location'].id,
+                    'to_location': purchase.warehouse.input_location.id,
+                    'product': dict['product'].id,
+                    'uom': dict['uom'].id,
+                    'quantity': dict['quantity'],
+                    'unit_price': dict['unit_price'],
+                    'currency': purchase.company.currency.id,
+                }
+            #     if dict['product'] in line_moves:
+            #         move = line_moves[dict['product']]
+            #         move.quantity = dict['quantity']
+            #         move.unit_price = dict['unit_price']
+            #     else:
+            #         move = Move()
+            #         move.from_location = dict['from_location']
+            #         move.to_location = dict['to_location']
+            #         move.product = dict['product']
+            #         move.uom = dict['uom']
+            #         move.quantity = dict['quantity']
+            #         move.unit_price = dict['unit_price']
+            #         move.currency = purchase.company.currency
+                if purchase_lines:
+                    # move.origin = str(purchase_lines.pop())
+                    move['origin'] = str(purchase_lines.pop())
                 moves.append(move)
-            shipment.moves = (list(getattr(shipment, 'moves', [])) + moves)
-            shipment.reference = purchase.reference
-            to_save.append(shipment)
-        Shipment.save(to_save)
-        Shipment.receive(to_save)
-        Shipment.done(to_save)
+            if moves:
+                # shipment.moves = (list(getattr(shipment, 'moves', [])) + moves)
+                shipment['incoming_moves'] = [('create', moves)]
+            # shipment.reference = purchase.reference
+            # to_save.append(shipment)
+            to_create.append(shipment)
+        with Transaction().set_context(_skip_warnings=True):
+            # Shipment.save(to_save)
+            to_save = Shipment.create(to_create)
+            Shipment.receive(to_save)
+            Shipment.done(to_save)
 
 
     @classmethod
