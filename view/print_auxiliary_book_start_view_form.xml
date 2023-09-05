@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<!-- This file is part of Tryton.  The COPYRIGHT file at the top level of
+this repository contains the full copyright notices and license terms. -->
+<form>
+    <label name="fiscalyear"/>
+    <field name="fiscalyear" widget="selection"/>
+    <label name="company"/>
+    <field name="company"/>
+    <label name="start_period"/>
+    <field name="start_period" widget="selection"/>
+    <label name="end_period"/>
+    <field name="end_period"  widget="selection"/>
+    <label name="start_account"/>
+    <field name="start_account"/>
+    <label name="end_account"/>
+    <field name="end_account"/>
+    <label name="party"/>
+    <field name="party"/>
+    <label name="reference"/>
+    <field name="reference"/>
+    <group id="checkboxes" colspan="4" col="6">
+        <label name="empty_account"/>
+        <field name="empty_account"/>
+        <label name="posted"/>
+        <field name="posted"/>
+        <label name="colgaap"/>
+        <field name="colgaap"/>
+    </group>
+</form>
