@@ -498,6 +498,10 @@ class Invoice(metaclass=PoolMeta):
     def check_duplicated_reference(cls, invoice):
         if invoice.total_amount < 0:
             return
+        if invoice.id_tecno:
+            sw = invoice.id_tecno.split('-')[0]
+            if sw in ['27', '28', '31', '32']:
+                return
         today = datetime.date.today()
         target_date = today - datetime.timedelta(days=90)
         if invoice.reference:
