@@ -581,3 +581,51 @@ msgstr "Inventario"
 msgctxt "selection:conector.actualizacion.imported_document,type_file:"
 msgid "Bank Account"
 msgstr "Cuentas de banco"
+
+msgctxt "model:ir.ui.menu,name:menu_auxiliary_book_print"
+msgid "Print Auxiliary Book"
+msgstr "Reporte Libro Auxiliar"
+
+msgctxt "model:ir.action,name:wizard_auxiliary_book_print"
+msgid "Print Auxiliary Book"
+msgstr "Reporte Libro Auxiliar"
+
+msgctxt "field:account_col.auxiliary_book_cds.start,fiscalyear:"
+msgid "Fiscal Year"
+msgstr "Año Fiscal"
+
+msgctxt "field:account_col.auxiliary_book_cds.start,start_period:"
+msgid "Start Period"
+msgstr "Periodo Inicial"
+
+msgctxt "field:account_col.auxiliary_book_cds.start,end_period:"
+msgid "End Period"
+msgstr "Periodo Final"
+
+msgctxt "field:account_col.auxiliary_book_cds.start,start_account:"
+msgid "Start Account"
+msgstr "Cuenta Inicial"
+
+msgctxt "field:account_col.auxiliary_book_cds.start,end_account:"
+msgid "End Account"
+msgstr "Cuenta Final"
+
+msgctxt "field:account_col.auxiliary_book_cds.start,party:"
+msgid "Party"
+msgstr "Tercero"
+
+msgctxt "field:account_col.auxiliary_book_cds.start,company:"
+msgid "Company"
+msgstr "Empresa"
+
+msgctxt "field:account_col.auxiliary_book_cds.start,reference:"
+msgid "Reference"
+msgstr "Referencia"
+
+msgctxt "field:account_col.auxiliary_book_cds.start,empty_account:"
+msgid "Empty Account"
+msgstr "Cuenta vacia"
+
+msgctxt "field:account_col.auxiliary_book_cds.start,posted:"
+msgid "Posted Move"
+msgstr "Movimientos enviados"
