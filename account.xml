@@ -26,5 +26,28 @@ this repository contains the full copyright notices and license terms. -->
             action="act_balance_stock"
             id="menu_balance_stock"/>
 
+        <!-- Print Auxiliary Book -->
+        <record model="ir.ui.view" id="print_auxiliary_book_start_view_form">
+            <field name="model">account_col.auxiliary_book_cds.start</field>
+            <field name="type">form</field>
+            <field name="name">print_auxiliary_book_start_view_form</field>
+        </record>
+
+        <record model="ir.action.wizard" id="wizard_auxiliary_book_print">
+            <field name="name">Print Auxiliary Book</field>
+            <field name="wiz_name">account_col.auxiliary_book_print</field>
+        </record>
+
+        <record model="ir.action.report" id="auxiliary_book_print">
+            <field name="name">Auxiliary Book</field>
+            <field name="model"></field>
+            <field name="report_name">account_col.auxiliary_book_cds.report</field>
+            <field name="report">conector/reports/auxiliary_book.fods</field>
+            <field name="template_extension">ods</field>
+            <field name="translatable">False</field>
+        </record>
+        <menuitem parent="account.menu_reporting" action="wizard_auxiliary_book_print"
+            id="menu_auxiliary_book_print" icon="tryton-print"/>
+
     </data>
 </tryton>
