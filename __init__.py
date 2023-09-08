@@ -91,6 +91,7 @@ def register():
         account.AccountAsset,
         account.AuxiliaryBookStartCDS,
         conector.ImportedDocument,
+        conector.ConectorLog,
         module='conector', type_='model')
 
     Pool.register(

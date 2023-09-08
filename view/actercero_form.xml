@@ -1,5 +1,19 @@
 <?xml version="1.0"?>
 <form>
+    <group id="quantity_imported" colspan="4" col="6">
+        <label name="quantity"/>
+        <field name="quantity"/>
+        <label name="imported"/>
+        <field name="imported"/>
+        <label name="exceptions"/>
+        <field name="exceptions"/>
+        <label name="cancelled"/>
+        <field name="cancelled"/>
+        <label name="not_imported"/>
+        <field name="not_imported"/>
+    </group>
+    <field name="log"/>
+    <!-- <newline/>
     <label name="logs"/>
-    <field name="logs"/>
+    <field name="logs"/> -->
 </form>

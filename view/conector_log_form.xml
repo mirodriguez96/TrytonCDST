@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<form>
+    <label name="event_time"/>
+    <field name="event_time"/>
+    <label name="id_tecno"/>
+    <field name="id_tecno"/>
+    <label name="message"/>
+    <field name="message"/>
+    <label name="state"/>
+    <field name="state"/>
+</form>
