@@ -601,23 +601,22 @@ class Purchase(metaclass=PoolMeta):
                 'effective_date': data[number]['date'],
                 'planned_date': data[number]['date'],
             }
-            purchase_lines = list(purchase.lines)
             moves = []
-            for dict in data[number]['lines']:
-                move = {
-                    'from_location': dict['from_location'].id,
-                    'to_location': purchase.warehouse.input_location.id,
-                    'product': dict['product'].id,
-                    'uom': dict['uom'].id,
-                    'quantity': dict['quantity'],
-                    'unit_price': dict['unit_price'],
-                    'currency': purchase.company.currency.id,
-                }
-                if purchase_lines:
-                    origin = purchase_lines[len(purchase_lines)-1]
-                    if len(purchase_lines) > 1:
-                        purchase_lines.pop()
-                    move['origin'] = origin
+            for move in data[number]['lines']:
+                move['to_location'] = purchase.warehouse.input_location.id
+                move['currency'] = purchase.company.currency.id
+                # move = {
+                #     'from_location': dict['from_location'].id,
+                #     'to_location': purchase.warehouse.input_location.id,
+                #     'product': dict['product'].id,
+                #     'uom': dict['uom'].id,
+                #     'quantity': dict['quantity'],
+                #     'unit_price': dict['unit_price'],
+                #     'currency': purchase.company.currency.id,
+                # }
+                for pl in purchase.lines:
+                    if pl.product.id == move['product']:
+                        move['origin'] = pl
                 moves.append(move)
             if moves:
                 shipment['incoming_moves'] = [('create', moves)]
@@ -673,13 +672,13 @@ class Purchase(metaclass=PoolMeta):
                     continue
                 products[idproducto], = product
             # Se valida la existencia de la bodega
-            bodega = str(linea.Bodega)
-            if bodega not in locations:
-                msg = f"EXCEPCION - {id_tecno} la bodega con id {bodega} no fue encontrada"
-                result['logs'].append(msg)
-                excepcion.append(id_tecno)
-                result['exportado'][id_tecno] = 'E'
-                continue
+            # bodega = str(linea.Bodega)
+            # if bodega not in locations:
+            #     msg = f"EXCEPCION - {id_tecno} la bodega con id {bodega} no fue encontrada"
+            #     result['logs'].append(msg)
+            #     excepcion.append(id_tecno)
+            #     result['exportado'][id_tecno] = 'E'
+            #     continue
             # Se valida el precio del producto
             valor_unitario = Decimal(linea.Valor_Unitario)
             if valor_unitario <= 0:
@@ -702,10 +701,10 @@ class Purchase(metaclass=PoolMeta):
                 cantidad = round(cantidad, 3)
             # Se procede a almacenar los datos validados
             line = {
-                'from_location': locations['supplier'],
-                'to_location': locations[bodega].input_location,
-                'product': products[idproducto],
-                'uom': products[idproducto].purchase_uom,
+                'from_location': locations['supplier'].id,
+                # 'to_location': locations[bodega].input_location,
+                'product': products[idproducto].id,
+                'uom': products[idproducto].purchase_uom.id,
                 'quantity': cantidad,
                 'unit_price': round(valor_unitario, 2)
             }
