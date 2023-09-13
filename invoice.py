@@ -687,6 +687,31 @@ class InvoiceLine(metaclass=PoolMeta):
                 return []
         return result
 
+    # Sobreescribir metodo creado en el módulo account_col
+    @classmethod
+    def trigger_create(cls, records):
+        print("trigger_create (CONECTOR)")
+        for line in records:
+            if line.type != 'line':
+                continue
+            if line.product and line.product.account_category and line.quantity < 0:
+                category = line.product.account_category
+                account_id = None
+                if line.invoice.type == 'in':
+                    """
+                    Se añade validación para agregar la cuenta de devolución de compra
+                    solamente a los productos de tipo servicio
+                    """
+                    if category.account_return_purchase and line.product.type == 'service':
+                        print(line.product, line.product.type)
+                        account_id = category.account_return_purchase.id
+                else:
+                    if category.account_return_sale:
+                        account_id = category.account_return_sale.id
+                if not account_id:
+                    continue
+                line.write([line], {'account': account_id})
+
 
 class UpdateInvoiceTecno(Wizard):
     'Update Invoice Tecno'
