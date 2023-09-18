@@ -176,8 +176,8 @@ class PayrollPaymentStartBcl(ModelView):
     company = fields.Many2One('company.company', 'Company', required=True)
     department = fields.Many2One('company.department', 'Department')
     payment_type = fields.Selection(_TYPES_PAYMENT, 'Type payment', required=True)
-    send_sequence = fields.Char('Send sequence', size=1)
-    type_bank_account = fields.Selection(_TYPES_BANK_ACCOUNT, 'Type of account to be debited', required=True)
+    send_sequence = fields.Char('Shipping sequence', size=1)
+    type_bank_account = fields.Selection(_TYPES_BANK_ACCOUNT, 'Bank account type', required=True)
     reference = fields.Char('Reference', required=True, size=9)
     type_transaction = fields.Selection(_TYPE_TRANSACTION, 'Type of transaction', required=True)
 
@@ -197,26 +197,69 @@ class PayrollPaymentBcl(Wizard):
     print_ = StateReport('staff.payroll.payment_report_bancolombia')
 
     def do_print_(self, action):
-        period = None
-        department_id = None
+        pool = Pool()
+        Payroll = pool.get('staff.payroll')
+        clause = [('state', '=', 'posted')]
         if self.start.department:
-            department_id = self.start.department.id
+            clause.append(('employee.department', '=', self.start.department))
         if self.start.period:
-            period = self.start.period.id
+            clause.append(('period', '=', self.start.period))
         if self.start.send_sequence:
             send_sequence = (self.start.send_sequence).upper()
         else:
             send_sequence = 'A'
+        # Se realiza la búsqueda de todas las nóminas que coincidan
+        payrolls = Payroll.search(clause)
+        result = []
+        values = {}
+        id_numbers = []
+        duplicate_employees = None
+        for payroll in payrolls:
+            values = values.copy()
+            values['employee'] = payroll.employee.party.name
+            type_document = payroll.employee.party.type_document
+            if type_document not in _TYPE_DOCUMENT:
+                raise UserError('error: type_document',
+                                f'{type_document} not found for type_document bancolombia')
+            values['type_document'] = _TYPE_DOCUMENT[type_document]
+            values['id_number'] = payroll.employee.party.id_number
+            bank_code_sap = None
+            if payroll.employee.party.bank_accounts:
+                bank_code_sap = payroll.employee.party.bank_accounts[0].bank.bank_code_sap
+            values['bank_code_sap'] = bank_code_sap
+            values['bank_account'] = payroll.employee.party.bank_account
+            net_payment = Decimal(round(payroll.net_payment, 0))
+            values['net_payment'] = net_payment
+            if values['id_number'] in id_numbers:
+                if not duplicate_employees:
+                    duplicate_employees = values['employee']
+                else:
+                    duplicate_employees += ", "+values['employee']
+            id_numbers.append(values['id_number'])
+            result.append(values)
+        # Se valida si se encontraron nóminas del mismo empleado en el periodo seleccionado y se muestra una alerta.
+        if duplicate_employees:
+            Warning = pool.get('res.user.warning')
+            warning_name = "warning_payment_report_bancolombia"
+            if Warning.check(warning_name):
+                raise UserWarning(
+                    warning_name,
+                    "Existen empleados con más de 1 nómina en el mismo periodo. "\
+                    f"Revisar: {duplicate_employees}."
+                    )
+        # Se construye diccionario a retornar
         data = {
-            'ids': [],
-            'company': self.start.company.id,
-            'period': period,
-            'department': department_id,
+            'company': {
+                'id_number': self.start.company.party.id_number,
+                'name': self.start.company.party.name,
+                'bank_account': self.start.company.party.bank_account
+            },
             'payment_type': self.start.payment_type,
             'send_sequence': send_sequence,
             'type_bank_account': self.start.type_bank_account,
             'reference': self.start.reference,
             'type_transaction': self.start.type_transaction,
+            'result': result,
             }
         return action, data
 
@@ -230,48 +273,13 @@ class PayrollPaymentReportBcl(Report):
     @classmethod
     def get_context(cls, records, header, data):
         report_context = super().get_context(records, header,  data)
-        pool = Pool()
-        user = pool.get('res.user')(Transaction().user)
-        Warning = Pool().get('res.user.warning')
-        Payroll = pool.get('staff.payroll')
-        clause = [('state', '=', 'posted')]
-        if data['period']:
-            clause.append(('period', '=', data['period']))
-        if data['department']:
-            clause.append(('employee.department', '=', data['department']))
-        payrolls = Payroll.search(clause)
-        new_objects = []
-        values = {}
-        id_numbers = []
-        for payroll in payrolls:
-            values = values.copy()
-            values['employee'] = payroll.employee.party.name
-            type_document = payroll.employee.party.type_document
-            if type_document not in _TYPE_DOCUMENT:
-                raise UserError('error: type_document', f'{type_document} not found for type_document bancolombia')
-            values['type_document'] = _TYPE_DOCUMENT[type_document]
-            values['id_number'] = payroll.employee.party.id_number
-            if values['id_number'] in id_numbers:
-                warning_name = f"warning_payment_report_bancolombia,{values['id_number']}"
-                if Warning.check(warning_name):
-                    raise UserWarning(warning_name, f"Hay más de 1 nómina para el empleado {values['employee']}.")
-            id_numbers.append(values['id_number'])
-            bank_code_sap = None
-            if payroll.employee.party.bank_accounts:
-                bank_code_sap = payroll.employee.party.bank_accounts[0].bank.bank_code_sap
-            values['bank_code_sap'] = bank_code_sap
-            values['bank_account'] = payroll.employee.party.bank_account
-            net_payment = Decimal(round(payroll.net_payment, 0))
-            values['net_payment'] = net_payment
-            new_objects.append(values)
-
         report_context['payment_type'] = data.get('payment_type')
         report_context['send_sequence'] = data.get('send_sequence')
         report_context['type_bank_account'] = data.get('type_bank_account')
         report_context['reference'] = data.get('reference')
         report_context['type_transaction'] = data.get('type_transaction')
-        report_context['records'] = new_objects
-        report_context['company'] = user.company
+        report_context['records'] = data.get('result')
+        report_context['company'] = data.get('company')
         return report_context
 
 class LiquidationPaymentStartBcl(ModelView):

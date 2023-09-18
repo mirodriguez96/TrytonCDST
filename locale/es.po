@@ -629,3 +629,39 @@ msgstr "Cuenta vacia"
 msgctxt "field:account_col.auxiliary_book_cds.start,posted:"
 msgid "Posted Move"
 msgstr "Movimientos enviados"
+
+msgctxt "model:ir.action,name:wizard_print_payroll_payment_bancolombia"
+msgid "Payroll Payment Bancolombia"
+msgstr "Pago de Nómina Bancolombia"
+
+msgctxt "field:staff.payroll_payment_bancolombia.start,period:"
+msgid "Period"
+msgstr "Periodo"
+
+msgctxt "field:staff.payroll_payment_bancolombia.start,company:"
+msgid "Company"
+msgstr "Empresa"
+
+msgctxt "field:staff.payroll_payment_bancolombia.start,department:"
+msgid "Department"
+msgstr "Departamento"
+
+msgctxt "field:staff.payroll_payment_bancolombia.start,payment_type:"
+msgid "Type payment"
+msgstr "Tipo de pago"
+
+msgctxt "field:staff.payroll_payment_bancolombia.start,send_sequence:"
+msgid "Shipping sequence"
+msgstr "Secuencia de envío"
+
+msgctxt "field:staff.payroll_payment_bancolombia.start,type_bank_account:"
+msgid "Bank account type"
+msgstr "Tipo de cuenta bancaria"
+
+msgctxt "field:staff.payroll_payment_bancolombia.start,reference:"
+msgid "Reference"
+msgstr "Referencia"
+
+msgctxt "field:staff.payroll_payment_bancolombia.start,type_transaction:"
+msgid "Type of transaction"
+msgstr "Tipo de transacción"
