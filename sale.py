@@ -3,6 +3,7 @@ from trytond.model import fields
 from trytond.pool import Pool, PoolMeta
 from trytond.exceptions import UserError
 from trytond.transaction import Transaction
+from trytond.wizard import Wizard
 from decimal import Decimal
 from sql import Table
 
@@ -411,13 +412,10 @@ class Sale(metaclass=PoolMeta):
         for idt in to_created:
             if idt not in to_exception:
                 Config.update_exportado(idt, 'T')
-                # print('creado...', idt) #TEST
         for idt in to_exception:
             Config.update_exportado(idt, 'E')
-            # print('excepcion...', idt) #TEST
         for idt in not_import:
             Config.update_exportado(idt, 'X')
-            # print('not_import...', idt) #TEST
         print('FINISH VENTAS')
 
 
@@ -484,8 +482,24 @@ class Sale(metaclass=PoolMeta):
                 logs.append(msg)
                 to_exception.append(sale.id_tecno)
                 continue
-            Invoice.post_batch([invoice])
-            Invoice.post([invoice])
+            try:
+                Invoice.post_batch([invoice])
+                Invoice.post([invoice])
+            except Exception as e:
+                if invoice.state == 'posted':
+                    # Se revierte el estado de la factura a validated
+                    account_invoice = Table('account_invoice')
+                    cursor = Transaction().connection.cursor()
+                    cursor.execute(*account_invoice.update(
+                    columns=[
+                        account_invoice.state,
+                    ],
+                    values=["validated"],
+                    where=account_invoice.id == invoice.id))
+                msg = f"REVISAR FACTURA: {sale.id_tecno} - {str(e)}"
+                logs.append(msg)
+                to_exception.append(sale.id_tecno)
+                continue 
             if invoice.original_invoice:
                 paymentline = PaymentLine()
                 paymentline.invoice = invoice.original_invoice
