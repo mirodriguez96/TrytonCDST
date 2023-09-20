@@ -91,6 +91,7 @@ def register():
         account.AccountAsset,
         account.AuxiliaryBookStartCDS,
         conector.ImportedDocument,
+        payroll.StaffAccessView,
         module='conector', type_='model')
 
     Pool.register(
@@ -127,6 +128,7 @@ def register():
         payroll.ImportBiometricRecords,
         account.PrintAuxiliaryBookCDS,
         conector.ImportedDocumentWizard,
+        payroll.StaffAccessWizard,
         module='conector', type_='wizard')
 
     Pool.register(
@@ -141,4 +143,5 @@ def register():
         payment_bank.BankReportBancolombia,
         stock.ShipmentDetailedReport,
         account.AuxiliaryBookCDS,
+        payroll.StaffAccessReport,
         module='conector', type_='report')

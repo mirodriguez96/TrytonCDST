@@ -170,6 +170,36 @@ this repository contains the full copyright notices and license terms. -->
             <field name="type">form</field>
             <field name="name">import_biometric_records_parameters_form</field>
         </record>
+
+        <!-- ###################################### -->
+        <!-- # Asistente para reporte de accesos  #-->
+        <!-- ###################################### -->
+        <record model="ir.action.wizard" id="act_report_access">
+            <field name="name">Staff access report</field>
+            <field name="wiz_name">staff.access_wizard</field>
+        </record>
+
+        <record model="ir.action.keyword" id="act_report_access_keyword">
+            <field name="keyword">form_action</field>
+            <field name="model">staff.access,-1</field>
+            <field name="action" ref="act_report_access"/>
+        </record>
+
+        <record model="ir.ui.view" id="staff_access_report_form">
+            <field name="model">staff.access_view_start</field>
+            <field name="type">form</field>
+            <field name="name">staff_access_report_form</field>
+        </record>
+        
+        <!-- Reportes ACCESOS -->
+        <record model="ir.action.report" id="staff_access_report">
+            <field name="name">Staff access format</field>
+            <field name="model">staff.access</field>
+            <field name="report_name">staff.access_report</field>
+            <field name="report">conector/staff_access_report.fods</field>
+            <field name="template_extension">ods</field>
+            <field name="translatable">False</field>
+        </record> 
         
     </data>
 </tryton>

@@ -1179,4 +1179,163 @@ class ImportBiometricRecordsParameters(ModelView):
     __name__ = 'staff.access.import_biometric_records.parameters'
 
     day = fields.Date('Day', required=True)
+
+
+class StaffAccessView(ModelView):
+    "Report Staff Access Start"
+    __name__ = "staff.access_view_start"
+
+    company = fields.Many2One('company.company', 'Company', required=True)
+    from_date = fields.Date("From Date",
+        domain=[
+            If(Eval('to_date') & Eval('from_date'),
+                ('from_date', '<=', Eval('to_date')),
+                ()),
+            ],
+        depends=['to_date'], required=True)
+    to_date = fields.Date("To Date",
+        domain=[
+            If(Eval('from_date') & Eval('to_date'),
+                ('to_date', '>=', Eval('from_date')),
+                ()),
+            ],
+        depends=['from_date'], required=True)
+
+
+
+    @staticmethod
+    def default_company():
+        return Transaction().context.get('company')
+     
+class StaffAccessWizard(Wizard):
+    'Report Staff Access Wizard'
+    __name__ = 'staff.access_wizard'
+    start = StateView('staff.access_view_start',
+                      'conector.staff_access_report_form', [
+                          Button('Cancel', 'end', 'tryton-cancel'),
+                          Button('Print', 'print_', 'tryton-ok', default=True),
+                      ])
+    print_ = StateReport('staff.access_report')
+
+    def do_print_(self, action):
+
+        data = {
+            'company': self.start.company.id,
+            # 'fiscalyear': self.start.fiscalyear.name,
+            'to_date': self.start.to_date,
+            'from_date': self.start.from_date,
+        }
+        return action, data
+
+    def transition_print_(self):
+        return 'end'
     
+class StaffAccessReport(Report):
+    "Staff access report"
+    __name__ = 'staff.access_report'    
+
+    @classmethod
+    def get_date_fech(cls, date):
+        result= ''
+        if date not in ['Null', None]:
+            date = str((date - timedelta(hours=5))).split(' ')
+            result = date[1]
+
+        return result
+    
+    # @classmethod
+    # def get_ttt(cls, enter_timestamp, exit_timestamp, timedelta):
+    #     result= ''
+    #     if enter_timestamp not in ['Null', None] and exit_timestamp not in ['Null', None]:
+    #         result = (enter_timestamp - exit_timestamp) / timedelta * -1
+    #         result = str(round(abs(result), 2))
+
+    #     return result
+
+    @classmethod
+    def get_context(cls, records, header, data):
+        report_context = super().get_context(records, header,  data)
+        pool = Pool()
+        Staff = pool.get('staff.access')
+        StaffRestd = pool.get('staff.access.rests')
+        Party = pool.get('party.party')
+        Employee = pool.get('company.employee')
+        Company = pool.get('company.company')
+        cursor = Transaction().connection.cursor()
+
+        #Asignacion de tabalas para extraccion de la data
+        staff = Staff.__table__()
+        staffRestd = StaffRestd.__table__()
+        party = Party.__table__()
+        employee = Employee.__table__()
+
+
+        #Dato de fecha de inicio 
+        fechfinal = str(data['to_date']).split('-')
+        datefinal = str(datetime(int(fechfinal[0]), int(fechfinal[1]), int(fechfinal[2]), 23,59,59))
+
+        #Dato de fecha final para reporte
+        fechini = str(data['from_date']).split('-')
+        dateintitial = str(datetime(int(fechini[0]), int(fechini[1]), int(fechini[2])))
+
+
+        #Condicionales para extraer los datos
+        where = staff.enter_timestamp >= dateintitial   
+        where &= staff.exit_timestamp  <= datefinal 
+
+
+        #Datos que seran extraidos desde la base de datos
+        columns = [
+                staff.id,
+                party.name,
+                party.id_number,
+                staff.enter_timestamp,
+                staff.exit_timestamp,
+                staff.ttt,
+                staff.rest,
+                staffRestd.end,
+                staffRestd.start
+            ]
+
+
+        #Consulta que retorna la informacion para el reporte de acceso diario
+        select = staff.join(staffRestd, 'LEFT', condition= staff.id == staffRestd.access 
+        ).join(employee, 'LEFT', condition= staff.employee == employee.id
+        ).join(party, 'LEFT', condition= party.id == employee.party
+        ).select(*columns,
+        where=where,
+        order_by=[party.id_number,staff.enter_timestamp, staffRestd.start])
+
+        cursor.execute(*select)
+        
+        record_dict = {}
+
+        #Ciclo para generar la data para el informe, todo en formato diccionario
+        for index, curso  in enumerate(cursor):
+            if curso[0] in record_dict:
+                record_dict[curso[2],index]= {
+                    'party': '',
+                    'id_number': '',
+                    'enter_timestamp': '',
+                    'exit_timestamp': '',
+                    'ttt': '',
+                    'rest': '',
+                    'end': cls.get_date_fech(curso[7]), # Funcion que toma solo la hora de la fecha obtenida en la base de datos
+                    'start': cls.get_date_fech(curso[8]),
+                }
+            else:
+                record_dict[curso[0]] = {
+
+                    'party': curso[1],
+                    'id_number': curso[2],
+                    'enter_timestamp': str(curso[3] - timedelta(hours=5)),
+                    'exit_timestamp': str(curso[4] - timedelta(hours=5)),
+                    'ttt': curso[5],
+                    'rest': curso[6],
+                    'end': cls.get_date_fech(curso[7]),
+                    'start': cls.get_date_fech(curso[8]),
+                }  
+
+        report_context['records'] = record_dict.values()
+        report_context['company'] = Company(data['company'])
+        return report_context
