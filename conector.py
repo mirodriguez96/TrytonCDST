@@ -402,21 +402,17 @@ class Actualizacion(ModelSQL, ModelView):
         configuration = Configuration.get_configuration()
         if not configuration:
             return
-        
         if not event_time:
-            today = datetime.date.today() - datetime.timedelta(days=1)
-            event_time = datetime.datetime(today.year, today.month, today.day, 0, 0, 0)
+            yesterday = datetime.date.today() - datetime.timedelta(days=1)
+            event_time = datetime.datetime(yesterday.year, yesterday.month, yesterday.day, 0, 0, 0)
         data = configuration.get_biometric_access_transactions(event_time)
-
         Access = pool.get('staff.access')
         Rest = pool.get('staff.access.rests')
         Employee = pool.get('company.employee')
         to_save = {}
         to_rest = {}
         start_work = None
-        # breakpoint()
         for d in data:
-            print(d)
             if d.Nit_cedula not in to_save:
                 employee = Employee.search([('party.id_number', '=', d.Nit_cedula)])
                 if not employee:
@@ -490,9 +486,22 @@ class Actualizacion(ModelSQL, ModelView):
                         rest.end = datetime_record
                         rests.append(rest)
                     continue
-
+        # Se busca los registros del mismo día
+        tomorrow = event_time + datetime.timedelta(days=1)
+        access_search = list(Access.search([
+            ('enter_timestamp', '>=', event_time),
+            ('enter_timestamp', '<', tomorrow)
+            ]))
         # to_create = []
         for nit, acess in to_save.items():
+            exists = False
+            for acces_search in access_search:
+                if acess.employee == acces_search.employee:
+                    access_search.remove(acces_search)
+                    exists = True
+                    break
+            if exists:
+                continue
             if not acess.enter_timestamp:
                 continue
             if acess.exit_timestamp \
