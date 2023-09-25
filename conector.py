@@ -76,39 +76,22 @@ class Actualizacion(ModelSQL, ModelView):
 
     # se solicita una actualizacion y una lista de registros (logs) para validar si existen
     # y si no existen, se almacena en el campo logs de la actualizacion dada
-    @classmethod
-    def add_logs(cls, actualizacion, logs):
+    def add_logs(self, logs):
+        now = datetime.datetime.now()# - datetime.timedelta(hours=5)
         if not logs:
-            actualizacion.name = actualizacion.name
-            actualizacion.save()
+            self.write([self], {'write_date': now})
             return
-        now = datetime.datetime.now() - datetime.timedelta(hours=5)
-        logs_result = []
-        registros = ""
-        if actualizacion.logs:
-            registros = actualizacion.logs
-            for lr in registros.split('\n'):
-                res = lr.split(' - ')
-                res.pop(0)
-                res = " - ".join(res)
-                logs_result.append(res)
-        for log in logs:
-            if log not in logs_result:
-                log = f"\n{now} - {log}"
-                registros += log
-        actualizacion.logs = registros
-        actualizacion.save()
+        to_create = []
+        for id_tecno, message in logs.items():
+            create = {
+                'event_time': now,
+                'id_tecno': id_tecno,
+                'message': message,
+                'state': 'pending'
+            }
+            to_create.append(create)
+        self.write([self], {'log': [('create', to_create)]})
 
-    # @classmethod
-    # def reset_writedate(cls, name):
-    #     conector_actualizacion = Table('conector_actualizacion')
-    #     cursor = Transaction().connection.cursor()
-    #     # Se elimina la fecha de última modificación para que se actualicen los terceros desde (primer importe) una fecha mayor rango
-    #     cursor.execute(*conector_actualizacion.update(
-    #             columns=[conector_actualizacion.write_date],
-    #             values=[None],
-    #             where=conector_actualizacion.name == name)
-    #         )
     
     # Se consulta en la base de datos de SQLSERVER por la cantidad de documentos
     # que se van a importar
@@ -377,15 +360,16 @@ class Actualizacion(ModelSQL, ModelView):
         result_tecno = [r[0] for r in result_tecno]
         list_difference = [r for r in result_tecno if r not in result_tryton]
         # Se guarda el registro y se marcan los documentos para ser importados de nuevo
-        logs = []
+        logs = {}
         for falt in list_difference:
             lid = falt.split('-')
             query = "UPDATE dbo.Documentos SET exportado = 'N' "\
                 f"WHERE sw = {lid[0]} AND tipo = {lid[1]} AND Numero_documento = {lid[2]}"
             Config.set_data(query)
-            logs.append(f"DOCUMENTO FALTANTE: {falt}")
+            logs[falt] = "EL DOCUMENTO ESTABA MARCADO COMO IMPORTADO (T) SIN ESTARLO. "\
+                "AHORA FUE MARACADO COMO PENDIENTE PARA IMPOTAR (N)"
         actualizacion, = Actualizacion.search([('name', '=', name)])
-        cls.add_logs(actualizacion, logs)
+        actualizacion.add_logs(logs)
 
 
     @classmethod

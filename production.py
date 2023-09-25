@@ -41,7 +41,7 @@ class Production(metaclass=PoolMeta):
         Location = pool.get('stock.location')
         Product = pool.get('product.product')
         Template = pool.get('product.template')
-        logs = []
+        logs = {}
         to_created = []
         to_exception = []
         not_import = []
@@ -53,14 +53,12 @@ class Production(metaclass=PoolMeta):
                 id_tecno = str(sw)+'-'+tipo_doc+'-'+str(numero_doc)
                 print(id_tecno)
                 if transformacion.anulado == 'S':
-                    msg = f"{id_tecno} Documento anulado en TecnoCarnes"
-                    logs.append(msg)
+                    logs[id_tecno] = "Documento anulado en TecnoCarnes"
                     not_import.append(id_tecno)
                     continue
                 existe = Production.search([('id_tecno', '=', id_tecno)])
                 if existe:
-                    msg = f"La producción {id_tecno} ya existe en Tryton"
-                    logs.append(msg)
+                    logs[id_tecno] = "La producción ya existe en Tryton"
                     to_created.append(id_tecno)
                     continue
                 fecha = str(transformacion.Fecha_Hora_Factura).split()[0].split('-')
@@ -86,15 +84,15 @@ class Production(metaclass=PoolMeta):
                     cantidad = float(line.Cantidad_Facturada)
                     bodega = Location.search([('id_tecno', '=', line.IdBodega)])
                     if not bodega:
-                        msg = f"EXCEPCION {id_tecno} - No se encontro la bodega {line.IdBodega}"
-                        logs.append(msg)
+                        msg = f"EXCEPCION: No se encontro la bodega {line.IdBodega}"
+                        logs[id_tecno] = msg
                         to_exception.append(id_tecno)
                         break
                     bodega, = bodega
                     producto = Product.search(['OR', ('id_tecno', '=', line.IdProducto), ('code', '=', line.IdProducto)])
                     if not producto:
-                        msg = f"EXCEPCION {id_tecno} - No se encontro el producto {line.IdProducto}"
-                        logs.append(msg)
+                        msg = f"EXCEPCION: No se encontro el producto {line.IdProducto}"
+                        logs[id_tecno] = msg
                         to_exception.append(id_tecno)
                         break
                     producto, = producto
@@ -133,8 +131,8 @@ class Production(metaclass=PoolMeta):
                         # Se valida que el precio de venta sea diferente de 0
                         if producto.list_price == 0:
                             if valor_unitario == 0:
-                                msg = f"EXCEPCION {id_tecno} - Valor de venta en 0 en tryton y tecnoCarnes del producto {line.IdProducto}"
-                                logs.append(msg)
+                                msg = f"EXCEPCION: Valor de venta en 0 en tryton y tecnoCarnes del producto {line.IdProducto}"
+                                logs[id_tecno] = msg
                                 to_exception.append(id_tecno)
                                 break
                             to_write = {
@@ -145,13 +143,13 @@ class Production(metaclass=PoolMeta):
                 if id_tecno in to_exception:
                     continue
                 if not entradas:
-                    msg = f"EXCEPCION {id_tecno} - No se encontraron líneas de entrada para la producción"
-                    logs.append(msg)
+                    msg = f"EXCEPCION: No se encontraron líneas de entrada para la producción"
+                    logs[id_tecno] = msg
                     to_exception.append(id_tecno)
                     continue
                 if not salidas:
-                    msg = f"EXCEPCION {id_tecno} - No se encontraron líneas de salida para la producción"
-                    logs.append(msg)
+                    msg = f"EXCEPCION: No se encontraron líneas de salida para la producción"
+                    logs[id_tecno] = msg
                     to_exception.append(id_tecno)
                     continue
                 production['inputs'] = [('create', entradas)]
@@ -164,10 +162,9 @@ class Production(metaclass=PoolMeta):
                 Production.done(producciones)
                 to_created.append(id_tecno)
             except Exception as e:
-                msg = f"EXCEPCION {id_tecno}: {str(e)}"
-                logs.append(msg)
+                logs[id_tecno] = f"EXCEPCION: {str(e)}"
                 to_exception.append(id_tecno)
-        Actualizacion.add_logs(actualizacion, logs)
+        actualizacion.add_logs(logs)
         for idt in not_import:
             Config.update_exportado(idt, 'X')
         for idt in to_exception:

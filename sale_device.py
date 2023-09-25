@@ -17,15 +17,14 @@ class SaleDevice(metaclass=PoolMeta):
         pool = Pool()
         Actualizacion = pool.get('conector.actualizacion')
         actualizacion = Actualizacion.create_or_update("CONFIG_POS")
-        logs = []
+        logs = {}
         try:
             cls.import_sale_shop(logs)
             cls.import_sale_device(logs)
             cls.import_statement_sale(logs)
         except Exception as e:
-            msg = f"EXCEPCION {str(e)}"
-            logs.append(msg)
-        Actualizacion.add_logs(actualizacion, logs)
+            logs['CONFIG_POS'] = f"EXCEPCION: {str(e)}"
+        actualizacion.add_logs(logs)
         print("FINISH CONFIG POS")
 
     # Se importan las tiendas que seran utilizadas para las ventas POS
@@ -47,7 +46,7 @@ class SaleDevice(metaclass=PoolMeta):
             location = Location.search([('id_tecno', '=', id_tecno)])
             if not location:
                 msg = f"LA BODEGA DE TECNOCARNES CON ID {id_tecno} NO EXISTE"
-                logs.append(msg)
+                logs[id_tecno] = msg
             nombre = bodega.Bodega
             location = location[0]
             existe = Shop.search([('warehouse', '=', location)])
@@ -142,7 +141,7 @@ class SaleDevice(metaclass=PoolMeta):
                 #En caso de ser un nombre vacio se continua con el siguiente
                 if len(equipo.Equipo) == 0 or equipo.Equipo == ' ':
                     msg = f"EL NOMBRE DEL EQUIPO ESTA VACIO {equipo.IdEquipo}"
-                    logs.append(msg)
+                    logs[id_tecno] = msg
                     break
 
                 journals = Journal.search([()])
@@ -190,7 +189,7 @@ class SaleDevice(metaclass=PoolMeta):
                 paymode = PayMode.search([('id_tecno', '=', id_tecno)])
                 if not paymode:
                     msg = f"NO SE ENCONTRO EN TRYTON EL MODO DE PAGO {id_tecno}"
-                    logs.append(msg)
+                    logs[id_tecno] = msg
                     continue
                 paymode, = paymode
                 statement_journal = {
@@ -204,7 +203,7 @@ class SaleDevice(metaclass=PoolMeta):
                 to_create.append(statement_journal)
             else:
                 msg = f"YA EXISTE EL LIBRO DIARIO POS {id_tecno}"
-                logs.append(msg)
+                logs[id_tecno] = msg
         StatementJournal.create(to_create)
 
 

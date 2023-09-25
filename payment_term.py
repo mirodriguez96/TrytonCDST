@@ -32,6 +32,7 @@ class PaymentTerm(metaclass=PoolMeta):
         Actualizacion = pool.get('conector.actualizacion')
         actualizacion = Actualizacion.create_or_update('PLAZOS DE PAGO')
         condiciones_pago = Config.get_data_table('TblCondiciones_pago')
+        logs = {}
         to_save = []
         for condicion in condiciones_pago:
             id_tecno = condicion.IdCondiciones_pago
@@ -40,15 +41,17 @@ class PaymentTerm(metaclass=PoolMeta):
             payment_type = '2'
             if dias_vcto == 0:
                 payment_type = '1'
-
             existe = PaymentTerm.search([('id_tecno', '=', id_tecno)])
             if existe:
-                existe[0].name = nombre
-                existe[0].payment_type = payment_type
                 line, = existe[0].lines
                 delta, = line.relativedeltas
-                delta.days = dias_vcto
-                existe[0].save()
+                if existe[0].name != nombre or \
+                    existe[0].payment_type != payment_type or delta.days != dias_vcto:
+                    delta.days = dias_vcto
+                    existe[0].name = nombre
+                    existe[0].payment_type = payment_type
+                    existe[0].save()
+                    logs[id_tecno] = "SE AGREGARON CAMBIOS EN LOS PLAZOS DE PAGO"
             else:
                 #Se crea un nuevo plazo de pago
                 plazo_pago = PaymentTerm()
@@ -66,4 +69,4 @@ class PaymentTerm(metaclass=PoolMeta):
                 to_save.append(plazo_pago)
                 #plazo_pago.save()
         PaymentTerm.save(to_save)
-        actualizacion.save()
+        actualizacion.add_logs(logs)

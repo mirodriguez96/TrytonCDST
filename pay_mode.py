@@ -38,6 +38,7 @@ class VoucherPayMode(ModelSQL, ModelView):
         Journal = pool.get('account.journal')
         actualizacion = Actualizacion.create_or_update('FORMAS DE PAGO')
         formas_pago = Config.get_data_table('TblFormaPago')
+        logs = {}
         to_save = []
         for fp in formas_pago:
             id_tecno = str(fp.IdFormaPago)
@@ -46,9 +47,12 @@ class VoucherPayMode(ModelSQL, ModelView):
             paymode = PayMode.search([('id_tecno', '=', id_tecno)])
             if paymode:
                 paymode, = paymode
-                paymode.name = nombre
+                old_account = paymode.account
                 cls.add_account(paymode, cuenta)
-                paymode.save()
+                if paymode.name != nombre or old_account != paymode.account:
+                    paymode.name = nombre
+                    paymode.save()
+                    logs[id_tecno] = "SE AGREGARON CAMBIOS EN LA FORMA DE PAGO"
             else:
                 #Diario por defecto del plan contable
                 journal, = Journal.search([('code', '=', 'CASH')])
@@ -70,7 +74,7 @@ class VoucherPayMode(ModelSQL, ModelView):
                 to_save.append(paymode)
                 #paym.save()
         PayMode.save(to_save)
-        actualizacion.save()
+        actualizacion.add_logs(logs)
         print('FINISH FORMAS DE PAGO')
 
 
