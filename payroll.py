@@ -6,7 +6,7 @@ from trytond.pool import Pool, PoolMeta
 from trytond.wizard import (
     Wizard, StateView, Button, StateReport, StateTransition
 )
-from trytond.pyson import Eval, Or, Not
+from trytond.pyson import Eval, Or, Not, If
 from trytond.transaction import Transaction
 from trytond.report import Report
 from trytond.exceptions import UserError, UserWarning
