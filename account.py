@@ -472,7 +472,6 @@ class AuxiliaryBookCDS(Report):
         Company = pool.get('company.company')
         Party = pool.get('party.party')
         company = Company(data['company'])
-        date_initial = []
 
         accountLine = Line.__table__()
         accountmove = Move.__table__()
@@ -499,14 +498,6 @@ class AuxiliaryBookCDS(Report):
             )
         
         accounts = Account.search(dom_accounts, order=[('code', 'ASC')])
-
-        # partyaccount = AccountParty.search([
-        #     ('party', '=', data['party']),
-        #     ('account', 'in', accounts),
-        #     ])
-
-        # datos = ['credit', 'debit', 'amount_second_currency']
-        # print(cls.get_credit_debit(records=partyaccount, names=datos), cls.get_balance(records=partyaccount))
 
         # --------------------------------------------------------------
         start_period_ids = [0]
@@ -541,43 +532,57 @@ class AuxiliaryBookCDS(Report):
 
 
         party = None
-        if data['party']:
-            party, = Party.search([('id', '=', data['party'])])
+        def get_party(account=None, party=None):
             # --------------------------------------------------------------
 
-            date_initial = start_date + start_period_ids
-            period = [a.id for a in accounts]
-
-############################################################################
-            if period:
-                where = accountLine.account.in_(period)
+            # Consulta para los saldos debitos y creeditos iniciales 
+            initial = ''
+            date_initial = ''
+            if noSelectPerid:
+                date_initial = start_date + start_period_ids
+                if data['start_period'] != start_date[0]:
+                    initial = str(data['start_period']-1)
+                else:
+                   initial = str(start_date[0])
+            else: 
+                date_initial = start_period_ids
+                initial = str(data['start_period'])
+            
+            print(initial, date_initial)
+            if account:
+                where = accountLine.account == account
             if date_initial:
                 where &= accountmove.period.in_(date_initial)
-            if data["party"]:
-                where &= accountLine.party == data["party"]
+            if party:
+                where &= accountLine.party == party
+            if data['posted']:
+                where &= accountmove.state == 'posted'
 
+            # Consulta para el balance inicial
             select2 = accountLine.join(accountmove, 'LEFT', condition= (accountLine.move == accountmove.id)
-            ).select(Sum(accountLine.credit), Sum(accountLine.debit), Sum(Coalesce(accountLine.debit,0) - Coalesce(accountLine.credit,0))
-            ,where=where)
+                    ).select(Sum(accountLine.credit), Sum(accountLine.debit), Sum(Coalesce(accountLine.debit,0) - Coalesce(accountLine.credit,0))
+                    ,where=where)
 
 
             cursor.execute(*select2)
             result_start = cursor.fetchall()
 
 
-#############################################################################
-            #######Trabajando en los saldos inciales###############
-            initial = str(data['start_period']-1) if data['start_period'] and data['start_period'] != start_date[0]  else str(start_date[0])
+            # initial = str(data['start_period']-1) if data['start_period'] and data['start_period'] != start_date[0]  else str(start_date[0])
             where &= accountmove.period == initial
+            if data['posted']:
+                where &= accountmove.state == 'posted'
 
             query = accountLine.join(accountmove, 'LEFT', condition= (accountLine.move == accountmove.id)
-            ).select(Sum(accountLine.credit), Sum(accountLine.debit), Sum(Coalesce(accountLine.debit,0) - Coalesce(accountLine.credit,0))
-            ,where=where)
+                    ).select(Sum(accountLine.credit), Sum(accountLine.debit), Sum(Coalesce(accountLine.debit,0) - Coalesce(accountLine.credit,0))
+                    ,where=where)
 
-            
+                    
             cursor.execute(*query)
             initial_balance = cursor.fetchall()
-            cursor.close() 
+            print(initial_balance)
+            #retornamos la consulta con los saldos debitos, credito y el balance inicial, ademas, con la cuenta respectiva para asociarlos
+            return initial_balance, result_start, account
 
         with Transaction().set_context(
                 fiscalyear=data['fiscalyear'],
@@ -586,19 +591,24 @@ class AuxiliaryBookCDS(Report):
                 posted=data['posted'],
                 colgaap=data['colgaap']):
             start_accounts = Account.browse(accounts)
-        print(start_accounts[0].balance, 'valida  acceso')
         
         end1 = timer()
         delta1 = (end1 - start)
         id2start_account = {}
-        
+        balance = {}
+        accountBalance = {}
         for account in start_accounts:
             id2start_account[account.id] = account
-            if party != None:
-                balance = result_start[0][2] or 0
-                id2start_account[account.id].credit = initial_balance[0][0] or 0
-                id2start_account[account.id].debit = initial_balance[0][1] or 0
-                id2start_account[account.id].balance = balance 
+            #Evalua si el reporte fue filtrado por tercero o no, si lo esta ingresa a realiza la consulta del tercero por cada una de las cuentas seleccionadas
+            if data['party'] != None:
+                party, = Party.search([('id', '=', data['party'])])
+                initial_balance, result_start, accountId = get_party(account=account.id, party=data['party']) # se obtiene los balances iniciales de los terceros con cada una de las cuentas
+                if (None in list(initial_balance[0])) or (None in list(result_start[0])):
+                    print('esta entrando aqui')
+                    accountBalance[accountId] = result_start[0][2] # En este diccionario se agrega cada saldos inciales asociado a cada una de las cuentas
+                    id2start_account[accountId].credit = initial_balance[0][0] or 0
+                    id2start_account[accountId].debit = initial_balance[0][1] or 0
+                    id2start_account[accountId].balance = result_start[0][2] or 0
 
         # --------------------------------------------------------------
 
@@ -616,6 +626,7 @@ class AuxiliaryBookCDS(Report):
         for account in end_accounts:
             id2end_account[account.id] = account
 
+
         if not data['empty_account']:
             accounts_ids = [a.id for a in accounts]
             account2lines = dict(cls.get_lines(accounts,
@@ -632,15 +643,22 @@ class AuxiliaryBookCDS(Report):
         end3 = timer()
         delta3 = (end3 - end2)
         
-        account_id2lines, credit, debit = cls.lines(accounts,
+        account_id2lines, result = cls.lines(accounts,
             list(set(end_periods).difference(set(start_periods))),
             data['posted'], data['party'], data['reference'], data['colgaap'])
+        
 
         if party != None:
-            for account in end_accounts:
-                id2end_account[account.id].credit = credit
-                id2end_account[account.id].debit = debit
-                id2end_account[account.id].balance = (balance + debit - credit)
+            for start_account in accountBalance:
+                #Recorremos el diccionario con la informacion de los saldos iniciales de cada una de las cuenta y evaluamos si esta cuenta, tiene informaciones relacionada para cargas los datos
+                if start_account in result.keys():
+                    credit = result[start_account].get('credit') or 0
+                    debit = result[start_account].get('debit') or 0
+                    balance = accountBalance.get(start_account) or 0
+                    id2end_account[start_account].credit = credit
+                    id2end_account[start_account].debit = debit
+                    id2end_account[start_account].balance = (( debit - credit ) + balance)
+
 
         report_context['start_period_name'] = start_period_name
         report_context['end_period_name'] = end_period_name
@@ -660,38 +678,12 @@ class AuxiliaryBookCDS(Report):
         end = timer()
         delta_total = (end - start)
         return report_context
-    
-
-    # @classmethod
-    # def query_to_dict_detailed(cls, query):
-    #     cursor = Transaction().connection.cursor()
-    #     Party = Pool().get('party.party')
-    #     cursor.execute(*query)
-    #     columns = list(cursor.description)
-    #     result = cursor.fetchall()
-    #     res_dict = {}
-    #     moves_ids = set()
-        
-    #     for row in result:
-    #         row_dict = {}
-    #         key_id = str(row[0])+row[1]
-    #         for i, col in enumerate(columns):
-    #             row_dict[col.name] = row[i]
-    #         try:
-    #             moves_ids.add(row_dict['move'])
-    #         except:
-    #             res_dict[key_id] = {
-    #                 'party':  Party(row[0]),
-    #             }
-    #             moves_ids.add(row_dict['move'])
-    #     return res_dict, moves_ids
 
     @classmethod
     def get_lines(cls, accounts, periods, posted, party=None, reference=None, colgaap=False):
         cursor = Transaction().connection.cursor()
         _lineas = None
         where = None
-        print('Inicio proceso en esta sesion de get_lines')
         MoveLine = Pool().get('account.move.line')
         Account = Pool().get('account.move')
         Party = Pool().get('party.party')
@@ -699,15 +691,11 @@ class AuxiliaryBookCDS(Report):
         moveLine = MoveLine.__table__()
         account = Account.__table__()
         partys = Party.__table__()
-
-        clause = [
-            ('account', 'in', [a.id for a in accounts]),
-            ('period', 'in', [p.id for p in periods]),
-        ]
         
         accountfilter = [a.id for a in accounts]
         periodsfilter = [p.id for p in periods]
 
+        #Estructura condicional de where para realizar el filtro de la informacion
         if periodsfilter:
             where = account.period.in_(periodsfilter)
         if accountfilter:
@@ -715,22 +703,22 @@ class AuxiliaryBookCDS(Report):
         if party:
             where &= moveLine.party == party
         if posted:
-            where &= moveLine.state == 'posted'
+            where &= account.state == 'posted'
         if reference:
             where &= moveLine.reference.like_(reference)
-
-    
+        print(accountfilter, periodsfilter)
+        #Consulta que trae cada una de las lineas de las cuentas
         query = moveLine.join(partys, 'LEFT', condition=(partys.id == moveLine.party)
-        ).join(account, condition=(moveLine.move == account.id)
+        ).join(account, 'LEFT',condition=(moveLine.move == account.id)
         ).select(moveLine.reference, moveLine.credit, moveLine.account, moveLine.debit, moveLine.id, moveLine.description, account.date, account.number, account.id, moveLine.party, partys.name, partys.id_number
         ,where=where) 
 
         cursor.execute(*query)
-        _lineas = cursor.fetchall()
-        cursor.close()     
-                
-        lines  = _get_structured_json_data(_lineas)
+        _lineas = cursor.fetchall()    
 
+
+
+        lines  = _get_structured_json_data(_lineas)#Aqui se obtiene la estructura de json que pasara para generar el reporte
         key = operator.itemgetter('account')
         lines.sort(key=key)
         val = groupby(lines, key)
@@ -739,6 +727,7 @@ class AuxiliaryBookCDS(Report):
     @classmethod
     def lines(cls, accounts, periods, posted, party=None, reference=None, colgaap=False):  
         res = dict((a.id, []) for a in accounts)
+        result = {}
         if res:
             account2lines = cls.get_lines(accounts, periods, posted, party, reference, colgaap)
             for account_id, lines in account2lines:
@@ -748,155 +737,26 @@ class AuxiliaryBookCDS(Report):
                 rec_append = res[account_id].append
                 for line in lines:
                     line['move'] = line['move.']['number']
-                    balance += line['debit'] - line['credit']
-                    if party != None:
-                        credit += line['credit']
-                        debit += line['debit']
+                    balance += line['debit'] - line['credit']                      
                     if line['party.']:
                         line['party'] = line['party.']['name']
                         line['party_id'] = line['party.']['id_number']
                     if line['move_origin.']:
                         line['origin'] = line['move_origin.']['rec_name']
-
+                    credit += line['credit']
+                    debit += line['debit']
                     line['balance'] = balance
                     rec_append(line)
+                if party != None:
+                    # Se acomulan los valores creditos y debitos de cada cuenta para realizar el calculo del saldo inicial para el proximo periodo
+                    result[account_id]  = {
+                        'credit': credit,
+                        'debit': debit,
+                        }
         else: 
+            # Si el reporte no cuenta con informacion, el usuario recibira este mensaje y no se ejectara el reporte.
             raise UserError( message=None, description=f"El reporte no contiene informacion, no es posible generarlo")
-
-        return res, credit, debit
+        return res, result
     
-
-    # @classmethod
-    # def get_balance(cls, records, name=None):
-    #     pool = Pool()
-    #     Account = pool.get('account.account')
-    #     MoveLine = pool.get('account.move.line')
-    #     FiscalYear = pool.get('account.fiscalyear')
-    #     cursor = Transaction().connection.cursor()
-
-    #     table_a = Account.__table__()
-    #     table_c = Account.__table__()
-    #     line = MoveLine.__table__()
-    #     ids = [a.id for a in records]
-    #     account_ids = {a.account.id for a in records}
-    #     party_ids = {a.party.id for a in records}
-    #     account_party2id = {(a.account.id, a.party.id): a.id for a in records}
-    #     balances = dict((i, Decimal(0)) for i in ids)
-    #     line_query, fiscalyear_ids = MoveLine.query_get(line)
-    #     for sub_account_ids in grouped_slice(account_ids):
-    #         account_sql = reduce_ids(table_a.id, sub_account_ids)
-    #         for sub_party_ids in grouped_slice(party_ids):
-    #             party_sql = reduce_ids(line.party, sub_party_ids)
-    #             cursor.execute(*table_a.join(table_c,
-    #                     condition=(table_c.left >= table_a.left)
-    #                     & (table_c.right <= table_a.right)
-    #                     ).join(line, condition=line.account == table_c.id
-    #                     ).select(
-    #                     table_a.id,
-    #                     line.party,
-    #                     Sum(
-    #                         Coalesce(line.debit, 0)
-    #                         - Coalesce(line.credit, 0)),
-    #                     where=account_sql & party_sql & line_query,
-    #                     group_by=[table_a.id, line.party]))
-    #             for account_id, party_id, balance in cursor:
-    #                 try:
-    #                     id_ = account_party2id[(account_id, party_id)]
-    #                 except KeyError:
-    #                     # There can be more combinations of account-party in
-    #                     # the database than from records
-    #                     continue
-    #                 balances[id_] = balance
-    #     for record in records:
-    #         # SQLite uses float for SUM
-    #         if not isinstance(balances[record.id], Decimal):
-    #             balances[record.id] = Decimal(str(balances[record.id]))
-    #         exp = Decimal(str(10.0 ** -record.currency_digits))
-    #         balances[record.id] = balances[record.id].quantize(exp)
-
-    #     fiscalyears = FiscalYear.browse(fiscalyear_ids)
-
-    #     def func(records, names):
-    #         return {names[0]: cls.get_balance(records, names[0])}
-    #     return Account._cumulate(
-    #         fiscalyears, records, [name], {name: balances}, func,
-    #         deferral=None)[name]
-
-    # @classmethod
-    # def get_credit_debit(cls, records, names):
-    #     pool = Pool()
-    #     Account = pool.get('account.account')
-    #     MoveLine = pool.get('account.move.line')
-    #     FiscalYear = pool.get('account.fiscalyear')
-    #     cursor = Transaction().connection.cursor()
-
-    #     print(records, names)
-    #     result = {}
-    #     ids = [a.id for a in records]
-    #     for name in names:
-    #         if name not in {'credit', 'debit', 'amount_second_currency'}:
-    #             raise ValueError('Unknown name: %s' % name)
-    #         result[name] = dict((i, Decimal(0)) for i in ids)
-
-    #     account_ids = {a.account.id for a in records}
-    #     party_ids = {a.party.id for a in records}
-    #     account_party2id = {(a.account.id, a.party.id): a.id for a in records}
-    #     table = Account.__table__()
-    #     line = MoveLine.__table__()
-    #     line_query, fiscalyear_ids = MoveLine.query_get(line)
-    #     print(line_query)
-    #     columns = [table.id, line.party]
-    #     for name in names:
-    #         columns.append(Sum(Coalesce(Column(line, name), 0)))
-    #     for sub_account_ids in grouped_slice(account_ids):
-    #         account_sql = reduce_ids(table.id, sub_account_ids)
-    #         for sub_party_ids in grouped_slice(party_ids):
-    #             party_sql = reduce_ids(line.party, sub_party_ids)
-    #             cursor.execute(*table.join(line, 'LEFT',
-    #                     condition=line.account == table.id
-    #                     ).select(*columns,
-    #                     where=account_sql & party_sql & line_query,
-    #                     group_by=[table.id, line.party]))
-    #             for row in cursor:
-    #                 try:
-    #                     id_ = account_party2id[tuple(row[0:2])]
-    #                 except KeyError:
-    #                     # There can be more combinations of account-party in
-    #                     # the database than from records
-    #                     continue
-    #                 for i, name in enumerate(names, 2):
-    #                     # SQLite uses float for SUM
-    #                     if not isinstance(row[i], Decimal):
-    #                         result[name][id_] = Decimal(str(row[i]))
-    #                     else:
-    #                         result[name][id_] = row[i]
-    #     for record in records:
-    #         for name in names:
-    #             if name == 'amount_second_currency':
-    #                 exp = Decimal(str(10.0 ** -record.second_currency_digits))
-    #             else:
-    #                 exp = Decimal(str(10.0 ** -record.currency_digits))
-    #             result[name][record.id] = (
-    #                 result[name][record.id].quantize(exp))
-
-    #     cumulate_names = []
-    #     if Transaction().context.get('cumulate'):
-    #         cumulate_names = names
-    #     elif 'amount_second_currency' in names:
-    #         cumulate_names = ['amount_second_currency']
-    #     if cumulate_names:
-    #         fiscalyears = FiscalYear.browse(fiscalyear_ids)
-    #         return Account._cumulate(
-    #             fiscalyears, records, cumulate_names, result,
-    #             cls.get_credit_debit, deferral=None)
-    #     else:
-    #         return result
-
-    # def get_currency_digits(self, name):
-    #     return self.company.currency.digits
-
-    # def get_second_currency_digits(self, name):
-    #     return self.account.second_currency_digits
-
 
 
