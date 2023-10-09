@@ -49,5 +49,17 @@ this repository contains the full copyright notices and license terms. -->
         <menuitem parent="account.menu_reporting" action="wizard_auxiliary_book_print"
             id="menu_auxiliary_book_print" icon="tryton-print"/>
 
+
+        <!--Forzar borrado activos-->
+        <record model="ir.action.wizard" id="act_invoice_asset_force_draft">
+            <field name="name">Asset Force Draft</field>
+            <field name="wiz_name">account.invoice_asset.force_draft</field>
+        </record>
+        <record model="ir.action.keyword" id="action_invoice_asset_force_draft_keyword">
+            <field name="keyword">form_action</field>
+            <field name="model">account.asset,-1</field>
+            <field name="action" ref="act_invoice_asset_force_draft"/>
+        </record>
+        
     </data>
 </tryton>

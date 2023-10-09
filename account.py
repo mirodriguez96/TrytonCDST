@@ -760,3 +760,35 @@ class AuxiliaryBookCDS(Report):
     
 
 
+#Forzar a borrador de activo fijo
+class ActiveForceDraft(Wizard):
+    'Active Force Draft'
+    __name__ = 'account.invoice_asset.force_draft'
+    start_state = 'force_draft'
+    force_draft = StateTransition()
+
+    def transition_force_draft(self):
+        pool = Pool()
+        Asset = pool.get('account.asset')
+        ids_ = Transaction().context['active_ids']
+        for id_ in ids_:
+            asset = Asset(id_)
+            assetTable = Asset.__table__()
+            #Validacion para saber si el activo se encuentra cerrado
+            if asset.state == 'closed':
+                raise UserError('AVISO', f'El activo numero {asset.number} se encuentra cerrado y no es posible forzar su borrado')
+            #Validacion para saber si el activo ya se encuentra en borrador
+            if asset.state == 'draft':
+                return 'end'
+            cursor = Transaction().connection.cursor()
+            #Consulta que le asigna el estado borrado al activo
+            if id_:
+                cursor.execute(*assetTable.update(
+                    columns=[
+                        assetTable.state,
+                    ],
+                    values=["draft"],
+                    where=assetTable.id == id_)
+                )
+            
+        return 'end'
