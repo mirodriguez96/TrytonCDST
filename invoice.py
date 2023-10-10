@@ -59,6 +59,50 @@ class Invoice(metaclass=PoolMeta):
     # def default_cufe():
     #     return '0'
 
+    # se sobreescribe el metodo del modulo account_col
+    @classmethod
+    @ModelView.button
+    def validate_invoice(cls, invoices):
+        for inv in invoices:
+            if inv.type == 'out':
+                cls.validate_tax(inv)
+        super(Invoice, cls).validate_invoice(invoices)
+
+    # se sobreescribe el metodo del modulo account_col
+    @classmethod
+    def validate_tax(cls, invoice):
+        pool = Pool()
+        Config = pool.get('account.configuration')
+        Line = pool.get('account.invoice.line')
+        InvoiceTax = Pool().get('account.invoice.tax')
+        config = Config(1)
+        taxes_validate = [t for t in invoice.taxes if t.base and t.tax.base and t.tax.base > abs(t.base)]
+        if taxes_validate and config.remove_tax:
+            lines_to_change = [l for l in invoice.lines if l.type == 'line']
+            Line.write(lines_to_change, {'taxes': [
+                ('remove', [t.tax.id for t in taxes_validate])]})
+            InvoiceTax.delete(taxes_validate)
+            invoice.save()
+
+    # se sobreescribe el metodo del modulo account_col
+    @classmethod
+    def set_number(cls, invoices):
+        to_save = []
+        for invoice in invoices:
+            if not invoice.number and invoice.type == 'out' \
+                    and invoice.authorization:
+                invoice.check_authorization()
+                invoice.number = invoice.authorization.sequence.get()
+                to_save.append(invoice)
+            if invoice.type == 'in' and invoice.equivalent_invoice \
+                    and not invoice.number_alternate:
+                invoice.check_authorization()
+                invoice.number_alternate = invoice.authorization.sequence.get()
+                to_save.append(invoice)
+        if to_save:
+            cls.save(to_save)
+        super(Invoice, cls).set_number(invoices)
+
     # Funcion encargada de eliminar loas conciliaciones del asiento pasado como parametro
     @classmethod
     def unreconcile_move(self, move):
