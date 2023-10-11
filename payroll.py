@@ -24,11 +24,24 @@ from email.utils import formataddr, getaddresses
 from trytond.modules.company import CompanyReport
 from trytond.sendmail import sendmail
 from trytond.config import config
-# from trytond.pyson import Id
-# from trytond.i18n import gettext
-# from .exceptions import (
-# MissingSecuenceCertificate,
-#  )
+
+from dateutil import tz
+
+from_zone = tz.gettz('UTC')
+to_zone = tz.gettz('America/Bogota')
+
+_ZERO = Decimal('0.0')
+WORKDAY_DEFAULT = Decimal(7.83)
+RESTDAY_DEFAULT = 0
+WEEK_DAYS = {
+    1: 'monday',
+    2: 'tuesday',
+    3: 'wednesday',
+    4: 'thursday',
+    5: 'friday',
+    6: 'saturday',
+    7: 'sunday',
+}
 
 try:
     import html2text
@@ -1141,6 +1154,270 @@ class StaffAccess(metaclass=PoolMeta):
             Rests = Pool().get('staff.access.rests')
             Rests.delete(to_delete)
         super(StaffAccess, cls).delete(instances)
+
+
+    def _get_extras(self, employee, enter_timestamp, exit_timestamp,
+            start_rest, end_rest, rest, workday=None, restday=None):
+        pool = Pool()
+        Workday = pool.get('staff.workday_definition')
+        Holiday = pool.get('staff.holidays')
+        Contract = pool.get('staff.contract')
+
+        start_date = (enter_timestamp + timedelta(hours=5)).date()
+        contracts = Contract.search(['OR', [
+                ('employee', '=', employee.id),
+                ('start_date', '<=', start_date),
+                ('finished_date', '>=', start_date),
+            ], [
+                ('employee', '=', employee.id),
+                ('start_date', '<=', start_date),
+                ('finished_date', '=', None),
+            ]], limit=1, order=[('start_date', 'DESC')])
+
+        if not contracts:
+            raise UserError(f"staff_access_extratime {start_date}",
+                            f"missing_contract {employee.party.name}")
+
+        position_ = contracts[0].position
+        if not enter_timestamp or not exit_timestamp \
+                or not position_ or not position_.extras:
+            return {
+                'ttt': 0, 'het': 0, 'hedo': 0, 'heno': 0,
+                'reco': 0, 'recf': 0, 'dom': 0, 'hedf': 0, 'henf': 0
+            }
+
+        holidays = [day.holiday for day in Holiday.search([])]
+
+        #Ajuste UTC tz para Colombia timestamp [ -5 ]
+        enter_timestamp = enter_timestamp.replace(tzinfo=from_zone)
+        enter_timestamp = enter_timestamp.astimezone(to_zone)
+
+        exit_timestamp = exit_timestamp.replace(tzinfo=from_zone)
+        exit_timestamp = exit_timestamp.astimezone(to_zone)
+
+        # Contexto de cambio de turno
+        weekday_number = int(enter_timestamp.strftime("%u"))
+        weekday_ = WEEK_DAYS[weekday_number]
+        if not workday:
+            # position = employee.contract.position or employee.position
+            day_work = Workday.search([
+                ('weekday', '=', weekday_),
+                ('position', '=', position_.id),
+            ])
+            if day_work and enter_timestamp.date() not in holidays:
+                workday, restday = day_work[0].workday, day_work[0].restday
+            else:
+                workday = WORKDAY_DEFAULT
+        if not restday:
+            restday = RESTDAY_DEFAULT
+            print("Warning: Using default restday!")
+        print(workday, 'workday...........', restday)
+
+        restday_effective = 0
+        if rest:
+            restday_effective = Decimal(rest)
+
+        # Verifica si el usuario sale o entra un festivo
+        enter_holiday = False
+        exit_holiday = False
+
+        if (enter_timestamp.weekday() == 6) or (enter_timestamp.date() in holidays):
+            enter_holiday = True
+        if (exit_timestamp.weekday() == 6) or (exit_timestamp.date() in holidays):
+            exit_holiday = True
+
+        # To convert datetime enter/exit to decimal object
+        enterd = self._datetime2decimal(enter_timestamp)
+        exitd = self._datetime2decimal(exit_timestamp)
+
+        all_rests = []
+        for _rest in self.rests:
+            start_rest = _rest.start
+            end_rest = _rest.end
+            if start_rest and end_rest:
+                start_rest_timestamp = start_rest.replace(tzinfo=from_zone)
+                start_rest_timestamp = start_rest_timestamp.astimezone(to_zone)
+                end_rest_timestamp = end_rest.replace(tzinfo=from_zone)
+                end_rest_timestamp = end_rest_timestamp.astimezone(to_zone)
+
+                start_rest = self._datetime2decimal(start_rest_timestamp)
+                end_rest = self._datetime2decimal(end_rest_timestamp)
+                all_rests.append((start_rest, end_rest))
+
+        # To check whether date change inside of shift
+        if enter_timestamp.date() == exit_timestamp.date():
+            date_change = False
+        else:
+            date_change = True
+
+        liquid = self._calculate_shift(
+            enterd, exitd, date_change, enter_holiday, exit_holiday,
+            workday, restday, all_rests, restday_effective
+        )
+
+        res = {
+            'ttt': liquid['ttt'],
+            'het': liquid['het'],
+            'reco': liquid['reco'],
+            'recf': liquid['recf'],
+            'dom': liquid['dom'],
+            'hedo': liquid['hedo'],
+            'heno': liquid['heno'],
+            'hedf': liquid['hedf'],
+            'henf': liquid['henf'],
+        }
+        return res
+
+
+    def _calculate_shift(
+        self, enterd, exitd, date_change, enter_holiday, exit_holiday, workday,
+            restday, all_rests, restday_effective):
+        ttt = het = hedo = heno = reco = recf = dom = hedf = henf = _ZERO
+
+        if date_change:
+            exitd += 24
+
+        # T.T.T.
+        ttt = exitd - enterd - restday_effective
+        if ttt <= 0:
+            ttt = 0
+            return {'ttt': ttt, 'het': het, 'hedo': hedo, 'heno': heno,
+                'reco': reco, 'recf': recf, 'dom': dom, 'hedf': hedf, 'henf': henf}
+
+        # H.E.T.
+        workday_legal = Decimal(workday - restday)
+        # workday_effective = workday - restday_effective?
+        if ttt > workday_legal:
+            het = ttt - workday_legal
+
+        contador = enterd  # Contador que comienza con la hora de entrada
+        total = 0  # Sumador que comienza en Cero
+        in_extras = False
+        cicle = True
+        rest_moment = False
+        index_rest = 0
+        # ---------------------- main iter -----------------------------
+        while cicle:
+            # Ciclo Inicial
+            if contador == enterd:
+                if int(enterd) == int(exitd):
+                    # Significa que entro y salio en la misma hora
+                    sumador = exitd - contador
+                    cicle = False
+                else:
+                    # Significa que salio en una hora distinta a la que entro
+                    if int(enterd) == enterd:
+                        # Si entra en una hora en punto, suma una hora
+                        sumador = 1
+                    else:
+                        # Si entra en una hora no en punto suma el parcial de la hora
+                        sumador = (int(enterd) + 1) - enterd
+            elif contador >= int(exitd):
+                # Ciclo Final
+                sumador = exitd - int(exitd)
+                cicle = False
+            else:
+                # Ciclo Intermedio
+                sumador = 1
+
+            contador = contador + sumador
+            if index_rest < len(all_rests):
+                start_rest, end_rest = all_rests[index_rest]
+                if start_rest and end_rest:
+                    if contador == start_rest:
+                        pass
+                    elif (int(contador) - 1) == int(start_rest) and not rest_moment:
+                        # Ajusta sumador por empezar descanso
+                        rest_moment = True
+                        sumador = start_rest - (contador - 1)
+                        if int(start_rest) == int(end_rest):
+                            sumador, rest_moment, index_rest = self._get_all_rests(index_rest, all_rests, contador)
+                        #     index_rest += 1
+                    elif contador >= start_rest and contador <= end_rest:
+                        continue
+                    elif (int(contador) - 1) == int(end_rest) and rest_moment:
+                        # Ajusta sumador por terminar descanso
+                        sumador = contador - end_rest
+                        rest_moment = False
+                        index_rest += 1
+                    else:
+                        pass
+
+            total = total + sumador
+            is_night = True
+            if (6 < contador <= 21) or (30 < contador <= 46):
+                is_night = False
+
+            # Verifica si hay EXTRAS
+            sum_partial_rec = 0
+
+            if total > workday:
+                # Se calcula el sumador para extras
+                in_extras = True
+                sum_extra = sumador
+                if (total - sumador - restday) <= workday_legal:
+                    sum_extra = (total - restday) - workday_legal
+                    sum_partial_rec = sumador - sum_extra
+
+                if (contador <= 24 and not enter_holiday) or \
+                    (contador > 24 and not exit_holiday):
+                    if is_night:
+                        heno = self._get_sum(heno, sum_extra)
+                    else:
+                        hedo = self._get_sum(hedo, sum_extra)
+                else:
+                    if is_night:
+                        henf = self._get_sum(henf, sum_extra)
+                    else:
+                        hedf = self._get_sum(hedf, sum_extra)
+
+            # Verifica si hay DOM
+            if not in_extras:
+                if (enter_holiday and contador <= 24) or (exit_holiday and contador > 24):
+                    dom = self._get_sum(dom, sumador)
+                    if dom >= round(Decimal(7.83),2):
+                        dom = round(Decimal(7.83),2)
+
+            # Verifica si hay REC
+            if sum_partial_rec > 0:
+                in_extras = False
+                sum_rec = sum_partial_rec
+            else:
+                sum_rec = sumador
+
+            if is_night and not in_extras:
+                if (contador <= 24 and not enter_holiday) or \
+                    (contador > 24 and not exit_holiday):
+                    reco = self._get_sum(reco, sum_rec)
+                else:
+                    recf = self._get_sum(recf, sum_rec)
+                    
+        if ttt >= 7.83 and dom > Decimal(0.0):
+            dom = round(Decimal(7.83),2)
+        elif ttt <= 7.83 and dom > Decimal(0.0):
+            dom = ttt
+
+        hedo = round(Decimal(ttt) - Decimal(7.83),2) if hedo != float(0) else float(0)
+        heno = round(Decimal(ttt) - Decimal(7.83),2) if heno != float(0) else float(0)
+        hedf = round(Decimal(ttt) - Decimal(7.83),2) if hedf != float(0) else float(0)
+        henf = round(Decimal(ttt) - Decimal(7.83),2) if henf != float(0) else float(0)
+
+        return {'ttt': ttt, 'het': round(het,2), 'hedo': float(0) if hedo <= float(0) else hedo, 'heno': float(0) if heno <= float(0) else heno,
+                'reco': reco, 'recf': recf, 'dom': dom, 'hedf': float(0) if hedf <= float(0) else hedf, 'henf': float(0) if henf <= float(0) else  henf}
+    
+    # Obtiene la suma de los descansos
+    def _get_all_rests(self, index_rest, all_rests, contador):
+        sumador = 1
+        rest_moment = False
+        for start_rest, end_rest in all_rests[index_rest:]:
+            if (int(contador) - 1) == int(start_rest):
+                rest_moment = True
+                if int(start_rest) == int(end_rest):
+                    sumador = sumador - (end_rest - start_rest)
+                    rest_moment = False
+                    index_rest += 1
+        return sumador, rest_moment, index_rest
+
 
 class ImportBiometricRecords(Wizard):
     'Import Biometric Records'
