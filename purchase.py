@@ -26,6 +26,10 @@ class Purchase(metaclass=PoolMeta):
                                     )
     order_tecno_sent = fields.Boolean('Order TecnoCarnes sent', readonly=True)
 
+    @staticmethod
+    def default_order_tecno():
+        return 'no'
+
     @classmethod
     def copy(cls, purchases, default=None):
         if default is None:
