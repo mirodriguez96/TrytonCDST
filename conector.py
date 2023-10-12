@@ -55,7 +55,6 @@ class Actualizacion(ModelSQL, ModelView):
             #Se crea un registro con la actualización
             actualizacion = Actualizacion()
             actualizacion.name = name
-            actualizacion.logs = 'logs...'
             actualizacion.save()
         return actualizacion
 
@@ -74,8 +73,7 @@ class Actualizacion(ModelSQL, ModelView):
                 fecha = (actualizacion.create_date - datetime.timedelta(hours=6))
         return fecha
 
-    # se solicita una actualizacion y una lista de registros (logs) para validar si existen
-    # y si no existen, se almacena en el campo logs de la actualizacion dada
+    # Se recibe un dicionario con los mensajes arrojados en la importacion
     def add_logs(self, logs):
         now = datetime.datetime.now()# - datetime.timedelta(hours=5)
         if not logs:

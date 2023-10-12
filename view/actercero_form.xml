@@ -1,5 +1,6 @@
 <?xml version="1.0"?>
 <form>
+    <field name="name"/>
     <group id="quantity_imported" colspan="4" col="6">
         <label name="quantity"/>
         <field name="quantity"/>
