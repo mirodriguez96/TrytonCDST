@@ -68,7 +68,7 @@ class Party(metaclass=PoolMeta):
             return
         values = {
             'to_create': [],
-            'logs': [],
+            'logs': {},
         }
         parties = cls._get_party_documentos(terceros_db, 'nit_cedula')
         # Comenzamos a recorrer los terceros traidos por la consulta
@@ -90,8 +90,7 @@ class Party(metaclass=PoolMeta):
                 if nit_cedula in parties['active']:
                     party = parties['active'][nit_cedula]
                 elif nit_cedula in parties['inactive']:
-                    msg = f"El tercero {nit_cedula} esta marcado como inactivo"
-                    values['logs'].append(msg)
+                    values['logs'][nit_cedula] = "El tercero esta marcado como inactivo"
                     continue
                 # Ahora verificamos si el tercero existe en tryton
                 if party:
@@ -203,12 +202,11 @@ class Party(metaclass=PoolMeta):
                         party['contact_mechanisms'] = [('create', contacts)]
                     values['to_create'].append(party)
             except Exception as e:
-                msg = f"EXCEPCION TERCERO {nit_cedula} : {str(e)}"
-                values['logs'].append(msg)
+                values['logs'][nit_cedula] = f"EXCEPCION: {str(e)}"
         if values['to_create']:
             Party.create(values['to_create'])
         #Se almacena los registros y finaliza el importe
-        Actualizacion.add_logs(actualizacion, values['logs'])
+        actualizacion.add_logs(values['logs'])
         print("FINISH TERCEROS")
 
 
@@ -234,7 +232,7 @@ class Party(metaclass=PoolMeta):
             return
         values = {
             'to_create': [],
-            'logs': [],
+            'logs': {},
         }
         country_code, = Country.search([('code', '=', '169')])
         print(country_code)
@@ -243,8 +241,7 @@ class Party(metaclass=PoolMeta):
                 nit = (dir.nit).replace('\n',"")
                 party = Party.search([('id_number', '=', nit)])
                 if not party:
-                    msg = f"NO SE ENCONTRO EL TERCERO {nit}"
-                    values['logs'].append(msg)
+                    values['logs'][nit] = "NO SE ENCONTRO EL TERCERO"
                     continue
                 id_tecno = nit+'-'+str(dir.codigo_direccion)
                 address = Address.search([('id_tecno', '=', id_tecno)])
@@ -257,7 +254,8 @@ class Party(metaclass=PoolMeta):
                         write_date = (address.write_date - datetime.timedelta(hours=5))
                     elif address.create_date:
                         create_date = (address.create_date - datetime.timedelta(hours=5))
-                    if (ultimo_cambiod and write_date and ultimo_cambiod > write_date) or (ultimo_cambiod and not write_date and ultimo_cambiod > create_date):
+                    if (ultimo_cambiod and write_date and ultimo_cambiod > write_date) or \
+                        (ultimo_cambiod and not write_date and ultimo_cambiod > create_date):
                         region = list(dir.CodigoSucursal.strip())
                         if len(region) > 4:
                             department_code = Department.search([('code', '=', region[0]+region[1])])
@@ -286,12 +284,11 @@ class Party(metaclass=PoolMeta):
                     addressn['party'] = party[0].id
                     values['to_create'].append(addressn)
             except Exception as e:
-                msg = f"EXCEPCION {nit} : {str(e)}"
-                values['logs'].append(msg)
+                values['logs'][id_tecno] = f"EXCEPCION: {str(e)}"
         if values['to_create']:
             Address.create(values['to_create'])
         # Se almacena los registros y finaliza el importe
-        Actualizacion.add_logs(actualizacion, values['logs'])
+        actualizacion.add_logs(values['logs'])
         print("FINISH DIRECCION TERCEROS")
 
 

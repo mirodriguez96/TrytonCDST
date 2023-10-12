@@ -92,6 +92,7 @@ def register():
         account.AuxiliaryBookStartCDS,
         conector.ImportedDocument,
         payroll.StaffAccessView,
+        conector.ConectorLog,
         module='conector', type_='model')
 
     Pool.register(

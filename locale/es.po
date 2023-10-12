@@ -40,27 +40,43 @@ msgstr "Actualización"
 
 msgctxt "field:conector.actualizacion,quantity:"
 msgid "Quantity"
-msgstr "# Importar"
+msgstr "Cantidad a importar"
 
 msgctxt "field:conector.actualizacion,imported:"
 msgid "Imported"
-msgstr "# Importado"
+msgstr "Cantidad importada"
 
 msgctxt "field:conector.actualizacion,exceptions:"
 msgid "Exceptions"
-msgstr "# Excepciones"
+msgstr "Cantidad de excepciones"
 
 msgctxt "field:conector.actualizacion,cancelled:"
 msgid "Cancelled"
-msgstr "# Anulados"
+msgstr "Cantidad anulada"
 
 msgctxt "field:conector.actualizacion,not_imported:"
 msgid "Not imported"
-msgstr "# Sin importar"
+msgstr "Cantidad sin importar"
 
 msgctxt "field:conector.actualizacion,logs:"
 msgid "Logs"
 msgstr "Registros"
+
+msgctxt "field:conector.actualizacion,log:"
+msgid "Log"
+msgstr "Registro"
+
+msgctxt "field:conector.log,event_time:"
+msgid "Event time"
+msgstr "Hora del evento"
+
+msgctxt "field:conector.log,message:"
+msgid "Message"
+msgstr "Mensaje"
+
+msgctxt "field:conector.log,state:"
+msgid "State"
+msgstr "Estado"
 
 msgctxt "model:ir.action,name:act_payrollelectronic_cdst"
 msgid "Send supplier it"

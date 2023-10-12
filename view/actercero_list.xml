@@ -5,9 +5,9 @@
     <field name="name" expand="1"/>
     <field name="write_date" widget="date"/>
     <field name="write_date" widget="time"/>
-    <field name="quantity"/>
+    <!-- <field name="quantity"/>
     <field name="imported"/>
     <field name="exceptions"/>
     <field name="cancelled"/>
-    <field name="not_imported"/>
+    <field name="not_imported"/> -->
 </tree>

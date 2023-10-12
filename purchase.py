@@ -81,7 +81,7 @@ class Purchase(metaclass=PoolMeta):
         if company_operation:
             CompanyOperation = pool.get('company.operation_center')
             operation_center = CompanyOperation.search([], order=[('id', 'DESC')], limit=1)
-        logs = [] # lista utilizada para almacenar los mensajes (logs) en el proceso de la importación
+        logs = {}
         to_created = [] # lista utilizada para almacenar los documentos que se importaron correctamente
         to_exception = [] # lista utilizada para almacenar los documentos que tuvieron alguna excepcion en el proceso de la importación
         not_import = [] # lista utilizada para almacenar los documentos que NO se deben importar (anulados)
@@ -96,22 +96,18 @@ class Purchase(metaclass=PoolMeta):
                 existe = Purchase.search([('id_tecno', '=', id_compra)])
                 if existe:
                     if compra.anulado == 'S':
-                        msg =  f"El documento {id_compra} fue eliminado de tryton porque fue anulado en TecnoCarnes"
-                        logs.append(msg)
+                        logs[id_compra] = "El documento fue eliminado de tryton porque fue anulado en TecnoCarnes"
                         cls.delete_imported_purchases(existe)
                         not_import.append(id_compra)
                         continue
                     to_created.append(id_compra)
                     continue
                 if compra.anulado == 'S':
-                    msg = f"{id_compra} Documento anulado en TecnoCarnes"
-                    logs.append(msg)
+                    logs[id_compra] = "Documento anulado en TecnoCarnes"
                     not_import.append(id_compra)
                     continue
-                print(id_compra)
                 if company_operation and not operation_center:
-                    msg = f"{id_compra} Falta el centro de operación"
-                    logs.append(msg)
+                    logs[id_compra] = "Falta el centro de operación"
                     to_exception.append(id_compra)
                     continue
                 purchase = Purchase()
@@ -129,8 +125,8 @@ class Purchase(metaclass=PoolMeta):
                     party = parties['active'][nit_cedula]
                 if not party:
                     if nit_cedula not in parties['inactive']:
-                        msg = f"EXCEPCION {id_compra} - No se encontró el tercero con id {nit_cedula}"
-                        logs.append(msg)
+                        msg = f"EXCEPCION: No se encontró el tercero con id {nit_cedula}"
+                        logs[id_compra] = msg
                         to_exception.append(id_compra)
                     continue
                 purchase.party = party
@@ -141,8 +137,8 @@ class Purchase(metaclass=PoolMeta):
                 #Se indica a que bodega pertenece
                 bodega = Location.search([('id_tecno', '=', compra.bodega)])
                 if not bodega:
-                    msg = f"EXCEPCION {id_compra} - No se econtro la bodega {compra.bodega}"
-                    logs.append(msg)
+                    msg = f"EXCEPCION: No se econtro la bodega {compra.bodega}"
+                    logs[id_compra] = msg
                     to_exception.append(id_compra)
                     continue
                 bodega = bodega[0]
@@ -150,15 +146,14 @@ class Purchase(metaclass=PoolMeta):
                 #Se le asigna el plazo de pago correspondiente
                 plazo_pago = payment_term.search([('id_tecno', '=', compra.condicion)])
                 if not plazo_pago:
-                    msg = f"EXCEPCION {id_compra} - No se econtro el plazo de pago {compra.condicion}"
-                    logs.append(msg)
+                    msg = f"EXCEPCION: No se econtro el plazo de pago {compra.condicion}"
+                    logs[id_compra] = msg
                     to_exception.append(id_compra)
                     continue
                 purchase.payment_term = plazo_pago[0]
                 lineas_tecno = Config.get_lineasd_tecno(id_compra)
                 if not lineas_tecno:
-                    msg = f"EXCEPCION {id_compra} - No se encontraron líneas para la compra"
-                    logs.append(msg)
+                    logs[id_compra] = "EXCEPCION: No se encontraron líneas para la compra"
                     to_exception.append(id_compra)
                     continue
                 retencion_iva = False
@@ -179,14 +174,14 @@ class Purchase(metaclass=PoolMeta):
                     #print(id_producto)
                     producto = Product.search([('id_tecno', '=', str(lin.IdProducto))])
                     if not producto:
-                        msg = f"{id_compra} No se encontro el producto {str(lin.IdProducto)} - Revisar si tiene variante o esta inactivo"
-                        logs.append(msg)
+                        msg = f"EXCEPCION: No se encontro el producto {str(lin.IdProducto)} - Revisar si tiene variante o esta inactivo"
+                        logs[id_compra] = msg
                         to_exception.append(id_compra)
                         break
                     #mensaje si la busqueda de "Product" trae mas de un producto
                     elif len(producto) > 1:
-                      msg = f"REVISAR {id_compra} - Hay mas de un producto que tienen el mismo código o id_tecno."
-                      logs.append(msg)
+                      msg = f"EXCEPCION: Hay mas de un producto que tienen el mismo código o id_tecno."
+                      logs[id_compra] = msg
                       to_exception.append(id_compra)
                       break
                     producto, = producto
@@ -238,18 +233,26 @@ class Purchase(metaclass=PoolMeta):
                                 impuestos_linea.append(impuestol)
                         elif impuestol.consumo and impuesto_consumo > 0:
                             #Se busca el impuesto al consumo con el mismo valor para aplicarlo
-                            tax = Tax.search([('consumo', '=', True), ('type', '=', 'fixed'), ('amount', '=', impuesto_consumo), ['OR', ('group.kind', '=', 'purchase'), ('group.kind', '=', 'both')]])
+                            tax = Tax.search([
+                                ('consumo', '=', True),
+                                ('type', '=', 'fixed'),
+                                ('amount', '=', impuesto_consumo),
+                                ['OR', ('group.kind', '=', 'purchase'),
+                                 ('group.kind', '=', 'both')]
+                                 ])
                             if tax:
                                 if len(tax) > 1:
-                                    msg = f"EXCEPCION: {id_compra} - Se encontro mas de un impuesto de tipo consumo con el importe igual a {impuesto_consumo} del grupo compras, recuerde que se debe manejar un unico impuesto con esta configuracion"
-                                    logs.append(msg)
+                                    msg = "EXCEPCION: Se encontro mas de un impuesto de tipo consumo "\
+                                        f"con el importe igual a {impuesto_consumo} del grupo compras, "\
+                                            "recuerde que se debe manejar un unico impuesto con esta configuracion"
+                                    logs[id_compra] = msg
                                     to_exception.append(id_compra)
                                     break
                                 tax, = tax
                                 impuestos_linea.append(tax)
                             else:
-                                msg = f"EXCEPCION: {id_compra} No se encontró el impuesto fijo al consumo con valor {str(impuesto_consumo)}"
-                                logs.append(msg)
+                                msg = f"EXCEPCION: No se encontró el impuesto fijo al consumo con valor {str(impuesto_consumo)}"
+                                logs[id_compra] = msg
                                 to_exception.append(id_compra)
                                 break
                         elif clase_impuesto != '05' and clase_impuesto != '06' and clase_impuesto != '07' and not impuestol.consumo:
@@ -295,8 +298,7 @@ class Purchase(metaclass=PoolMeta):
                 if not purchase.invoices:
                     purchase.create_invoice()
                     if not purchase.invoices:
-                        msg = f"EXCEPCION {id_compra} sin factura"
-                        logs.append(msg)
+                        logs[id_compra] = "EXCEPCION: sin factura"
                         to_exception.append(id_compra)
                         continue
                 for invoice in purchase.invoices:
@@ -316,7 +318,7 @@ class Purchase(metaclass=PoolMeta):
                             original_invoice = original_invoice[0]
                         else:
                             msg = f"NO SE ENCONTRO LA FACTURA {dcto_base} PARA CRUZAR CON LA DEVOLUCION {invoice.number}"
-                            logs.append(msg)
+                            logs[id_compra] = msg
                     invoice.save()
                     #Verificamos que el total de la tabla en sqlserver coincidan o tengan una diferencia menor a 4 decimales, para contabilizar la factura
                     ttecno = {
@@ -329,7 +331,7 @@ class Purchase(metaclass=PoolMeta):
                         f"El total de Tryton {invoice.total_amount} "\
                         f"es diferente al total de TecnoCarnes {result['total_tecno']} "\
                         f"La diferencia es de {result['diferencia']}"
-                        logs.append(msg)
+                        logs[id_compra] = msg
                         to_exception.append(id_compra)
                         continue
                     with Transaction().set_context(_skip_warnings=True):
@@ -348,11 +350,10 @@ class Purchase(metaclass=PoolMeta):
                             Invoice.process([original_invoice])
                 to_created.append(id_compra)
             except Exception as e:
-                msg = f"EXCEPCION {id_compra} - {str(e)}"
-                logs.append(msg)
+                logs[id_compra] = f"EXCEPCION: {str(e)}"
                 to_exception.append(id_compra)
                 continue
-        Actualizacion.add_logs(actualizacion, logs)
+        actualizacion.add_logs(logs)
         for idt in to_created:
             #print('creado...', idt) #TEST
             Config.update_exportado(idt, 'T')
@@ -639,7 +640,7 @@ class Purchase(metaclass=PoolMeta):
         Location = pool.get('stock.location')
         result = {
             'tryton': {},
-            'logs': [],
+            'logs': {},
             'exportado': {}
         }
         excepcion = []
@@ -669,8 +670,8 @@ class Purchase(metaclass=PoolMeta):
             if idproducto not in products:
                 product = Product.search([('code', '=', idproducto)])
                 if not product:
-                    msg = f"EXCEPCION - {id_tecno} el producto con codigo {idproducto} no fue encontrado"
-                    result['logs'].append(msg)
+                    msg = f"EXCEPCION: el producto con codigo {idproducto} no fue encontrado"
+                    result['logs'][id_tecno] = msg
                     excepcion.append(id_tecno)
                     result['exportado'][id_tecno] = 'E'
                     continue
@@ -686,16 +687,16 @@ class Purchase(metaclass=PoolMeta):
             # Se valida el precio del producto
             valor_unitario = Decimal(linea.Valor_Unitario)
             if valor_unitario <= 0:
-                msg = f"EXCEPCION - {id_tecno} el valor unitario no puede ser menor o igual a cero. Su valor es: {valor_unitario} "
-                result['logs'].append(msg)
+                msg = f"EXCEPCION: el valor unitario no puede ser menor o igual a cero. Su valor es: {valor_unitario} "
+                result['logs'][id_tecno] = msg
                 excepcion.append(id_tecno)
                 result['exportado'][id_tecno] = 'E'
                 continue
             # Se valida la cantidad del producto
             cantidad = float(linea.Cantidad_Facturada)
             if cantidad <= 0:
-                msg = f"EXCEPCION - {id_tecno} la cantidad no puede ser menor o igual a cero. Su valor es: {cantidad} "
-                result['logs'].append(msg)
+                msg = f"EXCEPCION: la cantidad no puede ser menor o igual a cero. Su valor es: {cantidad} "
+                result['logs'][id_tecno] = msg
                 excepcion.append(id_tecno)
                 result['exportado'][id_tecno] = 'E'
                 continue
@@ -735,8 +736,7 @@ class Purchase(metaclass=PoolMeta):
             number = purchase.number
             if purchase.shipments:
                 id_tecno = tecno[number]['id_tecno']
-                msg = f"EXCEPCION - {id_tecno} el envío de la orden de compra ya se encuentra creado"
-                result['logs'].append(msg)
+                result['logs'][id_tecno] = "EXCEPCION: el envío de la orden de compra ya se encuentra creado"
                 excepcion.append(id_tecno)
                 result['exportado'][id_tecno] = 'E'
                 continue
@@ -752,11 +752,9 @@ class Purchase(metaclass=PoolMeta):
         for number in tecno.keys():
             id_tecno = tecno[number]['id_tecno']
             if number not in result['tryton'] and id_tecno not in excepcion:
-                msg = f"EXCEPCION - {id_tecno} no se encontro la orden de compra"
-                result['logs'].append(msg)
+                result['logs'][id_tecno] = "EXCEPCION: no se encontro la orden de compra"
                 excepcion.append(id_tecno)
                 result['exportado'][id_tecno] = 'E'
-            
         return result
     
 
@@ -769,7 +767,7 @@ class Purchase(metaclass=PoolMeta):
         lineas = Config.get_documentos_orden()
         result = cls._validate_order(lineas)
         cls._create_shipment(result['tryton'])
-        Actualizacion.add_logs(actualizacion, result['logs'])
+        actualizacion.add_logs(result['logs'])
         for idt, exportado in result['exportado'].items():
             Config.update_exportado(idt, exportado)
 

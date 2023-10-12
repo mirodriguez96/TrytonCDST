@@ -46,8 +46,6 @@ class Sale(metaclass=PoolMeta):
         #Se crea o actualiza la fecha de importación
         actualizacion = Actualizacion.create_or_update('VENTAS')
         if not data:
-            actualizacion.save()
-            print('FINISH VENTAS')
             return
         Sale = pool.get('sale.sale')
         SaleLine = pool.get('sale.line')
@@ -80,7 +78,7 @@ class Sale(metaclass=PoolMeta):
         venta_electronica = Config.get_data_parametros('9')
         if venta_electronica:
             venta_electronica = (venta_electronica[0].Valor).strip().split(',')
-        logs = []
+        logs = {}
         to_created = []
         to_exception = []
         not_import = []
@@ -95,17 +93,14 @@ class Sale(metaclass=PoolMeta):
                 existe = Sale.search([('id_tecno', '=', id_venta)])
                 if existe:
                     if venta.anulado == 'S':
-                        msg =  f"El documento {id_venta} fue eliminado de tryton porque fue anulado en TecnoCarnes"
-                        logs.append(msg)
+                        logs[id_venta] = "El documento fue eliminado de tryton porque fue anulado en TecnoCarnes"
                         cls.delete_imported_sales(existe)
                         not_import.append(id_venta)
                         continue
                     to_created.append(id_venta)
                     continue
-                print(id_venta)
                 if venta.anulado == 'S':
-                    msg = f"{id_venta} Documento anulado en TecnoCarnes"
-                    logs.append(msg)
+                    logs[id_venta] = "Documento anulado en TecnoCarnes"
                     not_import.append(id_venta)
                     continue
                 if venta.sw == 2:
@@ -113,12 +108,12 @@ class Sale(metaclass=PoolMeta):
                     original_invoice = Sale.search([('number', '=', dcto_base)])
                     if not original_invoice:
                         msg = f"EXCEPCION: El documento (devolucion) {id_venta} no encuentra el documento de referencia {dcto_base} para ser cruzado"
-                        logs.append(msg)
+                        logs[id_venta] = msg
                         to_exception.append(id_venta)
                         continue
                 if company_operation and not operation_center:
                     msg = f"EXCEPCION {id_venta} - Falta el centro de operación"
-                    logs.append(msg)
+                    logs[id_venta] = msg
                     to_exception.append(id_venta)
                     continue
                 analytic_account = None
@@ -129,7 +124,7 @@ class Sale(metaclass=PoolMeta):
                         analytic_account = AnalyticAccount.search([('code', '=', str(tbltipodocto[0].Encabezado))])
                         if not analytic_account:
                             msg = f'EXCEPCION {id_venta} - No se encontro la asignacion de la cuenta analitica en TecnoCarnes {str(tbltipodocto[0].Encabezado)}'
-                            logs.append(msg)
+                            logs[id_venta] = msg
                             to_exception.append(id_venta)
                             continue
                         analytic_account = analytic_account[0]
@@ -142,23 +137,20 @@ class Sale(metaclass=PoolMeta):
                     party = parties['active'][nit_cedula]
                 if not party:
                     if nit_cedula not in parties['inactive']:
-                        msg2 = f'REVISAR {id_venta} - No se encontro el tercero {nit_cedula}'
-                        logs.append(msg2)
+                        logs[id_venta] = f"EXCEPCION: No se encontro el tercero {nit_cedula}"
                         to_exception.append(id_venta)
                     continue
                 #Se indica a que bodega pertenece
                 id_tecno_bodega = venta.bodega
                 bodega = Location.search([('id_tecno', '=', id_tecno_bodega)])
                 if not bodega:
-                    msg2 = f'EXCEPCION {id_venta} - Bodega {id_tecno_bodega} no existe'
-                    logs.append(msg2)
+                    logs[id_venta] = f"EXCEPCION: Bodega {id_tecno_bodega} no existe"
                     to_exception.append(id_venta)
                     continue
                 bodega = bodega[0]
                 shop = Shop.search([('warehouse', '=', bodega.id)])
                 if not shop:
-                    msg2 = f'EXCEPCION {id_venta} - Tienda (bodega) {id_tecno_bodega} no existe'
-                    logs.append(msg2)
+                    logs[id_venta] = f"EXCEPCION: Tienda (bodega) {id_tecno_bodega} no existe"
                     to_exception.append(id_venta)
                     continue
                 shop = shop[0]
@@ -166,16 +158,14 @@ class Sale(metaclass=PoolMeta):
                 condicion = venta.condicion
                 plazo_pago = payment_term.search([('id_tecno', '=', condicion)])
                 if not plazo_pago:
-                    msg2 = f'EXCEPCION {id_venta} - Plazo de pago {condicion} no existe'
-                    logs.append(msg2)
+                    logs[id_venta] = f"EXCEPCION: Plazo de pago {condicion} no existe"
                     to_exception.append(id_venta)
                     continue
                 plazo_pago = plazo_pago[0]
                 #Ahora traemos las lineas (productos) para la venta
                 documentos_linea = Config.get_lineasd_tecno(id_venta)
                 if not documentos_linea:
-                    msg = f"EXCEPCION {id_venta} - No se encontraron líneas para la venta"
-                    logs.append(msg)
+                    logs[id_venta] = "EXCEPCION: No se encontraron líneas para la venta"
                     to_exception.append(id_venta)
                     continue
                 #Busco la terminal y se la asigno
@@ -189,14 +179,12 @@ class Sale(metaclass=PoolMeta):
                     ]
                 ])
                 if not sale_device:
-                    msg = f'EXCEPCION {id_venta} - Terminal de venta {id_tecno_device} no existe'
-                    logs.append(msg)
+                    logs[id_venta] = f"EXCEPCION: Terminal de venta {id_tecno_device} no existe"
                     to_exception.append(id_venta)
                     continue
                 #si la busqueda de "SaleDevice" trae mas de una terminal 
                 elif len(sale_device) > 1:
-                   msg = f'EXCEPCION {id_venta} - Hay mas de una terminal que concuerdan con el mismo equipo de venta y bodega'
-                   logs.append(msg)
+                   logs[id_venta] = "EXCEPCION: Hay mas de una terminal que concuerdan con el mismo equipo de venta y bodega"
                    to_exception.append(id_venta)
                    continue
                 sale_device = sale_device[0]
@@ -255,21 +243,20 @@ class Sale(metaclass=PoolMeta):
                 for lin in documentos_linea:
                     producto = Product.search(['OR', ('id_tecno', '=', str(lin.IdProducto)), ('code', '=', str(lin.IdProducto))])
                     if not producto:
-                        msg = f"REVISAR {id_venta} - No se encontro el producto {str(lin.IdProducto)} - Revisar si tiene variante o esta inactivo"
-                        logs.append(msg)
+                        msg = f"EXCEPCION: No se encontro el producto {str(lin.IdProducto)} - Revisar si tiene variante o esta inactivo"
+                        logs[id_venta] = msg
                         to_exception.append(id_venta)
                         break
                     #Verificamos si la busqueda de "Product" trae mas de un producto
                     if len(producto) > 1:
-                      msg = f"REVISAR {id_venta} - Hay mas de un producto que tienen el mismo código o id_tecno."
-                      logs.append(msg)
+                      logs[id_venta] = "EXCEPCION: Hay mas de un producto que tienen el mismo código o id_tecno."
                       to_exception.append(id_venta)
                       break
                     producto, = producto
                     #verificacion que el producto si este marcado para la venta.
                     if not producto.template.salable:
-                      msg = f"REVISAR {id_venta} - El producto {str(lin.IdProducto)} no esta marcado como vendible"
-                      logs.append(msg)
+                      msg = f"EXCEPCION: El producto {str(lin.IdProducto)} no esta marcado como vendible"
+                      logs[id_venta] = msg
                       to_exception.append(id_venta)
                       break
                     cantidad_facturada = round(float(lin.Cantidad_Facturada), 3)
@@ -340,14 +327,14 @@ class Sale(metaclass=PoolMeta):
                                         "Se encontro mas de un impuesto de tipo consumo con el "\
                                         f"importe igual a {impuesto_consumo} del grupo venta, "\
                                         "recuerde que se debe manejar un unico impuesto con esta configuracion"
-                                    logs.append(msg)
+                                    logs[id_venta] = msg
                                     to_exception.append(id_venta)
                                     break
                                 tax, = tax
                                 impuestos_linea.append(tax)
                             else:
-                                msg = f"EXCEPCION: {id_venta} - No se encontró el impuesto al consumo con el importe igual a {impuesto_consumo}"
-                                logs.append(msg)
+                                msg = f"EXCEPCION: No se encontró el impuesto al consumo con el importe igual a {impuesto_consumo}"
+                                logs[id_venta] = msg
                                 to_exception.append(id_venta)
                                 break
                         elif clase_impuesto != '05' and clase_impuesto != '06' and clase_impuesto != '07' and not impuestol.consumo:
@@ -399,16 +386,14 @@ class Sale(metaclass=PoolMeta):
                         cls.set_payment_pos(pagos, sale, args_statement, logs, to_exception)
                         Sale.update_state([sale])
                     elif sale.payment_term.id_tecno == '0':
-                        msg = f"REVISAR {sale.id_tecno} - No se encontraron pagos asociados en tecnocarnes (documentos_che)"
-                        logs.append(msg)
+                        logs[id_venta] = "EXCEPCION: No se encontraron pagos asociados en tecnocarnes (documentos_che)"
                         to_exception.append(sale.id_tecno)
                         continue
                 to_created.append(id_venta)
             except Exception as e:
-                msg = f"EXCEPCION {id_venta} - {str(e)}"
-                logs.append(msg)
+                logs[id_venta] = f"EXCEPCION: {str(e)}"
                 to_exception.append(id_venta)
-        Actualizacion.add_logs(actualizacion, logs)
+        actualizacion.add_logs(logs)
         for idt in to_created:
             if idt not in to_exception:
                 Config.update_exportado(idt, 'T')
@@ -448,8 +433,7 @@ class Sale(metaclass=PoolMeta):
         if not sale.invoices:
             sale._process_invoice([sale])
             if not sale.invoices:
-                msg1 = f"REVISAR {sale.id_tecno} VENTA SIN FACTURA"
-                logs.append(msg1)
+                logs[sale.id_tecno] = "REVISAR: VENTA SIN FACTURA"
                 to_exception.append(sale.id_tecno)
         for invoice in sale.invoices:
             invoice.accounting_date = sale.sale_date
@@ -470,7 +454,7 @@ class Sale(metaclass=PoolMeta):
                     invoice.original_invoice = original_invoice[0]
                 else:
                     msg = f"REVISAR: NO SE ENCONTRO LA FACTURA {dcto_base} PARA CRUZAR CON LA DEVOLUCION {invoice.number}"
-                    logs.append(msg)
+                    logs[sale.id_tecno] = msg
                     to_exception.append(sale.id_tecno)
             Invoice.validate_invoice([invoice])
             result = cls._validate_total(invoice.total_amount, venta)
@@ -479,7 +463,7 @@ class Sale(metaclass=PoolMeta):
                 f"El total de Tryton {invoice.total_amount} "\
                 f"es diferente al total de TecnoCarnes {result['total_tecno']} "\
                 f"La diferencia es de {result['diferencia']}"
-                logs.append(msg)
+                logs[sale.id_tecno] = msg
                 to_exception.append(sale.id_tecno)
                 continue
             try:
@@ -537,7 +521,7 @@ class Sale(metaclass=PoolMeta):
             valor = pago.valor
             if valor == 0:
                 msg = f"REVISAR {sale.id_tecno} - Revisar el valor del pago, su valor es de {valor}"
-                logs.append(msg)
+                logs[sale.id_tecno] = msg
                 to_exception.append(sale.id_tecno)
                 return
             fecha = str(pago.fecha).split()[0].split('-')
@@ -558,7 +542,7 @@ class Sale(metaclass=PoolMeta):
             result_payment = cls.multipayment_invoices_statement(data_payment, logs, to_exception)
             if result_payment != 'ok':
                 msg = f"REVISAR: ERROR AL PROCESAR EL PAGO DE LA VENTA POS {sale.number}"
-                logs.append(msg)
+                logs[sale.id_tecno] = msg
 
     
     #Metodo encargado de buscar el estado de cuenta de una terminal y en caso de no existir, se crea.
@@ -620,7 +604,7 @@ class Sale(metaclass=PoolMeta):
                         Sale.do_reconcile([sale])
                     else:
                         msg = f"REVISAR {sale.id_tecno} - venta pos con un total pagado mayor al total de la venta"
-                        logs.append(msg)
+                        logs[sale.id_tecno] = msg
                         # to_exception.append(sale.id_tecno)
                     continue
             total_pay = args.get('sales')[sale]
@@ -640,8 +624,7 @@ class Sale(metaclass=PoolMeta):
                         'account_receivable': config.default_account_receivable.id
                     })
                 else:
-                    msg = f"sale_pos.msg_party_without_account_receivable"
-                    logs.append(msg)
+                    logs[sale.id_tecno] = "EXCEPCION: sale_pos.msg_party_without_account_receivable"
                     to_exception.append(sale.id_tecno)
                     continue
             account_id = sale.party.account_receivable.id
