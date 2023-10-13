@@ -60,6 +60,34 @@ this repository contains the full copyright notices and license terms. -->
             <field name="model">account.asset,-1</field>
             <field name="action" ref="act_invoice_asset_force_draft"/>
         </record>
+
+
+        <!-- Print comprehensive income statement -->
+        <record model="ir.action.wizard" id="wizard_income_statement">
+            <field name="name">Income statement Report</field>
+            <field name="wiz_name">account.income_statement_wizard_cds</field>    
+        </record>
+
+      <record model="ir.action.keyword" id="act_income_statement_keyword">
+            <field name="keyword">form_action</field>
+            <field name="model">account.account.type,-1</field>
+            <field name="action" ref="wizard_income_statement"/>
+      </record>  
+
+        <record model="ir.ui.view" id="detailed_income_statement_form">
+            <field name="model">account.income_statement.start</field>
+            <field name="type">form</field>
+            <field name="name">detailed_income_statement_form</field>
+        </record>
+
+        <record model="ir.action.report" id="print_income_statement">
+            <field name="name">Income statement Report</field>
+            <field name="model">account.account.type</field>
+            <field name="report_name">account.income_statement_report</field>
+            <field name="report">conector/reports/analytic_accounts.fods</field>
+            <field name="template_extension">ods</field>
+            <field name="translatable">False</field>
+        </record>
         
     </data>
 </tryton>

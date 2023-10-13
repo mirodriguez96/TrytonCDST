@@ -1,7 +1,7 @@
 from collections import defaultdict
 from decimal import Decimal
 from timeit import default_timer as timer
-
+from datetime import date
 import operator
 from itertools import groupby
 try:
@@ -10,16 +10,18 @@ except ImportError:
     izip = zip
 from trytond.report import Report
 
-from sql import Column, Null
+from sql import Column, Null, Literal, functions, Cast
 from sql.aggregate import Sum,Max, Min
 from sql.conditionals import Coalesce
 from collections import OrderedDict
+from sql.operators import Like, Between
 
 
+from trytond.model.exceptions import AccessError
 from trytond.i18n import gettext
 from trytond.exceptions import UserError
-from trytond.model import ModelView, fields
-from trytond.pyson import Eval
+from trytond.model import ModelView, fields, Workflow, ModelSQL
+from trytond.pyson import Eval, Or, If, Bool, Not
 from trytond.transaction import Transaction
 from trytond.tools import grouped_slice, reduce_ids, lstrip_wildcard
 from trytond.wizard import Wizard, StateView, StateAction, Button,StateReport, StateTransition
@@ -792,3 +794,290 @@ class ActiveForceDraft(Wizard):
                 )
             
         return 'end'
+
+    
+# Reporte de estado de resultado integral 
+class IncomeStatementView(ModelView):
+    'Income Statement View'
+    __name__ = 'account.income_statement.start'
+    company = fields.Many2One('company.company', 'Company', required=True)
+    from_date = fields.Date("From Date",
+        domain=[
+            If(Eval('to_date') & Eval('from_date'),
+                ('from_date', '<=', Eval('to_date')),
+                ()),
+            ],
+        depends=['to_date'], required=True)
+    to_date = fields.Date("To Date",
+        domain=[
+            If(Eval('from_date') & Eval('to_date'),
+                ('to_date', '>=', Eval('from_date')),
+                ()),
+            ],
+        depends=['from_date'], required=True)
+    
+
+    posted = fields.Boolean('Posted Move', help='Show only posted move')
+
+    accumulated = fields.Boolean('Accumulated', help='Show detailed report', on_change_with='on_change_with_accumulated')
+
+    Analitic_filter = fields.Boolean('Analytic Detailed', help='Show Analytic Detailed', on_change_with='on_change_with_Analitic_filter')
+
+    analytic_accounts = fields.Many2Many('analytic_account.account', None, None, 'Analytic Account', states={
+            'readonly': ~Not(Eval('allstart')),
+            'required': ~Bool(Eval('allstart'))}, depends=['allstart'],domain=[('active', '=', True),])
+
+    allstart = fields.Boolean('All', help='Show all Analytic', on_change_with='on_change_with_allstart' )
+    
+
+        
+
+    @staticmethod
+    def default_fiscalyear():
+        FiscalYear = Pool().get('account.fiscalyear')
+        return FiscalYear.find(
+            Transaction().context.get('company'), exception=False)
+
+    @staticmethod
+    def default_company():
+        return Transaction().context.get('company')
+
+    @staticmethod
+    def default_posted():
+        return False
+
+    @staticmethod
+    def default_accumulated():
+        return True
+
+    @staticmethod
+    def default_allstart():
+        return True
+    
+    @fields.depends('Analitic_filter')
+    def on_change_with_accumulated(self, name=None):
+        res = True
+        if self.Analitic_filter :
+            res = False
+
+        return res
+
+    @fields.depends('accumulated')
+    def on_change_with_Analitic_filter(self, name=None):
+        res = True
+        if self.accumulated:
+            res = False
+
+        return res
+
+    @fields.depends('analytic_accounts')
+    def on_change_with_allstart(self, name=None):
+        res = True
+        if self.analytic_accounts:
+            res = False
+        return res
+    
+    
+class IncomeStatementWizard(Wizard):
+    'Income Statement Wizard'
+    __name__ = 'account.income_statement_wizard_cds'
+    start = StateView('account.income_statement.start',
+        'conector.detailed_income_statement_form', [
+            Button('Cancel', 'end', 'tryton-cancel'),
+            Button('Print', 'print_', 'tryton-print', default=True),
+            ])
+    print_ = StateReport('account.income_statement_report')
+
+    def do_print_(self, action):
+        accumulated = False
+        Analitic_filter = False
+        allstart = False
+        analytic_accounts_ids = []
+        if self.start.accumulated:
+            accumulated = True
+        if self.start.Analitic_filter:
+            Analitic_filter = True
+        if self.start.allstart:
+            allstart = True
+
+        if self.start.analytic_accounts and not allstart:
+            analytic_accounts_ids = [acc.id for acc in self.start.analytic_accounts]
+
+        data = {
+            'company': self.start.company.id,
+            'from_date': self.start.from_date,
+            'to_date': self.start.to_date,
+            'analytic_accounts': analytic_accounts_ids,
+            'posted': self.start.posted,
+            'accumulated': accumulated,
+            'Analitic_filter': Analitic_filter,
+            'allstart': allstart
+        }
+        print(data)
+        return action, data
+
+        
+    def transition_print_(self):
+        
+        return 'end'
+
+
+class IncomeStatementReport(Report):
+    'Income Statement Report'
+    __name__ = 'account.income_statement_report'
+
+    @classmethod
+    def get_context(cls, records, header, data):
+        report_context = super().get_context(records, header, data)
+        pool = Pool()
+        cursor = Transaction().connection.cursor()
+        Account = pool.get('account.account')
+        Move = pool.get('account.move')
+        Line = pool.get('account.move.line')
+        AccountType = pool.get('account.account.type')
+        Company = pool.get('company.company')
+        AnalyticAccount = pool.get('analytic_account.account')
+        AnalyticAccountLine = pool.get('analytic_account.line') 
+        
+        account = Account.__table__()
+        accountType = AccountType.__table__()
+        move = Move.__table__()
+        line = Line.__table__()
+        analyticAccount = AnalyticAccount.__table__()
+        analyticAccountLine = AnalyticAccountLine.__table__()
+
+
+        # Realizamos las condiciones para la busqueda en la base de datos
+        where = analyticAccountLine.date >= data['from_date'] 
+        where &= analyticAccountLine.date <= data['to_date']
+        where &= accountType.statement == 'income'
+        where &= analyticAccount.active == True
+
+        # if data['posted']:
+        #     where &= move.state == 'posted'
+
+        # si cumple la siguiente codicion, se 
+        # agregan los id de las cuentas analiticas 
+        # seleccionadas en los parametros de entrada
+        if data['analytic_accounts'] and not data['allstart']:
+
+            where &=  analyticAccount.id.in_(data['analytic_accounts'])
+
+
+        # Aqui se asignan las columnas para los parametros que extraeremos de la db
+        columns = {
+            'parent_results': accountType.parent,
+            'type_account': accountType.name,
+            'sequence': accountType.sequence,
+            'id_analytic': analyticAccount.code,
+            'name_analytic': analyticAccount.name,
+            'account' : account.code,
+            'name': account.name,
+            'date': analyticAccountLine.date,
+            'description_line': line.description,
+            'debit': analyticAccountLine.debit,  
+            'credit' :analyticAccountLine.credit,  
+            'neto':  Sum(analyticAccountLine.debit - analyticAccountLine.credit),
+        }
+
+
+        # Construccion de la consulta a la 
+        # base de datos, con sintaxis de pythom-sql
+        selected = analyticAccountLine.join(line, 'LEFT', condition = analyticAccountLine.move_line == line.id
+                                    ).join(account, 'LEFT', condition = account.id == line.account
+                                    ).join(accountType, 'LEFT', condition = accountType.id == account.type
+                                    ).join(analyticAccount, 'LEFT', condition = analyticAccountLine.account == analyticAccount.id
+                                    ).select(*columns.values(), where=where, 
+                                             group_by=(accountType.sequence,  analyticAccountLine.id, account.name,  account.code, 
+                                                       line.description, analyticAccount.code, analyticAccount.name, accountType.name,accountType.parent),
+                                                       order_by=(account.code))
+        
+        # ejecuta la consulta, el * se asigna para que lo pase como un string
+        cursor.execute(*selected)
+        
+        # Realizamos un fetch a la consulta para extraer los datos obtenidos
+        result = cursor.fetchall()
+
+        records = []
+
+        print(result)
+        # Realizamos validacion para saber si existen datos extraidos de la db
+        if result:  
+            finalitems = {}
+            items = {}
+             
+            for index, record in enumerate(result):
+                fila_dict =  OrderedDict() # Le damos la extructura de diccionario
+
+                # con esta funcion lo que hacemos es crear el 
+                # diccionario con las claves de las columnas 
+                # y asi sea mas facil acceder a los datos
+                fila_dict = dict(zip(columns.keys(), record))
+
+                parent_results = fila_dict['parent_results']
+                type_account = fila_dict['type_account']
+                analytic_name = fila_dict['name_analytic']
+                sequence = fila_dict['sequence']
+
+
+                # Si se selecciono la opcion de 'Analitic_filter' 
+                # en los parametros de entrada, ingresamos 
+                # directamente a ingresar el diccionario de datos
+                if data['Analitic_filter']:
+                    
+                    records.append(fila_dict)
+
+
+                elif data['accumulated']:
+                    
+                    if analytic_name not in items:
+                        items[analytic_name] = {
+                            'account_type': {}
+                            }
+
+                    if sequence not in items[analytic_name]['account_type']:
+                        items[analytic_name]['account_type'][sequence] = {
+                            'account_type': type_account,
+                            'neto': 0
+                            }
+                        
+                    items[analytic_name]['account_type'][sequence]['neto'] += fila_dict['neto']   
+
+
+                # Es este tramo de codigo, realizamos una acomulacion 
+                # de los datos para la extrutura de el estado de 
+                # resultado, utilidas bruta, utilidad antes de 
+                # impuesto y utilidad neta
+                if analytic_name not in finalitems:
+                    name = AccountType.search_read([('name', '=', 'UTILIDAD NETA')], fields_names=['sequence', 'name'])
+                    finalitems[analytic_name] = {
+                        'parent_results': {},
+                        'sequence': name[0]['sequence'],
+                        'name': name[0]['name'],
+                        'UTILIDAD_NETA' : 0
+                    }
+
+                if parent_results not in finalitems[analytic_name]['parent_results']:
+                    name = AccountType.search_read([('id', '=', parent_results)], fields_names=['name', 'sequence'])
+                    finalitems[analytic_name]['parent_results'][parent_results] = {
+                        'account_type_result': name[0]['name'],
+                        'sequence': name[0]['sequence'], 
+                        'neto_secuence' : 0,
+                    }
+
+                finalitems[analytic_name]['parent_results'][parent_results]['neto_secuence'] += fila_dict['neto']
+                finalitems[analytic_name]['UTILIDAD_NETA'] += fila_dict['neto']
+
+        else: 
+            # Si el reporte no cuenta con informacion, el usuario recibira este mensaje y no se ejectara el reporte.
+            raise UserError( message=None, description=f"El reporte no contiene informacion, no es posible generarlo") 
+
+        report_context['accumulated'] = str(data['accumulated'])
+        report_context['Analitic_filter'] = str(data['Analitic_filter'])
+        report_context['finalitems'] = finalitems
+        report_context['records'] = records if records else items
+        report_context['company'] = Company(Transaction().context.get('company'))
+        report_context['date'] = Transaction().context.get('date')
+        return report_context
+    
+
