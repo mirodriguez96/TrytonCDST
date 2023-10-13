@@ -132,6 +132,7 @@ def register():
         conector.ImportedDocumentWizard,
         payroll.StaffAccessWizard,
         account.IncomeStatementWizard,
+        account.ActiveForceDraft,
         module='conector', type_='wizard')
 
     Pool.register(
