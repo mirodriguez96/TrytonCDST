@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<!-- This file is part of Tryton.  The COPYRIGHT file at the top level of
+this repository contains the full copyright notices and license terms. -->
+<form >
+    <label name="company"/>
+    <field name="company" widget="selection"/>
+    <label name="posted"/>
+    <field name="posted"/>
+    <label name="from_date"/>
+    <field name="from_date"/>
+    <label name="to_date"/>
+    <field name="to_date"/>
+    <label name="accumulated"/>
+    <field name="accumulated"/>
+    <label name="Analitic_filter"/>
+    <field name="Analitic_filter"/>
+    <label name="allstart"/>
+    <field name="allstart"/>
+    <field name="analytic_accounts" colspan="4"/>
+</form>
