@@ -30,48 +30,42 @@ class Location(metaclass=PoolMeta):
         actualizacion = Actualizacion.create_or_update('BODEGAS')
         _zones = []
         _warehouses = []
+        logs = {}
         for bodega in bodegas:
             id_tecno = bodega.IdBodega
             nombre = bodega.Bodega.strip()
-
             existe = Location.search([('id_tecno', '=', id_tecno)])
             if existe:
-                existe[0].name = nombre
-                _warehouses.append(existe[0])
+                if existe[0].name != nombre:
+                    existe[0].name = nombre
+                    _warehouses.append(existe[0])
+                    logs[id_tecno] = f'Se actualiza nombre de la bodega "{nombre}"'
                 continue
-
             #zona de entrada
             ze = Location()
             ze.id_tecno = 'ze-'+str(id_tecno)
             ze.name = 'ZE '+nombre
             ze.type = 'storage'
             _zones.append(ze)
-            #ze.save()
-
             #zona de salida
             zs = Location()
             zs.id_tecno = 'zs-'+str(id_tecno)
             zs.name = 'ZS '+nombre
             zs.type = 'storage'
-            _zones.append(zs)
-            #zs.save()
-            
+            _zones.append(zs)            
             #zona de almacenamiento
             za = Location()
             za.id_tecno = 'za-'+str(id_tecno)
             za.name = 'ZA '+nombre
             za.type = 'storage'
             _zones.append(za)
-            #za.save()
-
             #zona de producción
             prod = Location()
             prod.id_tecno = 'prod-'+str(id_tecno)
             prod.name = 'PROD '+nombre
             prod.type = 'production'
             _zones.append(prod)
-            #prod.save()
-
+            # Bodega
             almacen = Location()
             almacen.id_tecno = id_tecno
             almacen.name = nombre
@@ -81,11 +75,10 @@ class Location(metaclass=PoolMeta):
             almacen.storage_location = za
             almacen.production_location = prod
             _warehouses.append(almacen)
-            #almacen.save()
-
+        # Se crean todas las bódegas y ubicaciones
         Location.save(_zones)
         Location.save(_warehouses)
-        actualizacion.save()
+        actualizacion.add_logs(logs)
         print('FINISH BODEGAS')
 
 

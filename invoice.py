@@ -59,6 +59,50 @@ class Invoice(metaclass=PoolMeta):
     # def default_cufe():
     #     return '0'
 
+    # se sobreescribe el metodo del modulo account_col
+    @classmethod
+    @ModelView.button
+    def validate_invoice(cls, invoices):
+        for inv in invoices:
+            if inv.type == 'out':
+                cls.validate_tax(inv)
+        super(Invoice, cls).validate_invoice(invoices)
+
+    # se sobreescribe el metodo del modulo account_col
+    @classmethod
+    def validate_tax(cls, invoice):
+        pool = Pool()
+        Config = pool.get('account.configuration')
+        Line = pool.get('account.invoice.line')
+        InvoiceTax = Pool().get('account.invoice.tax')
+        config = Config(1)
+        taxes_validate = [t for t in invoice.taxes if t.base and t.tax.base and t.tax.base > abs(t.base)]
+        if taxes_validate and config.remove_tax:
+            lines_to_change = [l for l in invoice.lines if l.type == 'line']
+            Line.write(lines_to_change, {'taxes': [
+                ('remove', [t.tax.id for t in taxes_validate])]})
+            InvoiceTax.delete(taxes_validate)
+            invoice.save()
+
+    # se sobreescribe el metodo del modulo account_col
+    @classmethod
+    def set_number(cls, invoices):
+        to_save = []
+        for invoice in invoices:
+            if not invoice.number and invoice.type == 'out' \
+                    and invoice.authorization:
+                invoice.check_authorization()
+                invoice.number = invoice.authorization.sequence.get()
+                to_save.append(invoice)
+            if invoice.type == 'in' and invoice.equivalent_invoice \
+                    and not invoice.number_alternate:
+                invoice.check_authorization()
+                invoice.number_alternate = invoice.authorization.sequence.get()
+                to_save.append(invoice)
+        if to_save:
+            cls.save(to_save)
+        super(Invoice, cls).set_number(invoices)
+
     # Funcion encargada de eliminar loas conciliaciones del asiento pasado como parametro
     @classmethod
     def unreconcile_move(self, move):
@@ -72,7 +116,7 @@ class Invoice(metaclass=PoolMeta):
     def _validate_documentos_tecno(documentos):
         data = {
             'exportado': {},
-            'logs': [],
+            'logs': {},
             'tryton': {},
         }
         pool = Pool()
@@ -94,7 +138,7 @@ class Invoice(metaclass=PoolMeta):
             OperationCenter = pool.get('company.operation_center')
             operation_center = OperationCenter.search([], order=[('id', 'DESC')], limit=1)
             if not operation_center:
-                data['logs'].append('SE REQUIERE LA CREACION DE UN CENTRO DE OPERACION')
+                data['logs']['operation_center'] = "SE REQUIERE LA CREACION DE UN CENTRO DE OPERACION"
                 return data
             data['operation_center'], = operation_center
         # Se comienza a recorrer los registros importados
@@ -102,8 +146,7 @@ class Invoice(metaclass=PoolMeta):
         for doc in documentos:
             id_tecno = f"{doc.sw}-{doc.tipo}-{doc.Numero_documento}"
             if doc.anulado.upper() == 'S':
-                msg = f"Documento {id_tecno} anulado en TecnoCarnes"
-                data['logs'].append(msg)
+                data['logs'][id_tecno] = f"Documento anulado en TecnoCarnes"
                 data['exportado'][id_tecno] = 'X'
                 continue
             if id_tecno not in tecno:
@@ -132,15 +175,15 @@ class Invoice(metaclass=PoolMeta):
         ])
         for inv in invoices:
             id_tecno = inv.id_tecno
-            msg = f"EL DOCUMENTO {id_tecno} YA EXISTE EN TRYTON"
+            msg = "EL DOCUMENTO YA EXISTE EN TRYTON"
             data['exportado'][id_tecno] = 'T'
             anulado = tecno[id_tecno].anulado
             if anulado.upper() == 'S':
-                msg = f"EL DOCUMENTO {id_tecno} FUE ANULADO EN TecnoCarnes (eliminar)"
+                msg = "EL DOCUMENTO FUE ANULADO EN TecnoCarnes (eliminar)"
                 data['exportado'][id_tecno] = 'X'
             # Se elimina del diccionario de los documentos por validar
             del tecno[id_tecno]
-            data['logs'].append(msg)
+            data['logs'][id_tecno] = msg
         if not tecno:
             return data
         # Se importa las lineas de los documentos
@@ -189,7 +232,7 @@ class Invoice(metaclass=PoolMeta):
             for value in impuesto_consumo:
                 if not impuesto_consumo[value]:
                     msg = f"No se encontro el impuesto al consumo con valor fijo de {value} para {kind}"
-                    data['logs'].append(msg)
+                    data['logs'][id_tecno] = msg
                     return data
         ################################
         # Se realiza la validacion de los demas campos y se almacena los valores
@@ -198,8 +241,7 @@ class Invoice(metaclass=PoolMeta):
                 if id_tecno in data['exportado']:
                     continue
                 if id_tecno not in lineas_tecno:
-                    msg = f"EXCEPCION: {id_tecno} - NO SE ENCONTRARON LINEAS PARA EL DOCUMENTO"
-                    data['logs'].append(msg)
+                    data['logs'][id_tecno] = "NO SE ENCONTRARON LINEAS PARA EL DOCUMENTO"
                     data['exportado'][id_tecno] = 'E'
                     continue
                 nit_cedula = doc.nit_Cedula.replace('\n',"")
@@ -208,14 +250,14 @@ class Invoice(metaclass=PoolMeta):
                     party = parties['active'][nit_cedula]
                 if not party:
                     if nit_cedula not in parties['inactive']:
-                        msg = f"EXCEPCION: NO SE ENCONTRO EL TERCERO {nit_cedula} DEL DOCUMENTO {id_tecno}"
-                        data['logs'].append(msg)
+                        msg = f"EXCEPCION: NO SE ENCONTRO EL TERCERO {nit_cedula} DEL DOCUMENTO"
+                        data['logs'][id_tecno] = msg
                         data['exportado'][id_tecno] = 'E'
                     continue
                 condicion = str(doc.condicion)
                 if condicion not in payment_term:
-                    msg = f"EXCEPCION: NO SE ENCONTRO EL PLAZO {condicion} DEL DOCUMENTO {id_tecno}"
-                    data['logs'].append(msg)
+                    msg = f"EXCEPCION: NO SE ENCONTRO EL PLAZO {condicion}"
+                    data['logs'][id_tecno] = msg
                     data['exportado'][id_tecno] = 'E'
                     continue
                 account = None
@@ -230,8 +272,8 @@ class Invoice(metaclass=PoolMeta):
                     elif AccountConfiguration.default_account_payable:
                         account = AccountConfiguration.default_account_payable
                 if not account:
-                    msg = f"EXCEPCION: {id_tecno} Hace falta la configuración de las cuentas por defecto pagar/cobrar"
-                    data['logs'].append(msg).append(msg)
+                    msg = "EXCEPCION: Hace falta la configuración de las cuentas por defecto pagar/cobrar"
+                    data['logs'][id_tecno] = msg
                     data['exportado'][id_tecno] = 'E'
                     continue
                 fecha = str(doc.fecha_hora).split()[0].split('-')
@@ -263,8 +305,7 @@ class Invoice(metaclass=PoolMeta):
                     'invoice': invoice
                 }
             except Exception as ex:
-                msg = f"EXCEPCION: {id_tecno} - {ex}"
-                data['logs'].append(msg)
+                data['logs'][id_tecno] = f"EXCEPCION: {ex}"
                 data['exportado'][id_tecno] = 'E'
         ################################
         # Se procede a validar los valores de las lineas del documento
@@ -276,7 +317,7 @@ class Invoice(metaclass=PoolMeta):
                     id_producto = str(linea.IdProducto)
                     if not productos_lin[id_producto]:
                         msg = f"EXCEPCION: El producto con código {id_producto} no se encontro, revisar si esta inactivo"
-                        data['logs'].append(msg).append(msg)
+                        data['logs'][id_tecno] = msg
                         data['exportado'][id_tecno] = 'E'
                         break
                     if _type_note == 'credit':
@@ -299,8 +340,7 @@ class Invoice(metaclass=PoolMeta):
                     else:
                         data['tryton'][id_tecno]['lines'].append(line)
                 except Exception as ex:
-                    msg = f"EXCEPCION: {id_tecno} - {ex}"
-                    data['logs'].append(msg)
+                    data['logs'][id_tecno] = f"EXCEPCION: {ex}"
                     data['exportado'][id_tecno] = 'E'
         return data
     
@@ -399,7 +439,7 @@ class Invoice(metaclass=PoolMeta):
                     f"El total de Tryton {invoice.total_amount} "\
                     f"es diferente al total de TecnoCarnes {result['total_tecno']} "\
                     f"La diferencia es de {result['diferencia']}"
-                    data['logs'].append(msg)
+                    data['logs'][invoice.id_tecno] = msg
                 else:
                     to_post.append(invoice)
                 data['exportado'][invoice.id_tecno] = 'T'
@@ -431,7 +471,7 @@ class Invoice(metaclass=PoolMeta):
         # Se marca los documentos en Tecnocarnes de acuerdo a las diferentes excepciones
         for idt, exportado in data['exportado'].items():
             Config.update_exportado(idt, exportado)
-        Actualizacion.add_logs(actualizacion, data['logs'])
+        actualizacion.add_logs(data['logs'])
         print(f"FINISH {_SW[sw]['name']}")
 
 
@@ -498,6 +538,10 @@ class Invoice(metaclass=PoolMeta):
     def check_duplicated_reference(cls, invoice):
         if invoice.total_amount < 0:
             return
+        if invoice.id_tecno:
+            sw = invoice.id_tecno.split('-')[0]
+            if sw in ['27', '28', '31', '32']:
+                return
         today = datetime.date.today()
         target_date = today - datetime.timedelta(days=90)
         if invoice.reference:
@@ -534,7 +578,6 @@ class Invoice(metaclass=PoolMeta):
         Reconciliation = pool.get('account.move.reconciliation')
         Actualizacion = pool.get('conector.actualizacion')
         actualizacion = Actualizacion.create_or_update(f'CRUCE DE FACTURAS')
-        logs = []
         if not invoices:
             cursor = Transaction().connection.cursor()
             # (FIX) CONSULTA SOLO PARA NOTAS CREDITO
@@ -560,13 +603,14 @@ class Invoice(metaclass=PoolMeta):
             ('number', 'in', numbers),
             ('state', 'in', ['posted', 'paid'])
         ])
+        logs = {}
         to_save = []
         for origin in origin_invoices:
             if origin.state == 'paid':
                 msg = f"LA FACTURA CON ID {origin} YA SE ENCUENTRA EN ESTADO PAGADA "\
                     f"PERO LA(S) FACTURA(S) CRUCE CON ID {cross[origin.number]} "\
                     "SE ENCUENTRAN AUN EN ESTADO CONTABILIZADO"
-                logs.append(msg)
+                logs[origin.number] = msg
                 continue
             lines_to_pay = []
             for inv in cross[origin.number]:
@@ -595,9 +639,9 @@ class Invoice(metaclass=PoolMeta):
                 else:
                     msg = f"LA FACTURA CON ID {origin} TIENE UN PAGO MAYOR "\
                         f"POR LA(S) FACTURA(S) CRUCE {cross[origin.number]}"
-                    logs.append(msg)
+                    logs[origin.number] = msg
         Invoice.save(to_save)
-        Actualizacion.add_logs(actualizacion, logs)
+        actualizacion.add_logs(logs)
         print('FINISH validar cruce de facturas')
 
     # Función encargada de obtener los ids de los registros a eliminar
@@ -682,6 +726,31 @@ class InvoiceLine(metaclass=PoolMeta):
             if id_tecno[0] in _SW:
                 return []
         return result
+
+    # Sobreescribir metodo creado en el módulo account_col
+    @classmethod
+    def trigger_create(cls, records):
+        print("trigger_create (CONECTOR)")
+        for line in records:
+            if line.type != 'line':
+                continue
+            if line.product and line.product.account_category and line.quantity < 0:
+                category = line.product.account_category
+                account_id = None
+                if line.invoice.type == 'in':
+                    """
+                    Se añade validación para agregar la cuenta de devolución de compra
+                    solamente a los productos de tipo servicio
+                    """
+                    if category.account_return_purchase and line.product.type == 'service':
+                        print(line.product, line.product.type)
+                        account_id = category.account_return_purchase.id
+                else:
+                    if category.account_return_sale:
+                        account_id = category.account_return_sale.id
+                if not account_id:
+                    continue
+                line.write([line], {'account': account_id})
 
 
 class UpdateInvoiceTecno(Wizard):

@@ -296,7 +296,6 @@ class Configuration(ModelSQL, ModelView):
                 "ORDER BY Nit_cedula, Fecha_Hora_Marcacion ASC"
         else:
             query = "SELECT * FROM TblDatosBiometrico ORDER BY Nit_cedula, Fecha_Hora_Marcacion ASC"
-        print(query)
         data = cls.get_data(query)
         return data
 

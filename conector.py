@@ -23,6 +23,11 @@ TYPES_FILE = [
     # ('loans', 'Loans'),
 ]
 
+STATE_LOG = [
+    ('pending', 'Pending'),
+    ('in_progress', 'In progress'),
+    ('done', 'Done'),
+]
 
 class Actualizacion(ModelSQL, ModelView):
     'Actualizacion'
@@ -35,6 +40,7 @@ class Actualizacion(ModelSQL, ModelView):
     cancelled = fields.Function(fields.Integer('Cancelled'), 'getter_cancelled')
     not_imported = fields.Function(fields.Integer('Not imported'), 'getter_not_imported')
     logs = fields.Text("Logs", readonly=True)
+    log = fields.One2Many('conector.log', 'actualizacion', 'Log')
 
 
     #Crea o actualiza un registro de la tabla actualización en caso de ser necesario
@@ -49,7 +55,6 @@ class Actualizacion(ModelSQL, ModelView):
             #Se crea un registro con la actualización
             actualizacion = Actualizacion()
             actualizacion.name = name
-            actualizacion.logs = 'logs...'
             actualizacion.save()
         return actualizacion
 
@@ -68,41 +73,23 @@ class Actualizacion(ModelSQL, ModelView):
                 fecha = (actualizacion.create_date - datetime.timedelta(hours=6))
         return fecha
 
-    # se solicita una actualizacion y una lista de registros (logs) para validar si existen
-    # y si no existen, se almacena en el campo logs de la actualizacion dada
-    @classmethod
-    def add_logs(cls, actualizacion, logs):
+    # Se recibe un dicionario con los mensajes arrojados en la importacion
+    def add_logs(self, logs):
+        now = datetime.datetime.now()# - datetime.timedelta(hours=5)
         if not logs:
-            actualizacion.name = actualizacion.name
-            actualizacion.save()
+            self.write([self], {'write_date': now})
             return
-        now = datetime.datetime.now() - datetime.timedelta(hours=5)
-        logs_result = []
-        registros = ""
-        if actualizacion.logs:
-            registros = actualizacion.logs
-            for lr in registros.split('\n'):
-                res = lr.split(' - ')
-                res.pop(0)
-                res = " - ".join(res)
-                logs_result.append(res)
-        for log in logs:
-            if log not in logs_result:
-                log = f"\n{now} - {log}"
-                registros += log
-        actualizacion.logs = registros
-        actualizacion.save()
+        to_create = []
+        for id_tecno, message in logs.items():
+            create = {
+                'event_time': now,
+                'id_tecno': id_tecno,
+                'message': message,
+                'state': 'pending'
+            }
+            to_create.append(create)
+        self.write([self], {'log': [('create', to_create)]})
 
-    # @classmethod
-    # def reset_writedate(cls, name):
-    #     conector_actualizacion = Table('conector_actualizacion')
-    #     cursor = Transaction().connection.cursor()
-    #     # Se elimina la fecha de última modificación para que se actualicen los terceros desde (primer importe) una fecha mayor rango
-    #     cursor.execute(*conector_actualizacion.update(
-    #             columns=[conector_actualizacion.write_date],
-    #             values=[None],
-    #             where=conector_actualizacion.name == name)
-    #         )
     
     # Se consulta en la base de datos de SQLSERVER por la cantidad de documentos
     # que se van a importar
@@ -371,15 +358,16 @@ class Actualizacion(ModelSQL, ModelView):
         result_tecno = [r[0] for r in result_tecno]
         list_difference = [r for r in result_tecno if r not in result_tryton]
         # Se guarda el registro y se marcan los documentos para ser importados de nuevo
-        logs = []
+        logs = {}
         for falt in list_difference:
             lid = falt.split('-')
             query = "UPDATE dbo.Documentos SET exportado = 'N' "\
                 f"WHERE sw = {lid[0]} AND tipo = {lid[1]} AND Numero_documento = {lid[2]}"
             Config.set_data(query)
-            logs.append(f"DOCUMENTO FALTANTE: {falt}")
+            logs[falt] = "EL DOCUMENTO ESTABA MARCADO COMO IMPORTADO (T) SIN ESTARLO. "\
+                "AHORA FUE MARACADO COMO PENDIENTE PARA IMPOTAR (N)"
         actualizacion, = Actualizacion.search([('name', '=', name)])
-        cls.add_logs(actualizacion, logs)
+        actualizacion.add_logs(logs)
 
 
     @classmethod
@@ -402,21 +390,17 @@ class Actualizacion(ModelSQL, ModelView):
         configuration = Configuration.get_configuration()
         if not configuration:
             return
-        
         if not event_time:
-            today = datetime.date.today() - datetime.timedelta(days=1)
-            event_time = datetime.datetime(today.year, today.month, today.day, 0, 0, 0)
+            yesterday = datetime.date.today() - datetime.timedelta(days=1)
+            event_time = datetime.datetime(yesterday.year, yesterday.month, yesterday.day, 0, 0, 0)
         data = configuration.get_biometric_access_transactions(event_time)
-
         Access = pool.get('staff.access')
         Rest = pool.get('staff.access.rests')
         Employee = pool.get('company.employee')
         to_save = {}
         to_rest = {}
         start_work = None
-        # breakpoint()
         for d in data:
-            print(d)
             if d.Nit_cedula not in to_save:
                 employee = Employee.search([('party.id_number', '=', d.Nit_cedula)])
                 if not employee:
@@ -490,9 +474,22 @@ class Actualizacion(ModelSQL, ModelView):
                         rest.end = datetime_record
                         rests.append(rest)
                     continue
-
+        # Se busca los registros del mismo día
+        tomorrow = event_time + datetime.timedelta(days=1)
+        access_search = list(Access.search([
+            ('enter_timestamp', '>=', event_time),
+            ('enter_timestamp', '<', tomorrow)
+            ]))
         # to_create = []
         for nit, acess in to_save.items():
+            exists = False
+            for acces_search in access_search:
+                if acess.employee == acces_search.employee:
+                    access_search.remove(acces_search)
+                    exists = True
+                    break
+            if exists:
+                continue
             if not acess.enter_timestamp:
                 continue
             if acess.exit_timestamp \
@@ -1200,3 +1197,16 @@ class ImportedDocumentWizard(Wizard):
 
     # Funcion encargada de cargar los ingresos y salidas de los empleados (access biometric)
     
+class ConectorLog(ModelSQL, ModelView):
+    'Conector Log'
+    __name__ = 'conector.log'
+
+    actualizacion = fields.Many2One('conector.actualizacion', 'log', 'Actualizacion', required=True)
+    event_time = fields.DateTime('Event time', required=True)
+    id_tecno = fields.Char('Id TecnoCarnes', help='For documents sw-tipo-numero', required=True)
+    message = fields.Char('Message', required=True)
+    state = fields.Selection(STATE_LOG, 'State', required=True)
+
+    @staticmethod
+    def default_state():
+        return 'pending'

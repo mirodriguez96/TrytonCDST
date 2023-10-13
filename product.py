@@ -29,18 +29,18 @@ class Product(metaclass=PoolMeta):
         #to_category = []
         to_product = []
         to_template = []
-        logs = []
+        logs = {}
         for producto in productos_tecno:
             try:
                 id_producto = str(producto.IdProducto)
                 if producto.ref_anulada == 'S':
                     msg = f"EL PRODUCTO CON CODIGO {id_producto} ESTA MARCADO COMO ANULADO EN TECNOCARNES"
-                    logs.append(msg)
+                    logs[id_producto] = msg
                     continue
                 product_inactive = Product.search([('code', '=', id_producto), ('active', '=', False)])
                 if product_inactive:
                     msg = f"EL PRODUCTO CON CODIGO {id_producto} ESTA MARCADO COMO INACTIVO EN TRYTON"
-                    logs.append(msg)
+                    logs[id_producto] = msg
                     continue
                 existe = Product.search([('code', '=', id_producto), ('active', '=', True)])
                 id_categoria = producto.contable
@@ -109,12 +109,11 @@ class Product(metaclass=PoolMeta):
                     to_template.append(temp)
                     to_product.append(prod)
             except Exception as e:
-                msg = f"EXCEPTION {id_producto} -> {str(e)}"
-                logs.append(msg)
+                logs[id_producto] = f"EXCEPCION: {str(e)}"
         #Category.save(to_category)
         Template.save(to_template)
         Product.save(to_product)
-        Actualizacion.add_logs(actualizacion, logs)
+        actualizacion.add_logs(logs)
         print('FINISH PRODUCTOS')
 
 
@@ -189,7 +188,7 @@ class ProductCategory(metaclass=PoolMeta):
         Category = pool.get('product.category')
         Account = pool.get('account.account')
         to_create = []
-        logs = []
+        logs = {}
         for modelo in modelos:
             id_tecno = modelo.IDMODELOS
             try:
@@ -225,8 +224,7 @@ class ProductCategory(metaclass=PoolMeta):
 
                     to_create.append(category)
             except Exception as e:
-                msg = f"EXCEPCION {id_tecno} - {str(e)}"
-                logs.append(msg)
+                logs[id_tecno] = f"EXCEPCION: {str(e)}"
         Category.create(to_create)
-        Actualizacion.add_logs(actualizacion, logs)
+        actualizacion.add_logs(logs)
         print("FINISH CATEGORIAS DE PRODUCTOS")

@@ -89,8 +89,10 @@ def register():
         loan.Loan,
         payroll.CertificateOfIncomeAndWithholdingSendStart,
         account.AccountAsset,
-        # account.AuxiliaryBookStartCDS,
+        account.AuxiliaryBookStartCDS,
         conector.ImportedDocument,
+        payroll.StaffAccessView,
+        conector.ConectorLog,
         module='conector', type_='model')
 
     Pool.register(
@@ -125,8 +127,9 @@ def register():
         payment_bank.PaymentBankGroup,
         payroll.SendCertificateOfIncomeAndWithholding,
         payroll.ImportBiometricRecords,
-        # account.PrintAuxiliaryBookCDS,
+        account.PrintAuxiliaryBookCDS,
         conector.ImportedDocumentWizard,
+        payroll.StaffAccessWizard,
         module='conector', type_='wizard')
 
     Pool.register(
@@ -140,5 +143,6 @@ def register():
         payment_bank.PaymentBankGroupReport,
         payment_bank.BankReportBancolombia,
         stock.ShipmentDetailedReport,
-        # account.AuxiliaryBookCDS,
+        account.AuxiliaryBookCDS,
+        payroll.StaffAccessReport,
         module='conector', type_='report')

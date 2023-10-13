@@ -105,6 +105,19 @@
             <field name="name">imported_form</field>
         </record>
 
+        <!-- ################ -->
+        <!-- # Conector Log # -->
+        <!-- ################ -->
+        <record model="ir.ui.view" id="conector_log_view_form">
+            <field name="model">conector.log</field>
+            <field name="type">form</field>
+            <field name="name">conector_log_form</field>
+        </record>
+        <record model="ir.ui.view" id="conector_log_view_list">
+            <field name="model">conector.log</field>
+            <field name="type">tree</field>
+            <field name="name">conector_log_tree</field>
+        </record>
 
     </data>
 </tryton>

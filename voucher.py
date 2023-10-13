@@ -41,7 +41,7 @@ class Voucher(ModelSQL, ModelView):
         Party = pool.get('party.party')
         PayMode = pool.get('account.voucher.paymode')
         actualizacion = Actualizacion.create_or_update('COMPROBANTES DE EGRESO')
-        logs = []
+        logs = {}
         created = []
         exceptions = []
         not_import = []
@@ -63,7 +63,7 @@ class Voucher(ModelSQL, ModelView):
         #     if id_tecno in vouchers and doc.anulado == 'S':
         #         to_delete.append(vouchers[id_tecno])
         #         msg = f"El documento {id_tecno} fue eliminado de tryton porque fue anulado en TecnoCarnes"
-        #         logs.append(msg)
+        #         logs[id_tecno] = msg
         #         not_import.append(id_tecno)
         #         continue
         #     elif id_tecno in vouchers and doc.anulado == 'N':
@@ -86,24 +86,20 @@ class Voucher(ModelSQL, ModelView):
                             cls.unreconcilie_move_voucher([comprobante])
                             cls.force_draft_voucher([comprobante])
                             Voucher.delete([comprobante])
-                            msg = f"El documento {id_tecno} fue eliminado de tryton porque fue anulado en TecnoCarnes"
-                            logs.append(msg)
+                            logs[id_tecno] = "El documento fue eliminado de tryton porque fue anulado en TecnoCarnes"
                             not_import.append(id_tecno)
                             continue
-                    msg = f"EL DOCUMENTO {id_tecno} YA EXISTE EN TRYTON"
-                    logs.append(msg)
+                    logs[id_tecno] = "EL DOCUMENTO YA EXISTE EN TRYTON"
                     created.append(id_tecno)
                     continue
                 if doc.anulado == 'S':
-                    msg = f'Documento {id_tecno} ANULADO EN TECNOCARNES'
-                    logs.append(msg)
+                    logs[id_tecno] = "Documento ANULADO EN TECNOCARNES"
                     not_import.append(id_tecno)
                     continue
                 facturas = Config.get_dctos_cruce(id_tecno)
                 if not facturas:
-                    msg1 = f"NO HAY FACTURAS EN TECNOCARNES PARA EL RECIBO {id_tecno}"
                     exceptions.append(id_tecno)
-                    logs.append(msg1)
+                    logs[id_tecno] = "EXCEPCION: NO SE ENCONTRARON FACTURAS PARA EL PAGO (CRUCE)"
                     continue
                 nit_cedula = doc.nit_Cedula.replace('\n',"")
                 party = None
@@ -111,27 +107,25 @@ class Voucher(ModelSQL, ModelView):
                     party = parties['active'][nit_cedula]
                 if not party:
                     if nit_cedula not in parties['inactive']:
-                        msg = f"REVISAR {id_tecno} - El tercero {nit_cedula} no existe en tryton"
-                        logs.append(msg)
+                        logs[id_tecno] = f"EXCEPCION: El tercero {nit_cedula} no existe en tryton"
                         exceptions.append(id_tecno)
                     continue
                 tipo_pago = Config.get_tipos_pago(id_tecno)
                 if not tipo_pago:
-                    msg = f"NO SE ENCONTRO FORMA(S) DE PAGO EN TECNOCARNES (DOCUMENTOS_CHE) PARA EL DOCUMENTO {id_tecno}"
-                    logs.append(msg)
+                    logs[id_tecno] = "EXCEPCION: NO SE ENCONTRO FORMA(S) DE PAGO EN TECNOCARNES (DOCUMENTOS_CHE)"
                     exceptions.append(id_tecno)
                     continue
                 # REVISAR ¿CUANDO HAY MAS DE 1 FORMA DE PAGO?
                 if len(tipo_pago) != 1:
                     msg = f"EXCEPCION {id_tecno} - se esperaba 1 forma de pago y se obtuvo {len(tipo_pago)}"
-                    logs.append(msg)
+                    logs[id_tecno] = msg
                     exceptions.append(id_tecno)
                     continue
                 #for pago in tipo_pago: 
                 paymode = PayMode.search([('id_tecno', '=', tipo_pago[0].forma_pago)])
                 if not paymode:
-                    msg = f"NO SE ENCONTRO LA FORMA DE PAGO {tipo_pago[0].forma_pago}"
-                    logs.append(msg)
+                    msg = f"EXCEPCION: NO SE ENCONTRO LA FORMA DE PAGO {tipo_pago[0].forma_pago}"
+                    logs[id_tecno] = msg
                     exceptions.append(id_tecno)
                     continue
                 print('VOUCHER EGRESO:', id_tecno)
@@ -185,10 +179,9 @@ class Voucher(ModelSQL, ModelView):
                     voucher.save()
                 created.append(id_tecno)
             except Exception as e:
-                msg = f"EXCEPCION RECIBO {id_tecno} : {str(e)}"
-                logs.append(msg)
+                logs[id_tecno] = f"EXCEPCION: {str(e)}"
                 exceptions.append(id_tecno)
-        Actualizacion.add_logs(actualizacion, logs)
+        actualizacion.add_logs(logs)
         for idt in exceptions:
             Config.update_exportado(idt, 'E')
         for idt in created:
@@ -219,7 +212,7 @@ class Voucher(ModelSQL, ModelView):
         MultiRevenueLine = pool.get('account.multirevenue.line')
         Transaction = pool.get('account.multirevenue.transaction')
         OthersConcepts = pool.get('account.multirevenue.others_concepts')
-        logs = []
+        logs = {}
         created = []
         exceptions = []
         not_import = []
@@ -250,23 +243,19 @@ class Voucher(ModelSQL, ModelView):
                             MultiRevenueLine.delete(comprobante.lines)
                             Transaction.delete(comprobante.transactions)
                             MultiRevenue.delete([comprobante])
-                        msg = f"El documento {id_tecno} fue eliminado de tryton porque fue anulado en TecnoCarnes"
-                        logs.append(msg)
+                        logs[id_tecno] = "El documento fue eliminado de tryton porque fue anulado en TecnoCarnes"
                         not_import.append(id_tecno)
                         continue
-                    msg = f"EL DOCUMENTO {id_tecno} YA EXISTE EN TRYTON"
-                    logs.append(msg)
+                    logs[id_tecno] = "EL DOCUMENTO YA EXISTE EN TRYTON"
                     created.append(id_tecno)
                     continue
                 if doc.anulado == 'S':
-                    msg = f'Documento {id_tecno} ANULADO EN TECNOCARNES'
-                    logs.append(msg)
+                    logs[id_tecno] = "Documento ANULADO EN TECNOCARNES"
                     not_import.append(id_tecno)
                     continue
                 facturas = Config.get_dctos_cruce(id_tecno)
                 if not facturas:
-                    msg1 = f"EXCEPCION NO HAY FACTURAS EN TECNOCARNES PARA EL RECIBO {id_tecno}"
-                    logs.append(msg1)
+                    logs[id_tecno] = "EXCEPCION: NO HAY FACTURAS EN TECNOCARNES PARA EL RECIBO"
                     exceptions.append(id_tecno)
                     continue
                 nit_cedula = doc.nit_Cedula.replace('\n',"")
@@ -275,15 +264,14 @@ class Voucher(ModelSQL, ModelView):
                     party = parties['active'][nit_cedula]
                 if not party:
                     if nit_cedula not in parties['inactive']:
-                        msg = f"REVISAR {id_tecno} - El tercero {nit_cedula} no existe en tryton"
-                        logs.append(msg)
+                        msg = f"EXCEPCION: El tercero {nit_cedula} no existe en tryton"
+                        logs[id_tecno] = msg
                         exceptions.append(id_tecno)
                     continue
                 #Se obtiene la forma de pago, según la tabla Documentos_Che de TecnoCarnes
                 tipo_pago = Config.get_tipos_pago(id_tecno)
                 if not tipo_pago:
-                    msg = f"EXCEPCION NO SE ENCONTRO FORMA(S) DE PAGO EN TECNOCARNES (DOCUMENTOS_CHE) PARA EL DOCUMENTO {id_tecno}"
-                    logs.append(msg)
+                    logs[id_tecno] = "EXCEPCION: NO SE ENCONTRO FORMA(S) DE PAGO EN TECNOCARNES (DOCUMENTOS_CHE) PARA EL DOCUMENTO"
                     exceptions.append(id_tecno)
                     continue            
                 # Comprobante con mas de 1 forma de pago (MULTI-INGRESO)
@@ -301,8 +289,8 @@ class Voucher(ModelSQL, ModelView):
                     for pago in tipo_pago:
                         paymode = PayMode.search([('id_tecno', '=', pago.forma_pago)])
                         if not paymode:
-                            msg = f"EXCEPCION: MULTI-INGRESO {id_tecno} - NO SE ENCONTRO LA FORMA DE PAGO {pago.forma_pago}"
-                            logs.append(msg)
+                            msg = f"EXCEPCION: MULTI-INGRESO - NO SE ENCONTRO LA FORMA DE PAGO {pago.forma_pago}"
+                            logs[id_tecno] = msg
                             exceptions.append(id_tecno)
                             break
                         # for existr in to_transactions:
@@ -345,13 +333,13 @@ class Voucher(ModelSQL, ModelView):
                                 line.others_concepts = cls.get_others_tecno(factura, amount_to_pay)
                                 to_lines.append(line)
                             else:
-                                msg = f'EXCEPCION: MULTI-INGRESO {id_tecno} - Valor erroneo ({factura.valor}) de la factura {reference}'
-                                logs.append(msg)
+                                msg = f'EXCEPCION: MULTI-INGRESO - Valor erroneo ({factura.valor}) de la factura {reference}'
+                                logs[id_tecno] = msg
                                 exceptions.append(id_tecno)
                                 break
                         else:
-                            msg = f'EXCEPCION: MULTI-INGRESO {id_tecno} - No se encontro la factura {reference} en Tryton'
-                            logs.append(msg)
+                            msg = f'EXCEPCION: MULTI-INGRESO - No se encontro la factura {reference} en Tryton'
+                            logs[id_tecno] = msg
                             exceptions.append(id_tecno)
                             break
                     if id_tecno in exceptions:
@@ -366,8 +354,8 @@ class Voucher(ModelSQL, ModelView):
                     forma_pago = tipo_pago[0].forma_pago
                     paymode = PayMode.search([('id_tecno', '=', forma_pago)])
                     if not paymode:
-                        msg = f"EXCEPCION {id_tecno} - NO SE ENCONTRO LA FORMA DE PAGO {forma_pago}"
-                        logs.append(msg)
+                        msg = f"EXCEPCION: NO SE ENCONTRO LA FORMA DE PAGO {forma_pago}"
+                        logs[id_tecno] = msg
                         exceptions.append(id_tecno)
                         continue
                     fecha_date = cls.convert_fecha_tecno(tipo_pago[0].fecha)
@@ -420,15 +408,14 @@ class Voucher(ModelSQL, ModelView):
                         voucher.save()
                     created.append(id_tecno)
                 else:
-                    msg1 = f"EXCEPCION EL DOCUMENTO {id_tecno} NO ENCONTRO FORMA DE PAGO EN TECNOCARNES"
                     exceptions.append(id_tecno)
-                    logs.append(msg1)
+                    logs[id_tecno] = "EXCEPCION: NO ENCONTRO FORMA DE PAGO EN TECNOCARNES"
                     continue
             except Exception as e:
                 msg = f"EXCEPCION RECIBO {id_tecno} : {str(e)}"
-                logs.append(msg)
+                logs[id_tecno] = msg
                 exceptions.append(id_tecno)
-        Actualizacion.add_logs(actualizacion, logs)
+        actualizacion.add_logs(logs)
         for idt in exceptions:
             #print('EXCEPCIONES...', idt) #TEST
             Config.update_exportado(idt, 'E')
@@ -468,13 +455,11 @@ class Voucher(ModelSQL, ModelView):
         if moveline:
             if len(moveline) > 1:
                 msg = f"Esperaba unica referencia ({reference}) en linea de movimiento (saldos iniciales) y obtuvo muchas !"
-                logs.append(msg)
+                logs[reference] = msg
                 return False
             if moveline[0].reconciliation:
-                msg = f"REVISAR FACTURA ({reference}) CONCILIADA"
-                logs.append(msg)
+                logs[reference] = f"REVISAR FACTURA ({reference}) CONCILIADA"
                 return False
-            #print("SALDOS INICIALES")
             return moveline[0]
         else:
             return False
@@ -530,8 +515,8 @@ class Voucher(ModelSQL, ModelView):
             ref = inv.tipo_aplica+'-'+str(inv.numero_aplica)
             move_line = cls.get_moveline(ref, voucher.party, logs, account_type)
             if not move_line:
-                msg = f"EXCEPCION {voucher.id_tecno} - NO SE ENCONTRO LA FACTURA {ref} o REVISAR SI NO ESTA CONTABILIZADA EN TRYTON"
-                logs.append(msg)
+                msg = f"EXCEPCION: NO SE ENCONTRO LA FACTURA {ref} o REVISAR SI NO ESTA CONTABILIZADA EN TRYTON"
+                logs[voucher.id_tecno] = msg
                 return None
             #print(ref)
             valor_original, amount_to_pay, untaxed_amount = cls.get_amounts_to_pay(move_line, voucher.voucher_type)
@@ -785,7 +770,7 @@ class Voucher(ModelSQL, ModelView):
                 if move_line.reference == line.reference and \
                     (move_line.account.type.receivable or move_line.account.type.payable):
                     return move_line
-        logs = []
+        logs = {}
         lines_invoice = {}
         for line in lines:
             if line.reference in lines_invoice:
@@ -834,9 +819,9 @@ class Voucher(ModelSQL, ModelView):
                 else:
                     msg = f"LA FACTURA CON ID {invoice} TIENE UN PAGO MAYOR "\
                         f"AL INTENTAR AGREGAR LA(S) LINEA(S) CRUCE {move_lines}"
-                    logs.append(msg)
+                    logs[invoice.number] = msg
         Invoice.save(to_save)
-        Actualizacion.add_logs(actualizacion, logs)
+        actualizacion.add_logs(logs)
         print('FINISH validar cruce de comprobantes')
 
 

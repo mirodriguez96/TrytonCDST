@@ -161,15 +161,20 @@ class DeleteImportRecords(Wizard):
     def transition_do_submit(self):
         pool = Pool()
         Warning = pool.get('res.user.warning')
-        Actualizacion = pool.get('conector.actualizacion')
+        # Actualizacion = pool.get('conector.actualizacion')
+        Log = pool.get('conector.log')
         ids = Transaction().context['active_ids']
         #Se agrega un nombre unico a la advertencia
         warning_name = 'warning_delete_import_records'
         if Warning.check(warning_name):
             raise UserWarning(warning_name, "Los registros de la actualización serán eliminados.")
-        for actualizacion in Actualizacion.browse(ids):
-            actualizacion.logs = 'logs...'
-            actualizacion.save()
+        # actualizacion_id = []
+        # for actualizacion in Actualizacion.browse(ids):
+        #     if actualizacion.id not in actualizacion_id:
+        #         actualizacion_id.append(actualizacion.id)
+        if ids:
+            to_delete = Log.search([('actualizacion.id', 'in', ids)])
+            Log.delete(to_delete)
         return 'end'
 
     def end(self):
