@@ -236,6 +236,7 @@ class PayrollPaymentBcl(Wizard):
                                 f'{type_document} not found for type_document bancolombia')
             values['type_document'] = _TYPE_DOCUMENT[type_document]
             values['id_number'] = payroll.employee.party.id_number
+            values['email'] = payroll.employee.party.email
             bank_code_sap = None
             if payroll.employee.party.bank_accounts:
                 bank_code_sap = payroll.employee.party.bank_accounts[0].bank.bank_code_sap
