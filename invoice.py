@@ -324,11 +324,27 @@ class Invoice(metaclass=PoolMeta):
                         quantity = abs(round(linea.Cantidad_Facturada, 3)) * -1
                     else:
                         quantity = abs(round(linea.Cantidad_Facturada, 3))
+
+                    #Nueva linea para aplicar cuenta analitica
+                    tbltipodocto = Config.get_tbltipodoctos(doc.tipo)
+                    if tbltipodocto and tbltipodocto[0].Encabezado != '0':
+                        AnalyticAccount = pool.get('analytic_account.account')
+                        analytic_account = AnalyticAccount.search([('code', '=', str(tbltipodocto[0].Encabezado))])
+                        if not analytic_account:
+                            msg = f'EXCEPCION {id_tecno} - No se encontro la asignacion de la cuenta analitica en TecnoCarnes {str(tbltipodocto[0].Encabezado)}'
+                            data['logs'][id_tecno] = msg
+                            data['exportado'][id_tecno] = 'E'
+                            continue
+                    analytic_account = analytic_account[0]
+                    # Termina aqui
+
                     line = {
                         'product': productos_lin[id_producto],
                         'quantity': quantity,
                         'unit_price': linea.Valor_Unitario,
+                        'analytic_account': analytic_account,
                     }
+
                     # Se verifica si la línea tiene descuento y se agrega su valor
                     if linea.Porcentaje_Descuento_1 > 0:
                         descuento = (linea.Valor_Unitario * Decimal(linea.Porcentaje_Descuento_1)) / 100
@@ -393,6 +409,9 @@ class Invoice(metaclass=PoolMeta):
                 line.gross_unit_price = linea['unit_price']
             if _type == 'in':
                 line.account = line.product.account_category.account_expense
+            if  linea['analytic_account']:
+                line.analytic_account = linea['analytic_account']
+                line.on_change_analytic_account()
             lines.append(line)
         return lines
 
