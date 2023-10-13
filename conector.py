@@ -975,6 +975,7 @@ class ImportedDocumentWizard(Wizard):
         company = Transaction().context.get('company')
         revisions = []
         to_create = []
+        products = []
         firts = True
         for linea in lineas:
             linea = linea.strip()
@@ -1011,11 +1012,12 @@ class ImportedDocumentWizard(Wizard):
                 "cost_price": cost,
             }
             to_create.append(average_cost)
+            products.append(product)
         records = Revision.create(revisions)
-        # if records:
-        #     start = min((r.date for r in revisions), default=None)
-        #     Product.recompute_cost_price(products, start=start)
         AverageCost.create(to_create)
+        if records:
+                # start = min((r.date for r in products), default=None)
+            Product.recompute_cost_price(products, start=datetime.date.today())
 
     # Funcion encargada de cargar el inventario
     @classmethod
