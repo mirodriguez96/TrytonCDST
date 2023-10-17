@@ -25,14 +25,14 @@ ELECTRONIC_STATES = [
 
 _SW = {
     '27': {
-        'name': 'NOTA CREDITO COMPRAS',
-        'type': 'in',
-        'type_note': 'credit',
-    },
-    '28': {
         'name': 'NOTA DEBITO COMPRAS',
         'type': 'in',
         'type_note': 'debit',
+    },
+    '28': {
+        'name': 'NOTA CREDITO COMPRAS',
+        'type': 'in',
+        'type_note': 'credit',
     },
     '31': {
         'name': 'NOTA DEBITO',
@@ -155,11 +155,11 @@ class Invoice(metaclass=PoolMeta):
                 _type = _SW[str(doc.sw)]['type']
             if not _type_note:
                 _type_note = _SW[str(doc.sw)]['type_note']
-                if company.party.id_number == '900715776':
-                    if str(doc.sw) == '27':
-                        _type_note = _SW['28']['type_note']
-                    elif str(doc.sw) == '28':
-                        _type_note = _SW['27']['type_note']
+                # if company.party.id_number == '900715776':
+                #     if str(doc.sw) == '27':
+                #         _type_note = _SW['28']['type_note']
+                #     elif str(doc.sw) == '28':
+                #         _type_note = _SW['27']['type_note']
         if not tecno:
             return data
         # Se trae todos los terceros necesarios para los documentos
@@ -525,12 +525,12 @@ class Invoice(metaclass=PoolMeta):
     # Nota de crédito de compras
     @classmethod
     def import_credit_note_purchase(cls):
-        cls._import_notas_tecno('27')
+        cls._import_notas_tecno('28')
 
     # Nota de débito de compras
     @classmethod
     def import_debit_note_purchase(cls):
-        cls._import_notas_tecno('28')
+        cls._import_notas_tecno('27')
 
 
     @classmethod
