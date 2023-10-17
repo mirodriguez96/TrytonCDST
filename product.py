@@ -179,16 +179,16 @@ class ProductCategory(metaclass=PoolMeta):
         Config = pool.get('conector.configuration')
         Actualizacion = pool.get('conector.actualizacion')
         actualizacion = Actualizacion.create_or_update('CATEGORIAS DE PRODUCTOS')
+        logs = {}
         modelos = Config.get_data_table('vistamodelos')
         if not modelos:
-            msg = "No se encontraron valores para importar en la tabla vistamodelos"
-            Actualizacion.add_logs(actualizacion, [msg])
+            logs['vistamodelos'] = "No se encontraron valores para importar en la tabla vistamodelos"
+            actualizacion.add_logs(logs)
             return
         # Creación o actualización de las categorias de los productos
         Category = pool.get('product.category')
         Account = pool.get('account.account')
         to_create = []
-        logs = {}
         for modelo in modelos:
             id_tecno = modelo.IDMODELOS
             try:
