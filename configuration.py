@@ -241,6 +241,12 @@ class Configuration(ModelSQL, ModelView):
         query = "SELECT * FROM dbo.TblTipoDoctos WHERE idTipoDoctos = "+id
         data = cls.get_data(query)
         return data
+    
+    @classmethod
+    def get_tbltipodoctos_encabezado(cls, ids):
+        query = "SELECT idTipoDoctos, Encabezado FROM dbo.TblTipoDoctos WHERE idTipoDoctos in "+ids
+        data = cls.get_data(query)
+        return data
 
     @classmethod
     def get_tbltipoproducto(cls, id):

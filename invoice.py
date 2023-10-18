@@ -112,6 +112,24 @@ class Invoice(metaclass=PoolMeta):
             Reconciliation.delete(reconciliations)
 
 
+    @classmethod
+    def get_analytic_tipodocto(cls, tipos_doctos):
+        analytic_types = {}
+        if tipos_doctos:
+            Config = Pool().get('conector.configuration')
+            ids_tipos = "(" + ", ".join(map(str, tipos_doctos)) + ")"
+            tbltipodocto = Config.get_tbltipodoctos_encabezado(ids_tipos)
+            _codes = []
+            for tipodocto in tbltipodocto:
+                if tipodocto.Encabezado != '0':
+                    _codes.append(str(tipodocto.Encabezado))
+            if _codes:
+                AnalyticAccount = Pool().get('analytic_account.account')
+                analytic_accounts = AnalyticAccount.search([('code', 'in', _codes)])
+                for ac in analytic_accounts:
+                    analytic_types[ac.code] = ac
+        return analytic_types
+
     # Metodo encargado de validar los datos (importados) requeridos para la creación de la factura
     def _validate_documentos_tecno(documentos):
         data = {
@@ -127,8 +145,8 @@ class Invoice(metaclass=PoolMeta):
         Party = pool.get('party.party')
         PaymentTerm = pool.get('account.invoice.payment_term')
         Product = pool.get('product.product')
-        id_company = Transaction().context.get('company')
-        company = pool.get('company.company')(id_company)
+        # id_company = Transaction().context.get('company')
+        # company = pool.get('company.company')(id_company)
         Tax = pool.get('account.tax')
         _type = None
         _type_note = None
@@ -142,6 +160,7 @@ class Invoice(metaclass=PoolMeta):
                 return data
             data['operation_center'], = operation_center
         # Se comienza a recorrer los registros importados
+        tipos_doctos = []
         tecno = {}
         for doc in documentos:
             id_tecno = f"{doc.sw}-{doc.tipo}-{doc.Numero_documento}"
@@ -155,11 +174,8 @@ class Invoice(metaclass=PoolMeta):
                 _type = _SW[str(doc.sw)]['type']
             if not _type_note:
                 _type_note = _SW[str(doc.sw)]['type_note']
-                # if company.party.id_number == '900715776':
-                #     if str(doc.sw) == '27':
-                #         _type_note = _SW['28']['type_note']
-                #     elif str(doc.sw) == '28':
-                #         _type_note = _SW['27']['type_note']
+            if str(doc.tipo) not in tipos_doctos:
+                tipos_doctos.append(str(doc.tipo))
         if not tecno:
             return data
         # Se trae todos los terceros necesarios para los documentos
@@ -308,6 +324,19 @@ class Invoice(metaclass=PoolMeta):
                 data['logs'][id_tecno] = f"EXCEPCION: {ex}"
                 data['exportado'][id_tecno] = 'E'
         ################################
+        analytic_types = {}
+        if tipos_doctos:
+            ids_tipos = "(" + ", ".join(map(str, tipos_doctos)) + ")"
+            tbltipodocto = Config.get_tbltipodoctos_encabezado(ids_tipos)
+            _codes = []
+            for tipodocto in tbltipodocto:
+                if tipodocto.Encabezado != '0':
+                    _codes.append(str(tipodocto.Encabezado))
+            if _codes:
+                AnalyticAccount = pool.get('analytic_account.account')
+                analytic_accounts = AnalyticAccount.search([('code', 'in', _codes)])
+                for ac in analytic_accounts:
+                    analytic_types[ac.code] = ac
         # Se procede a validar los valores de las lineas del documento
         for id_tecno, lineas in lineas_tecno.items():
             if id_tecno in data['exportado']:
@@ -326,25 +355,25 @@ class Invoice(metaclass=PoolMeta):
                         quantity = abs(round(linea.Cantidad_Facturada, 3))
 
                     #Nueva linea para aplicar cuenta analitica
-                    tbltipodocto = Config.get_tbltipodoctos(doc.tipo)
-                    if tbltipodocto and tbltipodocto[0].Encabezado != '0':
-                        AnalyticAccount = pool.get('analytic_account.account')
-                        analytic_account = AnalyticAccount.search([('code', '=', str(tbltipodocto[0].Encabezado))])
-                        if not analytic_account:
-                            msg = f'EXCEPCION {id_tecno} - No se encontro la asignacion de la cuenta analitica en TecnoCarnes {str(tbltipodocto[0].Encabezado)}'
-                            data['logs'][id_tecno] = msg
-                            data['exportado'][id_tecno] = 'E'
-                            continue
-                    analytic_account = analytic_account[0]
+                    # tbltipodocto = Config.get_tbltipodoctos(doc.tipo)
+                    # if tbltipodocto and tbltipodocto[0].Encabezado != '0':
+                    #     AnalyticAccount = pool.get('analytic_account.account')
+                    #     analytic_account = AnalyticAccount.search([('code', '=', str(tbltipodocto[0].Encabezado))])
+                    #     if not analytic_account:
+                    #         msg = f'EXCEPCION: No se encontro la asignacion de la cuenta analitica en TecnoCarnes {str(tbltipodocto[0].Encabezado)}'
+                    #         data['logs'][id_tecno] = msg
+                    #         data['exportado'][id_tecno] = 'E'
+                    #         continue
+                    # analytic_account = analytic_account[0]
                     # Termina aqui
 
                     line = {
                         'product': productos_lin[id_producto],
                         'quantity': quantity,
                         'unit_price': linea.Valor_Unitario,
-                        'analytic_account': analytic_account,
                     }
-
+                    if str(doc.tipo) in analytic_types:
+                        line['analytic_account'] = analytic_types[str(doc.tipo)]
                     # Se verifica si la línea tiene descuento y se agrega su valor
                     if linea.Porcentaje_Descuento_1 > 0:
                         descuento = (linea.Valor_Unitario * Decimal(linea.Porcentaje_Descuento_1)) / 100
@@ -358,6 +387,9 @@ class Invoice(metaclass=PoolMeta):
                 except Exception as ex:
                     data['logs'][id_tecno] = f"EXCEPCION: {ex}"
                     data['exportado'][id_tecno] = 'E'
+                    if id_tecno in data['tryton']:
+                        # Se elimina de las facturas a crear
+                        del data['tryton'][id_tecno]
         return data
     
 
@@ -409,7 +441,7 @@ class Invoice(metaclass=PoolMeta):
                 line.gross_unit_price = linea['unit_price']
             if _type == 'in':
                 line.account = line.product.account_category.account_expense
-            if  linea['analytic_account']:
+            if  'analytic_account' in linea:
                 line.analytic_account = linea['analytic_account']
                 line.on_change_analytic_account()
             lines.append(line)
