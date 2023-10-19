@@ -128,6 +128,12 @@ class Liquidation(metaclass=PoolMeta):
         return sundays + holidays
     
     def _validate_holidays_lines(self, event):
+        line = None
+        for l in self.lines:
+            if l.wage.type_concept == 'holidays':
+                line = l
+        if not line:
+            return
         amount_day = (self.contract.salary / 30)
         # amount = amount_day * event.days_of_vacations
         holidays = self.count_holidays(event.start_date, event.end_date)
@@ -135,7 +141,7 @@ class Liquidation(metaclass=PoolMeta):
         # breakpoint()
         amount_workdays = round(amount_day * workdays, 2)
         amount_holidays = round(amount_day * holidays, 2)
-        line, = self.lines
+        # line, = self.lines
         move_lines = []
         value = 0
         for move_line in line.move_lines:
