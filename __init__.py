@@ -94,6 +94,7 @@ def register():
         payroll.StaffAccessView,
         conector.ConectorLog,
         account.IncomeStatementView,
+        production.ProductionDetailedStart,
         module='conector', type_='model')
 
     Pool.register(
@@ -133,6 +134,7 @@ def register():
         payroll.StaffAccessWizard,
         account.IncomeStatementWizard,
         account.ActiveForceDraft,
+        production.ProductionDetailed,
         module='conector', type_='wizard')
 
     Pool.register(
@@ -149,4 +151,5 @@ def register():
         account.AuxiliaryBookCDS,
         payroll.StaffAccessReport,
         account.IncomeStatementReport,
+        production.ProductionDetailedReport,
         module='conector', type_='report')

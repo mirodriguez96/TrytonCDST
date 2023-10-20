@@ -681,3 +681,15 @@ msgstr "Referencia"
 msgctxt "field:staff.payroll_payment_bancolombia.start,type_transaction:"
 msgid "Type of transaction"
 msgstr "Tipo de transacción"
+
+msgctxt "model:ir.action,name:report_production"
+msgid "Production"
+msgstr "Producción"
+
+msgctxt "model:ir.ui.menu,name:menu_reports"
+msgid "Reports"
+msgstr "Informes"
+
+msgctxt "model:ir.action,name:wizard_production_detailed"
+msgid "Report Production Detailed"
+msgstr "Informe de producción detallada"

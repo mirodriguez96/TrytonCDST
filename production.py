@@ -1,9 +1,13 @@
-from trytond.model import fields
+from trytond.model import fields, ModelView
 from trytond.pool import Pool, PoolMeta
 from decimal import Decimal
 import datetime
 from trytond.exceptions import UserError
-
+from trytond.modules.company import CompanyReport
+from trytond.report import Report
+from trytond.wizard import (
+    Wizard, StateReport, StateView, Button)
+from trytond.transaction import Transaction
 
 #Heredamos del modelo sale.sale para agregar el campo id_tecno
 class Production(metaclass=PoolMeta):
@@ -329,3 +333,91 @@ class Production(metaclass=PoolMeta):
             return
         account_move_lines = cls._get_account_stock_move_lines(smove, type_)
         return account_move_lines
+
+
+class ProductionReport(CompanyReport):
+    'Production Report'
+    __name__ = 'production.report'
+
+
+class ProductionDetailedStart(ModelView):
+    'Production Detailed Start'
+    __name__ = 'production.detailed.start'
+    company = fields.Many2One('company.company', 'Company', required=True)
+    grouped = fields.Boolean('Grouped', help='Grouped by products')
+    start_date = fields.Date('Start Date')
+    end_date = fields.Date('End Date', required=True)
+
+    @staticmethod
+    def default_company():
+        return Transaction().context.get('company')
+
+    @staticmethod
+    def default_start_date():
+        Date = Pool().get('ir.date')
+        return Date.today()
+
+    @staticmethod
+    def default_end_date():
+        Date = Pool().get('ir.date')
+        return Date.today()
+
+
+class ProductionDetailed(Wizard):
+    'Production Detailed'
+    __name__ = 'production.detailed'
+    start = StateView(
+        'production.detailed.start',
+        'conector.production_detailed_start_view_form', [
+            Button('Cancel', 'end', 'tryton-cancel'),
+            Button('Print', 'print_', 'tryton-ok', default=True),
+        ])
+    print_ = StateReport('production.detailed_report')
+
+    def do_print_(self, action):
+        data = {
+            'ids': [],
+            'company': self.start.company.id,
+            'start_date': self.start.start_date,
+            'end_date': self.start.end_date,
+            'grouped': self.start.grouped,
+        }
+        return action, data
+
+    def transition_print_(self):
+        return 'end'
+
+
+class ProductionDetailedReport(Report):
+    'Production Detailed Report'
+    __name__ = 'production.detailed_report'
+
+    @classmethod
+    def get_context(cls, records, header, data):
+        report_context = super().get_context(records, header, data)
+        Production = Pool().get('production')
+        domain = [
+            ('company', '=', data['company']),
+            ('effective_date', '>=', data['start_date']),
+            ('effective_date', '<=', data['end_date']),
+            ]
+        fields_names = ['warehouse.name', 'location.name', 'effective_date',
+            'number', 'uom.name', 'quantity', 'cost', 'product.name', 'product.id']
+        productions = Production.search_read(domain, fields_names=fields_names)
+        if not data['grouped']:
+            records = productions
+        else:
+            records = {}
+            for p in productions:
+                key = str(p['product.']['id']) + p['location.']['name']
+                try:
+                    records[key]['quantity'] += p['quantity']
+                    records[key]['cost'] += p['cost']
+                except:
+                    records[key] = p
+                    records[key]['effective_date'] = None
+                    records[key]['numero'] = None
+            records = records.values() if records else []
+        report_context['records'] = records
+        report_context['Decimal'] = Decimal
+        return report_context
