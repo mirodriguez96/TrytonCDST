@@ -690,6 +690,54 @@ msgctxt "model:ir.ui.menu,name:menu_reports"
 msgid "Reports"
 msgstr "Informes"
 
+msgctxt "model:ir.ui.menu,name:wizard_production_detailed"
+msgid "Report Production Detailed"
+msgstr "Informe de producción detallada"
+
 msgctxt "model:ir.action,name:wizard_production_detailed"
 msgid "Report Production Detailed"
 msgstr "Informe de producción detallada"
+
+msgctxt "model:ir.ui.menu,name:wizard_payroll_settlement_send"
+msgid "Settlement Send"
+msgstr "Enviar soporte de liquidación"
+
+msgctxt "model:ir.action,name:wizard_payroll_settlement_send"
+msgid "Settlement Send"
+msgstr "Enviar soporte de liquidación"
+
+msgctxt "field:staff.payroll_settlement_send.start,subject:"
+msgid "Subject"
+msgstr "Asunto"
+
+msgctxt "field:staff.staff.payroll_settlement_send.start,department:"
+msgid "Department"
+msgstr "Departamento"
+
+msgctxt "field:staff.payroll_settlement_send.start,company:"
+msgid "Company"
+msgstr "Empresa"
+
+msgctxt "field:staff.payroll_settlement_send.start,kind:"
+msgid "Kind"
+msgstr "Tipo"
+
+msgctxt "field:staff.payroll_settlement_send.start,date:"
+msgid "Date"
+msgstr "Fecha"
+
+msgctxt "wizard_button:staff.payroll_settlement_send,start,end:"
+msgid "Cancel"
+msgstr "Cancelar"
+
+msgctxt "wizard_button:staff.payroll_settlement_send,start,send_:"
+msgid "Send"
+msgstr "Enviar"
+
+msgctxt "model:ir.ui.menu,name:wizard_print_payroll_payment_bancolombia"
+msgid "Payroll Payment Bancolombia"
+msgstr "Pago de Nómina Bancolombia"
+
+msgctxt "model:ir.action,name:wizard_print_payroll_payment_bancolombia"
+msgid "Payroll Payment Bancolombia"
+msgstr "Pago de Nómina Bancolombia"
