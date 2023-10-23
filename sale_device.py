@@ -201,9 +201,6 @@ class SaleDevice(metaclass=PoolMeta):
                     'kind': 'other',
                 }
                 to_create.append(statement_journal)
-            else:
-                msg = f"YA EXISTE EL LIBRO DIARIO POS {id_tecno}"
-                logs[id_tecno] = msg
         StatementJournal.create(to_create)
 
 

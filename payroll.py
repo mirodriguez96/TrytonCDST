@@ -1028,7 +1028,6 @@ class PayrollLine(metaclass=PoolMeta):
 
     # Se reescribe el metodo para que aumente támbien el valor de la cuenta analitica a crear
     def update_move_line(self, move_line, values):
-        print(move_line)
         if values['debit']:
             move_line['debit'] += values['debit']
             if 'analytic_lines' in move_line:
