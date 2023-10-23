@@ -77,6 +77,7 @@ def register():
         payroll.PayrollElectronic,
         payroll.StaffAccessRests,
         payroll.StaffAccess,
+        payroll.PayrollLine,
         payroll.ImportBiometricRecordsParameters,
         cron.Cron,
         wiz.DocumentsForImportParameters,

@@ -1023,6 +1023,24 @@ class Payroll(metaclass=PoolMeta):
             LoanLine.write([m], {'state': 'paid', 'origin': line})
 
 
+class PayrollLine(metaclass=PoolMeta):
+    __name__ = "staff.payroll.line"
+
+    # Se reescribe el metodo para que aumente támbien el valor de la cuenta analitica a crear
+    def update_move_line(self, move_line, values):
+        print(move_line)
+        if values['debit']:
+            move_line['debit'] += values['debit']
+            if 'analytic_lines' in move_line:
+                move_line['analytic_lines'][0][1][0]['debit'] += values['debit']
+        if values['credit']:
+            move_line['credit'] += values['credit']
+            if 'analytic_lines' in move_line:
+                move_line['analytic_lines'][0][1][0]['credit'] += values['credit']
+
+        return move_line
+
+
 class PayrollReport(CompanyReport):
     __name__ = 'staff.payroll'
     
