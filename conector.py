@@ -351,7 +351,7 @@ class Actualizacion(ModelSQL, ModelView):
             return
         config, = Config.search([], order=[('id', 'DESC')], limit=1)
         fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
-        consultc = "SELECT CONCAT(sw,'-',tipo,'-',numero_documento) FROM Documentos "\
+        consultc = "SET DATEFORMAT ymd SELECT CONCAT(sw,'-',tipo,'-',numero_documento) FROM Documentos "\
             f"WHERE {cond} AND fecha_hora >= CAST('{fecha}' AS datetime) "\
             "AND exportado = 'T' AND tipo<>0 ORDER BY tipo,numero_documento"
         result_tecno = Config.get_data(consultc)
