@@ -274,7 +274,7 @@ class BalanceStock(Wizard):
         move = self.create_move()
         if not move:
             lang = Lang.get()
-            raise UserError('account_stock.msg_no_move', date=lang.strftime(self.start.date))
+            raise UserError('account_stock.msg_no_move', lang.strftime(self.start.date))
         action['res_id'] = [move.id]
         action['views'].reverse()
         return action, {}
