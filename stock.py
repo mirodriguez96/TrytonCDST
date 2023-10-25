@@ -3,6 +3,9 @@ from trytond.model import fields
 from trytond.transaction import Transaction
 from operator import itemgetter
 from decimal import Decimal
+from .additional import validate_documentos
+
+SW = 16
 
 type_shipment = {
     'out': 'Envio a Clientes',
@@ -222,3 +225,50 @@ class ShipmentDetailedReport(metaclass=PoolMeta):
         report_context['Decimal'] = Decimal
         report_context['kind'] = type_shipment[data['type_shipment']]
         return report_context
+
+
+class ShipmentInternal(metaclass=PoolMeta):
+    "Internal Shipment"
+    __name__ = 'stock.shipment.internal'
+    id_tecno = fields.Char('Id TecnoCarnes', required=False)
+
+    @classmethod
+    def import_tecnocarnes(cls):
+        print('RUN import_tecnocarnes')
+        pool = Pool()
+        Config = pool.get('conector.configuration')
+        configuration = Config.get_configuration()
+        if not configuration:
+            return
+        data = Config.get_documentos_traslados()
+        if not data:
+            return
+        Actualizacion = pool.get('conector.actualizacion')
+        actualizacion = Actualizacion.create_or_update('TRASLADOS')
+        result = validate_documentos(data)
+        try:
+            shipments = cls.create(result["tryton"].values())
+            # with Transaction().set_context(_skip_warnings=True):
+            cls.wait(shipments)
+            cls.assign(shipments)
+            cls.ship(shipments)
+            cls.done(shipments)
+        except Exception as e:
+            result["logs"]["try_except"] = str(e)
+            actualizacion.add_logs(result["logs"])
+            return
+        actualizacion.add_logs(result["logs"])
+        for exportado, idt in result["exportado"].items():
+            for _id in idt:
+                Config.update_exportado(_id, exportado)
+        print('FINISH import_tecnocarnes')
+        
+
+    @classmethod
+    def create_account_move(cls, shipments):
+        result = []
+        for shipment in shipments:
+            if not shipment.id_tecno:
+                result.append(shipment)
+        # Se valida que solo procese los que no se han importado de TecnoCarnes
+        super(ShipmentInternal, cls).create_account_move(result)

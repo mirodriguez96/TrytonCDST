@@ -79,3 +79,6 @@ class Cron(metaclass=PoolMeta):
         cls.method.selection.append(
             ('conector.actualizacion|import_biometric_access', 'Import biometric accesses'),
         )
+        cls.method.selection.append(
+            ('stock.shipment.internal|import_tecnocarnes', 'Importar traslados'),
+        )

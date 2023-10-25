@@ -45,6 +45,7 @@ def register():
         sale_device.SaleDevice,
         sale_device.Journal,
         stock.Location,
+        stock.ShipmentInternal,
         configuration.Configuration,
         voucher.Voucher,
         voucher.MultiRevenue,
