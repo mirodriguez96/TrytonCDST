@@ -2,6 +2,7 @@ from trytond.model import ModelSQL, ModelView, fields
 from trytond.pool import Pool
 from trytond.exceptions import UserError
 import datetime
+from .additional import list_to_tuple
 
 try:
     import pyodbc
@@ -147,6 +148,12 @@ class Configuration(ModelSQL, ModelView):
         query = "UPDATE dbo.Documentos SET exportado = '"+e+"' WHERE sw ="+lista[0]+" and tipo = "+lista[1]+" and Numero_documento = "+lista[2]
         cls.set_data(query)
 
+    @classmethod
+    def update_exportado_list(cls, idt, e):
+        ids = list_to_tuple(idt, string=True)
+        query = f"UPDATE dbo.Documentos SET exportado = '{e}' WHERE CONCAT(sw,'-',tipo,'-',Numero_Documento) IN {ids}"
+        print(query)
+        cls.set_data(query)
 
     @classmethod
     def get_tblproducto(cls, fecha):
@@ -294,7 +301,7 @@ class Configuration(ModelSQL, ModelView):
         Config = Pool().get('conector.configuration')
         config, = Config.search([], order=[('id', 'DESC')], limit=1)
         fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
-        query = "SET DATEFORMAT ymd SELECT TOP(50) d.anulado, d.bodega from_location, l.* FROM dbo.Documentos_Lin l "\
+        query = "SET DATEFORMAT ymd SELECT d.anulado, d.bodega from_location, l.* FROM dbo.Documentos_Lin l "\
                 "INNER JOIN Documentos d ON d.sw=l.sw AND d.tipo=l.tipo AND d.Numero_documento=l.Numero_Documento "\
                 f"WHERE d.anulado != 'S' AND d.fecha_hora >= CAST('{fecha}' AS datetime) "\
                 "AND d.sw = 16 AND d.exportado != 'T' AND d.exportado != 'E' AND d.exportado != 'X'"

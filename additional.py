@@ -3,10 +3,13 @@ from trytond.transaction import Transaction
 from trytond.exceptions import UserError
 
 # Función encargada de convertir una lista a un string tipo tupla
-def list_to_tuple(value):
+def list_to_tuple(value, string=False):
     result = None
     if value:
-        result = "(" + ", ".join(map(str, value)) + ")"
+        if string:
+            result = "('" + "', '".join(map(str, value)) + "')"
+        else:
+            result = "(" + ", ".join(map(str, value)) + ")"
     return result
 
 # Se retorna las cuentas analiticas según los tipos de documentos que coinciden
@@ -136,6 +139,14 @@ def validate_documentos(data):
     if hasattr(Internal, 'analytic_account') and tipos_doctos:
         analytic_types = get_analytic_types(tipos_doctos)
     for id_tecno, shipment in result["tryton"].items():
+        if analytic_types:
+            tipo = shipment["reference"].split("-")[0]
+            if tipo in analytic_types:
+                shipment["analytic_account"] = analytic_types[tipo].id
+            else:
+                result["logs"][id_tecno] = f"No se encontro la cuenta analitica para el tipo: {tipo}"
+                result["exportado"]["E"].append(id_tecno)
+                continue
         from_location = shipment["from_location"]
         if from_location in locations:
             storage_location_id = locations[from_location].storage_location.id
@@ -143,7 +154,6 @@ def validate_documentos(data):
         else:
             result["tryton"][id_tecno] = f"No se encontro la bodega con id_tecno: {from_location}"
             result["exportado"]["E"].append(id_tecno)
-            del(result["tryton"][id_tecno])
             continue
         to_location = shipment["to_location"]
         if to_location in locations:
@@ -152,7 +162,6 @@ def validate_documentos(data):
         else:
             result["tryton"][id_tecno] = f"No se encontro la bodega con id_tecno: {to_location}"
             result["exportado"]["E"].append(id_tecno)
-            del(result["tryton"][id_tecno])
             continue
         for mv in shipment["moves"][0][1]:
             mv["from_location"] = shipment["from_location"]
@@ -165,17 +174,8 @@ def validate_documentos(data):
                 break
         if id_tecno in result["logs"]:
             result["exportado"]["E"].append(id_tecno)
-            del(result["tryton"][id_tecno])
             continue
-        # Analytic
-        if analytic_types:
-            tipo = shipment["reference"].split("-")[0]
-            if tipo in analytic_types:
-                shipment["analytic_account"] = analytic_types[tipo].id
-            else:
-                result["tryton"][id_tecno] = f"No se encontro la cuenta analitica para el tipo: {tipo}"
-                result["exportado"]["E"].append(id_tecno)
-                del(result["tryton"][id_tecno])
-                continue
         result["exportado"]["T"].append(id_tecno)
+    for to_delete in result["exportado"]["E"]:
+        del(result["tryton"][to_delete])
     return result

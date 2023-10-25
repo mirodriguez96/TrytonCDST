@@ -259,8 +259,8 @@ class ShipmentInternal(metaclass=PoolMeta):
             return
         actualizacion.add_logs(result["logs"])
         for exportado, idt in result["exportado"].items():
-            for _id in idt:
-                Config.update_exportado(_id, exportado)
+            if idt:
+                Config.update_exportado_list(idt, exportado)
         print('FINISH import_tecnocarnes')
         
 
