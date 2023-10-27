@@ -301,13 +301,26 @@ class Configuration(ModelSQL, ModelView):
         Config = Pool().get('conector.configuration')
         config, = Config.search([], order=[('id', 'DESC')], limit=1)
         fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
-        query = "SET DATEFORMAT ymd SELECT d.anulado, d.bodega from_location, l.* FROM dbo.Documentos_Lin l "\
-                "INNER JOIN Documentos d ON d.sw=l.sw AND d.tipo=l.tipo AND d.Numero_documento=l.Numero_Documento "\
-                f"WHERE d.anulado != 'S' AND d.fecha_hora >= CAST('{fecha}' AS datetime) "\
-                "AND d.sw = 16 AND d.exportado != 'T' AND d.exportado != 'E' AND d.exportado != 'X'"
+        # Consulta T-SQL mejorada
+        subquery = f"""SELECT TOP 50 sw, tipo, Numero_documento, bodega 
+                    FROM dbo.Documentos 
+                    WHERE sw = 16 
+                    AND fecha_hora >= CAST('{fecha}' AS datetime)
+                    AND anulado != 'S' 
+                    AND exportado NOT IN ('T', 'E', 'X')
+                    """
         if config.end_date:
             end_date = config.end_date.strftime('%Y-%m-%d %H:%M:%S')
-            query += f" AND fecha_hora < CAST('{end_date}' AS datetime) "
+            subquery += f"AND fecha_hora < CAST('{end_date}' AS datetime)"
+        query = f"""
+                SET DATEFORMAT ymd 
+                SELECT d.bodega from_location, l.* 
+                FROM dbo.Documentos_Lin AS l
+                INNER JOIN (
+                {subquery}
+                ) AS d
+                ON d.sw = l.sw AND d.tipo = l.tipo AND d.Numero_documento = l.Numero_Documento;
+                """
         data = cls.get_data(query)
         return data
 

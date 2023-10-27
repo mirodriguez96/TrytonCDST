@@ -20,16 +20,21 @@ def get_analytic_types(tipos_doctos):
         Config = pool.get('conector.configuration')
         ids_tipos = list_to_tuple(tipos_doctos)
         tbltipodocto = Config.get_tbltipodoctos_encabezado(ids_tipos)
-        _codes = {}
+        _values = {}
         for tipodocto in tbltipodocto:
-            if tipodocto.Encabezado != '0':
-                _codes[str(tipodocto.Encabezado)] = str(tipodocto.idTipoDoctos)
-                # _codes.append(str(tipodocto.Encabezado))
-        if _codes:
+            if tipodocto.Encabezado and tipodocto.Encabezado != '0':
+                encabezado = str(tipodocto.Encabezado)
+                idtipod = str(tipodocto.idTipoDoctos)
+                if encabezado not in _values:
+                    _values[encabezado] = []
+                _values[encabezado].append(idtipod)
+        if _values:
             AnalyticAccount = pool.get('analytic_account.account')
-            analytic_accounts = AnalyticAccount.search([('code', 'in', _codes.keys())])
+            analytic_accounts = AnalyticAccount.search([('code', 'in', _values.keys())])
             for ac in analytic_accounts:
-                analytic_types[_codes[ac.code]] = ac
+                idstipo = _values[ac.code]
+                for idt in idstipo:
+                    analytic_types[idt] = ac
     return analytic_types
 
 # Se retorna un diccionario con las ubicaciones encontradas
@@ -123,12 +128,18 @@ def validate_documentos(data):
         producto = str(d.IdProducto)
         if producto not in productos:
             productos.append(producto)
+        quantity = float(round(d.Cantidad_Facturada, 2))
+        if quantity < 0:
+            result["logs"][id_tecno] = f"Cantidad en negativo: {quantity} Producto: {producto}"
+            result["exportado"]["E"].append(id_tecno)
+            del(result["tryton"][id_tecno])
+            continue
         move = {
             "from_location": shipment["from_location"],
             "to_location": shipment["to_location"],
             "product": producto,
             "company": id_company,
-            "quantity": float(d.Cantidad_Facturada),
+            "quantity": quantity,
             "planned_date": shipment["planned_date"],
             "effective_date": shipment["effective_date"],
         }
@@ -163,16 +174,21 @@ def validate_documentos(data):
             result["tryton"][id_tecno] = f"No se encontro la bodega con id_tecno: {to_location}"
             result["exportado"]["E"].append(id_tecno)
             continue
+        products_exist = True
         for mv in shipment["moves"][0][1]:
             mv["from_location"] = shipment["from_location"]
             mv["to_location"] = shipment["to_location"]
             if mv["product"] in products:
-                mv["uom"] = products[mv["product"]].default_uom.id
-                mv["product"] = products[mv["product"]].id
+                product = products[mv["product"]]
+                mv["uom"] = product.default_uom.id
+                mv["product"] = product.id
+                if product.default_uom.symbol.upper() == 'U':
+                    mv["quantity"] = float(int(mv["quantity"]))
             else:
+                products_exist = False
                 result["logs"][id_tecno] = f"No se encontro el producto: {mv['product']}"
                 break
-        if id_tecno in result["logs"]:
+        if not products_exist:
             result["exportado"]["E"].append(id_tecno)
             continue
         result["exportado"]["T"].append(id_tecno)
