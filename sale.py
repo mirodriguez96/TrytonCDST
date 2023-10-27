@@ -3,7 +3,6 @@ from trytond.model import fields
 from trytond.pool import Pool, PoolMeta
 from trytond.exceptions import UserError
 from trytond.transaction import Transaction
-from trytond.wizard import Wizard
 from decimal import Decimal
 from sql import Table
 
@@ -599,13 +598,13 @@ class Sale(metaclass=PoolMeta):
             total_paid = Decimal(0.0)
             if sale.payments:
                 total_paid = sum([p.amount for p in sale.payments])
-                if total_paid >= sale.total_amount:
+                if abs(total_paid) >= abs(sale.total_amount):
                     if total_paid == sale.total_amount:
                         Sale.do_reconcile([sale])
                     else:
-                        msg = f"REVISAR {sale.id_tecno} - venta pos con un total pagado mayor al total de la venta"
+                        msg = f"REVISAR: venta pos con un total pagado: {total_paid}"\
+                            f" mayor al total de la venta: {sale.total_amount}"
                         logs[sale.id_tecno] = msg
-                        # to_exception.append(sale.id_tecno)
                     continue
             total_pay = args.get('sales')[sale]
             if not total_pay:
