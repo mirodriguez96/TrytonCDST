@@ -118,9 +118,9 @@ msgctxt "model:ir.action,name:act_update_note_date"
 msgid "Update accounting note date"
 msgstr "Actualizar fecha de nota contable"
 
-msgctxt "model:ir.action,name:act_reverse_production"
-msgid "Reverse production"
-msgstr "Revertir producción"
+msgctxt "model:ir.action,name:wizard_production_force_draft"
+msgid "Force Draft"
+msgstr "Forzar a borrador"
 
 msgctxt "model:ir.action,name:act_move_fix_party_account"
 msgid "Add missing party to invoice moves"

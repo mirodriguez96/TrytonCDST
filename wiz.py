@@ -15,43 +15,6 @@ _EXPORTADO = [
 
 ZERO = Decimal('0.0')
 
-class FixBugsConector(Wizard):
-    'Fix Bugs Conector'
-    __name__ = 'conector.configuration.fix_bugs_conector'
-    start_state = 'fix_bugs_conector'
-    fix_bugs_conector = StateTransition()
-
-    def transition_fix_bugs_conector(self):
-        pool = Pool()
-        Warning = pool.get('res.user.warning')
-        warning_name = 'warning_fix_bugs_conector'
-        if Warning.check(warning_name):
-            raise UserWarning(warning_name, "No continue si desconoce el funcionamiento interno del asistente.")
-        
-        cnx = pool.get('conector.configuration')
-        MultiRevenue = pool.get('account.multirevenue')
-        Transaction = pool.get('account.multirevenue.transaction')
-        PayMode = pool.get('account.voucher.paymode')
-        multi = MultiRevenue.search([])
-
-        to_save = []
-        for mr in multi:
-            print(mr)
-            to_transactions = []
-            pagos = cnx.get_tipos_pago(mr.id_tecno)
-            for pago in pagos:
-                paymode, = PayMode.search([('id_tecno', '=', pago.forma_pago)])
-                transaction = Transaction()
-                transaction.description = 'IMPORTACION TECNO (fix)'
-                transaction.amount = Decimal(pago.valor)
-                transaction.date = mr.date
-                transaction.payment_mode = paymode
-                to_transactions.append(transaction)
-            mr.transactions = to_transactions
-            to_save.append(mr)
-        MultiRevenue.save(to_save)
-
-        return 'end'
 
 class DocumentsForImportParameters(ModelView):
     'Documents For Import Parameters'
@@ -213,26 +176,6 @@ class MoveFixParty(Wizard): # ACTUALIZAR PARA SOLUCIONAR ASIENTOS DE CUALLQUIER 
                         )
         return 'end'
 
-
-# Asistente encargado de revertir las producciones
-class ReverseProduction(Wizard):
-    'Reverse Production'
-    __name__ = 'production.reverse_production'
-    start_state = 'reverse_production'
-    reverse_production = StateTransition()
-
-    def transition_reverse_production(self):
-        Production = Pool().get('production')
-        ids = Transaction().context['active_ids']
-        to_reverse = []
-        if ids:
-            for production in Production.browse(ids):
-                to_reverse.append(production)
-        Production.reverse_production(to_reverse)
-        return 'end'
-    
-    def end(self):
-        return 'reload'
 
 # Asistente para eliminar tipos en cuentas padres
 class DeleteAccountType(Wizard):

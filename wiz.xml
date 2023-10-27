@@ -2,16 +2,6 @@
 <tryton>
     
     <data>
-        <!--Asistente para reparar errores encontrados o generados en Tryton-->
-        <record model="ir.action.wizard" id="act_fix_bugs_conector">
-            <field name="name">Fix bugs conector</field>
-            <field name="wiz_name">conector.configuration.fix_bugs_conector</field>
-        </record>
-        <record model="ir.action.keyword" id="act_fix_bugs_conector_keyword">
-            <field name="keyword">form_action</field>
-            <field name="model">conector.configuration,-1</field>
-            <field name="action" ref="act_fix_bugs_conector"/>
-        </record>
         <!-- ################## -->
         <!-- # Mark Documents # -->
         <!-- ################## -->
@@ -81,16 +71,6 @@
             <field name="keyword">form_action</field>
             <field name="model">account.move,-1</field>
             <field name="action" ref="act_move_fix_party_account"/>
-        </record>
-        <!-- Asistente para revertir la producción -->
-        <record model="ir.action.wizard" id="act_reverse_production">
-            <field name="name">Reverse production</field>
-            <field name="wiz_name">production.reverse_production</field>
-        </record>
-        <record model="ir.action.keyword" id="act_reverse_production_keyword">
-            <field name="keyword">form_action</field>
-            <field name="model">production,-1</field>
-            <field name="action" ref="act_reverse_production"/>
         </record>
         <!--Asistente para actualizar las fechas de las notas contables-->
         <record model="ir.action.wizard" id="act_update_note_date">

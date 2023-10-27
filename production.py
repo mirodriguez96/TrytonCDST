@@ -6,8 +6,9 @@ from trytond.exceptions import UserError
 from trytond.modules.company import CompanyReport
 from trytond.report import Report
 from trytond.wizard import (
-    Wizard, StateReport, StateView, Button)
+    Wizard, StateReport, StateView, Button, StateTransition)
 from trytond.transaction import Transaction
+from sql import Table
 
 #Heredamos del modelo sale.sale para agregar el campo id_tecno
 class Production(metaclass=PoolMeta):
@@ -177,40 +178,6 @@ class Production(metaclass=PoolMeta):
             Config.update_exportado(idt, 'T')
         print('FINISH PRODUCTION')
 
-
-    #Función encargada de revertir las producciones hechas
-    @classmethod
-    def reverse_production(cls, productions):
-        pool = Pool()
-        Production = pool.get('production')
-        Move = pool.get('stock.move')
-        reverse = Production.copy(productions)
-        to_reverse = []
-        for production in reverse:
-            to_inputs = []
-            for output in production.outputs:
-                inp = Move()
-                inp.product = output.product
-                inp.quantity = output.quantity
-                inp.uom = output.uom
-                inp.from_location = output.to_location
-                inp.to_location = output.from_location
-                to_inputs.append(inp)
-            to_outputs = []
-            for input in production.inputs:
-                out = Move()
-                out.product = input.product
-                out.quantity = input.quantity
-                out.uom = input.uom
-                out.from_location = input.to_location
-                out.to_location = input.from_location
-                out.unit_price = input.product.template.list_price
-                to_outputs.append(out)
-            production.inputs = to_inputs
-            production.outputs = to_outputs
-            to_reverse.append(production)
-        #print(to_reverse)
-        Production.save(to_reverse)
 
     # Función que recibe una producción y de acuerdo a esa información crea un asiento contable 
     @classmethod
@@ -421,3 +388,49 @@ class ProductionDetailedReport(Report):
         report_context['records'] = records
         report_context['Decimal'] = Decimal
         return report_context
+
+
+class ProductionForceDraft(Wizard):
+    'Production Force Draft'
+    __name__ = 'production.force_draft'
+    start_state = 'force_draft'
+    force_draft = StateTransition()
+
+    def transition_force_draft(self):
+        ids_ = Transaction().context['active_ids']
+        if ids_:
+            Production = Pool().get('production')
+            stock_move = Table('stock_move')
+            account_move = Table('account_move')
+            cursor = Transaction().connection.cursor()
+            to_save = []
+            to_delete = []
+            for prod in Production.browse(ids_):
+                if prod.state == 'draft':
+                    continue
+                if prod.move:
+                    # Se agrega a la lista el asiento que debe ser eliminado
+                    to_delete.append(prod.move.id)
+                inputs = [mv.id for mv in prod.inputs]
+                outputs = [mv.id for mv in prod.outputs]
+                moves = inputs + outputs
+                if moves:
+                    cursor.execute(*stock_move.update(
+                        columns=[stock_move.state],
+                        values=['draft'],
+                        where=stock_move.id.in_(moves))
+                    )
+                prod.state = 'draft'
+                to_save.append(prod)
+            if to_delete:
+                cursor.execute(*account_move.update(
+                    columns=[account_move.state],
+                    values=['draft'],
+                    where=account_move.id.in_(to_delete))
+                )
+                cursor.execute(*account_move.delete(
+                    where=account_move.id.in_(to_delete))
+                    )
+            if to_save:
+                Production.save(to_save)
+        return 'end'

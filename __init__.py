@@ -105,14 +105,12 @@ def register():
         invoice.UpdateNoteDate,
         wiz.DeleteVoucherTecno,
         wiz.VoucherMoveUnreconcile,
-        wiz.ReverseProduction,
         wiz.DeleteImportRecords,
         wiz.DeleteAccountType,
         wiz.CheckImportedDoc,
         wiz.MarkImportMulti,
         wiz.MoveFixParty,
         wiz.ForceDraftVoucher,
-        wiz.FixBugsConector,
         wiz.UnreconcilieMulti,
         wiz.CreateAdjustmentNotes,
         wiz.AddCenterOperationLine,
@@ -136,6 +134,7 @@ def register():
         account.IncomeStatementWizard,
         account.ActiveForceDraft,
         production.ProductionDetailed,
+        production.ProductionForceDraft,
         module='conector', type_='wizard')
 
     Pool.register(

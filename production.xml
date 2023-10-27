@@ -48,6 +48,16 @@ this repository contains the full copyright notices and license terms. -->
 
       <menuitem parent="menu_reports" sequence="100"
         action="wizard_production_detailed" id="menu_production_detailed"/>
+
+        <record model="ir.action.wizard" id="wizard_production_force_draft">
+            <field name="name">Force Draft</field>
+            <field name="wiz_name">production.force_draft</field>
+        </record>
+        <record model="ir.action.keyword" id="action_production_force_draft_keyword">
+            <field name="keyword">form_action</field>
+            <field name="model">production,-1</field>
+            <field name="action" ref="wizard_production_force_draft"/>
+        </record>
       
     </data>
 </tryton>
