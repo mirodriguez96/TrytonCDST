@@ -204,5 +204,6 @@ def validate_documentos(data):
             continue
         result["exportado"]["T"].append(id_tecno)
     for to_delete in result["exportado"]["E"]:
-        del(result["tryton"][to_delete])
+        if to_delete in result["tryton"]:
+            del(result["tryton"][to_delete])
     return result

@@ -305,13 +305,14 @@ class Configuration(ModelSQL, ModelView):
         subquery = f"""SELECT TOP 50 sw, tipo, Numero_documento, bodega 
                     FROM dbo.Documentos 
                     WHERE sw = 16 
-                    AND fecha_hora >= CAST('{fecha}' AS datetime)
+                    AND Fecha_Hora_Factura >= CAST('{fecha}' AS datetime)
                     AND anulado != 'S' 
                     AND exportado NOT IN ('T', 'E', 'X')
                     """
         if config.end_date:
             end_date = config.end_date.strftime('%Y-%m-%d %H:%M:%S')
-            subquery += f"AND fecha_hora < CAST('{end_date}' AS datetime)"
+            subquery += f"AND Fecha_Hora_Factura < CAST('{end_date}' AS datetime) "
+        subquery += "ORDER BY Fecha_Hora_Factura ASC"
         query = f"""
                 SET DATEFORMAT ymd 
                 SELECT d.bodega from_location, l.* 
@@ -319,7 +320,7 @@ class Configuration(ModelSQL, ModelView):
                 INNER JOIN (
                 {subquery}
                 ) AS d
-                ON d.sw = l.sw AND d.tipo = l.tipo AND d.Numero_documento = l.Numero_Documento;
+                ON d.sw = l.sw AND d.tipo = l.tipo AND d.Numero_documento = l.Numero_Documento
                 """
         data = cls.get_data(query)
         return data
