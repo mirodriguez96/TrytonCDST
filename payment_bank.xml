@@ -29,5 +29,15 @@
             <field name="translatable">False</field>
       </record>
 
+
+
+      <!-- Campo Modo de pago bancos -->
+      <record model="ir.ui.view" id="bank_account_number_view_form">
+            <field name="model">bank.account.number</field>
+            <field name="inherit" ref="bank.bank_account_number_view_form"/> 
+            <field name="name">bank_form_view</field>
+      </record>
+
+
     </data>
 </tryton>
