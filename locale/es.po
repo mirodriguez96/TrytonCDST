@@ -741,3 +741,95 @@ msgstr "Pago de Nómina Bancolombia"
 msgctxt "model:ir.action,name:wizard_print_payroll_payment_bancolombia"
 msgid "Payroll Payment Bancolombia"
 msgstr "Pago de Nómina Bancolombia"
+
+msgctxt "model:ir.ui.menu,name:menu_payroll_ibc_report"
+msgid "Payroll IBC Report"
+msgstr "Reporte Acomulado IBC"
+
+msgctxt "field:staff.payroll_ibc.start,company:"
+msgid "Company"
+msgstr "Empresa"
+
+msgctxt "field:staff.payroll_ibc.start,start_period:"
+msgid "Start Period"
+msgstr "Periodo Inicial"
+
+msgctxt "field:staff.payroll_ibc.start,end_period:"
+msgid "End Period"
+msgstr "Periodo Final"
+
+msgctxt "field:staff.payroll_ibc.start,department:"
+msgid "Department"
+msgstr "Departamento"
+
+msgctxt "field:staff.payroll_ibc.start,accomulated_month:"
+msgid "accomulated Month"
+msgstr "Acomular por mes"
+
+msgctxt "field:staff.payroll_ibc.start,accomulated_period:"
+msgid "accomulated Period"
+msgstr "Acomular por periodo"
+
+msgctxt "field:staff.payroll_ibc.start,fiscalyear:"
+msgid "Fiscal Year"
+msgstr "Año Fiscal"
+
+msgctxt "field:staff.payroll_ibc.start,start_period_fiscalyear:"
+msgid "Start Period"
+msgstr "Periodo Inicial"
+
+msgctxt "field:staff.payroll_ibc.start,end_period_fiscalyear:"
+msgid "End Period"
+msgstr "Periodo Final"
+
+msgctxt "wizard_button:staff.payroll_ibc.start.payroll_ibc_wizard,start,print_:"
+msgid "Print"
+msgstr "Imprimir"
+
+msgctxt "wizard_button:staff.payroll_ibc.start.payroll_ibc_wizard,start,end:"
+msgid "Cancel"
+msgstr "Cancelar"
+
+msgctxt "model:ir.action,name:wizard_income_statement"
+msgid "Income statement Report"
+msgstr "Reporte Balance cuentas analiticas"
+
+msgctxt "field:account.income_statement.start,company:"
+msgid "Company"
+msgstr "Empresa"
+
+msgctxt "field:account.income_statement.start,from_date:"
+msgid "From Date"
+msgstr "Fecha Inicial"
+
+msgctxt "field:account.income_statement.start,to_date:"
+msgid "To Date"
+msgstr "Fecha Final"
+
+msgctxt "field:account.income_statement.start,posted:"
+msgid "Posted Move"
+msgstr "Movimientos contabilizados"
+
+msgctxt "field:account.income_statement.start,accumulated:"
+msgid "Accumulated"
+msgstr "Acomulado por cuenta analitica"
+
+msgctxt "field:account.income_statement.start,Analitic_filter:"
+msgid "Analytic Detailed"
+msgstr "Detallado por cuenta analitica"
+
+msgctxt "field:account.income_statement.start,analytic_accounts:"
+msgid "Analytic Account"
+msgstr "Cuentas Analiticas"
+
+msgctxt "field:account.income_statement.start,allstart:"
+msgid "All"
+msgstr "Todas las cuentas"
+
+msgctxt "wizard_button:account.income_statement_wizard_cds,start,print_:"
+msgid "Print"
+msgstr "Imprimir"
+
+msgctxt "wizard_button:account.income_statement_wizard_cds,start,end:"
+msgid "Cancel"
+msgstr "Cancelar"

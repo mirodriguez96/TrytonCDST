@@ -201,5 +201,36 @@ this repository contains the full copyright notices and license terms. -->
             <field name="translatable">False</field>
         </record> 
         
+
+        <!-- ####################################################### -->
+        <!-- # interfaz para la generación del reporte payroll IBC #-->
+        <!-- ####################################################### -->
+
+
+        <record model="ir.ui.view" id="payroll_ibc_form">
+            <field name="model">staff.payroll_ibc.start</field>
+            <field name="type">form</field>
+            <field name="name">payroll_ibc_form</field>
+        </record>
+
+        <record model="ir.action.wizard" id="wizard_payroll_ibc">
+            <field name="name">Payroll IBC Report</field>
+            <field name="wiz_name">staff.payroll_ibc_wizard</field>
+        </record>
+
+
+        <record model="ir.action.report" id="payroll_ibc_report">
+            <field name="name">Payroll IBC Report</field>
+            <field name="model"></field>
+            <field name="report_name">staff_payroll.ibc_report</field>
+            <field name="report">conector/payroll_ibc_report.fods</field>
+            <field name="template_extension">ods</field>
+            <field name="translatable">False</field>
+        </record>
+
+        <menuitem parent="staff.menu_reporting" id="menu_payroll_ibc_report"
+            action="wizard_payroll_ibc"/>
+
+            
     </data>
 </tryton>

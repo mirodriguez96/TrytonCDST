@@ -116,18 +116,25 @@ class Invoice(metaclass=PoolMeta):
     def get_analytic_tipodocto(cls, tipos_doctos):
         analytic_types = {}
         if tipos_doctos:
-            Config = Pool().get('conector.configuration')
-            ids_tipos = "(" + ", ".join(map(str, tipos_doctos)) + ")"
+            pool = Pool()
+            Config = pool.get('conector.configuration')
+            ids_tipos = ids_tipos = "(" + ", ".join(map(str, tipos_doctos)) + ")"
             tbltipodocto = Config.get_tbltipodoctos_encabezado(ids_tipos)
-            _codes = []
+            _values = {}
             for tipodocto in tbltipodocto:
-                if tipodocto.Encabezado != '0':
-                    _codes.append(str(tipodocto.Encabezado))
-            if _codes:
-                AnalyticAccount = Pool().get('analytic_account.account')
-                analytic_accounts = AnalyticAccount.search([('code', 'in', _codes)])
+                if tipodocto.Encabezado and tipodocto.Encabezado != '0':
+                    encabezado = str(tipodocto.Encabezado)
+                    idtipod = str(tipodocto.idTipoDoctos)
+                    if encabezado not in _values:
+                        _values[encabezado] = []
+                    _values[encabezado].append(idtipod)
+            if _values:
+                AnalyticAccount = pool.get('analytic_account.account')
+                analytic_accounts = AnalyticAccount.search([('code', 'in', _values.keys())])
                 for ac in analytic_accounts:
-                    analytic_types[ac.code] = ac
+                    idstipo = _values[ac.code]
+                    for idt in idstipo:
+                        analytic_types[idt] = ac
         return analytic_types
 
     # Metodo encargado de validar los datos (importados) requeridos para la creación de la factura
@@ -324,19 +331,7 @@ class Invoice(metaclass=PoolMeta):
                 data['logs'][id_tecno] = f"EXCEPCION: {ex}"
                 data['exportado'][id_tecno] = 'E'
         ################################
-        analytic_types = {}
-        if tipos_doctos:
-            ids_tipos = "(" + ", ".join(map(str, tipos_doctos)) + ")"
-            tbltipodocto = Config.get_tbltipodoctos_encabezado(ids_tipos)
-            _codes = []
-            for tipodocto in tbltipodocto:
-                if tipodocto.Encabezado != '0':
-                    _codes.append(str(tipodocto.Encabezado))
-            if _codes:
-                AnalyticAccount = pool.get('analytic_account.account')
-                analytic_accounts = AnalyticAccount.search([('code', 'in', _codes)])
-                for ac in analytic_accounts:
-                    analytic_types[ac.code] = ac
+        analytic_types = Invoice.get_analytic_tipodocto(tipos_doctos)
         # Se procede a validar los valores de las lineas del documento
         for id_tecno, lineas in lineas_tecno.items():
             if id_tecno in data['exportado']:

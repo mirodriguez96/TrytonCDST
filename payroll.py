@@ -6,7 +6,9 @@ from trytond.pool import Pool, PoolMeta
 from trytond.wizard import (
     Wizard, StateView, Button, StateReport, StateTransition
 )
-from trytond.pyson import Eval, Or, Not, If
+from sql.aggregate import Sum
+from sql.operators import Between
+from trytond.pyson import Eval, Or, Not, If, Bool
 from trytond.transaction import Transaction
 from trytond.report import Report
 from trytond.exceptions import UserError, UserWarning
@@ -42,6 +44,23 @@ WEEK_DAYS = {
     6: 'saturday',
     7: 'sunday',
 }
+
+
+MONTH = {
+    '01': 'ENERO',
+    '02': 'FEBRERO',
+    '03': 'MARZO',
+    '04': 'ABRIL',
+    '05': 'MAYO',
+    '06': 'JUNIO',
+    '07': 'JULIO',
+    '08':  'AGOSTO',
+    '09': 'SEPTIEMBRE',
+    '10': 'OCTUBRE',
+    '11': 'NOVIEMBRE',
+    '12': 'DICIEMBRE'
+}
+
 
 try:
     import html2text
@@ -1421,13 +1440,16 @@ class StaffAccess(metaclass=PoolMeta):
         elif ttt <= 7.83 and dom > Decimal(0.0):
             dom = ttt
 
-        hedo = round(Decimal(ttt) - Decimal(7.83),2) if hedo != float(0) else float(0)
-        heno = round(Decimal(ttt) - Decimal(7.83),2) if heno != float(0) else float(0)
-        hedf = round(Decimal(ttt) - Decimal(7.83),2) if hedf != float(0) else float(0)
-        henf = round(Decimal(ttt) - Decimal(7.83),2) if henf != float(0) else float(0)
-
-        return {'ttt': ttt, 'het': round(het,2), 'hedo': float(0) if hedo <= float(0) else hedo, 'heno': float(0) if heno <= float(0) else heno,
-                'reco': reco, 'recf': recf, 'dom': dom, 'hedf': float(0) if hedf <= float(0) else hedf, 'henf': float(0) if henf <= float(0) else  henf}
+        # hedo = round(Decimal(ttt) - Decimal(7.83),2) if hedo != float(0) else float(0)
+        # heno = round(Decimal(ttt) - Decimal(7.83),2) if heno != float(0) else float(0)
+        # hedf = round(Decimal(ttt) - Decimal(7.83),2) if hedf != float(0) else float(0)
+        # henf = round(Decimal(ttt) - Decimal(7.83),2) if henf != float(0) else float(0)
+        
+        return {'ttt': ttt, 'het': round(het,2), 'hedo': round(het-heno,2) if dom == 0 else hedo, 'heno': round(heno,2) ,
+                'reco': reco, 'recf': recf, 'dom': dom, 'hedf': round(het-henf,2) if dom != 0 else hedf, 'henf': round(henf,2) }
+    
+        # return {'ttt': ttt, 'het': round(het,2), 'hedo': float(0) if hedo <= float(0) else hedo, 'heno': float(0) if heno <= float(0) else heno,
+        #         'reco': reco, 'recf': recf, 'dom': dom, 'hedf': float(0) if hedf <= float(0) else hedf, 'henf': float(0) if henf <= float(0) else  henf}
     
     # Obtiene la suma de los descansos
     def _get_all_rests(self, index_rest, all_rests, contador):
@@ -1544,14 +1566,6 @@ class StaffAccessReport(Report):
 
         return result
     
-    # @classmethod
-    # def get_ttt(cls, enter_timestamp, exit_timestamp, timedelta):
-    #     result= ''
-    #     if enter_timestamp not in ['Null', None] and exit_timestamp not in ['Null', None]:
-    #         result = (enter_timestamp - exit_timestamp) / timedelta * -1
-    #         result = str(round(abs(result), 2))
-
-    #     return result
 
     @classmethod
     def get_context(cls, records, header, data):
@@ -1639,4 +1653,309 @@ class StaffAccessReport(Report):
 
         report_context['records'] = record_dict.values()
         report_context['company'] = Company(data['company'])
+        return report_context
+    
+
+# Reporte FRIGOECOL IBC
+class PayrollIBCView(ModelView):
+    'Payroll IBC View'
+    __name__ = 'staff.payroll_ibc.start'
+    company = fields.Many2One('company.company', 'Company', required=True)
+
+    start_period = fields.Many2One('staff.payroll.period', 'Start Period',
+        required=True, domain=[('state', '!=', 'draft')],
+        states={
+            'invisible': ~Not(Eval('accomulated_month')),
+            'required': ~Bool(Eval('accomulated_month'))}, depends=['accomulated_month'])
+
+    end_period = fields.Many2One('staff.payroll.period', 'End Period',
+        required=True, domain=[('state', '!=', 'draft'),], 
+        states={
+            'invisible': ~Not(Eval('accomulated_month')),
+            'required': ~Bool(Eval('accomulated_month'))}, depends=['accomulated_month'])
+
+    department = fields.Many2One('company.department', 'Department')
+    
+    accomulated_month = fields.Boolean('accomulated Month', help='If this check is selected, it will accumulate by months',on_change_with='on_change_with_accomulated_month')
+
+    accomulated_period = fields.Boolean('accomulated Period', help='If this check is selected, it will accumulate by period',on_change_with='on_change_with_accomulated_period')
+
+    fiscalyear = fields.Many2One('account.fiscalyear', 'Fiscal Year',
+        states={
+            'invisible': ~Not(Eval('accomulated_period')),
+            'required': ~Bool(Eval('accomulated_period'))}, depends=['accomulated_period'])
+    
+    start_period_fiscalyear = fields.Many2One('account.period', 'Start Period',
+        domain=[
+            ('fiscalyear', '=', Eval('fiscalyear')),
+            ('start_date', '<=', (Eval('end_period_fiscalyear'), 'start_date')),
+            ],states={
+            'invisible': ~Not(Eval('accomulated_period')),
+            'required': ~Bool(Eval('accomulated_period'))}, depends=['fiscalyear', 'end_period_fiscalyear', 'accomulated_period'],)
+    
+    end_period_fiscalyear = fields.Many2One('account.period', 'End Period',
+        domain=[
+            ('fiscalyear', '=', Eval('fiscalyear')),
+            ('start_date', '>=', (Eval('start_period_fiscalyear'), 'start_date'))
+            ], 
+        states={
+            'invisible': ~Not(Eval('accomulated_period')),
+            'required': ~Bool(Eval('accomulated_period'))}, depends=['fiscalyear', 'start_period_fiscalyear', 'accomulated_period'],)
+    
+
+    @staticmethod
+    def default_company():
+        return Transaction().context.get('company')
+
+    @fields.depends('fiscalyear')
+    def on_change_fiscalyear(self):
+        self.start_period_fiscalyear = None
+        self.end_period_fiscalyear = None
+
+
+    @staticmethod
+    def default_accomulated_month():
+        return True
+
+
+    # Estas dos funcion nos permite deseleccionar una check cuando el otro este en true
+    @fields.depends('accomulated_period')
+    def on_change_with_accomulated_month(self, name=None):
+        res = True
+        if self.accomulated_period:
+            res = False
+        return res
+
+    @fields.depends('accomulated_month')
+    def on_change_with_accomulated_period(self, name=None):
+        res = True
+        if self.accomulated_month:
+            res = False
+            
+        return res
+
+
+    
+class PayrollIBCWizard(Wizard):
+    'Payroll IBC wizard'
+    __name__ = 'staff.payroll_ibc_wizard'
+    start = StateView('staff.payroll_ibc.start',
+        'conector.payroll_ibc_form', [
+        Button('Cancel', 'end', 'tryton-cancel'),
+        Button('Print', 'print_', 'tryton-ok', default=True),
+    ])
+
+    print_ = StateReport('staff_payroll.ibc_report')
+
+    def do_print_(self, action):
+        department_id = None
+        start_period = None
+        end_period = None
+        
+        if self.start.department:
+            department_id = self.start.department.id
+        if self.start.start_period:
+            start_period = self.start.start_period.start
+        if self.start.start_period_fiscalyear:
+            start_period = self.start.start_period_fiscalyear.start_date
+        if self.start.end_period:
+            end_period = self.start.end_period.start
+        if self.start.end_period_fiscalyear:
+            end_period = self.start.end_period_fiscalyear.end_date
+        
+
+
+        data = {
+            'company': self.start.company.id,
+            'start_period': start_period,
+            'end_period': end_period,
+            'department': department_id,
+            'accomulated': self.start.accomulated_month
+            }
+        
+        return action, data
+
+    def transition_print_(self):
+        return 'end'
+    
+
+
+class PayrollIBCReport(Report):
+    __name__ = 'staff_payroll.ibc_report'
+
+    @classmethod
+    def get_context(cls, records, header, data):
+        report_context = super().get_context(records, header,  data)
+        cursor = Transaction().connection.cursor()
+        pool = Pool()
+        StaffPayroll = pool.get('staff.payroll')
+        StaffPayrollLine = pool.get('staff.payroll.line')
+        Company = pool.get('company.company')
+        Party = pool.get('party.party')
+        Employee = pool.get('company.employee')
+        StaffWage = pool.get('staff.wage_type')
+        Department = pool.get('company.department')
+        Contract = pool.get('staff.contract')
+
+        #Asignacion de tabalas para extraccion de la data
+        staffPayroll = StaffPayroll.__table__()
+        staffPayrollLine = StaffPayrollLine.__table__()
+        party = Party.__table__()
+        employee = Employee.__table__()
+        staffWage = StaffWage.__table__()
+        department = Department.__table__()
+        contract = Contract.__table__()
+
+        # Columnas para representar la data que genera la consulta
+        columns = {
+            'id_number': party.id_number,
+            'name': party.name,
+            'department': department.name,
+            'amount': Sum(staffPayrollLine.unit_value * staffPayrollLine.quantity),
+            'concept': staffWage.name,
+            'payroll_number': staffPayroll.number,
+            'start': staffPayroll.start,
+            'end': staffPayroll.date_effective,
+            'type_concept': staffWage.type_concept,
+            'wage_type_id': staffPayrollLine.wage_type,
+            'description': staffPayroll.description,
+        }
+
+        # Condicionales para filtrar la informacion en la consulta
+        where = staffWage.type_concept.in_(['extras', 'bonus','salary','commission'])
+        where &= Between(staffPayroll.start, data['start_period'], data['end_period'])
+        where &= employee.contracting_state == 'active'
+        where &= contract.kind != 'learning'
+
+        if data['department']:
+            where &= staffPayroll.departament == data['department']
+
+        # Estructura de query para lanzar la consulta a la base de datos
+        select = staffPayrollLine.join(staffPayroll, 'LEFT', condition= staffPayroll.id == staffPayrollLine.payroll
+                                       ).join(staffWage, 'LEFT', condition= staffWage.id == staffPayrollLine.wage_type
+                                        ).join(employee, 'LEFT', condition=employee.id == staffPayroll.employee
+                                        ).join(party, 'LEFT', condition=party.id == employee.party
+                                        ).join(contract, 'LEFT', condition= employee.id == contract.employee
+                                        ).join(department, 'LEFT', condition= department.id == staffPayroll.department
+                                        ).select(*columns.values(), where=where, group_by=[
+                                        party.id_number,
+                                        party.name,
+                                        department.name,
+                                        staffWage.name,
+                                        staffPayroll.number,
+                                        staffPayroll.start,
+                                        staffPayroll.date_effective,
+                                        staffWage.type_concept,
+                                        staffPayrollLine.wage_type,
+                                        staffPayroll.description
+                                        ])
+        
+        # Ejecucion de la consulta
+        cursor.execute(*select)
+
+        # Extraccion de la data 
+        result = cursor.fetchall()
+
+        fila_dict = {}
+        items = {}
+
+        # Verificamos que la consulta halla generado data
+        if result:
+            for record in result:
+
+                # Estructura de diccionario donde las columnas creadas arriba de unen con cada uno de los datos.
+                fila_dict = dict(zip(columns.keys(), record))
+
+                # Verificamos que el usuario halla escojido una acomulacion por mes 
+                if data['accomulated']:
+                    
+                    # Estraemos el mes al que pertenece dicha informacion para agruparla 
+                    fila_dict['month'] = MONTH.get(str(fila_dict['start']).split('-')[1])
+
+                    # Verificamos si el id_number no se encuentra en las estrutura de diccionario
+                    # si es asi, le asigna el id_number con un diccionario interno con la data
+                    if fila_dict['id_number'] not in items:
+
+                        items[fila_dict['id_number']] = {
+                            'data': {}
+                        }
+
+                    # Verificamos si el mes no se encuentra dentro del diccionario data interno, 
+                    # si es asi, lo agrega con la cabecera del mes para acomular la data
+                    if  fila_dict['month'] not in items[fila_dict['id_number']]['data']:
+                        
+                        items[fila_dict['id_number']]['data'][fila_dict['month']] ={
+                            'id_number': fila_dict['id_number'],
+                            'name': fila_dict['name'],
+                            'department': fila_dict['department'],
+                            'salary': 0,
+                            'extras': 0,
+                            'recargos': 0,
+                            'bonus': 0,
+                            'comision': 0,
+                            'total': 0,
+                        }
+
+
+                    # Verificamos cual es el tipo de concepto para acomularlo en cada uno de ellos
+                    if fila_dict['type_concept'] == 'salary':
+                        items[fila_dict['id_number']]['data'][fila_dict['month']]['salary'] += fila_dict['amount']
+                    elif fila_dict['type_concept'] == 'extras':
+                        items[fila_dict['id_number']]['data'][fila_dict['month']]['extras'] += fila_dict['amount']
+                    elif fila_dict['type_concept'] == 'bonus':
+                        items[fila_dict['id_number']]['data'][fila_dict['month']]['bonus'] += fila_dict['amount']
+                    elif fila_dict['type_concept'] == 'commission':
+                        items[fila_dict['id_number']]['data'][fila_dict['month']]['comision'] += fila_dict['amount']
+                    
+                    # Aqui acomulamos todos los valores para dar un total final de ese mes.
+                    items[fila_dict['id_number']]['data'][fila_dict['month']]['total'] += fila_dict['amount']
+
+                else: # Si el valor del bool es quincenal, entonces ingresamos en esta seccion
+                    # Agregamos el numero de la nomina como indice para acomular los valores
+                    index = fila_dict['payroll_number']
+                    
+                    if fila_dict['id_number'] not in items:
+                        items[index] ={
+                                'id_number': fila_dict['id_number'],
+                                'name': fila_dict['name'],
+                                'department': fila_dict['department'],
+                                'description': fila_dict['description'],
+                                'values':{}
+                            }
+                    
+                    # Tomamos la description de la nomina para acomular los valores de la data
+                    if fila_dict['description'] not in items[index]['values']:
+
+                        items[index]['values'][fila_dict['description']] = {
+                            'salary': 0,
+                            'extras': 0,
+                            'recargos': 0,
+                            'bonus': 0,
+                            'comision': 0,
+                            'total': 0,
+                        }
+
+                    # Verificamos cual es el tipo de concepto para acomularlo en cada uno de ellos
+                    if fila_dict['type_concept'] == 'salary':
+                        items[index]['values'][fila_dict['description']]['salary'] += fila_dict['amount']
+                    elif fila_dict['type_concept'] == 'extras':
+                         items[index]['values'][fila_dict['description']]['extras'] += fila_dict['amount']
+                    elif fila_dict['type_concept'] == 'bonus':
+                         items[index]['values'][fila_dict['description']]['bonus'] += fila_dict['amount']
+                    elif fila_dict['type_concept'] == 'commission':
+                        items[index]['values'][fila_dict['description']]['comision'] += fila_dict['amount']
+
+                    #Totalisamos los valores
+                    items[index]['values'][fila_dict['description']]['total'] += fila_dict['amount']
+
+                    
+        # Funcion para ordenas de manera accedente la informacion 
+        items = dict(sorted(items.items()))
+
+
+        report_context['start'] = data['start_period']
+        report_context['end'] = data['end_period']
+        report_context['accomulated_period'] = str(data['accomulated'])
+        report_context['records'] = items
+        report_context['company'] = Company(Transaction().context.get('company'))
         return report_context
