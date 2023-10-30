@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<!-- This file is part of Tryton.  The COPYRIGHT file at the top level of
+this repository contains the full copyright notices and license terms. -->
+<form >
+
+    <label name="company"/>
+    <field name="company"/>
+    <label name="department"/>
+    <field name="department" widget="selection"/>
+    <label name="start_period"/>
+    <field name="start_period" widget="selection"/>
+    <label name="end_period"/>
+    <field name="end_period" widget="selection"/>
+    <label name="fiscalyear"/>
+    <field name="fiscalyear" widget="selection"/>
+    <label name="start_period_fiscalyear"/>
+    <field name="start_period_fiscalyear" widget="selection"/>
+    <label name="end_period_fiscalyear"/>
+    <field name="end_period_fiscalyear" widget="selection"/>
+    <group id="checkboxes" colspan="4" col="6">
+        <label name="accomulated_period"/>
+        <field name="accomulated_period"/>
+        <label name="accomulated_month"/>
+        <field name="accomulated_month"/>
+    </group>
+
+</form>

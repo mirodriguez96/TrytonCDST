@@ -1,0 +1,1216 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<office:document xmlns:presentation="urn:oasis:names:tc:opendocument:xmlns:presentation:1.0" xmlns:css3t="http://www.w3.org/TR/css3-text/" xmlns:grddl="http://www.w3.org/2003/g/data-view#" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:formx="urn:openoffice:names:experimental:ooxml-odf-interop:xmlns:form:1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:chart="urn:oasis:names:tc:opendocument:xmlns:chart:1.0" xmlns:svg="urn:oasis:names:tc:opendocument:xmlns:svg-compatible:1.0" xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0" xmlns:oooc="http://openoffice.org/2004/calc" xmlns:style="urn:oasis:names:tc:opendocument:xmlns:style:1.0" xmlns:ooow="http://openoffice.org/2004/writer" xmlns:meta="urn:oasis:names:tc:opendocument:xmlns:meta:1.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:rpt="http://openoffice.org/2005/report" xmlns:draw="urn:oasis:names:tc:opendocument:xmlns:drawing:1.0" xmlns:config="urn:oasis:names:tc:opendocument:xmlns:config:1.0" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:fo="urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0" xmlns:ooo="http://openoffice.org/2004/office" xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:dr3d="urn:oasis:names:tc:opendocument:xmlns:dr3d:1.0" xmlns:table="urn:oasis:names:tc:opendocument:xmlns:table:1.0" xmlns:number="urn:oasis:names:tc:opendocument:xmlns:datastyle:1.0" xmlns:of="urn:oasis:names:tc:opendocument:xmlns:of:1.2" xmlns:calcext="urn:org:documentfoundation:names:experimental:calc:xmlns:calcext:1.0" xmlns:tableooo="http://openoffice.org/2009/table" xmlns:drawooo="http://openoffice.org/2010/draw" xmlns:loext="urn:org:documentfoundation:names:experimental:office:xmlns:loext:1.0" xmlns:dom="http://www.w3.org/2001/xml-events" xmlns:field="urn:openoffice:names:experimental:ooo-ms-interop:xmlns:field:1.0" xmlns:math="http://www.w3.org/1998/Math/MathML" xmlns:form="urn:oasis:names:tc:opendocument:xmlns:form:1.0" xmlns:script="urn:oasis:names:tc:opendocument:xmlns:script:1.0" xmlns:xforms="http://www.w3.org/2002/xforms" office:version="1.3" office:mimetype="application/vnd.oasis.opendocument.spreadsheet">
+ <office:meta><meta:creation-date>2012-09-27T06:56:34</meta:creation-date><meta:editing-duration>P0D</meta:editing-duration><meta:editing-cycles>1</meta:editing-cycles><meta:generator>LibreOffice/7.3.7.2$Linux_X86_64 LibreOffice_project/30$Build-2</meta:generator><meta:document-statistic meta:table-count="1" meta:cell-count="61" meta:object-count="1"/></office:meta>
+ <office:settings>
+  <config:config-item-set config:name="ooo:view-settings">
+   <config:config-item config:name="VisibleAreaTop" config:type="int">0</config:config-item>
+   <config:config-item config:name="VisibleAreaLeft" config:type="int">0</config:config-item>
+   <config:config-item config:name="VisibleAreaWidth" config:type="int">25282</config:config-item>
+   <config:config-item config:name="VisibleAreaHeight" config:type="int">15214</config:config-item>
+   <config:config-item-map-indexed config:name="Views">
+    <config:config-item-map-entry>
+     <config:config-item config:name="ViewId" config:type="string">view1</config:config-item>
+     <config:config-item-map-named config:name="Tables">
+      <config:config-item-map-entry config:name="Hoja1">
+       <config:config-item config:name="CursorPositionX" config:type="int">3</config:config-item>
+       <config:config-item config:name="CursorPositionY" config:type="int">8</config:config-item>
+       <config:config-item config:name="ActiveSplitRange" config:type="short">2</config:config-item>
+       <config:config-item config:name="PositionLeft" config:type="int">0</config:config-item>
+       <config:config-item config:name="PositionRight" config:type="int">0</config:config-item>
+       <config:config-item config:name="PositionTop" config:type="int">0</config:config-item>
+       <config:config-item config:name="PositionBottom" config:type="int">6</config:config-item>
+       <config:config-item config:name="ZoomType" config:type="short">0</config:config-item>
+       <config:config-item config:name="ZoomValue" config:type="int">180</config:config-item>
+       <config:config-item config:name="PageViewZoomValue" config:type="int">60</config:config-item>
+       <config:config-item config:name="ShowGrid" config:type="boolean">false</config:config-item>
+       <config:config-item config:name="AnchoredTextOverflowLegacy" config:type="boolean">false</config:config-item>
+      </config:config-item-map-entry>
+     </config:config-item-map-named>
+     <config:config-item config:name="ActiveTable" config:type="string">Hoja1</config:config-item>
+     <config:config-item config:name="HorizontalScrollbarWidth" config:type="int">1295</config:config-item>
+     <config:config-item config:name="ZoomType" config:type="short">0</config:config-item>
+     <config:config-item config:name="ZoomValue" config:type="int">180</config:config-item>
+     <config:config-item config:name="PageViewZoomValue" config:type="int">60</config:config-item>
+     <config:config-item config:name="ShowPageBreakPreview" config:type="boolean">false</config:config-item>
+     <config:config-item config:name="ShowZeroValues" config:type="boolean">true</config:config-item>
+     <config:config-item config:name="ShowNotes" config:type="boolean">true</config:config-item>
+     <config:config-item config:name="ShowGrid" config:type="boolean">true</config:config-item>
+     <config:config-item config:name="GridColor" config:type="int">12632256</config:config-item>
+     <config:config-item config:name="ShowPageBreaks" config:type="boolean">true</config:config-item>
+     <config:config-item config:name="HasColumnRowHeaders" config:type="boolean">true</config:config-item>
+     <config:config-item config:name="HasSheetTabs" config:type="boolean">true</config:config-item>
+     <config:config-item config:name="IsOutlineSymbolsSet" config:type="boolean">true</config:config-item>
+     <config:config-item config:name="IsValueHighlightingEnabled" config:type="boolean">false</config:config-item>
+     <config:config-item config:name="IsSnapToRaster" config:type="boolean">false</config:config-item>
+     <config:config-item config:name="RasterIsVisible" config:type="boolean">false</config:config-item>
+     <config:config-item config:name="RasterResolutionX" config:type="int">1000</config:config-item>
+     <config:config-item config:name="RasterResolutionY" config:type="int">1000</config:config-item>
+     <config:config-item config:name="RasterSubdivisionX" config:type="int">1</config:config-item>
+     <config:config-item config:name="RasterSubdivisionY" config:type="int">1</config:config-item>
+     <config:config-item config:name="IsRasterAxisSynchronized" config:type="boolean">true</config:config-item>
+     <config:config-item config:name="AnchoredTextOverflowLegacy" config:type="boolean">false</config:config-item>
+    </config:config-item-map-entry>
+   </config:config-item-map-indexed>
+  </config:config-item-set>
+  <config:config-item-set config:name="ooo:configuration-settings">
+   <config:config-item config:name="AllowPrintJobCancel" config:type="boolean">true</config:config-item>
+   <config:config-item config:name="ApplyUserData" config:type="boolean">false</config:config-item>
+   <config:config-item config:name="AutoCalculate" config:type="boolean">true</config:config-item>
+   <config:config-item config:name="CharacterCompressionType" config:type="short">0</config:config-item>
+   <config:config-item config:name="EmbedAsianScriptFonts" config:type="boolean">true</config:config-item>
+   <config:config-item config:name="EmbedComplexScriptFonts" config:type="boolean">true</config:config-item>
+   <config:config-item config:name="EmbedFonts" config:type="boolean">false</config:config-item>
+   <config:config-item config:name="EmbedLatinScriptFonts" config:type="boolean">true</config:config-item>
+   <config:config-item config:name="EmbedOnlyUsedFonts" config:type="boolean">false</config:config-item>
+   <config:config-item-map-indexed config:name="ForbiddenCharacters">
+    <config:config-item-map-entry>
+     <config:config-item config:name="Language" config:type="string">en</config:config-item>
+     <config:config-item config:name="Country" config:type="string">US</config:config-item>
+     <config:config-item config:name="Variant" config:type="string"/>
+     <config:config-item config:name="BeginLine" config:type="string"/>
+     <config:config-item config:name="EndLine" config:type="string"/>
+    </config:config-item-map-entry>
+    <config:config-item-map-entry>
+     <config:config-item config:name="Language" config:type="string">es</config:config-item>
+     <config:config-item config:name="Country" config:type="string">CO</config:config-item>
+     <config:config-item config:name="Variant" config:type="string"/>
+     <config:config-item config:name="BeginLine" config:type="string"/>
+     <config:config-item config:name="EndLine" config:type="string"/>
+    </config:config-item-map-entry>
+   </config:config-item-map-indexed>
+   <config:config-item config:name="GridColor" config:type="int">12632256</config:config-item>
+   <config:config-item config:name="HasColumnRowHeaders" config:type="boolean">true</config:config-item>
+   <config:config-item config:name="HasSheetTabs" config:type="boolean">true</config:config-item>
+   <config:config-item config:name="IsDocumentShared" config:type="boolean">false</config:config-item>
+   <config:config-item config:name="IsKernAsianPunctuation" config:type="boolean">false</config:config-item>
+   <config:config-item config:name="IsOutlineSymbolsSet" config:type="boolean">true</config:config-item>
+   <config:config-item config:name="IsRasterAxisSynchronized" config:type="boolean">true</config:config-item>
+   <config:config-item config:name="IsSnapToRaster" config:type="boolean">false</config:config-item>
+   <config:config-item config:name="LinkUpdateMode" config:type="short">3</config:config-item>
+   <config:config-item config:name="LoadReadonly" config:type="boolean">false</config:config-item>
+   <config:config-item config:name="PrinterName" config:type="string">CUPS-BRF-Printer</config:config-item>
+   <config:config-item config:name="PrinterPaperFromSetup" config:type="boolean">false</config:config-item>
+   <config:config-item config:name="PrinterSetup" config:type="base64Binary">nQH+/0NVUFMtQlJGLVByaW50ZXIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQ1VQUzpDVVBTLUJSRi1QcmludGVyAAAAAAAAAAAAAAAWAAMAugAAAAAAAAAIAFZUAAAkbQAASm9iRGF0YSAxCnByaW50ZXI9Q1VQUy1CUkYtUHJpbnRlcgpvcmllbnRhdGlvbj1Qb3J0cmFpdApjb3BpZXM9MQpjb2xsYXRlPWZhbHNlCm1hcmdpbmFkanVzdG1lbnQ9MCwwLDAsMApjb2xvcmRlcHRoPTI0CnBzbGV2ZWw9MApwZGZkZXZpY2U9MQpjb2xvcmRldmljZT0wClBQRENvbnRleHREYXRhClBhZ2VTaXplOkxldHRlcgAAEgBDT01QQVRfRFVQTEVYX01PREUTAER1cGxleE1vZGU6OlVua25vd24=</config:config-item>
+   <config:config-item config:name="RasterIsVisible" config:type="boolean">false</config:config-item>
+   <config:config-item config:name="RasterResolutionX" config:type="int">1000</config:config-item>
+   <config:config-item config:name="RasterResolutionY" config:type="int">1000</config:config-item>
+   <config:config-item config:name="RasterSubdivisionX" config:type="int">1</config:config-item>
+   <config:config-item config:name="RasterSubdivisionY" config:type="int">1</config:config-item>
+   <config:config-item config:name="SaveThumbnail" config:type="boolean">true</config:config-item>
+   <config:config-item config:name="SaveVersionOnClose" config:type="boolean">false</config:config-item>
+   <config:config-item config:name="ShowGrid" config:type="boolean">true</config:config-item>
+   <config:config-item config:name="ShowNotes" config:type="boolean">true</config:config-item>
+   <config:config-item config:name="ShowPageBreaks" config:type="boolean">true</config:config-item>
+   <config:config-item config:name="ShowZeroValues" config:type="boolean">true</config:config-item>
+   <config:config-item config:name="SyntaxStringRef" config:type="short">7</config:config-item>
+   <config:config-item config:name="UpdateFromTemplate" config:type="boolean">true</config:config-item>
+   <config:config-item-map-named config:name="ScriptConfiguration">
+    <config:config-item-map-entry config:name="Hoja1">
+     <config:config-item config:name="CodeName" config:type="string">Sheet1</config:config-item>
+    </config:config-item-map-entry>
+   </config:config-item-map-named>
+  </config:config-item-set>
+ </office:settings>
+ <office:scripts>
+  <office:script script:language="ooo:Basic">
+   <ooo:libraries xmlns:ooo="http://openoffice.org/2004/office" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <ooo:library-embedded ooo:name="Standard"/>
+   </ooo:libraries>
+  </office:script>
+ </office:scripts>
+ <office:font-face-decls>
+  <style:font-face style:name="Arial" svg:font-family="Arial" style:font-family-generic="swiss" style:font-pitch="variable"/>
+  <style:font-face style:name="DejaVu Sans" svg:font-family="&apos;DejaVu Sans&apos;" style:font-family-generic="system" style:font-pitch="variable"/>
+  <style:font-face style:name="DejaVu Sans Condensed" svg:font-family="&apos;DejaVu Sans Condensed&apos;" style:font-family-generic="swiss" style:font-pitch="variable"/>
+  <style:font-face style:name="Droid Sans Fallback" svg:font-family="&apos;Droid Sans Fallback&apos;" style:font-family-generic="system" style:font-pitch="variable"/>
+  <style:font-face style:name="Liberation Sans" svg:font-family="&apos;Liberation Sans&apos;" style:font-adornments="Normal" style:font-family-generic="swiss" style:font-pitch="variable"/>
+  <style:font-face style:name="Liberation Sans1" svg:font-family="&apos;Liberation Sans&apos;" style:font-family-generic="swiss" style:font-pitch="variable"/>
+  <style:font-face style:name="Lohit Hindi" svg:font-family="&apos;Lohit Hindi&apos;" style:font-family-generic="system" style:font-pitch="variable"/>
+  <style:font-face style:name="Noto Sans" svg:font-family="&apos;Noto Sans&apos;" style:font-family-generic="swiss" style:font-pitch="variable"/>
+ </office:font-face-decls>
+ <office:styles>
+  <style:default-style style:family="table-cell">
+   <style:paragraph-properties style:tab-stop-distance="0.4921in"/>
+   <style:text-properties style:font-name="Arial" fo:font-size="10pt" fo:language="es" fo:country="CO" style:font-name-asian="DejaVu Sans" style:font-size-asian="10pt" style:language-asian="zh" style:country-asian="CN" style:font-name-complex="DejaVu Sans" style:font-size-complex="10pt" style:language-complex="hi" style:country-complex="IN"/>
+  </style:default-style>
+  <style:default-style style:family="graphic">
+   <style:graphic-properties svg:stroke-color="#3465a4" draw:fill-color="#729fcf" fo:wrap-option="no-wrap" draw:shadow-offset-x="0.1181in" draw:shadow-offset-y="0.1181in"/>
+   <style:paragraph-properties style:text-autospace="ideograph-alpha" style:punctuation-wrap="simple" style:line-break="strict" style:writing-mode="page" style:font-independent-line-spacing="false">
+    <style:tab-stops/>
+   </style:paragraph-properties>
+   <style:text-properties style:use-window-font-color="true" loext:opacity="0%" fo:font-family="&apos;Liberation Serif&apos;" style:font-family-generic="roman" style:font-pitch="variable" fo:font-size="12pt" fo:language="es" fo:country="CO" style:letter-kerning="true" style:font-name-asian="DejaVu Sans" style:font-size-asian="12pt" style:language-asian="zh" style:country-asian="CN" style:font-name-complex="DejaVu Sans" style:font-size-complex="12pt" style:language-complex="hi" style:country-complex="IN"/>
+  </style:default-style>
+  <number:number-style style:name="N0">
+   <number:number number:min-integer-digits="1"/>
+  </number:number-style>
+  <number:currency-style style:name="N122P0" style:volatile="true">
+   <number:currency-symbol number:language="es" number:country="CO">$</number:currency-symbol>
+   <number:number number:decimal-places="2" number:min-decimal-places="2" number:min-integer-digits="1" number:grouping="true"/>
+  </number:currency-style>
+  <number:currency-style style:name="N122">
+   <style:text-properties fo:color="#ff0000"/>
+   <number:text>(</number:text>
+   <number:currency-symbol number:language="es" number:country="CO">$</number:currency-symbol>
+   <number:number number:decimal-places="2" number:min-decimal-places="2" number:min-integer-digits="1" number:grouping="true"/>
+   <number:text>)</number:text>
+   <style:map style:condition="value()&gt;=0" style:apply-style-name="N122P0"/>
+  </number:currency-style>
+  <number:currency-style style:name="N131P0" style:volatile="true">
+   <number:currency-symbol number:language="es" number:country="CO">$</number:currency-symbol>
+   <number:number number:decimal-places="0" number:min-decimal-places="0" number:min-integer-digits="1" number:grouping="true"/>
+  </number:currency-style>
+  <number:currency-style style:name="N131">
+   <style:text-properties fo:color="#ff0000"/>
+   <number:text>(</number:text>
+   <number:currency-symbol number:language="es" number:country="CO">$</number:currency-symbol>
+   <number:number number:decimal-places="0" number:min-decimal-places="0" number:min-integer-digits="1" number:grouping="true"/>
+   <number:text>)</number:text>
+   <style:map style:condition="value()&gt;=0" style:apply-style-name="N131P0"/>
+  </number:currency-style>
+  <number:number-style style:name="N130P0" style:volatile="true">
+   <number:number number:decimal-places="2" number:min-decimal-places="2" number:min-integer-digits="1"/>
+  </number:number-style>
+  <number:number-style style:name="N130">
+   <style:text-properties fo:color="#ff0000"/>
+   <number:text>-</number:text>
+   <number:number number:decimal-places="2" number:min-decimal-places="2" number:min-integer-digits="1"/>
+   <style:map style:condition="value()&gt;=0" style:apply-style-name="N130P0"/>
+  </number:number-style>
+  <number:currency-style style:name="N129P0" style:volatile="true">
+   <number:number number:decimal-places="2" number:min-decimal-places="2" number:min-integer-digits="1" number:grouping="true"/>
+   <number:text> </number:text>
+   <number:currency-symbol number:language="fr" number:country="BE">€</number:currency-symbol>
+  </number:currency-style>
+  <number:currency-style style:name="N129">
+   <style:text-properties fo:color="#ff0000"/>
+   <number:text>-</number:text>
+   <number:number number:decimal-places="2" number:min-decimal-places="2" number:min-integer-digits="1" number:grouping="true"/>
+   <number:text> </number:text>
+   <number:currency-symbol number:language="fr" number:country="BE">€</number:currency-symbol>
+   <style:map style:condition="value()&gt;=0" style:apply-style-name="N129P0"/>
+  </number:currency-style>
+  <number:currency-style style:name="N127P0" style:volatile="true">
+   <number:currency-symbol number:language="es" number:country="CO">$</number:currency-symbol>
+   <number:number number:decimal-places="0" number:min-decimal-places="0" number:min-integer-digits="1" number:grouping="true"/>
+  </number:currency-style>
+  <number:currency-style style:name="N127">
+   <number:text>(</number:text>
+   <number:currency-symbol number:language="es" number:country="CO">$</number:currency-symbol>
+   <number:number number:decimal-places="0" number:min-decimal-places="0" number:min-integer-digits="1" number:grouping="true"/>
+   <number:text>)</number:text>
+   <style:map style:condition="value()&gt;=0" style:apply-style-name="N127P0"/>
+  </number:currency-style>
+  <number:number-style style:name="N125P0" style:volatile="true">
+   <number:number number:decimal-places="0" number:min-decimal-places="0" number:min-integer-digits="1" number:grouping="true"/>
+  </number:number-style>
+  <number:number-style style:name="N125">
+   <number:text>(</number:text>
+   <number:number number:decimal-places="0" number:min-decimal-places="0" number:min-integer-digits="1" number:grouping="true"/>
+   <number:text>)</number:text>
+   <style:map style:condition="value()&gt;=0" style:apply-style-name="N125P0"/>
+  </number:number-style>
+  <number:number-style style:name="N124">
+   <number:text>(</number:text>
+   <number:number number:decimal-places="0" number:min-decimal-places="0" number:min-integer-digits="1" number:grouping="true"/>
+   <number:text>)</number:text>
+  </number:number-style>
+  <number:number-style style:name="N123P0" style:volatile="true">
+   <number:number number:decimal-places="2" number:min-decimal-places="2" number:min-integer-digits="1" number:grouping="true"/>
+  </number:number-style>
+  <number:number-style style:name="N123">
+   <style:text-properties fo:color="#ff0000"/>
+   <number:text>-</number:text>
+   <number:number number:decimal-places="2" number:min-decimal-places="2" number:min-integer-digits="1" number:grouping="true"/>
+   <style:map style:condition="value()&gt;=0" style:apply-style-name="N123P0"/>
+  </number:number-style>
+  <number:currency-style style:name="N10108P0" style:volatile="true" number:language="sl" number:country="SI">
+   <number:number number:decimal-places="2" number:min-decimal-places="2" number:min-integer-digits="1" number:grouping="true"/>
+   <number:text> </number:text>
+   <number:currency-symbol number:language="sl" number:country="SI">€</number:currency-symbol>
+  </number:currency-style>
+  <number:currency-style style:name="N10108" number:language="sl" number:country="SI">
+   <style:text-properties fo:color="#ff0000"/>
+   <number:text>-</number:text>
+   <number:number number:decimal-places="2" number:min-decimal-places="2" number:min-integer-digits="1" number:grouping="true"/>
+   <number:text> </number:text>
+   <number:currency-symbol number:language="sl" number:country="SI">€</number:currency-symbol>
+   <style:map style:condition="value()&gt;=0" style:apply-style-name="N10108P0"/>
+  </number:currency-style>
+  <number:date-style style:name="N20124" number:language="en" number:country="US">
+   <number:day number:style="long"/>
+   <number:text>/</number:text>
+   <number:month number:style="long"/>
+   <number:text>/</number:text>
+   <number:year number:style="long"/>
+  </number:date-style>
+  <number:date-style style:name="N20123" number:language="en" number:country="US">
+   <number:day number:style="long"/>
+   <number:text>/</number:text>
+   <number:month number:style="long"/>
+   <number:text>/</number:text>
+   <number:year/>
+  </number:date-style>
+  <number:date-style style:name="N20122" number:language="en" number:country="US">
+   <number:day number:style="long"/>
+   <number:text>-</number:text>
+   <number:month number:style="long"/>
+   <number:text>-</number:text>
+   <number:year number:style="long"/>
+   <number:text>-</number:text>
+   <number:month number:style="long"/>
+   <number:text>-</number:text>
+  </number:date-style>
+  <number:number-style style:name="N20121" number:language="en" number:country="US">
+   <number:number number:decimal-places="1" number:min-decimal-places="1" number:min-integer-digits="1" number:grouping="true"/>
+  </number:number-style>
+  <style:style style:name="Default" style:family="table-cell">
+   <style:text-properties style:font-name-asian="Droid Sans Fallback" style:font-family-asian="&apos;Droid Sans Fallback&apos;" style:font-family-generic-asian="system" style:font-pitch-asian="variable" style:font-name-complex="Lohit Hindi" style:font-family-complex="&apos;Lohit Hindi&apos;" style:font-family-generic-complex="system" style:font-pitch-complex="variable"/>
+  </style:style>
+  <style:style style:name="Heading" style:family="table-cell" style:parent-style-name="Default">
+   <style:table-cell-properties style:text-align-source="fix" style:repeat-content="false"/>
+   <style:paragraph-properties fo:text-align="center"/>
+   <style:text-properties fo:font-size="16pt" fo:font-style="italic" fo:font-weight="bold"/>
+  </style:style>
+  <style:style style:name="Heading_20_1" style:display-name="Heading 1" style:family="table-cell" style:parent-style-name="Heading">
+   <style:table-cell-properties style:rotation-angle="90"/>
+  </style:style>
+  <style:style style:name="Heading_20_2" style:display-name="Heading 2" style:family="table-cell" style:parent-style-name="Heading">
+   <style:text-properties fo:color="#000000" fo:font-size="12pt" fo:font-style="normal" fo:font-weight="normal"/>
+  </style:style>
+  <style:style style:name="Text" style:family="table-cell" style:parent-style-name="Default"/>
+  <style:style style:name="Note" style:family="table-cell" style:parent-style-name="Text">
+   <style:table-cell-properties fo:background-color="#ffffcc" style:diagonal-bl-tr="none" style:diagonal-tl-br="none" fo:border="0.74pt solid #808080"/>
+   <style:text-properties fo:color="#333333" fo:font-size="10pt" fo:font-style="normal" fo:font-weight="normal"/>
+  </style:style>
+  <style:style style:name="Footnote" style:family="table-cell" style:parent-style-name="Text">
+   <style:text-properties fo:color="#808080" fo:font-size="10pt" fo:font-style="italic" fo:font-weight="normal"/>
+  </style:style>
+  <style:style style:name="Hyperlink" style:family="table-cell" style:parent-style-name="Text">
+   <style:text-properties fo:color="#0000ee" fo:font-size="10pt" fo:font-style="normal" style:text-underline-style="solid" style:text-underline-width="auto" style:text-underline-color="#0000ee" fo:font-weight="normal"/>
+  </style:style>
+  <style:style style:name="Status" style:family="table-cell" style:parent-style-name="Default"/>
+  <style:style style:name="Good" style:family="table-cell" style:parent-style-name="Status">
+   <style:table-cell-properties fo:background-color="#ccffcc"/>
+   <style:text-properties fo:color="#006600" fo:font-size="10pt" fo:font-style="normal" fo:font-weight="normal"/>
+  </style:style>
+  <style:style style:name="Neutral" style:family="table-cell" style:parent-style-name="Status">
+   <style:table-cell-properties fo:background-color="#ffffcc"/>
+   <style:text-properties fo:color="#996600" fo:font-size="10pt" fo:font-style="normal" fo:font-weight="normal"/>
+  </style:style>
+  <style:style style:name="Bad" style:family="table-cell" style:parent-style-name="Status">
+   <style:table-cell-properties fo:background-color="#ffcccc"/>
+   <style:text-properties fo:color="#cc0000" fo:font-size="10pt" fo:font-style="normal" fo:font-weight="normal"/>
+  </style:style>
+  <style:style style:name="Warning" style:family="table-cell" style:parent-style-name="Status">
+   <style:text-properties fo:color="#cc0000" fo:font-size="10pt" fo:font-style="normal" fo:font-weight="normal"/>
+  </style:style>
+  <style:style style:name="Error" style:family="table-cell" style:parent-style-name="Status">
+   <style:table-cell-properties fo:background-color="#cc0000"/>
+   <style:text-properties fo:color="#ffffff" fo:font-size="10pt" fo:font-style="normal" fo:font-weight="bold"/>
+  </style:style>
+  <style:style style:name="Accent" style:family="table-cell" style:parent-style-name="Default">
+   <style:text-properties fo:color="#000000" fo:font-size="10pt" fo:font-style="normal" fo:font-weight="bold"/>
+  </style:style>
+  <style:style style:name="Accent_20_1" style:display-name="Accent 1" style:family="table-cell" style:parent-style-name="Accent">
+   <style:table-cell-properties fo:background-color="#000000"/>
+   <style:text-properties fo:color="#ffffff" fo:font-size="10pt" fo:font-style="normal" fo:font-weight="normal"/>
+  </style:style>
+  <style:style style:name="Accent_20_2" style:display-name="Accent 2" style:family="table-cell" style:parent-style-name="Accent">
+   <style:table-cell-properties fo:background-color="#808080"/>
+   <style:text-properties fo:color="#ffffff" fo:font-size="10pt" fo:font-style="normal" fo:font-weight="normal"/>
+  </style:style>
+  <style:style style:name="Accent_20_3" style:display-name="Accent 3" style:family="table-cell" style:parent-style-name="Accent">
+   <style:table-cell-properties fo:background-color="#dddddd"/>
+  </style:style>
+  <style:style style:name="Result" style:family="table-cell" style:parent-style-name="Default">
+   <style:text-properties fo:font-style="italic" style:text-underline-style="solid" style:text-underline-width="auto" style:text-underline-color="font-color" fo:font-weight="bold"/>
+  </style:style>
+  <style:style style:name="Result2" style:family="table-cell" style:parent-style-name="Result" style:data-style-name="N122"/>
+  <style:style style:name="Sin_20_nombre1" style:display-name="Sin nombre1" style:family="table-cell" style:parent-style-name="Default">
+   <style:text-properties fo:color="#ff0000" style:font-name="Liberation Sans" fo:font-family="&apos;Liberation Sans&apos;" style:font-style-name="Normal" style:font-family-generic="swiss" style:font-pitch="variable"/>
+  </style:style>
+  <style:style style:name="Sin_20_nombre2" style:display-name="Sin nombre2" style:family="table-cell" style:parent-style-name="Default">
+   <style:text-properties fo:color="#ff0000"/>
+  </style:style>
+  <style:style style:name="Sin_20_nombre3" style:display-name="Sin nombre3" style:family="table-cell" style:parent-style-name="Default">
+   <style:text-properties fo:color="#ff0000"/>
+  </style:style>
+  <style:style style:name="Sin_20_nombre4" style:display-name="Sin nombre4" style:family="table-cell" style:parent-style-name="Default">
+   <style:text-properties fo:color="#ff0000"/>
+  </style:style>
+  <style:style style:name="Sin_20_nombre5" style:display-name="Sin nombre5" style:family="table-cell" style:parent-style-name="Default">
+   <style:text-properties fo:color="#ff0000"/>
+  </style:style>
+ </office:styles>
+ <office:automatic-styles>
+  <style:style style:name="co1" style:family="table-column">
+   <style:table-column-properties fo:break-before="auto" style:column-width="1.5425in"/>
+  </style:style>
+  <style:style style:name="co2" style:family="table-column">
+   <style:table-column-properties fo:break-before="auto" style:column-width="0.9354in"/>
+  </style:style>
+  <style:style style:name="co3" style:family="table-column">
+   <style:table-column-properties fo:break-before="auto" style:column-width="0.8752in"/>
+  </style:style>
+  <style:style style:name="co4" style:family="table-column">
+   <style:table-column-properties fo:break-before="auto" style:column-width="0.798in"/>
+  </style:style>
+  <style:style style:name="co5" style:family="table-column">
+   <style:table-column-properties fo:break-before="auto" style:column-width="1.411in"/>
+  </style:style>
+  <style:style style:name="co6" style:family="table-column">
+   <style:table-column-properties fo:break-before="auto" style:column-width="1.6256in"/>
+  </style:style>
+  <style:style style:name="co7" style:family="table-column">
+   <style:table-column-properties fo:break-before="auto" style:column-width="0.9882in"/>
+  </style:style>
+  <style:style style:name="co8" style:family="table-column">
+   <style:table-column-properties fo:break-before="auto" style:column-width="0.889in"/>
+  </style:style>
+  <style:style style:name="ro1" style:family="table-row">
+   <style:table-row-properties style:row-height="0.178in" fo:break-before="auto" style:use-optimal-row-height="false"/>
+  </style:style>
+  <style:style style:name="ro2" style:family="table-row">
+   <style:table-row-properties style:row-height="0.2244in" fo:break-before="auto" style:use-optimal-row-height="false"/>
+  </style:style>
+  <style:style style:name="ro3" style:family="table-row">
+   <style:table-row-properties style:row-height="0.3346in" fo:break-before="auto" style:use-optimal-row-height="false"/>
+  </style:style>
+  <style:style style:name="ro4" style:family="table-row">
+   <style:table-row-properties style:row-height="0.1917in" fo:break-before="auto" style:use-optimal-row-height="true"/>
+  </style:style>
+  <style:style style:name="ro5" style:family="table-row">
+   <style:table-row-properties style:row-height="0.1102in" fo:break-before="auto" style:use-optimal-row-height="false"/>
+  </style:style>
+  <style:style style:name="ro6" style:family="table-row">
+   <style:table-row-properties style:row-height="0.2957in" fo:break-before="auto" style:use-optimal-row-height="false"/>
+  </style:style>
+  <style:style style:name="ro7" style:family="table-row">
+   <style:table-row-properties style:row-height="0.2126in" fo:break-before="auto" style:use-optimal-row-height="false"/>
+  </style:style>
+  <style:style style:name="ro8" style:family="table-row">
+   <style:table-row-properties style:row-height="0.2165in" fo:break-before="auto" style:use-optimal-row-height="false"/>
+  </style:style>
+  <style:style style:name="ro9" style:family="table-row">
+   <style:table-row-properties style:row-height="0.1898in" fo:break-before="auto" style:use-optimal-row-height="false"/>
+  </style:style>
+  <style:style style:name="ta1" style:family="table" style:master-page-name="Default">
+   <style:table-properties table:display="true" style:writing-mode="lr-tb"/>
+  </style:style>
+  <number:number-style style:name="N4">
+   <number:number number:decimal-places="2" number:min-decimal-places="2" number:min-integer-digits="1" number:grouping="true"/>
+  </number:number-style>
+  <number:text-style style:name="N100">
+   <number:text-content/>
+  </number:text-style>
+  <number:number-style style:name="N20000" number:language="en" number:country="US">
+   <number:number number:min-integer-digits="1"/>
+  </number:number-style>
+  <number:number-style style:name="N20004" number:language="en" number:country="US">
+   <number:number number:decimal-places="2" number:min-decimal-places="2" number:min-integer-digits="1" number:grouping="true"/>
+  </number:number-style>
+  <number:date-style style:name="N20045" number:language="en" number:country="US">
+   <number:day/>
+   <number:text>. </number:text>
+   <number:month number:textual="true"/>
+   <number:text>. </number:text>
+   <number:year number:style="long"/>
+  </number:date-style>
+  <number:date-style style:name="N30036" number:language="es" number:country="CO" number:automatic-order="true">
+   <number:day number:style="long"/>
+   <number:text>/</number:text>
+   <number:month number:style="long"/>
+   <number:text>/</number:text>
+   <number:year number:style="long"/>
+  </number:date-style>
+  <style:style style:name="ce2" style:family="table-cell" style:parent-style-name="Default">
+   <style:table-cell-properties style:text-align-source="fix" style:repeat-content="false" fo:background-color="transparent" style:vertical-align="middle"/>
+   <style:paragraph-properties fo:text-align="start" fo:margin-left="0in"/>
+   <style:text-properties fo:color="#666666" style:font-name="Noto Sans" fo:font-size="9pt" fo:font-weight="bold" style:font-size-asian="9pt" style:font-weight-asian="bold" style:font-size-complex="9pt" style:font-weight-complex="bold"/>
+  </style:style>
+  <style:style style:name="ce3" style:family="table-cell" style:parent-style-name="Default">
+   <style:table-cell-properties style:text-align-source="fix" style:repeat-content="false" fo:background-color="transparent" style:vertical-align="middle"/>
+   <style:paragraph-properties fo:text-align="start" fo:margin-left="0in"/>
+   <style:text-properties fo:color="#333333" style:font-name="Noto Sans" fo:font-size="9pt" fo:font-weight="normal" style:font-size-asian="9pt" style:font-weight-asian="normal" style:font-size-complex="9pt" style:font-weight-complex="normal"/>
+  </style:style>
+  <style:style style:name="ce6" style:family="table-cell" style:parent-style-name="Default">
+   <style:table-cell-properties style:text-align-source="fix" style:repeat-content="false" style:vertical-align="bottom"/>
+   <style:paragraph-properties fo:text-align="end" fo:margin-left="0in"/>
+   <style:text-properties fo:color="#1c1c1c" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="Noto Sans" fo:font-size="6pt" fo:language="es" fo:country="CO" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="normal" style:text-underline-mode="continuous" style:text-overline-mode="continuous" style:text-line-through-mode="continuous" style:font-name-asian="Droid Sans Fallback" style:font-size-asian="6pt" style:language-asian="zh" style:country-asian="CN" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-name-complex="Lohit Hindi" style:font-size-complex="6pt" style:language-complex="hi" style:country-complex="IN" style:font-style-complex="normal" style:font-weight-complex="normal" style:text-emphasize="none" style:font-relief="none" style:text-overline-style="none" style:text-overline-color="font-color"/>
+  </style:style>
+  <style:style style:name="ce15" style:family="table-cell" style:parent-style-name="Default">
+   <style:table-cell-properties fo:border-bottom="0.06pt solid #eeeeee" style:text-align-source="fix" style:repeat-content="false" fo:border-left="none" fo:border-right="none" fo:border-top="0.06pt solid #eeeeee" style:vertical-align="middle"/>
+   <style:paragraph-properties fo:text-align="start" fo:margin-left="0in"/>
+   <style:text-properties style:use-window-font-color="true" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="DejaVu Sans Condensed" fo:font-size="7pt" fo:language="en" fo:country="US" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="normal" style:text-underline-mode="continuous" style:text-overline-mode="continuous" style:text-line-through-mode="continuous" style:font-size-asian="7pt" style:language-asian="en" style:country-asian="US" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-size-complex="7pt" style:language-complex="en" style:country-complex="US" style:font-style-complex="normal" style:font-weight-complex="normal" style:text-emphasize="none" style:font-relief="none" style:text-overline-style="none" style:text-overline-color="font-color"/>
+  </style:style>
+  <style:style style:name="ce4" style:family="table-cell" style:parent-style-name="Default">
+   <style:table-cell-properties fo:background-color="#dedce6" style:text-align-source="fix" style:repeat-content="false" style:vertical-align="middle"/>
+   <style:paragraph-properties fo:text-align="start" fo:margin-left="0in"/>
+   <style:text-properties fo:color="#55215b" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="DejaVu Sans Condensed" fo:font-size="11pt" fo:language="en" fo:country="US" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="bold" style:text-underline-mode="continuous" style:text-overline-mode="continuous" style:text-line-through-mode="continuous" style:font-size-asian="11pt" style:language-asian="en" style:country-asian="US" style:font-style-asian="normal" style:font-weight-asian="bold" style:font-size-complex="11pt" style:language-complex="en" style:country-complex="US" style:font-style-complex="normal" style:font-weight-complex="bold" style:text-emphasize="none" style:font-relief="none" style:text-overline-style="none" style:text-overline-color="font-color"/>
+  </style:style>
+  <style:style style:name="ce10" style:family="table-cell" style:parent-style-name="Default">
+   <style:table-cell-properties style:text-align-source="fix" style:repeat-content="false" fo:background-color="transparent" fo:border="none" style:vertical-align="middle"/>
+   <style:paragraph-properties fo:text-align="end" fo:margin-left="0in"/>
+   <style:text-properties fo:color="#1c1c1c" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="DejaVu Sans Condensed" fo:font-size="8pt" fo:language="en" fo:country="US" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="normal" style:text-underline-mode="continuous" style:text-overline-mode="continuous" style:text-line-through-mode="continuous" style:font-size-asian="8pt" style:language-asian="en" style:country-asian="US" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-size-complex="8pt" style:language-complex="en" style:country-complex="US" style:font-style-complex="normal" style:font-weight-complex="normal" style:text-emphasize="none" style:font-relief="none" style:text-overline-style="none" style:text-overline-color="font-color"/>
+  </style:style>
+  <style:style style:name="ce9" style:family="table-cell" style:parent-style-name="Default" style:data-style-name="N100">
+   <style:table-cell-properties style:text-align-source="fix" style:repeat-content="false" fo:background-color="transparent" fo:border="none" style:vertical-align="middle"/>
+   <style:paragraph-properties fo:text-align="start" fo:margin-left="0in"/>
+   <style:text-properties fo:color="#ffffff" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="Liberation Sans1" fo:font-size="7pt" fo:language="es" fo:country="CO" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="normal" style:text-underline-mode="continuous" style:text-overline-mode="continuous" style:text-line-through-mode="continuous" style:font-name-asian="Droid Sans Fallback" style:font-size-asian="7pt" style:language-asian="zh" style:country-asian="CN" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-name-complex="Lohit Hindi" style:font-size-complex="7pt" style:language-complex="hi" style:country-complex="IN" style:font-style-complex="normal" style:font-weight-complex="normal" style:text-emphasize="none" style:font-relief="none" style:text-overline-style="none" style:text-overline-color="font-color"/>
+  </style:style>
+  <style:style style:name="ce19" style:family="table-cell" style:parent-style-name="Default">
+   <style:table-cell-properties fo:border-bottom="0.06pt solid #eeeeee" fo:background-color="#dedce6" style:text-align-source="fix" style:repeat-content="false" fo:border-left="none" fo:border-right="none" fo:border-top="0.06pt solid #eeeeee" style:vertical-align="middle"/>
+   <style:paragraph-properties fo:text-align="center" fo:margin-left="0in"/>
+   <style:text-properties fo:color="#1c1c1c" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="DejaVu Sans Condensed" fo:font-size="7pt" fo:language="en" fo:country="US" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="bold" style:text-underline-mode="continuous" style:text-overline-mode="continuous" style:text-line-through-mode="continuous" style:font-size-asian="7pt" style:language-asian="en" style:country-asian="US" style:font-style-asian="normal" style:font-weight-asian="bold" style:font-size-complex="7pt" style:language-complex="en" style:country-complex="US" style:font-style-complex="normal" style:font-weight-complex="bold" style:text-emphasize="none" style:font-relief="none" style:text-overline-style="none" style:text-overline-color="font-color"/>
+  </style:style>
+  <style:style style:name="ce16" style:family="table-cell" style:parent-style-name="Default">
+   <style:table-cell-properties fo:border-bottom="0.06pt solid #eeeeee" style:text-align-source="fix" style:repeat-content="false" fo:border-left="none" fo:border-right="none" fo:border-top="0.06pt solid #eeeeee" style:vertical-align="middle"/>
+   <style:paragraph-properties fo:text-align="start" fo:margin-left="0in"/>
+   <style:text-properties style:use-window-font-color="true" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="DejaVu Sans Condensed" fo:font-size="7pt" fo:language="es" fo:country="CO" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="normal" style:text-underline-mode="continuous" style:text-overline-mode="continuous" style:text-line-through-mode="continuous" style:font-name-asian="Droid Sans Fallback" style:font-size-asian="7pt" style:language-asian="zh" style:country-asian="CN" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-name-complex="Lohit Hindi" style:font-size-complex="7pt" style:language-complex="hi" style:country-complex="IN" style:font-style-complex="normal" style:font-weight-complex="normal" style:text-emphasize="none" style:font-relief="none" style:text-overline-style="none" style:text-overline-color="font-color"/>
+  </style:style>
+  <style:style style:name="ce46" style:family="table-cell" style:parent-style-name="Default" style:data-style-name="N20045">
+   <style:table-cell-properties fo:border-bottom="0.06pt solid #eeeeee" style:text-align-source="fix" style:repeat-content="false" fo:background-color="transparent" fo:border-left="none" fo:border-right="none" fo:border-top="0.06pt solid #eeeeee" style:vertical-align="middle"/>
+   <style:paragraph-properties fo:text-align="center" fo:margin-left="0in"/>
+   <style:text-properties fo:color="#000000" style:font-name="DejaVu Sans Condensed" fo:font-size="7pt" style:font-name-asian="Droid Sans Fallback" style:font-size-asian="7pt" style:font-name-complex="Lohit Hindi" style:font-size-complex="7pt"/>
+  </style:style>
+  <style:style style:name="ce14" style:family="table-cell" style:parent-style-name="Default" style:data-style-name="N100">
+   <style:table-cell-properties fo:border-bottom="0.06pt solid #eeeeee" style:text-align-source="fix" style:repeat-content="false" fo:border-left="none" fo:border-right="none" fo:border-top="0.06pt solid #eeeeee" style:vertical-align="middle"/>
+   <style:paragraph-properties fo:text-align="start" fo:margin-left="0in"/>
+   <style:text-properties style:use-window-font-color="true" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="DejaVu Sans Condensed" fo:font-size="7pt" fo:language="es" fo:country="CO" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="normal" style:text-underline-mode="continuous" style:text-overline-mode="continuous" style:text-line-through-mode="continuous" style:font-name-asian="Droid Sans Fallback" style:font-size-asian="7pt" style:language-asian="zh" style:country-asian="CN" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-name-complex="Lohit Hindi" style:font-size-complex="7pt" style:language-complex="hi" style:country-complex="IN" style:font-style-complex="normal" style:font-weight-complex="normal" style:text-emphasize="none" style:font-relief="none" style:text-overline-style="none" style:text-overline-color="font-color"/>
+  </style:style>
+  <style:style style:name="ce21" style:family="table-cell" style:parent-style-name="Default">
+   <style:table-cell-properties style:vertical-align="middle"/>
+   <style:text-properties style:font-name="Liberation Sans1" fo:font-size="11pt" style:font-size-asian="11pt" style:font-size-complex="11pt"/>
+  </style:style>
+  <style:style style:name="ce20" style:family="table-cell" style:parent-style-name="Default">
+   <style:table-cell-properties style:text-align-source="fix" style:repeat-content="false" style:vertical-align="middle"/>
+   <style:paragraph-properties fo:text-align="start" fo:margin-left="0in"/>
+   <style:text-properties style:font-name="Liberation Sans1" fo:font-size="11pt" style:font-size-asian="11pt" style:font-size-complex="11pt"/>
+  </style:style>
+  <style:style style:name="ce1" style:family="table-cell" style:parent-style-name="Default">
+   <style:table-cell-properties style:text-align-source="fix" style:repeat-content="false" style:vertical-align="middle"/>
+   <style:paragraph-properties fo:text-align="start" fo:margin-left="0in"/>
+   <style:text-properties style:use-window-font-color="true" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="Liberation Sans1" fo:font-size="11pt" fo:language="en" fo:country="US" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="normal" style:text-underline-mode="continuous" style:text-overline-mode="continuous" style:text-line-through-mode="continuous" style:font-size-asian="11pt" style:language-asian="en" style:country-asian="US" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-size-complex="11pt" style:language-complex="en" style:country-complex="US" style:font-style-complex="normal" style:font-weight-complex="normal" style:text-emphasize="none" style:font-relief="none" style:text-overline-style="none" style:text-overline-color="font-color"/>
+  </style:style>
+  <style:style style:name="ce29" style:family="table-cell" style:parent-style-name="Default" style:data-style-name="N100">
+   <style:table-cell-properties style:text-align-source="fix" style:repeat-content="false" fo:background-color="transparent" fo:border="none" style:vertical-align="bottom"/>
+   <style:paragraph-properties fo:text-align="start" fo:margin-left="0in"/>
+   <style:text-properties fo:color="#1c1c1c" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="Noto Sans" fo:font-size="6pt" fo:language="es" fo:country="CO" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="normal" style:text-underline-mode="continuous" style:text-overline-mode="continuous" style:text-line-through-mode="continuous" style:font-name-asian="Droid Sans Fallback" style:font-size-asian="6pt" style:language-asian="zh" style:country-asian="CN" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-name-complex="Lohit Hindi" style:font-size-complex="6pt" style:language-complex="hi" style:country-complex="IN" style:font-style-complex="normal" style:font-weight-complex="normal" style:text-emphasize="none" style:font-relief="none" style:text-overline-style="none" style:text-overline-color="font-color"/>
+  </style:style>
+  <style:style style:name="ce22" style:family="table-cell" style:parent-style-name="Default">
+   <style:table-cell-properties fo:background-color="#dedce6" style:text-align-source="fix" style:repeat-content="false" style:vertical-align="middle"/>
+   <style:paragraph-properties fo:text-align="start" fo:margin-left="0in"/>
+   <style:text-properties fo:color="#55215b" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="DejaVu Sans Condensed" fo:font-size="11pt" fo:language="en" fo:country="US" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="normal" style:text-underline-mode="continuous" style:text-overline-mode="continuous" style:text-line-through-mode="continuous" style:font-size-asian="11pt" style:language-asian="en" style:country-asian="US" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-size-complex="11pt" style:language-complex="en" style:country-complex="US" style:font-style-complex="normal" style:font-weight-complex="normal" style:text-emphasize="none" style:font-relief="none" style:text-overline-style="none" style:text-overline-color="font-color"/>
+  </style:style>
+  <style:style style:name="ce25" style:family="table-cell" style:parent-style-name="Default">
+   <style:table-cell-properties style:text-align-source="fix" style:repeat-content="false" fo:background-color="transparent" style:vertical-align="middle"/>
+   <style:paragraph-properties fo:text-align="start" fo:margin-left="0in"/>
+   <style:text-properties fo:color="#ffffff" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="Liberation Sans1" fo:font-size="10pt" fo:language="en" fo:country="US" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="solid" style:text-underline-width="auto" style:text-underline-color="font-color" fo:font-weight="normal" style:text-underline-mode="continuous" style:text-overline-mode="continuous" style:text-line-through-mode="continuous" style:font-size-asian="10pt" style:language-asian="en" style:country-asian="US" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-size-complex="10pt" style:language-complex="en" style:country-complex="US" style:font-style-complex="normal" style:font-weight-complex="normal" style:text-emphasize="none" style:font-relief="none" style:text-overline-style="none" style:text-overline-color="font-color"/>
+  </style:style>
+  <style:style style:name="ce26" style:family="table-cell" style:parent-style-name="Default" style:data-style-name="N30036">
+   <style:table-cell-properties fo:border-bottom="0.06pt solid #eeeeee" fo:background-color="#eeeeee" style:text-align-source="fix" style:repeat-content="false" fo:border-left="none" fo:border-right="none" fo:border-top="0.06pt solid #eeeeee" style:vertical-align="middle"/>
+   <style:paragraph-properties fo:text-align="center" fo:margin-left="0in"/>
+   <style:text-properties fo:color="#1c1c1c" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="DejaVu Sans Condensed" fo:font-size="7pt" fo:language="en" fo:country="US" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="normal" style:text-underline-mode="continuous" style:text-overline-mode="continuous" style:text-line-through-mode="continuous" style:font-size-asian="7pt" style:language-asian="en" style:country-asian="US" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-size-complex="7pt" style:language-complex="en" style:country-complex="US" style:font-style-complex="normal" style:font-weight-complex="normal" style:text-emphasize="none" style:font-relief="none" style:text-overline-style="none" style:text-overline-color="font-color"/>
+  </style:style>
+  <style:style style:name="ce45" style:family="table-cell" style:parent-style-name="Default">
+   <style:table-cell-properties fo:border-bottom="0.06pt solid #eeeeee" fo:background-color="#dedce6" style:text-align-source="fix" style:repeat-content="false" fo:wrap-option="wrap" fo:border-left="none" fo:border-right="none" fo:border-top="0.06pt solid #eeeeee" style:vertical-align="middle"/>
+   <style:paragraph-properties fo:text-align="center" fo:margin-left="0in"/>
+   <style:text-properties fo:color="#1c1c1c" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="DejaVu Sans Condensed" fo:font-size="7pt" fo:language="en" fo:country="US" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="normal" style:text-underline-mode="continuous" style:text-overline-mode="continuous" style:text-line-through-mode="continuous" style:font-size-asian="7pt" style:language-asian="en" style:country-asian="US" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-size-complex="7pt" style:language-complex="en" style:country-complex="US" style:font-style-complex="normal" style:font-weight-complex="normal" style:text-emphasize="none" style:font-relief="none" style:text-overline-style="none" style:text-overline-color="font-color"/>
+  </style:style>
+  <style:style style:name="ce44" style:family="table-cell" style:parent-style-name="Default">
+   <style:table-cell-properties fo:border-bottom="0.06pt solid #eeeeee" style:text-align-source="fix" style:repeat-content="false" fo:border-left="none" fo:border-right="none" fo:border-top="0.06pt solid #eeeeee" style:vertical-align="middle"/>
+   <style:paragraph-properties fo:text-align="center" fo:margin-left="0in"/>
+   <style:text-properties style:use-window-font-color="true" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="DejaVu Sans Condensed" fo:font-size="7pt" fo:language="en" fo:country="US" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="normal" style:text-underline-mode="continuous" style:text-overline-mode="continuous" style:text-line-through-mode="continuous" style:font-size-asian="7pt" style:language-asian="en" style:country-asian="US" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-size-complex="7pt" style:language-complex="en" style:country-complex="US" style:font-style-complex="normal" style:font-weight-complex="normal" style:text-emphasize="none" style:font-relief="none" style:text-overline-style="none" style:text-overline-color="font-color"/>
+  </style:style>
+  <style:style style:name="ce51" style:family="table-cell" style:parent-style-name="Default">
+   <style:table-cell-properties fo:border-bottom="0.06pt solid #eeeeee" fo:background-color="#dedce6" style:text-align-source="fix" style:repeat-content="false" fo:border-left="none" fo:border-right="none" fo:border-top="0.06pt solid #eeeeee" style:vertical-align="middle"/>
+   <style:paragraph-properties fo:text-align="center" fo:margin-left="0in"/>
+   <style:text-properties fo:color="#1c1c1c" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="DejaVu Sans Condensed" fo:font-size="7pt" fo:language="en" fo:country="US" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="normal" style:text-underline-mode="continuous" style:text-overline-mode="continuous" style:text-line-through-mode="continuous" style:font-size-asian="7pt" style:language-asian="en" style:country-asian="US" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-size-complex="7pt" style:language-complex="en" style:country-complex="US" style:font-style-complex="normal" style:font-weight-complex="normal" style:text-emphasize="none" style:font-relief="none" style:text-overline-style="none" style:text-overline-color="font-color"/>
+  </style:style>
+  <style:style style:name="ce52" style:family="table-cell" style:parent-style-name="Default">
+   <style:table-cell-properties fo:border-bottom="0.06pt solid #eeeeee" fo:background-color="#ff972f" style:text-align-source="fix" style:repeat-content="false" fo:border-left="none" fo:border-right="none" fo:border-top="0.06pt solid #eeeeee" style:vertical-align="middle"/>
+   <style:paragraph-properties fo:text-align="center" fo:margin-left="0in"/>
+   <style:text-properties fo:color="#1c1c1c" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="DejaVu Sans Condensed" fo:font-size="7pt" fo:language="en" fo:country="US" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="normal" style:text-underline-mode="continuous" style:text-overline-mode="continuous" style:text-line-through-mode="continuous" style:font-size-asian="7pt" style:language-asian="en" style:country-asian="US" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-size-complex="7pt" style:language-complex="en" style:country-complex="US" style:font-style-complex="normal" style:font-weight-complex="normal" style:text-emphasize="none" style:font-relief="none" style:text-overline-style="none" style:text-overline-color="font-color"/>
+  </style:style>
+  <style:style style:name="ce33" style:family="table-cell" style:parent-style-name="Default" style:data-style-name="N4"/>
+  <style:style style:name="ce35" style:family="table-cell" style:parent-style-name="Default" style:data-style-name="N20004">
+   <style:table-cell-properties fo:border-bottom="0.06pt solid #eeeeee" style:text-align-source="fix" style:repeat-content="false" fo:background-color="transparent" fo:border-left="none" fo:border-right="none" fo:border-top="0.06pt solid #eeeeee" style:vertical-align="middle"/>
+   <style:paragraph-properties fo:text-align="center" fo:margin-left="0in"/>
+   <style:text-properties fo:color="#000000" style:font-name="DejaVu Sans Condensed" fo:font-size="7pt" style:font-name-asian="Droid Sans Fallback" style:font-size-asian="7pt" style:font-name-complex="Lohit Hindi" style:font-size-complex="7pt"/>
+  </style:style>
+  <style:style style:name="ce36" style:family="table-cell" style:parent-style-name="Default" style:data-style-name="N4">
+   <style:table-cell-properties fo:border-bottom="0.06pt solid #eeeeee" style:text-align-source="fix" style:repeat-content="false" fo:border-left="none" fo:border-right="none" fo:border-top="0.06pt solid #eeeeee" style:vertical-align="middle"/>
+   <style:paragraph-properties fo:text-align="start" fo:margin-left="0in"/>
+   <style:text-properties style:use-window-font-color="true" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="DejaVu Sans Condensed" fo:font-size="7pt" fo:language="es" fo:country="CO" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="normal" style:text-underline-mode="continuous" style:text-overline-mode="continuous" style:text-line-through-mode="continuous" style:font-name-asian="Droid Sans Fallback" style:font-size-asian="7pt" style:language-asian="zh" style:country-asian="CN" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-name-complex="Lohit Hindi" style:font-size-complex="7pt" style:language-complex="hi" style:country-complex="IN" style:font-style-complex="normal" style:font-weight-complex="normal" style:text-emphasize="none" style:font-relief="none" style:text-overline-style="none" style:text-overline-color="font-color"/>
+  </style:style>
+  <style:style style:name="ce47" style:family="table-cell" style:parent-style-name="Default" style:data-style-name="N4">
+   <style:table-cell-properties style:text-align-source="fix" style:repeat-content="false" fo:background-color="transparent" style:vertical-align="middle"/>
+   <style:paragraph-properties fo:text-align="start" fo:margin-left="0in"/>
+   <style:text-properties fo:color="#ffffff" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="Liberation Sans1" fo:font-size="10pt" fo:language="en" fo:country="US" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="solid" style:text-underline-width="auto" style:text-underline-color="font-color" fo:font-weight="normal" style:text-underline-mode="continuous" style:text-overline-mode="continuous" style:text-line-through-mode="continuous" style:font-size-asian="10pt" style:language-asian="en" style:country-asian="US" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-size-complex="10pt" style:language-complex="en" style:country-complex="US" style:font-style-complex="normal" style:font-weight-complex="normal" style:text-emphasize="none" style:font-relief="none" style:text-overline-style="none" style:text-overline-color="font-color"/>
+  </style:style>
+  <style:style style:name="ce34" style:family="table-cell" style:parent-style-name="Default" style:data-style-name="N20000">
+   <style:table-cell-properties fo:border-bottom="0.06pt solid #eeeeee" style:text-align-source="fix" style:repeat-content="false" fo:background-color="transparent" fo:border-left="none" fo:border-right="none" fo:border-top="0.06pt solid #eeeeee" style:vertical-align="middle"/>
+   <style:paragraph-properties fo:text-align="center" fo:margin-left="0in"/>
+   <style:text-properties fo:color="#000000" style:font-name="DejaVu Sans Condensed" fo:font-size="7pt" style:font-name-asian="Droid Sans Fallback" style:font-size-asian="7pt" style:font-name-complex="Lohit Hindi" style:font-size-complex="7pt"/>
+  </style:style>
+  <style:style style:name="ce60" style:family="table-cell" style:parent-style-name="Default">
+   <style:table-cell-properties fo:border-bottom="0.06pt solid #eeeeee" fo:background-color="#ff972f" style:text-align-source="fix" style:repeat-content="false" fo:wrap-option="wrap" fo:border-left="none" fo:border-right="none" fo:border-top="0.06pt solid #eeeeee" style:vertical-align="middle"/>
+   <style:paragraph-properties fo:text-align="center" fo:margin-left="0in"/>
+   <style:text-properties fo:color="#000000" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="DejaVu Sans Condensed" fo:font-size="7pt" fo:language="en" fo:country="US" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="normal" style:text-underline-mode="continuous" style:text-overline-mode="continuous" style:text-line-through-mode="continuous" style:font-size-asian="7pt" style:language-asian="en" style:country-asian="US" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-size-complex="7pt" style:language-complex="en" style:country-complex="US" style:font-style-complex="normal" style:font-weight-complex="normal" style:text-emphasize="none" style:font-relief="none" style:text-overline-style="none" style:text-overline-color="font-color"/>
+  </style:style>
+  <style:style style:name="ce39" style:family="table-cell" style:parent-style-name="Default" style:data-style-name="N4">
+   <style:table-cell-properties fo:border-bottom="0.06pt solid #eeeeee" style:text-align-source="fix" style:repeat-content="false" fo:border-left="none" fo:border-right="none" fo:border-top="0.06pt solid #eeeeee" style:vertical-align="middle"/>
+   <style:paragraph-properties fo:text-align="start" fo:margin-left="0in"/>
+   <style:text-properties style:use-window-font-color="true" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="DejaVu Sans Condensed" fo:font-size="7pt" fo:language="en" fo:country="US" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="normal" style:text-underline-mode="continuous" style:text-overline-mode="continuous" style:text-line-through-mode="continuous" style:font-size-asian="7pt" style:language-asian="en" style:country-asian="US" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-size-complex="7pt" style:language-complex="en" style:country-complex="US" style:font-style-complex="normal" style:font-weight-complex="normal" style:text-emphasize="none" style:font-relief="none" style:text-overline-style="none" style:text-overline-color="font-color"/>
+  </style:style>
+  <style:style style:name="ce40" style:family="table-cell" style:parent-style-name="Default" style:data-style-name="N4">
+   <style:table-cell-properties fo:border-bottom="0.06pt solid #eeeeee" style:text-align-source="fix" style:repeat-content="false" fo:border-left="none" fo:border-right="none" fo:border-top="0.06pt solid #eeeeee" style:vertical-align="middle"/>
+   <style:paragraph-properties fo:text-align="center" fo:margin-left="0in"/>
+   <style:text-properties style:use-window-font-color="true" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="DejaVu Sans Condensed" fo:font-size="7pt" fo:language="en" fo:country="US" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="normal" style:text-underline-mode="continuous" style:text-overline-mode="continuous" style:text-line-through-mode="continuous" style:font-size-asian="7pt" style:language-asian="en" style:country-asian="US" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-size-complex="7pt" style:language-complex="en" style:country-complex="US" style:font-style-complex="normal" style:font-weight-complex="normal" style:text-emphasize="none" style:font-relief="none" style:text-overline-style="none" style:text-overline-color="font-color"/>
+  </style:style>
+  <style:style style:name="ce41" style:family="table-cell" style:parent-style-name="Default" style:data-style-name="N4">
+   <style:table-cell-properties style:vertical-align="middle"/>
+   <style:text-properties style:font-name="Liberation Sans1" fo:font-size="11pt" style:font-size-asian="11pt" style:font-size-complex="11pt"/>
+  </style:style>
+  <style:style style:name="ce48" style:family="table-cell" style:parent-style-name="Default" style:data-style-name="N4">
+   <style:table-cell-properties fo:border-bottom="0.06pt solid #eeeeee" fo:border-left="none" fo:border-right="none" fo:border-top="0.06pt solid #eeeeee" style:vertical-align="middle"/>
+   <style:text-properties style:font-name="DejaVu Sans Condensed" fo:font-size="7pt" style:font-size-asian="7pt" style:font-size-complex="7pt"/>
+  </style:style>
+  <style:style style:name="ce66" style:family="table-cell" style:parent-style-name="Default">
+   <style:table-cell-properties fo:border-bottom="0.06pt solid #eeeeee" fo:background-color="#ff972f" style:text-align-source="fix" style:repeat-content="false" fo:wrap-option="wrap" fo:border-left="none" fo:border-right="none" fo:border-top="0.06pt solid #eeeeee" style:vertical-align="middle"/>
+   <style:paragraph-properties fo:text-align="center" fo:margin-left="0in"/>
+   <style:text-properties fo:color="#1c1c1c" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="DejaVu Sans Condensed" fo:font-size="7pt" fo:language="en" fo:country="US" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="normal" style:text-underline-mode="continuous" style:text-overline-mode="continuous" style:text-line-through-mode="continuous" style:font-size-asian="7pt" style:language-asian="en" style:country-asian="US" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-size-complex="7pt" style:language-complex="en" style:country-complex="US" style:font-style-complex="normal" style:font-weight-complex="normal" style:text-emphasize="none" style:font-relief="none" style:text-overline-style="none" style:text-overline-color="font-color"/>
+  </style:style>
+  <style:style style:name="ce67" style:family="table-cell" style:parent-style-name="Default">
+   <style:table-cell-properties fo:border-bottom="0.06pt solid #eeeeee" fo:background-color="#d4ea6b" style:text-align-source="fix" style:repeat-content="false" fo:wrap-option="wrap" fo:border-left="none" fo:border-right="none" fo:border-top="0.06pt solid #eeeeee" style:vertical-align="middle"/>
+   <style:paragraph-properties fo:text-align="center" fo:margin-left="0in"/>
+   <style:text-properties fo:color="#1c1c1c" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="DejaVu Sans Condensed" fo:font-size="7pt" fo:language="en" fo:country="US" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="normal" style:text-underline-mode="continuous" style:text-overline-mode="continuous" style:text-line-through-mode="continuous" style:font-size-asian="7pt" style:language-asian="en" style:country-asian="US" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-size-complex="7pt" style:language-complex="en" style:country-complex="US" style:font-style-complex="normal" style:font-weight-complex="normal" style:text-emphasize="none" style:font-relief="none" style:text-overline-style="none" style:text-overline-color="font-color"/>
+  </style:style>
+  <style:style style:name="gr1" style:family="graphic">
+   <style:graphic-properties draw:stroke="none" draw:fill="none" draw:textarea-horizontal-align="center" draw:textarea-vertical-align="middle" draw:color-mode="standard" draw:luminance="0%" draw:contrast="0%" draw:gamma="100%" draw:red="0%" draw:green="0%" draw:blue="0%" fo:clip="rect(0in, 0in, 0in, 0in)" draw:image-opacity="100%" style:mirror="none"/>
+   <style:paragraph-properties fo:text-align="center"/>
+  </style:style>
+  <style:page-layout style:name="pm1">
+   <style:page-layout-properties fo:page-width="11in" fo:page-height="8.5in" style:num-format="1" style:print-orientation="landscape" fo:margin-top="0.6299in" fo:margin-bottom="0.6299in" fo:margin-left="0.6299in" fo:margin-right="0.6299in" style:writing-mode="lr-tb"/>
+   <style:header-style>
+    <style:header-footer-properties fo:min-height="0.2953in" fo:margin-left="0in" fo:margin-right="0in" fo:margin-bottom="0.0984in"/>
+   </style:header-style>
+   <style:footer-style>
+    <style:header-footer-properties fo:min-height="0.2953in" fo:margin-left="0in" fo:margin-right="0in" fo:margin-top="0.0984in"/>
+   </style:footer-style>
+  </style:page-layout>
+  <style:style style:name="P1" style:family="paragraph">
+   <loext:graphic-properties draw:fill="none"/>
+   <style:paragraph-properties fo:text-align="center"/>
+  </style:style>
+ </office:automatic-styles>
+ <office:master-styles>
+  <style:master-page style:name="Default" style:page-layout-name="pm1">
+   <style:header style:display="false"/>
+   <style:header-left style:display="false"/>
+   <style:header-first style:display="false"/>
+   <style:footer style:display="false"/>
+   <style:footer-left style:display="false"/>
+   <style:footer-first style:display="false"/>
+  </style:master-page>
+ </office:master-styles>
+ <office:body>
+  <office:spreadsheet>
+   <table:table table:name="Hoja1" table:style-name="ta1">
+    <office:forms form:automatic-focus="false" form:apply-design-mode="false">
+     <form:form form:name="Formulario" form:apply-filter="true" form:command-type="table" form:control-implementation="ooo:com.sun.star.form.component.Form" office:target-frame="">
+      <form:properties>
+       <form:property form:property-name="PropertyChangeNotificationEnabled" office:value-type="boolean" office:boolean-value="true"/>
+       <form:property form:property-name="TargetURL" office:value-type="string" office:string-value=""/>
+      </form:properties>
+     </form:form>
+    </office:forms>
+    <table:shapes>
+     <draw:frame draw:z-index="0" draw:name="Image 1" draw:style-name="gr1" draw:text-style-name="P1" svg:width="2.5205in" svg:height="0.4472in" svg:x="0.0177in" svg:y="0.2189in">
+      <draw:image draw:mime-type="image/png">
+       <office:binary-data>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
+       </office:binary-data>
+       <text:p/>
+      </draw:image>
+     </draw:frame></table:shapes>
+    <table:table-column table:style-name="co1" table:default-cell-style-name="ce20"/>
+    <table:table-column table:style-name="co2" table:default-cell-style-name="ce20"/>
+    <table:table-column table:style-name="co3" table:default-cell-style-name="ce20"/>
+    <table:table-column table:style-name="co4" table:default-cell-style-name="ce20"/>
+    <table:table-column table:style-name="co5" table:default-cell-style-name="ce20"/>
+    <table:table-column table:style-name="co6" table:default-cell-style-name="ce20"/>
+    <table:table-column table:style-name="co7" table:default-cell-style-name="ce20"/>
+    <table:table-column table:style-name="co8" table:number-columns-repeated="50" table:default-cell-style-name="ce21"/>
+    <table:table-row table:style-name="ro1">
+     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="relatorio://company.rec_name" xlink:type="simple">company.rec_name</text:a></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce1" table:number-columns-repeated="6"/>
+     <table:table-cell table:number-columns-repeated="50"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro1" table:number-rows-repeated="3">
+     <table:table-cell table:style-name="ce3"/>
+     <table:table-cell table:style-name="ce1" table:number-columns-repeated="6"/>
+     <table:table-cell table:number-columns-repeated="50"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro1">
+     <table:table-cell table:style-name="ce6" office:value-type="string" calcext:value-type="string">
+      <text:p>Impreso el:</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce29" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="relatorio://company.time_now()" xlink:type="simple">company.time_now()</text:a></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce1" table:number-columns-repeated="5"/>
+     <table:table-cell table:number-columns-repeated="50"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro1">
+     <table:table-cell table:style-name="ce3"/>
+     <table:table-cell table:style-name="ce1" table:number-columns-repeated="6"/>
+     <table:table-cell table:number-columns-repeated="50"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro2">
+     <table:table-cell table:style-name="ce15" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="relatorio://if%20test=%22accomulated_period%20==%20%22True%22%22" xlink:type="simple">if test=&quot;accomulated_period == &quot;True&quot;&quot;</text:a></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce1" table:number-columns-repeated="6"/>
+     <table:table-cell table:number-columns-repeated="50"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro3">
+     <table:table-cell table:style-name="ce4" office:value-type="string" calcext:value-type="string">
+      <text:p>REPORTE DE NOMINA MENSUAL</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce22" table:number-columns-repeated="7"/>
+     <table:table-cell table:number-columns-repeated="49"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro4">
+     <table:table-cell table:style-name="Default"/>
+     <table:table-cell table:style-name="ce25" table:number-columns-repeated="6"/>
+     <table:table-cell table:number-columns-repeated="50"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro4">
+     <table:table-cell table:style-name="ce10" office:value-type="string" calcext:value-type="string">
+      <text:p>FECHA INICIAL:</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce26" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="relatorio://start" xlink:type="simple">start</text:a></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce25" table:number-columns-repeated="3"/>
+     <table:table-cell table:style-name="ce10" office:value-type="string" calcext:value-type="string">
+      <text:p>FECHA FINAL:</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce26" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="relatorio://end" xlink:type="simple">end</text:a></text:p>
+     </table:table-cell>
+     <table:table-cell table:number-columns-repeated="50"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro5">
+     <table:table-cell table:style-name="ce9"/>
+     <table:table-cell table:style-name="ce25" table:number-columns-repeated="6"/>
+     <table:table-cell table:number-columns-repeated="50"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro6">
+     <table:table-cell table:style-name="ce19" office:value-type="string" calcext:value-type="string">
+      <text:p>NIT</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce45" office:value-type="string" calcext:value-type="string">
+      <text:p>EMPLEADO</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce51" office:value-type="string" calcext:value-type="string">
+      <text:p>DEPARTAMENTO</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce51" office:value-type="string" calcext:value-type="string">
+      <text:p>NOMINA</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce52" office:value-type="string" calcext:value-type="string">
+      <text:p>SALARIO</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce60" office:value-type="string" calcext:value-type="string">
+      <text:p>HORAS EXTRAS Y RECARGOS</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce52" office:value-type="string" calcext:value-type="string">
+      <text:p>BONIFICACIONES</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce66" office:value-type="string" calcext:value-type="string">
+      <text:p>COMISIONES</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce67" office:value-type="string" calcext:value-type="string">
+      <text:p>TOTAL</text:p>
+     </table:table-cell>
+     <table:table-cell table:number-columns-repeated="48"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro7">
+     <table:table-cell table:style-name="ce16" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="relatorio://for%20each=&apos;rec%20in%20records.values()&apos;" xlink:type="simple">for each=&apos;rec in records.values()&apos;</text:a></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce44"/>
+     <table:table-cell table:style-name="ce15" table:number-columns-repeated="2"/>
+     <table:table-cell table:style-name="ce33"/>
+     <table:table-cell table:style-name="ce39" table:number-columns-repeated="3"/>
+     <table:table-cell table:number-columns-repeated="49"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro7">
+     <table:table-cell table:style-name="ce16" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="relatorio://for%20each=&apos;line%20in%20rec.values()&apos;" xlink:type="simple">for each=&apos;line in rec.values()&apos;</text:a></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce44"/>
+     <table:table-cell table:style-name="ce15" table:number-columns-repeated="2"/>
+     <table:table-cell table:style-name="ce33"/>
+     <table:table-cell table:style-name="ce39" table:number-columns-repeated="3"/>
+     <table:table-cell table:number-columns-repeated="49"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro7">
+     <table:table-cell table:style-name="ce16" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="relatorio://for%20each=&apos;key,%20move%20in%20line.items()&apos;" xlink:type="simple">for each=&apos;key, move in line.items()&apos;</text:a></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce44"/>
+     <table:table-cell table:style-name="ce15" table:number-columns-repeated="2"/>
+     <table:table-cell table:style-name="ce33"/>
+     <table:table-cell table:style-name="ce39" table:number-columns-repeated="3"/>
+     <table:table-cell table:number-columns-repeated="49"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro7">
+     <table:table-cell table:style-name="ce46" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="relatorio://move[&apos;id_number&apos;]" xlink:type="simple">move[&apos;id_number&apos;]</text:a></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce46" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="relatorio://move[&apos;name&apos;]" xlink:type="simple">move[&apos;name&apos;]</text:a></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce46" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="relatorio://move[&apos;department&apos;]" xlink:type="simple">move[&apos;department&apos;]</text:a></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce46" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="relatorio://key" xlink:type="simple">key</text:a></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce35" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="relatorio://move[&apos;salary&apos;]" xlink:type="simple">move[&apos;salary&apos;]</text:a></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce35" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="relatorio://move[&apos;extras&apos;]" xlink:type="simple">move[&apos;extras&apos;]</text:a></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce35" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="relatorio://move[&apos;bonus&apos;]" xlink:type="simple">move[&apos;bonus&apos;]</text:a></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce35" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="relatorio://move[&apos;comision&apos;]" xlink:type="simple">move[&apos;comision&apos;]</text:a></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce35" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="relatorio://move[&apos;total&apos;]" xlink:type="simple">move[&apos;total&apos;]</text:a></text:p>
+     </table:table-cell>
+     <table:table-cell table:number-columns-repeated="48"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro7">
+     <table:table-cell table:style-name="ce14" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="relatorio:///for" xlink:type="simple">/for</text:a></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce44"/>
+     <table:table-cell table:style-name="ce15" table:number-columns-repeated="2"/>
+     <table:table-cell table:style-name="ce33"/>
+     <table:table-cell table:style-name="ce39" table:number-columns-repeated="3"/>
+     <table:table-cell table:number-columns-repeated="49"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro7">
+     <table:table-cell table:style-name="ce14" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="relatorio:///for" xlink:type="simple">/for</text:a></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce44"/>
+     <table:table-cell table:style-name="ce15" table:number-columns-repeated="2"/>
+     <table:table-cell table:style-name="ce33"/>
+     <table:table-cell table:style-name="ce39" table:number-columns-repeated="3"/>
+     <table:table-cell table:number-columns-repeated="49"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro8">
+     <table:table-cell table:style-name="ce14" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="relatorio:///for" xlink:type="simple">/for</text:a></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce44"/>
+     <table:table-cell table:style-name="ce15" table:number-columns-repeated="2"/>
+     <table:table-cell table:style-name="ce35"/>
+     <table:table-cell table:style-name="ce40"/>
+     <table:table-cell table:style-name="ce48"/>
+     <table:table-cell table:style-name="ce39"/>
+     <table:table-cell table:number-columns-repeated="49"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro8">
+     <table:table-cell table:style-name="ce14" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="relatorio:///if" xlink:type="simple">/if</text:a></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce21" table:number-columns-repeated="3"/>
+     <table:table-cell table:style-name="ce36"/>
+     <table:table-cell table:style-name="ce41" table:number-columns-repeated="3"/>
+     <table:table-cell table:number-columns-repeated="40"/>
+     <table:table-cell table:style-name="Default" table:number-columns-repeated="9"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro9">
+     <table:table-cell table:style-name="ce15" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="relatorio://if%20test=%22accomulated_period%20==%20%22False%22%22" xlink:type="simple">if test=&quot;accomulated_period == &quot;False&quot;&quot;</text:a></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce25" table:number-columns-repeated="3"/>
+     <table:table-cell table:style-name="ce47" table:number-columns-repeated="3"/>
+     <table:table-cell table:style-name="ce41"/>
+     <table:table-cell table:number-columns-repeated="40"/>
+     <table:table-cell table:style-name="Default" table:number-columns-repeated="9"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro3">
+     <table:table-cell table:style-name="ce4" office:value-type="string" calcext:value-type="string">
+      <text:p>REPORTE DE NOMINA QUINCENAL</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce22" table:number-columns-repeated="7"/>
+     <table:table-cell table:number-columns-repeated="49"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro4">
+     <table:table-cell table:style-name="ce10" office:value-type="string" calcext:value-type="string">
+      <text:p>FECHA INICIAL:</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce26" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="relatorio://start" xlink:type="simple">start</text:a></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce25" table:number-columns-repeated="3"/>
+     <table:table-cell table:style-name="ce10" office:value-type="string" calcext:value-type="string">
+      <text:p>FECHA FINAL:</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce26" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="relatorio://end" xlink:type="simple">end</text:a></text:p>
+     </table:table-cell>
+     <table:table-cell table:number-columns-repeated="41"/>
+     <table:table-cell table:style-name="Default" table:number-columns-repeated="9"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro4">
+     <table:table-cell table:style-name="ce9"/>
+     <table:table-cell table:style-name="ce25" table:number-columns-repeated="6"/>
+     <table:table-cell table:number-columns-repeated="41"/>
+     <table:table-cell table:style-name="Default" table:number-columns-repeated="9"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro4">
+     <table:table-cell table:style-name="ce19" office:value-type="string" calcext:value-type="string">
+      <text:p>NIT</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce45" office:value-type="string" calcext:value-type="string">
+      <text:p>EMPLEADO</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce51" office:value-type="string" calcext:value-type="string">
+      <text:p>DEPARTAMENTO</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce51" office:value-type="string" calcext:value-type="string">
+      <text:p>NOMINA</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce52" office:value-type="string" calcext:value-type="string">
+      <text:p>SALARIO</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce60" office:value-type="string" calcext:value-type="string">
+      <text:p>HORAS EXTRAS Y RECARGOS</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce52" office:value-type="string" calcext:value-type="string">
+      <text:p>BONIFICACIONES</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce66" office:value-type="string" calcext:value-type="string">
+      <text:p>COMISIONES</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce67" office:value-type="string" calcext:value-type="string">
+      <text:p>TOTAL</text:p>
+     </table:table-cell>
+     <table:table-cell table:number-columns-repeated="39"/>
+     <table:table-cell table:style-name="Default" table:number-columns-repeated="9"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro4">
+     <table:table-cell table:style-name="ce16" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="relatorio://for%20each=&apos;key,%20rec%20in%20records.items()&apos;" xlink:type="simple">for each=&apos;key, rec in records.items()&apos;</text:a></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce44"/>
+     <table:table-cell table:style-name="ce15" table:number-columns-repeated="2"/>
+     <table:table-cell table:style-name="ce33"/>
+     <table:table-cell table:style-name="ce39" table:number-columns-repeated="3"/>
+     <table:table-cell table:number-columns-repeated="40"/>
+     <table:table-cell table:style-name="Default" table:number-columns-repeated="9"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro4">
+     <table:table-cell table:style-name="ce46" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="relatorio://rec[&apos;id_number&apos;]" xlink:type="simple">rec[&apos;id_number&apos;]</text:a></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce46" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="relatorio://rec[&apos;name&apos;]" xlink:type="simple">rec[&apos;name&apos;]</text:a></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce46" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="relatorio://rec[&apos;department&apos;]" xlink:type="simple">rec[&apos;department&apos;]</text:a></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce46" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="relatorio://rec[&apos;description&apos;]" xlink:type="simple">rec[&apos;description&apos;]</text:a></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce34" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="relatorio://rec[&apos;values&apos;][rec[&apos;description&apos;]][&apos;salary&apos;]" xlink:type="simple">rec[&apos;values&apos;][rec[&apos;description&apos;]][&apos;salary&apos;]</text:a></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce34" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="relatorio://rec[&apos;values&apos;][rec[&apos;description&apos;]][&apos;extras&apos;]" xlink:type="simple">rec[&apos;values&apos;][rec[&apos;description&apos;]][&apos;extras&apos;]</text:a></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce34" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="relatorio://rec[&apos;values&apos;][rec[&apos;description&apos;]][&apos;bonus&apos;]" xlink:type="simple">rec[&apos;values&apos;][rec[&apos;description&apos;]][&apos;bonus&apos;]</text:a></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce34" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="relatorio://rec[&apos;values&apos;][rec[&apos;description&apos;]][&apos;comision&apos;]" xlink:type="simple">rec[&apos;values&apos;][rec[&apos;description&apos;]][&apos;comision&apos;]</text:a></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce34" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="relatorio://rec[&apos;values&apos;][rec[&apos;description&apos;]][&apos;total&apos;]" xlink:type="simple">rec[&apos;values&apos;][rec[&apos;description&apos;]][&apos;total&apos;]</text:a></text:p>
+     </table:table-cell>
+     <table:table-cell table:number-columns-repeated="39"/>
+     <table:table-cell table:style-name="Default" table:number-columns-repeated="9"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro4">
+     <table:table-cell table:style-name="ce14" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="relatorio:///for" xlink:type="simple">/for</text:a></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce44"/>
+     <table:table-cell table:style-name="ce15" table:number-columns-repeated="2"/>
+     <table:table-cell table:style-name="ce35"/>
+     <table:table-cell table:style-name="ce40"/>
+     <table:table-cell table:style-name="ce48"/>
+     <table:table-cell table:style-name="ce39"/>
+     <table:table-cell table:number-columns-repeated="49"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro4">
+     <table:table-cell table:style-name="ce14" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="relatorio:///if" xlink:type="simple">/if</text:a></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce21" table:number-columns-repeated="3"/>
+     <table:table-cell table:style-name="ce36"/>
+     <table:table-cell table:style-name="ce41" table:number-columns-repeated="3"/>
+     <table:table-cell table:style-name="Default"/>
+     <table:table-cell table:number-columns-repeated="48"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro4">
+     <table:table-cell table:style-name="ce21" table:number-columns-repeated="7"/>
+     <table:table-cell table:number-columns-repeated="50"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro4" table:number-rows-repeated="1048545">
+     <table:table-cell table:number-columns-repeated="57"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro4">
+     <table:table-cell table:number-columns-repeated="57"/>
+    </table:table-row>
+   </table:table>
+   <table:named-expressions/>
+  </office:spreadsheet>
+ </office:body>
+</office:document>
