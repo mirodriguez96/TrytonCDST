@@ -97,6 +97,8 @@ def register():
         account.IncomeStatementView,
         production.ProductionDetailedStart,
         payroll.PayrollIBCView,
+        payment_bank.AccountBankParty,
+        payment_bank.BankPayment,
         module='conector', type_='model')
 
     Pool.register(
