@@ -63,7 +63,10 @@ def get_products(values):
     result = {}
     if values:
         Product = Pool().get('product.product')
-        products = Product.search([('id_tecno', 'in', values)])
+        products = Product.search([['OR',
+            ('id_tecno', 'in', values),
+            ('code', 'in', values)],
+            ('active', '=', True)])
         for p in products:
             result[p.code] = p
     return result
@@ -83,6 +86,10 @@ def validate_documentos(data):
     # Verificar y seleccionar el primer centro de operaciones
     operation_center = get_operation_center(Internal)
     id_company = Transaction().context.get('company')
+    shipments = Internal.search([('id_tecno', '!=', None)])
+    exists = []
+    for ship in shipments:
+        exists.append(ship.id_tecno)
     tipos_doctos = []
     bodegas = []
     productos = []
@@ -91,6 +98,10 @@ def validate_documentos(data):
         tipo = str(d.tipo)
         reference = f"{tipo}-{d.Numero_Documento}"
         id_tecno = f"{d.sw}-{reference}"
+        if id_tecno in exists:
+            result["logs"][id_tecno] = "Ya existe en Tryton"
+            result["exportado"]["T"].append(id_tecno)
+            continue
         fecha_documento = d.Fecha_Documento.date()
         if id_tecno not in result["tryton"]:
             shipment = {
