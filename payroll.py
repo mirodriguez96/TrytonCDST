@@ -1440,13 +1440,16 @@ class StaffAccess(metaclass=PoolMeta):
         elif ttt <= 7.83 and dom > Decimal(0.0):
             dom = ttt
 
-        hedo = round(Decimal(ttt) - Decimal(7.83),2) if hedo != float(0) else float(0)
-        heno = round(Decimal(ttt) - Decimal(7.83),2) if heno != float(0) else float(0)
-        hedf = round(Decimal(ttt) - Decimal(7.83),2) if hedf != float(0) else float(0)
-        henf = round(Decimal(ttt) - Decimal(7.83),2) if henf != float(0) else float(0)
-
-        return {'ttt': ttt, 'het': round(het,2), 'hedo': float(0) if hedo <= float(0) else hedo, 'heno': float(0) if heno <= float(0) else heno,
-                'reco': reco, 'recf': recf, 'dom': dom, 'hedf': float(0) if hedf <= float(0) else hedf, 'henf': float(0) if henf <= float(0) else  henf}
+        # hedo = round(Decimal(ttt) - Decimal(7.83),2) if hedo != float(0) else float(0)
+        # heno = round(Decimal(ttt) - Decimal(7.83),2) if heno != float(0) else float(0)
+        # hedf = round(Decimal(ttt) - Decimal(7.83),2) if hedf != float(0) else float(0)
+        # henf = round(Decimal(ttt) - Decimal(7.83),2) if henf != float(0) else float(0)
+        
+        return {'ttt': ttt, 'het': round(het,2), 'hedo': round(het-heno,2) if dom == 0 else hedo, 'heno': round(heno,2) ,
+                'reco': reco, 'recf': recf, 'dom': dom, 'hedf': round(het-henf,2) if dom != 0 else hedf, 'henf': round(henf,2) }
+    
+        # return {'ttt': ttt, 'het': round(het,2), 'hedo': float(0) if hedo <= float(0) else hedo, 'heno': float(0) if heno <= float(0) else heno,
+        #         'reco': reco, 'recf': recf, 'dom': dom, 'hedf': float(0) if hedf <= float(0) else hedf, 'henf': float(0) if henf <= float(0) else  henf}
     
     # Obtiene la suma de los descansos
     def _get_all_rests(self, index_rest, all_rests, contador):
@@ -1563,14 +1566,6 @@ class StaffAccessReport(Report):
 
         return result
     
-    # @classmethod
-    # def get_ttt(cls, enter_timestamp, exit_timestamp, timedelta):
-    #     result= ''
-    #     if enter_timestamp not in ['Null', None] and exit_timestamp not in ['Null', None]:
-    #         result = (enter_timestamp - exit_timestamp) / timedelta * -1
-    #         result = str(round(abs(result), 2))
-
-    #     return result
 
     @classmethod
     def get_context(cls, records, header, data):
