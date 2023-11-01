@@ -28,6 +28,15 @@ from trytond.sendmail import sendmail
 from trytond.config import config
 
 from dateutil import tz
+import sentry_sdk
+from sentry_sdk.integrations.trytond import TrytondWSGIIntegration
+
+# Configura Sentry con tu DSN
+sentry_sdk.init(
+    dsn="https://7e7c4557c2a9cbbed7aad24d58fd218f@o4506147189751808.ingest.sentry.io/4506147193028608",
+    integrations=[TrytondWSGIIntegration()],
+)
+
 
 from_zone = tz.gettz('UTC')
 to_zone = tz.gettz('America/Bogota')
@@ -1824,11 +1833,11 @@ class PayrollIBCReport(Report):
         # Condicionales para filtrar la informacion en la consulta
         where = staffWage.type_concept.in_(['extras', 'bonus','salary','commission'])
         where &= Between(staffPayroll.start, data['start_period'], data['end_period'])
-        where &= employee.contracting_state == 'active'
+        where &= contract.state == 'active'
         where &= contract.kind != 'learning'
 
         if data['department']:
-            where &= staffPayroll.departament == data['department']
+            where &= staffPayroll.department == data['department']
 
         # Estructura de query para lanzar la consulta a la base de datos
         select = staffPayrollLine.join(staffPayroll, 'LEFT', condition= staffPayroll.id == staffPayrollLine.payroll
@@ -1952,6 +1961,13 @@ class PayrollIBCReport(Report):
         # Funcion para ordenas de manera accedente la informacion 
         items = dict(sorted(items.items()))
 
+        # try:
+
+        #     print(items['Hola'])
+
+        # except Exception as e:
+
+        #     sentry_sdk.capture_exception(e)
 
         report_context['start'] = data['start_period']
         report_context['end'] = data['end_period']
