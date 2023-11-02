@@ -17,6 +17,9 @@ class Cron(metaclass=PoolMeta):
             ('sale.sale|import_data_sale', "Importar ventas"),
             )
         cls.method.selection.append(
+            ('product.product|update_product_parent', "Actualizar costo productos hijos"),
+            )
+        cls.method.selection.append(
             ('sale.sale|import_data_sale_return', "Importar devoluciones de ventas"),
             )
         cls.method.selection.append(

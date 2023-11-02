@@ -20,8 +20,17 @@ class Production(metaclass=PoolMeta):
     @classmethod
     def done(cls, records):
         super(Production, cls).done(records)
+        to_update = {} 
         for rec in records:
             cls.create_account_move(rec)
+            for move in rec.outputs:
+                product = move.product
+                if product not in to_update:
+                    to_update[product.code] = product
+        if to_update:
+            # Se actualiza el costo para los productos (relacioandos) hijos
+            Product = Pool().get('product.product')
+            Product.update_product_parent(to_update)
 
     # Función encargada de importar las producciones de TecnoCarnes a Tryton
     @classmethod

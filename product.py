@@ -2,6 +2,7 @@ from trytond.model import fields
 from trytond.pool import Pool, PoolMeta
 import datetime
 from trytond.transaction import Transaction
+from decimal import Decimal
 
 
 class Product(metaclass=PoolMeta):
@@ -164,6 +165,56 @@ class Product(metaclass=PoolMeta):
         else:
             return False
 
+
+    @classmethod
+    def update_product_parent(cls, _products=None):
+        print("RUN update_product_parent")
+        pool = Pool()
+        Config = pool.get('conector.configuration')
+        Product = pool.get('product.product')
+        Revision = pool.get('product.cost_price.revision')
+        AverageCost = pool.get('product.average_cost')
+        _today = datetime.date.today()
+        if not _products:
+            products = Product.search([])
+            if not products:
+                return
+            _products = {}
+            for pr in products:
+                _products[pr.code] = pr
+        result = Config.get_tblproducto_parent() 
+        if not result:
+            return
+        revisions = []
+        averages = []
+        for r in result:
+            if str(r.IdProducto) in _products and \
+                str(r.IdResponsable) in _products:
+                product = _products[str(r.IdProducto)]
+                responsable = _products[str(r.IdResponsable)]
+                factor = Decimal(r.tiempo_del_ciclo)
+                cost_price = round(responsable.cost_price * factor, 2)
+                revision = {
+                    "company": 1,
+                    "product": product.id,
+                    "template": product.template.id,
+                    "cost_price": cost_price,
+                    "date": _today,
+                }
+                revisions.append(revision)
+                # AverageCost
+                average = {
+                    "product": product.id,
+                    "effective_date": _today,
+                    "cost_price": cost_price,
+                }
+                averages.append(average)
+        if revisions:
+            Revision.create(revisions)
+            Product.recompute_cost_price(products, start=_today)
+        if averages:
+            AverageCost.create(averages)
+        print("FINISH update_product_parent")
 
 
 #Herencia del party.contact_mechanism e insercción del campo id_tecno
