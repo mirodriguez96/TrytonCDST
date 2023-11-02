@@ -8,6 +8,19 @@ from trytond.wizard import Wizard, StateTransition
 from trytond.transaction import Transaction
 from trytond.exceptions import UserError, UserWarning
 from sql import Table
+import sentry_sdk
+from sentry_sdk.integrations.trytond import TrytondWSGIIntegration
+
+# Configura Sentry con tu DSN
+sentry_sdk.init(
+    dsn="https://7e7c4557c2a9cbbed7aad24d58fd218f@o4506147189751808.ingest.sentry.io/4506147193028608",
+    integrations=[TrytondWSGIIntegration()],
+    traces_sample_rate=1.0,
+    profiles_sample_rate=1.0,
+
+    # Control dinamico de usuario
+    profiles_sampler = Pool().get('res.user')(Transaction().user)
+)
 
 
 from .it_supplier_noova import SendElectronicInvoice
