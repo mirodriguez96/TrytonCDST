@@ -1824,11 +1824,11 @@ class PayrollIBCReport(Report):
         # Condicionales para filtrar la informacion en la consulta
         where = staffWage.type_concept.in_(['extras', 'bonus','salary','commission'])
         where &= Between(staffPayroll.start, data['start_period'], data['end_period'])
-        where &= employee.contracting_state == 'active'
+        where &= contract.state == 'active'
         where &= contract.kind != 'learning'
 
         if data['department']:
-            where &= staffPayroll.departament == data['department']
+            where &= staffPayroll.department == data['department']
 
         # Estructura de query para lanzar la consulta a la base de datos
         select = staffPayrollLine.join(staffPayroll, 'LEFT', condition= staffPayroll.id == staffPayrollLine.payroll

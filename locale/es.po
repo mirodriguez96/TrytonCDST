@@ -764,11 +764,11 @@ msgstr "Departamento"
 
 msgctxt "field:staff.payroll_ibc.start,accomulated_month:"
 msgid "accomulated Month"
-msgstr "Acomular por mes"
+msgstr "Acomulado mensual"
 
 msgctxt "field:staff.payroll_ibc.start,accomulated_period:"
 msgid "accomulated Period"
-msgstr "Acomular por periodo"
+msgstr "Acomulado quincenal"
 
 msgctxt "field:staff.payroll_ibc.start,fiscalyear:"
 msgid "Fiscal Year"
