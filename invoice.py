@@ -15,11 +15,12 @@ from sentry_sdk.integrations.trytond import TrytondWSGIIntegration
 sentry_sdk.init(
     dsn="https://7e7c4557c2a9cbbed7aad24d58fd218f@o4506147189751808.ingest.sentry.io/4506147193028608",
     integrations=[TrytondWSGIIntegration()],
+    environment="produccion",
     traces_sample_rate=1.0,
     profiles_sample_rate=1.0,
 
     # Control dinamico de usuario
-    profiles_sampler = Pool().get('res.user')(Transaction().user)
+    # profiles_sampler = Pool().get('res.user')(Transaction().user)
 )
 
 
