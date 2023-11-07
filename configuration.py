@@ -163,6 +163,21 @@ class Configuration(ModelSQL, ModelView):
         return data
 
     @classmethod
+    def get_tblproducto_parent(cls):
+        query = """
+                SELECT
+                    IdProducto,
+                    IdResponsable,
+                    tiempo_del_ciclo
+                FROM
+                    dbo.TblProducto
+                WHERE
+                    IdResponsable <> 0
+                """
+        data = cls.get_data(query)
+        return data
+
+    @classmethod
     def get_tblterceros(cls, fecha):
         fecha = fecha.strftime('%Y-%m-%d %H:%M:%S')
         query = "SET DATEFORMAT ymd SELECT * FROM dbo.TblTerceros WHERE fecha_creacion >= CAST('"+fecha+"' AS datetime) OR Ultimo_Cambio_Registro >= CAST('"+fecha+"' AS datetime)"
