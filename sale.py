@@ -1,10 +1,17 @@
 import datetime
-from trytond.model import fields
+from trytond.model import fields, ModelView
 from trytond.pool import Pool, PoolMeta
 from trytond.exceptions import UserError
 from trytond.transaction import Transaction
+from trytond.wizard import Wizard, StateAction, StateView, Button, StateReport
 from decimal import Decimal
 from sql import Table
+from sql.operators import Like, Between, NotIn
+from collections import OrderedDict
+from trytond.report import Report
+from sql.aggregate import Sum
+from trytond.pyson import Eval, If
+
 
 
 #Heredamos del modelo sale.sale para agregar el campo id_tecno
@@ -823,3 +830,257 @@ class Statement(metaclass=PoolMeta):
             + sum(l.amount for l in self.lines))
         return amount
 
+# reporte costo de ventas
+class SaleShopDetailedCDSStart(ModelView):
+    'Sale Shop Detailed Start'
+    __name__ = 'sale_shop.sale_detailed_cds.start'
+    start_date = fields.Date("From Date",
+        domain=[
+            If(Eval('end_date') & Eval('start_date'),
+                ('start_date', '<=', Eval('end_date')),
+                ()),
+            ],
+        depends=['end_date'], required=True)
+    end_date = fields.Date("To Date",
+        domain=[
+            If(Eval('start_date') & Eval('end_date'),
+                ('end_date', '>=', Eval('start_date')),
+                ()),
+                (('end_date', '<=', datetime.date.today()))
+            ],
+        depends=['start_date'], required=True)
+    company = fields.Many2One('company.company', 'Company', required=True)
+    # salesman = fields.Many2One('company.employee', 'Salesman')
+    # party = fields.Many2One('party.party', 'Party')
+    # product = fields.Many2One('product.product', 'Product')
+    # shop = fields.Many2One('sale.shop', 'Shop')
+
+
+    @staticmethod
+    def default_company():
+        return Transaction().context.get('company')
+
+
+class SaleShopDetailedCDS(Wizard):
+    'Sale Shop Detailed'
+    __name__ = 'sale_shop.sale_detailed_cds'
+    start = StateView('sale_shop.sale_detailed_cds.start',
+        'conector.sale_shop_detailed_start_cds_form', [
+            Button('Cancel', 'end', 'tryton-cancel'),
+            Button('Print', 'print_', 'tryton-ok', default=True),
+            ])
+    
+    print_ = StateReport('sale_shop.report_sale_detailed_cds')
+
+    def do_print_(self, action):
+        salesman_id = None
+        party_id = None
+        product_id = None
+        shop_id = None
+        # if self.start.salesman:
+        #     salesman_id = self.start.salesman.id
+        # if self.start.shop:
+        #     shop_id = self.start.shop.id
+        # if self.start.party:
+        #     party_id = self.start.party.id
+        # if self.start.product:
+        #     product_id = self.start.product.id
+        data = {
+            'company': self.start.company.id,
+            'start_date': self.start.start_date,
+            'end_date': self.start.end_date,
+            'salesman': salesman_id,
+            'party': party_id,
+            'product': product_id,
+            'shop': shop_id,
+        }
+
+        return action, data
+
+    def transition_print_(self):
+        return 'end'
+    
+
+class SaleShopDetailedCDSReport(Report):
+    'Sale Shop Detailed Report'
+    __name__ = 'sale_shop.report_sale_detailed_cds'
+
+    @classmethod
+    def get_context(cls, records, header, data):
+        report_context = super().get_context(records, header, data)
+        pool = Pool()
+        cursor = Transaction().connection.cursor()
+        InvoiceLine = pool.get('account.invoice.line')
+        Company = pool.get('company.company')
+        MoveLine = pool.get('account.move.line')
+        Account = pool.get('account.account')
+        Product_uom = pool.get('product.uom')
+        Product = pool.get('product.product')
+        ProductTemplate = pool.get('product.template')
+        Invoice = pool.get('account.invoice')
+        Move = pool.get('account.move')
+        Party = pool.get('party.party')
+        Shop = pool.get('sale.shop')
+
+        product_uom = Product_uom.__table__()
+        moveLine = MoveLine.__table__()
+        account = Account.__table__()
+        invoiceLine = InvoiceLine.__table__()
+        party = Party.__table__()
+        invoice = Invoice.__table__()
+        moves = Move.__table__()
+        product = Product.__table__()
+        productTemplate = ProductTemplate.__table__()
+        shop = Shop.__table__()
+
+        lines = {}
+
+        # Columnas donde se grabaran la consulta que se realiza a las lineas de los movimientos 
+        columnsMove = {
+            'id': moveLine.id,
+            'move': moveLine.move,
+            'cost': Sum(moveLine.debit - moveLine.credit),
+            'reference': moveLine.reference,
+            'description': moveLine.description,
+            'date': moves.date,
+            'party': party.name,
+        }
+
+         # Columnas donde se grabaran la consulta que se realiza a las lineas de las facturas 
+        columnsLine = {
+            'move': invoice.move,
+            'total_quantity': Sum(invoiceLine.quantity),
+            'unit_price': invoiceLine.unit_price,
+            'reference': invoice.reference,
+            'product_name': invoiceLine.description,
+            'invoice_date': invoice.invoice_date,
+            'shop': shop.name,
+            'unit': product_uom.symbol,
+            'state': invoice.state
+        }
+
+        # Filtros de busquedas para las lineas de los movimientos
+        where = Like(account.code, ('6%'))
+        where &= Between(moves.date, data['start_date'], data['end_date'])
+
+        # Consulta que retorna los valores de las lineas de los movimientos
+        selectMove = account.join(moveLine, 'LEFT', condition = moveLine.account == account.id
+                                ).join(moves, 'LEFT', condition = moveLine.move == moves.id
+                                ).join(party, 'LEFT', condition = moveLine.party == party.id     
+                                ).select(*columnsMove.values(),where=where ,group_by = [moveLine.move,
+                                                                            moveLine.id,
+                                                                           moveLine.account,
+                                                                           moveLine.description, 
+                                                                           moveLine.reference,
+                                                                           moves.date,
+                                                                           party.name,])
+        # Ejecucion de la consulta
+        cursor.execute(*selectMove)
+
+        resultMove = cursor.fetchall()
+
+        fila_dict_move = {}
+
+        # Verificamos que la consulta traiga informacion
+        if resultMove:
+
+            for index, record in enumerate(resultMove):
+                fila_dict_move =  OrderedDict() # Le damos la extructura de diccionario
+                fila_dict_move = dict(zip(columnsMove.keys(), record))
+            
+                move = fila_dict_move['move']
+                reference = fila_dict_move['reference']
+                description = fila_dict_move['description']
+                cost = fila_dict_move['cost']
+                date = fila_dict_move['date']
+                party = fila_dict_move['party']
+
+
+
+                if move not in lines:
+                    lines[move] = {
+                        'lines':{}
+                    }
+
+                if description not in lines[move]['lines']:
+                        lines[move]['lines'][description] = {
+                        'party': party,    
+                        'unit_price': 0,
+                        'total_quantity':0,
+                        'cost': 0,
+                        'reference': reference,
+                        'date': date,
+                        'shop': '',
+                        'total_cost': 0,
+                        'state': '',
+                        'unit': ''
+                        }
+
+                lines[move]['lines'][description]['cost'] += cost
+
+        # FIltros para la consulta a las lineas de las facturas
+        where = Between(invoice.invoice_date, data['start_date'], data['end_date'])
+        where &= invoice.state.in_(['paid', 'validated', 'posted'])
+        where &= invoice.type.in_(['out'])
+
+        # Consulta que retorna la informacion de las lineas de las facturas
+        selectLine = invoice.join(invoiceLine, 'LEFT', condition= invoiceLine.invoice == invoice.id 
+                                ).join(product, 'LEFT', condition= invoiceLine.product == product.id
+                                ).join(productTemplate, 'LEFT', condition= product.template == productTemplate.id
+                                ).join(shop, 'LEFT', condition = invoice.shop == shop.id
+                                ).join(product_uom, 'LEFT', condition = invoiceLine.unit == product_uom.id  
+                                ).select(*columnsLine.values(), where=where,group_by = [invoice.move,
+                                                                           invoice.description, 
+                                                                           invoice.reference,
+                                                                           invoiceLine.unit_price,
+                                                                           invoiceLine.description,
+                                                                           invoice.invoice_date,
+                                                                           shop.name,
+                                                                           product_uom.symbol,
+                                                                           invoice.state])
+
+        cursor.execute(*selectLine)
+
+        resultLine = cursor.fetchall()
+
+        fila_dict_line = {}
+
+        # Verificamos que la consulta halla traifo informacion
+        if resultLine:
+
+            for record in resultLine:
+                
+                fila_dict_line =  OrderedDict() # Le damos la extructura de diccionario
+                fila_dict_line = dict(zip(columnsLine.keys(), record))
+
+                move = fila_dict_line['move']
+                reference = fila_dict_line['reference']
+                description = fila_dict_line['product_name']
+                unit_price = fila_dict_line['unit_price']
+                total_quantity = fila_dict_line['total_quantity']
+                shop = fila_dict_line['shop']
+                unit = fila_dict_line['unit']
+                state = fila_dict_line['state']
+
+                if move in lines:
+                    if description in lines[move]['lines']:
+
+                        lines[move]['lines'][description]['shop'] = shop
+                        lines[move]['lines'][description]['unit_price'] = unit_price
+                        lines[move]['lines'][description]['total_quantity'] += Decimal(total_quantity)
+                        lines[move]['lines'][description]['unit'] = unit
+                        lines[move]['lines'][description]['state'] = state
+                
+            
+            # For que recorreo las lineas creadas con las lineas de movimiento y factura y realiza la operacion
+            # para dar el costo unitario, si este es 0 aplica un 0
+            for key,record in lines.items():
+                for description, line in lines[key]['lines'].items():
+                    line['total_cost'] = round(line['cost'] / line['total_quantity'],2) if line['cost'] != 0 and line['total_quantity'] != 0 else line['cost']
+
+        
+        report_context['records'] = lines
+        report_context['start_date'] = data['start_date']
+        report_context['end_date'] = data['end_date']
+        report_context['company'] = Company(data['company'])
+        return report_context

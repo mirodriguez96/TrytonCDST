@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<!-- This file is part of Tryton.  The COPYRIGHT file at the top level of
+this repository contains the full copyright notices and license terms. -->
+<tryton>
+    <data>
+
+        <record model="ir.ui.view" id="sale_shop_detailed_start_cds_form">
+            <field name="model">sale_shop.sale_detailed_cds.start</field>
+            <field name="type">form</field>
+            <field name="name">sale_shop_detailed_start_cds_form</field>
+        </record>
+        <record model="ir.action.wizard" id="wizard_print_sale_shop_detailed_cds">
+            <field name="name">Print Cost Sale Shop Detailed Cds</field>
+            <field name="wiz_name">sale_shop.sale_detailed_cds</field>
+        </record>
+        <record model="ir.action.report" id="report_sale_detailed_cds">
+            <field name="name">Sale Cost Shop Detailed</field>
+            <field name="model">sale.sale</field>
+            <field name="report_name">sale_shop.report_sale_detailed_cds</field>
+            <field name="report">conector/reports/cost_sale_detailed.fods</field>
+            <field name="template_extension">ods</field>
+            <field name="translatable">False</field>
+        </record>
+
+        <menuitem parent="sale.menu_reporting" id="menu_sale_shop_detailed_cds"
+            action="wizard_print_sale_shop_detailed_cds"/>
+    </data>
+</tryton>

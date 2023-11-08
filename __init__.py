@@ -100,6 +100,7 @@ def register():
         payroll.PayrollIBCView,
         payment_bank.AccountBankParty,
         payment_bank.BankPayment,
+        sale.SaleShopDetailedCDSStart,
         module='conector', type_='model')
 
     Pool.register(
@@ -140,6 +141,7 @@ def register():
         production.ProductionDetailed,
         production.ProductionForceDraft,
         payroll.PayrollIBCWizard,
+        sale.SaleShopDetailedCDS,
         module='conector', type_='wizard')
 
     Pool.register(
@@ -158,4 +160,5 @@ def register():
         account.IncomeStatementReport,
         production.ProductionDetailedReport,
         payroll.PayrollIBCReport,
+        sale.SaleShopDetailedCDSReport,
         module='conector', type_='report')

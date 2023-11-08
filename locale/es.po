@@ -833,3 +833,32 @@ msgstr "Imprimir"
 msgctxt "wizard_button:account.income_statement_wizard_cds,start,end:"
 msgid "Cancel"
 msgstr "Cancelar"
+
+msgctxt "model:ir.ui.menu,name:menu_sale_shop_detailed_cds"
+msgid "Print Cost Sale Shop Detailed Cds"
+msgstr "Reporte Costo de Venta Detallado"
+
+msgctxt "model:ir.action,name:wizard_print_sale_shop_detailed_cds"
+msgid "Print Cost Sale Shop Detailed Cds"
+msgstr "Reporte Costo de Venta Detallado"
+
+msgctxt "field:sale_shop.sale_detailed_cds.start,company:"
+msgid "Company"
+msgstr "Empresa"
+
+msgctxt "field:sale_shop.sale_detailed_cds.start,start_date:"
+msgid "From Date"
+msgstr "Fecha Inicial"
+
+msgctxt "field:sale_shop.sale_detailed_cds.start,end_date:"
+msgid "To Date"
+msgstr "Fecha Final"
+
+
+msgctxt "wizard_button:sale_shop.sale_detailed_cds,start,print_:"
+msgid "Print"
+msgstr "Imprimir"
+
+msgctxt "wizard_button:account.income_statement_wizard_cds,start,end:"
+msgid "Cancel"
+msgstr "Cancelar"
