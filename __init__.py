@@ -158,4 +158,5 @@ def register():
         account.IncomeStatementReport,
         production.ProductionDetailedReport,
         payroll.PayrollIBCReport,
+        payroll.PayrollPaycheckReportExten,
         module='conector', type_='report')

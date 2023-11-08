@@ -1,5 +1,5 @@
 from decimal import Decimal
-from datetime import timedelta, datetime
+from datetime import timedelta, datetime,date
 
 from trytond.model import ModelSQL, ModelView, fields
 from trytond.pool import Pool, PoolMeta
@@ -1959,3 +1959,155 @@ class PayrollIBCReport(Report):
         report_context['records'] = items
         report_context['company'] = Company(Transaction().context.get('company'))
         return report_context
+    
+
+class PayrollPaycheckReportExten(metaclass=PoolMeta):
+    __name__ = 'staff.payroll.paycheck_report'
+
+
+    @classmethod
+    def get_context(cls, records, header, data):
+        report_context = super(PayrollPaycheckReportExten, cls).get_context(records, header, data)
+        pool = Pool()
+        Payroll = pool.get('staff.payroll')
+        PayrollLine = pool.get('staff.payroll.line')
+        Company = pool.get('company.company')
+
+        dom_payroll = cls.get_domain_payroll(data)
+        fields_payroll = [
+            'id', 'employee.party.name', 'employee.party.id_number',
+            'contract.start_date', 'contract.end_date', 'date_effective',
+            'ibc', 'contract.last_salary', 'worked_days', 'employee', 'contract'
+            ]
+        payrolls = Payroll.search_read(
+            dom_payroll, fields_names=fields_payroll)
+        today = date.today()
+        res = {}
+        wage_type_default = [
+            'health', 'retirement', 'risk', 'box_family',
+            'salary', 'fsp', 'icbf', 'sena',
+            ]
+        for p in payrolls:
+            key = str(p['employee']) + '_' + str(p['contract'])
+            try:
+                res[key]['ibc'] += p['ibc']
+                res[key]['variation'] += p['ibc']
+                res[key]['worked_days'] += p['worked_days']
+            except:
+                res[key] = p
+                res[key]['today'] = today
+                res[key]['ibc'] = p['ibc']
+                res[key]['worked_days'] = p['worked_days']
+                res[key]['type_contributor'] = '01'
+                res[key]['type_id'] = 'CC'
+                res[key]['type_affiliation'] = 'D'
+                for w in wage_type_default:
+                    res[key][w + '_amount'] = 0
+                    if w not in ('salary'):
+                        res[key][w + '_code'] = ''
+                        res[key][w + '_name'] = ''
+                        res[key][w + '_rate'] = 0
+
+                res[key]['license_amount'] = 0
+                res[key]['incapacity_amount'] = 0
+                res[key]['holidays_amount'] = 0
+                res[key]['extras'] = 0
+                res[key]['variation'] = p['ibc']
+                res[key]['subtotal'] = 0
+
+        payroll_ids = [p['id'] for p in payrolls]
+        PayrollLine = pool.get('staff.payroll.line')
+
+        fields_lines = [
+            'amount', 'quantity', 'party.name', 'wage_type.type_concept',
+            'wage_type.unit_price_formula', 'wage_type.expense_formula',
+            'payroll', 'start_date', 'end_date', 'payroll.employee',
+            'payroll.contract', 'wage_type.salary_constitute',
+            'party.code','wage_type.type_concept_electronic',
+        ]
+
+        dom_line = [
+            ('payroll', 'in', payroll_ids),
+            ['OR',
+             ('wage_type.type_concept', 'in', wage_type_default),
+             ('wage_type.type_concept', 'ilike', 'incapacity%'),
+             ('wage_type.type_concept', 'ilike', 'license%'),
+            ('wage_type.type_concept', '=', 'extras'),
+            ('wage_type.type_concept', '=', 'holidays'),
+            ('wage_type.type_concept_electronic', 'in', ['LicenciaR','LicenciaMP','ConceptoS']),
+             ['AND',
+              ('wage_type.provision_cancellation', '!=', None),
+              ]]
+            ]
+
+        order = [('payroll.employee', 'DESC'), ('payroll', 'ASC')]
+        payroll_lines = PayrollLine.search_read(
+            dom_line, fields_names=fields_lines, order=order)
+        total = []
+        total_append = total.append
+        for line in payroll_lines:
+            key = str(line['payroll.']['employee']) + '_' + \
+                      str(line['payroll.']['contract'])
+            total_append(cls.values_without_move(
+                line, wage_type_default, res, key))
+
+        report_context['records'] = res.values()
+        report_context['company'] = Company(data['company'])
+        report_context['total'] = sum(total)
+        return report_context
+
+
+    def values_without_move(line, wage_type_default, res, key):
+        PayrollLine = Pool().get('staff.payroll.line')
+        total = 0
+        concept = line['wage_type.']['type_concept']
+        concept_electronic = line['wage_type.']['type_concept_electronic']
+        if concept in wage_type_default and concept != 'salary':
+            unit_formula = line['wage_type.']['unit_price_formula']
+
+            if unit_formula:
+                unit_formula = Decimal(
+                    (unit_formula[unit_formula.index('*')+1:]).strip())
+            else:
+                unit_formula = 0
+
+            expense_formula = line['wage_type.']['expense_formula']
+            if expense_formula:
+                expense_formula = Decimal(
+                    (expense_formula[expense_formula.index('*')+1:]).strip())
+                line_ = PayrollLine(line['id'])
+                expense_amount = line_.get_expense_amount()
+                res[key][concept + '_amount'] += expense_amount
+                res[key]['subtotal'] += expense_amount
+                total += expense_amount
+            else:
+                expense_formula = 0
+            res[key][concept + '_name'] = line['party.']['name'] if line['party.'] else ''
+            res[key][concept + '_rate'] = unit_formula + \
+                (expense_formula if expense_formula < 1 else 0)
+            res[key][concept + '_code'] = line['party.']['code'] if line['party.'] else ''
+            res[key]['subtotal'] += line['amount']
+            total += line['amount']
+            res[key][concept + '_amount'] += line['amount']
+        elif concept_electronic in ['LicenciaR','LicenciaMP','ConceptoS']:
+            res[key]['license_amount'] += line['amount']
+            res[key]['variation'] -= line['amount']
+            # dict_employee[concept]['start_date'] = line['start_date']
+            # dict_employee[concept]['end_date'] = line['start_date']
+        elif concept.startswith('incapacity'):
+            res[key]['incapacity_amount'] += line['amount']
+            res[key]['variation'] -= line['amount']
+        elif concept == 'salary':
+            res[key]['salary_amount'] += line['amount']
+            res[key]['variation'] -= line['amount']
+        elif concept == 'holidays':
+            if line['wage_type.']['salary_constitute']:
+                res[key]['variation'] -= line['amount']
+                res[key]['holidays_amount'] += line['amount']
+        elif concept == 'extras':
+            res[key]['variation'] -= line['amount']
+            res[key]['extras'] += line['amount']
+            
+            # dict_employee[concept]['start_date'] = line['start_date']
+            # dict_employee[concept]['end_date'] = line['start_date']
+        return total
