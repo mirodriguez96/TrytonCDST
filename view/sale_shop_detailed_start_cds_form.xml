@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<!-- This file is part of Tryton.  The COPYRIGHT file at the top level of
+this repository contains the full copyright notices and license terms. -->
+<form>
+    <!-- <label name="salesman"/>
+    <field name="salesman"/> -->
+    <label name="company"/>
+    <field name="company" widget="selection"/>
+    <label name="start_date"/>
+    <field name="start_date"/>
+    <label name="end_date"/>
+    <field name="end_date"/>
+    <!-- <label name="party"/>
+    <field name="party"/>
+    <label name="product"/>
+    <field name="product"/>
+    <label name="shop"/>
+    <field name="shop"/> -->
+
+</form>
