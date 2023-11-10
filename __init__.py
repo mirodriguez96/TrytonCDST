@@ -23,6 +23,7 @@ from . import cron
 from . import statement
 from . import payment_bank
 from . import loan
+from . import liquidation
 
 
 def register():
@@ -161,4 +162,5 @@ def register():
         production.ProductionDetailedReport,
         payroll.PayrollIBCReport,
         sale.SaleShopDetailedCDSReport,
+        liquidation.LiquidationReport,
         module='conector', type_='report')

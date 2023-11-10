@@ -12,10 +12,10 @@ this repository contains the full copyright notices and license terms. -->
     <field name="payment_type"/>
     <label name="send_sequence"/>
     <field name="send_sequence"/>
-    <label name="type_bank_account"/>
-    <field name="type_bank_account"/>
     <label name="reference"/>
     <field name="reference"/>
     <label name="type_transaction"/>
     <field name="type_transaction"/>
+    <label name="bank"/>
+    <field name="bank" widget="selection"/>
 </form>

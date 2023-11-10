@@ -18,6 +18,7 @@ class Party(metaclass=PoolMeta):
             digits=(16, Eval('currency_digits', 2)),
             depends=['currency_digits']),
             'get_receivable_payable_tecno')
+    number_pay_payroll = fields.Char('number_payroll', size=5, states={'invisible': Eval('type_document') != '41'})
 
     # Funcion encargada de consultar en TecnoCarnes el saldo por pagar y cobrar de los terceros
     def get_receivable_payable_tecno(self, name):

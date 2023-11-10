@@ -45,6 +45,15 @@ WEEK_DAYS = {
     7: 'sunday',
 }
 
+_TYPES_BANK_ACCOUNT_ = {
+    'Cuenta de Ahorros': '37',
+    'Cuenta Corriente': '27',
+}
+
+_TYPES_BANKS = {
+    'Cuenta de Ahorros': 'S',
+    'Cuenta Corriente': 'D',
+}
 
 MONTH = {
     '01': 'ENERO',
@@ -211,13 +220,22 @@ class PayrollPaymentStartBcl(ModelView):
     'Payroll Payment Start'
     __name__ = 'staff.payroll_payment_bancolombia.start'
     period = fields.Many2One('staff.payroll.period', 'Period', required=True)
+    party = fields.Function(fields.Many2One('party.party', 'Party Bank'), 'on_change_with_party')
     company = fields.Many2One('company.company', 'Company', required=True)
     department = fields.Many2One('company.department', 'Department')
     payment_type = fields.Selection(_TYPES_PAYMENT, 'Type payment', required=True)
     send_sequence = fields.Char('Shipping sequence', size=1)
-    type_bank_account = fields.Selection(_TYPES_BANK_ACCOUNT, 'Bank account type', required=True)
     reference = fields.Char('Reference', required=True, size=9)
     type_transaction = fields.Selection(_TYPE_TRANSACTION, 'Type of transaction', required=True)
+    bank = fields.Many2One('bank.account', 'Bank Account', domain=[(
+        'owners', '=', Eval('party'))], depends=['party'], required=True)
+    
+    @fields.depends('company')
+    def on_change_with_party(self, name=None):
+        res = None
+        if self.company:
+            res = self.company.party.id
+        return res
 
     @staticmethod
     def default_company():
@@ -236,6 +254,7 @@ class PayrollPaymentBcl(Wizard):
 
     def do_print_(self, action):
         pool = Pool()
+        Type_bank_numbers = pool.get('bank.account.number')
         Payroll = pool.get('staff.payroll')
         clause = [('state', '=', 'posted')]
         if self.start.department:
@@ -251,53 +270,70 @@ class PayrollPaymentBcl(Wizard):
         result = []
         values = {}
         id_numbers = []
+        nothin_accounts = ''
         duplicate_employees = None
+        bank = self.start.bank.bank
         for payroll in payrolls:
-            values = values.copy()
-            values['employee'] = payroll.employee.party.name
-            type_document = payroll.employee.party.type_document
-            if type_document not in _TYPE_DOCUMENT:
-                raise UserError('error: type_document',
-                                f'{type_document} not found for type_document bancolombia')
-            values['type_document'] = _TYPE_DOCUMENT[type_document]
-            values['id_number'] = payroll.employee.party.id_number
-            values['email'] = payroll.employee.party.email
-            bank_code_sap = None
-            if payroll.employee.party.bank_accounts:
-                bank_code_sap = payroll.employee.party.bank_accounts[0].bank.bank_code_sap
-            values['bank_code_sap'] = bank_code_sap
-            values['bank_account'] = payroll.employee.party.bank_account
-            net_payment = Decimal(round(payroll.net_payment, 0))
-            values['net_payment'] = net_payment
-            if values['id_number'] in id_numbers:
-                if not duplicate_employees:
-                    duplicate_employees = values['employee']
-                else:
-                    duplicate_employees += ", "+values['employee']
-            id_numbers.append(values['id_number'])
-            result.append(values)
-        # Se valida si se encontraron nóminas del mismo empleado en el periodo seleccionado y se muestra una alerta.
-        if duplicate_employees:
+            accouns_bank = list(payroll.employee.party.bank_accounts)
+            if accouns_bank == []:
+                nothin_accounts = nothin_accounts + f"EL empleado {payroll.employee.party.name} no tiene una cuenta asociada  \n"
+                    
+            for ref in accouns_bank:
+                if bank == ref.bank:
+                    values = values.copy()
+                    values['employee'] = payroll.employee.party.name
+                    type_document = payroll.employee.party.type_document
+                    if type_document not in _TYPE_DOCUMENT:
+                        raise UserError('error: type_document',
+                                        f'{type_document} not found for type_document bancolombia')
+                    values['type_document'] = _TYPE_DOCUMENT[type_document]
+                    values['id_number'] = str(payroll.employee.party.number_pay_payroll) + str(payroll.employee.party.id_number) if type_document == '41' else payroll.employee.party.id_number
+                    values['email'] = payroll.employee.party.email
+                    bank_code_sap = None
+                    if payroll.employee.party.bank_accounts:
+                        bank_code_sap = payroll.employee.party.bank_accounts[0].bank.bank_code_sap
+                    values['bank_code_sap'] = bank_code_sap
+                    values['bank_account'] = payroll.employee.party.bank_account
+                    type_account_payment_party = Type_bank_numbers.search([('number', '=', str(payroll.employee.party.bank_account))])
+                    values['type_account_payment'] = _TYPES_BANK_ACCOUNT_.get(type_account_payment_party[0].type_string)
+                    net_payment = Decimal(round(payroll.net_payment, 0))
+                    values['net_payment'] = net_payment
+                    if values['id_number'] in id_numbers:
+                        if not duplicate_employees:
+                            duplicate_employees = values['employee']
+                        else:
+                            duplicate_employees += ", "+values['employee']
+                    id_numbers.append(values['id_number'])
+                    result.append(values)
+                    break
+                else: 
+                    continue
+
+            # Se valida si se encontraron nóminas del mismo empleado en el periodo seleccionado y se muestra una alerta.
+        if duplicate_employees or nothin_accounts:
             Warning = pool.get('res.user.warning')
             warning_name = "warning_payment_report_bancolombia"
+            if duplicate_employees:
+                duplicate_employees = "Existen empleados con más de 1 nómina en el mismo periodo. "\
+                    f"Revisar: {duplicate_employees}"
             if Warning.check(warning_name):
                 raise UserWarning(
                     warning_name,
-                    "Existen empleados con más de 1 nómina en el mismo periodo. "\
-                    f"Revisar: {duplicate_employees}."
+                    f"{duplicate_employees} \n {nothin_accounts}."
                     )
+            
         # Se construye diccionario a retornar
+        type_bank_account = _TYPES_BANKS.get(str(self.start.bank.numbers[0].type_string))
         data = {
             'company': {
-                'id_number': self.start.company.party.id_number,
-                'name': self.start.company.party.name,
-                'bank_account': self.start.company.party.bank_account
+            'id_number': self.start.company.party.id_number,
+            'name': self.start.company.party.name,
+            'bank_account': self.start.bank.numbers[0].number
             },
             'payment_type': self.start.payment_type,
             'send_sequence': send_sequence,
-            'type_bank_account': self.start.type_bank_account,
+            'type_bank_account': type_bank_account,
             'reference': self.start.reference,
-            'type_transaction': self.start.type_transaction,
             'result': result,
             }
         return action, data
@@ -316,7 +352,6 @@ class PayrollPaymentReportBcl(Report):
         report_context['send_sequence'] = data.get('send_sequence')
         report_context['type_bank_account'] = data.get('type_bank_account')
         report_context['reference'] = data.get('reference')
-        report_context['type_transaction'] = data.get('type_transaction')
         report_context['records'] = data.get('result')
         report_context['company'] = data.get('company')
         return report_context
