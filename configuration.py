@@ -337,3 +337,18 @@ class Configuration(ModelSQL, ModelView):
             query = "SELECT * FROM TblDatosBiometrico ORDER BY Nit_cedula, Fecha_Hora_Marcacion ASC"
         data = cls.get_data(query)
         return data
+    
+    @classmethod
+    def get_tblproducto_parent(cls):
+        query = """
+                SELECT
+                    IdProducto,
+                    IdResponsable,
+                    tiempo_del_ciclo
+                FROM
+                    dbo.TblProducto
+                WHERE
+                    IdResponsable <> 0
+                """
+        data = cls.get_data(query)
+        return data
