@@ -163,4 +163,5 @@ def register():
         payroll.PayrollIBCReport,
         sale.SaleShopDetailedCDSReport,
         liquidation.LiquidationReport,
+        payroll.PayrollPaycheckReportExten,
         module='conector', type_='report')
