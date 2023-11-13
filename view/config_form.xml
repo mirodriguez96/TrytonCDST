@@ -15,6 +15,9 @@
     <button string="Test" name="test_conexion" colspan="2"/>
     <label name="enhabled"/>
     <field name="enhabled"/>
+    <label name="visibible"/>
+    <field name="visibible"/>
+    
 
     <!-- <notebook colspan="6">
       <page string="Import" id="file_import">
