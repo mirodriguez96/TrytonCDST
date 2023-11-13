@@ -3,6 +3,7 @@ from trytond.pool import Pool
 from trytond.exceptions import UserError
 import datetime
 from .additional import list_to_tuple
+from trytond.pyson import Eval, Not
 
 try:
     import pyodbc
@@ -39,21 +40,37 @@ class Configuration(ModelSQL, ModelView):
     'Configuration'
     __name__ = 'conector.configuration'
 
-    server = fields.Char('Server', required=True, help="Example: ip,port")
-    db = fields.Char('Database', required=True, help="Enter the name of the database without leaving spaces")
-    user = fields.Char('User', required=True, help="Enter the user of the database without leaving spaces")
-    password = fields.Char('Password', required=True, help="Enter the password of the database without leaving spaces")
-    date = fields.Date('Date', required=True, help="Enter the import start date")
-    end_date = fields.Date('End Date', help="Enter the import end date" )
+    server = fields.Char('Server', required=True, help="Example: ip,port", states={
+            'invisible': ~Not(Eval('visibible'))},depends=['visibible'],)
+    db = fields.Char('Database', required=True, help="Enter the name of the database without leaving spaces", states={
+            'invisible': ~Not(Eval('visibible'))},depends=['visibible'],)
+    user = fields.Char('User', required=True, help="Enter the user of the database without leaving spaces", states={
+            'invisible': ~Not(Eval('visibible'))},depends=['visibible'],)
+    password = fields.Char('Password', required=True, help="Enter the password of the database without leaving spaces", states={
+            'invisible': ~Not(Eval('visibible'))},depends=['visibible'],)
+    date = fields.Date('Date', required=True, help="Enter the import start date", states={
+            'invisible': ~Not(Eval('visibible'))},depends=['visibible'],)
+    end_date = fields.Date('End Date', help="Enter the import end date" , states={
+            'invisible': ~Not(Eval('visibible'))},depends=['visibible'],)
     # file = fields.Binary('File', help="Enter the file to import with (;)")
     # type_file = fields.Selection(TYPES_FILE, 'Type file')
     #doc_types = fields.Char('Doc types', help="Example: 101;120;103")
-    order_type_production = fields.Char('Order types', help="Example: 101;202;303")
-    access_enter_timestamp = fields.Char('Inicia a laborar', help="Example: Laborando")
-    access_exit_timestamp = fields.Char('Finaliza de laborar', help="Example: Salir")
-    access_start_rest = fields.Char('Inicia a descansar', help="Example: Descansando")
-    access_end_rest = fields.Char('Finaliza de descansar', help="Example: Retornar")
+    order_type_production = fields.Char('Order types', help="Example: 101;202;303", states={
+            'invisible': ~Not(Eval('visibible'))},depends=['visibible'],)
+    access_enter_timestamp = fields.Char('Inicia a laborar', help="Example: Laborando", states={
+            'invisible': ~Not(Eval('visibible'))},depends=['visibible'],)
+    access_exit_timestamp = fields.Char('Finaliza de laborar', help="Example: Salir", states={
+            'invisible': ~Not(Eval('visibible'))},depends=['visibible'],)
+    access_start_rest = fields.Char('Inicia a descansar', help="Example: Descansando", states={
+            'invisible': ~Not(Eval('visibible'))},depends=['visibible'],)
+    access_end_rest = fields.Char('Finaliza de descansar', help="Example: Retornar", states={
+            'invisible': ~Not(Eval('visibible'))},depends=['visibible'],)
     enhabled = fields.Function(fields.Boolean('Enhabled'), 'get_enhabled')
+    visibible = fields.Boolean('Visible')
+
+    @staticmethod
+    def default_visibible():
+        return True
 
 
     @classmethod
