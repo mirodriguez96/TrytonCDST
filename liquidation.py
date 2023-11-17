@@ -22,7 +22,7 @@ class LiquidationReport(metaclass=PoolMeta):
                         total_days_holidays += liq_line.days
                     if liq_line.wage.type_concept == 'salary' and liq_line.wage.type_concept_electronic == 'Basico':
                         total_salaries += liq_line.days
-                    if liq_line.wage.type_concept == 'other' and liq_line.wage.type_concept_electronic == 'LicenciaNR':
+                    if liq_line.wage.type_concept_electronic == 'LicenciaNR':
                         licenseNR += liq_line.days
                 start_date = record.liquidation_date 
                 end_date = str((start_date + timedelta(days=total_days_holidays-1)))

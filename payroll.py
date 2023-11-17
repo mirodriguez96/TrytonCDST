@@ -277,37 +277,37 @@ class PayrollPaymentBcl(Wizard):
             accouns_bank = list(payroll.employee.party.bank_accounts)
             if accouns_bank == []:
                 nothin_accounts = nothin_accounts + f"EL empleado {payroll.employee.party.name} no tiene una cuenta asociada  \n"
-                    
-            for ref in accouns_bank:
-                if bank == ref.bank:
-                    values = values.copy()
-                    values['employee'] = payroll.employee.party.name
-                    type_document = payroll.employee.party.type_document
-                    if type_document not in _TYPE_DOCUMENT:
-                        raise UserError('error: type_document',
-                                        f'{type_document} not found for type_document bancolombia')
-                    values['type_document'] = _TYPE_DOCUMENT[type_document]
-                    values['id_number'] = str(payroll.employee.party.number_pay_payroll) + str(payroll.employee.party.id_number) if type_document == '41' else payroll.employee.party.id_number
-                    values['email'] = payroll.employee.party.email
-                    bank_code_sap = None
-                    if payroll.employee.party.bank_accounts:
-                        bank_code_sap = payroll.employee.party.bank_accounts[0].bank.bank_code_sap
-                    values['bank_code_sap'] = bank_code_sap
-                    values['bank_account'] = payroll.employee.party.bank_account
-                    type_account_payment_party = Type_bank_numbers.search([('number', '=', str(payroll.employee.party.bank_account))])
-                    values['type_account_payment'] = _TYPES_BANK_ACCOUNT_.get(type_account_payment_party[0].type_string)
-                    net_payment = Decimal(round(payroll.net_payment, 0))
-                    values['net_payment'] = net_payment
-                    if values['id_number'] in id_numbers:
-                        if not duplicate_employees:
-                            duplicate_employees = values['employee']
-                        else:
-                            duplicate_employees += ", "+values['employee']
-                    id_numbers.append(values['id_number'])
-                    result.append(values)
-                    break
-                else: 
-                    continue
+                continue
+            # for ref in accouns_bank:
+            #     if bank == ref.bank:
+            values = values.copy()
+            values['employee'] = payroll.employee.party.name
+            type_document = payroll.employee.party.type_document
+            if type_document not in _TYPE_DOCUMENT:
+                raise UserError('error: type_document',
+                                f'{type_document} not found for type_document bancolombia')
+            values['type_document'] = _TYPE_DOCUMENT[type_document]
+            values['id_number'] = str(payroll.employee.party.number_pay_payroll) + str(payroll.employee.party.id_number) if type_document == '41' else payroll.employee.party.id_number
+            values['email'] = payroll.employee.party.email
+            bank_code_sap = None
+            if payroll.employee.party.bank_accounts:
+                bank_code_sap = payroll.employee.party.bank_accounts[0].bank.bank_code_sap
+            values['bank_code_sap'] = bank_code_sap
+            values['bank_account'] = payroll.employee.party.bank_account
+            type_account_payment_party = Type_bank_numbers.search([('number', '=', str(payroll.employee.party.bank_account))])
+            values['type_account_payment'] = _TYPES_BANK_ACCOUNT_.get(type_account_payment_party[0].type_string)
+            net_payment = Decimal(round(payroll.net_payment, 0))
+            values['net_payment'] = net_payment
+            if values['id_number'] in id_numbers:
+                if not duplicate_employees:
+                    duplicate_employees = values['employee']
+                else:
+                    duplicate_employees += ", "+values['employee']
+            id_numbers.append(values['id_number'])
+            result.append(values)
+                #     break
+            # else: 
+            #     continue
 
             # Se valida si se encontraron nóminas del mismo empleado en el periodo seleccionado y se muestra una alerta.
         if duplicate_employees or nothin_accounts:
@@ -944,6 +944,7 @@ def send_mail(to='', cc='', bcc='', subject='', body='',
 class StaffEvent(metaclass=PoolMeta):
     __name__ = "staff.event"
     analytic_account = fields.Char('Analytic account code', states={'readonly': (Eval('state') != 'draft')})
+    staff_liquidation = fields.Many2One('staff.liquidation', 'liquidation')
 
     # @fields.depends('employee', 'contract')
     def on_change_employee(self):
@@ -1015,6 +1016,8 @@ class StaffEvent(metaclass=PoolMeta):
             # Se procesa la liquidación
             Liquidation.compute_liquidation([liquidation])
             liquidation._validate_holidays_lines(event)
+            event.staff_liquidation = liquidation
+            event.save()
 
 class Payroll(metaclass=PoolMeta):
     __name__ = "staff.payroll"
