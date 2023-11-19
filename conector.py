@@ -892,48 +892,74 @@ class ImportedDocumentWizard(Wizard):
         Account = pool.get('account.account')
         Type = pool.get('account.account.type')
         firts = True
+        item = []
+
+        columns = [
+            'account','name','type','reconcile','party_required'
+        ]
         
         for linea in lineas:
-            linea = linea.strip()
-            if not linea:
-                continue            
-            linea = linea.split(';')
-            if linea[0] == 'code':
-                continue
-            if len(linea) != 5:
-                raise UserError('Error plantilla', 'account | name | type | reconcile | party_required')
+
             if firts:
                 firts = False
                 continue
+
+            linea = linea.strip()
+
+            item = [i  for i in linea.split(';')]
+            
+            if item == ['']:
+                continue
+
+            if len(item) != 5:
+                raise UserError('Error plantilla', 'account | name | type | reconcile | party_required')
+            
+
+            
+            
+            if not firts:
+                dicAccount = {}
+                dicAccount = dict(zip(columns, item))
+
+            if not item:
+                continue            
+
+
             # Se consulta y procesa la cuenta
-            code = linea[0].strip()
+            code = dicAccount['account']
+
             account = Account.search([('code', '=', code)])
             print(account)
             if not account:
                 continue
             account, = account
-            name = linea[1].strip().upper()
+            name = dicAccount['name'].upper()
             if name:
                 account.name = name
-            reconcile = linea[3].strip().upper()
+            reconcile = dicAccount['reconcile'].upper()
             if reconcile:
                 if reconcile == 'TRUE':
                     account.reconcile = True
                 if reconcile == 'FALSE':
                     account.reconcile = False
-            party_required = linea[4].strip().upper()
+            party_required = dicAccount['party_required'].upper()
             if party_required:
                 if party_required == 'TRUE':
                     account.party_required = True
                 if party_required == 'FALSE':
                     account.party_required = False
-            type = linea[2].strip()
+            type = dicAccount['type']
+
             if type:
                 type = Type.search([('sequence', '=', type)])
                 if not type:
                     raise UserError('Importación de archivo: ', f'Error en la búsqueda del tipo de cuenta, para la cuenta {code} - {name}')
                 type, = type
                 account.type = type
+
+            if account.type and type == '':
+                account.type = None
+
             Account.save([account])
 
     
