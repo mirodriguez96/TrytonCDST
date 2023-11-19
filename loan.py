@@ -3,6 +3,11 @@ from trytond.transaction import Transaction
 from trytond.tools import reduce_ids, grouped_slice
 from datetime import date
 import calendar
+from trytond.wizard import (
+    Wizard, StateView, Button, StateReport, StateTransition
+)
+from sql import Table
+from trytond.exceptions import UserError
 # from trytond.exceptions import UserError
 from trytond.pyson import Eval
 
@@ -93,3 +98,63 @@ class Loan(metaclass=PoolMeta):
                         columns=[table.state],
                         values=['paid'],
                         where=red_sql))
+                
+
+#Forzar a borrador de Prestamos
+class LoanForceDraft(Wizard):
+    'Active Force Draft'
+    __name__ = 'staff.loan.force_draft'
+    start_state = 'force_draft'
+    force_draft = StateTransition()
+
+    def transition_force_draft(self):
+        pool = Pool()
+        Loan = pool.get('staff.loan')
+        move_table = Table('account_move')
+        cursor = Transaction().connection.cursor()
+        to_delete = []
+        to_draft = []
+        ids_ = Transaction().context['active_ids']
+        for id_ in ids_:
+            loan = Loan(id_)
+            loanTable = Loan.__table__()
+            
+            #Validacion para saber si el activo se encuentra cerrado
+            if loan.state == 'paid' or loan.state == 'cancelled':
+                raise UserError('AVISO', f'El prestamo {loan.number} se encuentra en estado {loan.state} y no es posible forzar su borrado')
+            #Validacion para saber si el activo ya se encuentra en borrador
+
+            for lines in loan.lines:
+                if lines.state == 'paid' and lines.origin:
+                    raise UserError('AVISO', f'El prestamo {loan.number} tiene lineas en estado pagado y no es posible forzar su borrado')
+            
+            if loan.state == 'draft':
+                return 'end'
+            cursor = Transaction().connection.cursor()
+            #Consulta que le asigna el estado borrado al activo
+            if loan.account_move:
+                to_delete.append(loan.account_move.id)
+            to_draft.append(id_)
+
+        if to_draft:
+
+            if to_delete:
+                cursor.execute(*move_table.update(
+                    columns=[move_table.state],
+                    values=['draft'],
+                    where=move_table.id.in_(to_delete))
+                    )
+                cursor.execute(*move_table.delete(
+                where=move_table.id.in_(to_delete))
+
+                    )
+            cursor.execute(*loanTable.update(
+                columns=[
+                    loanTable.state,
+                    loanTable.number,
+                ],
+                values=["draft",''],
+                where=loanTable.id.in_(to_draft))
+            )
+            
+        return 'end'

@@ -143,6 +143,7 @@ def register():
         production.ProductionForceDraft,
         payroll.PayrollIBCWizard,
         sale.SaleShopDetailedCDS,
+        loan.LoanForceDraft,
         module='conector', type_='wizard')
 
     Pool.register(
