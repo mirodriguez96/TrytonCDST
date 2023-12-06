@@ -1048,14 +1048,16 @@ class Note(metaclass=PoolMeta):
         Line = pool.get('account.note.line')
         Invoice = pool.get('account.invoice')
         invoices = Invoice.search([('type', '=', data['invoice_type']), ('state', '=', 'posted'),('invoice_date', '>=',data['date_start']),('invoice_date', '<=', data['date_finish'])])
-        inv_adjustment = []
-        for inv in invoices:
-            if inv.amount_to_pay <= data['amount'] and inv.amount_to_pay > 0:
-                inv_adjustment.append(inv)
+        # inv_adjustment = []
+        inv_adjustment = [inv for inv in invoices if inv.amount_to_pay <= data['amount'] and inv.amount_to_pay > 0]
+        # for inv in invoices:
+        #     if inv.amount_to_pay <= data['amount'] and inv.amount_to_pay > 0:
+        #         inv_adjustment.append(inv)
         if not inv_adjustment:
             return
         # Se procede a procesar las facturas que cumplen con la condicion
         config = Config.get_configuration()
+        # print(len(new_inv_adjustment))
         print(len(inv_adjustment))
         for inv in inv_adjustment:
             lines_to_create = []

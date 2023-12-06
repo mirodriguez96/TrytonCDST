@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<data>
+    <xpath expr="/form/button[@name='run_once']" position="after">
+      <label name="access_register" />
+      <field name="access_register" xexpand="0" width="25"/>
+        <group col='6' colspan="4" id="time_work_cron">
+            <group col='3' id="enter_time">
+            <label name="enter_timestamp"/>
+            <field name="enter_timestamp"/>
+            </group>
+            <group col='3' id="exit_time">
+            <label name="exit_timestamp"/>
+            <field name="exit_timestamp"/>
+            </group>
+        </group>
+    </xpath>
+</data>

@@ -5,5 +5,7 @@ this repository contains the full copyright notices and license terms. -->
     <xpath expr="/form/field[@name='receipt']" position="after">
         <label name="non_working_days"/>
         <field name="non_working_days"/>
+        <label name="excluded_payroll_electronic"/>
+        <field name="excluded_payroll_electronic"/>
     </xpath>
 </data>

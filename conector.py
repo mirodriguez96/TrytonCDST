@@ -8,6 +8,7 @@ from trytond.wizard import Wizard, StateTransition, StateView, Button
 # from sql import Table
 from decimal import Decimal
 import datetime
+from sql import Table
 from trytond.exceptions import UserError, UserWarning
 
 
@@ -120,6 +121,10 @@ class Actualizacion(ModelSQL, ModelView):
                 if (valor_parametro.index(tipo)+1) < len(valor_parametro):
                     consult += " OR "
             consult += ")"
+        # elif self.name == "TERCEROS":
+
+        #     consult = "select tt.nit_cedula  \
+        #                 from TblTerceros tt" 
         else:
             return None
         result = conexion.get_data(consult)
@@ -404,7 +409,8 @@ class Actualizacion(ModelSQL, ModelView):
             if d.Nit_cedula not in to_save:
                 employee = Employee.search([('party.id_number', '=', d.Nit_cedula)])
                 if not employee:
-                    raise UserError(f'Could not find employee with id_number = {d.Nit_cedula}')
+                    continue
+                    # raise UserError(f'Could not find employee with id_number = {d.Nit_cedula}')
                 employee, = employee
                 start_work = None
                 to_save[d.Nit_cedula] = Access()
@@ -504,9 +510,81 @@ class Actualizacion(ModelSQL, ModelView):
                 Rest.save(to_rest[nit])
                 acess.rests = to_rest[nit]
             # to_create.append(acess)
+            breakpoint()
             acess.on_change_rests()
             acess.save()
         # Access.save(to_create)
+
+
+
+    # Biometric access
+    @classmethod
+    def biometric_access_dom(cls):
+        print("RUN biometric_access_dom")
+        pool = Pool()
+        Config = pool.get('ir.cron')
+        Access = pool.get('staff.access')
+        Employee = pool.get('company.employee')
+        access_table = Table('staff_access')
+        cursor = Transaction().connection.cursor()
+        time, = Config.search([('access_register', '=', True)])
+        
+        date = [int(i) for i in str(datetime.date.today()).split('-')]
+
+        time_enter = [int(i) for i in str(time.enter_timestamp).split(':')]
+
+        time_exit = [int(i) for i in str(time.exit_timestamp).split(':')]
+
+
+        enter = datetime.datetime(*date,*time_enter)
+        exit = datetime.datetime(*date,*time_exit)
+
+        employees = Employee.search([('active', '=', 'active'),
+                                    ('contracting_state', '=', 'active'),])
+
+        for employee in employees:
+            if enter and exit:
+                    is_access = Access.search([
+                        ('enter_timestamp', '<=', enter + datetime.timedelta(hours=5)),
+                        ('exit_timestamp', '>=', exit + datetime.timedelta(hours=5)),
+                        ('employee', '=', employee)])
+
+                    if not is_access:
+                        to_save = Access()
+                        to_save.employee = employee
+                        to_save.payment_method = 'extratime'
+                        to_save.enter_timestamp = enter + datetime.timedelta(hours=5)
+                        to_save.exit_timestamp = exit + datetime.timedelta(hours=5)
+                        to_save.line_event = time
+                        to_save.save()
+
+                        cursor.execute(*access_table.update(
+                        columns=[
+                            access_table.ttt,
+                            access_table.hedo,
+                            access_table.heno,
+                            access_table.hedf,
+                            access_table.henf,
+                            access_table.reco,
+                            access_table.recf,
+                            access_table.dom,
+                        ],
+                        values=[Decimal(7.83),0,0,0,0,0,0,0],
+                        where=access_table.id.in_([to_save.id]))
+                    )
+                        
+    # Biometric access
+    @classmethod
+    def holidays_access_fes(cls):
+        print("RUN holidays_access_fes")        
+        Holiday = Pool().get('staff.holidays')
+        validate = datetime.date.today() + datetime.timedelta(hours=5)
+        holidays = Holiday.search([
+            ('holiday', '=', validate)])
+
+        if holidays:
+            cls.biometric_access_dom()
+
 
 # Vista para mportancion de documentos tryton 
 class ImportedDocument(ModelView):
@@ -1145,85 +1223,6 @@ class ImportedDocumentWizard(Wizard):
         BankAccount.save(to_save)
         print('FIN')
 
-    # Funcion encargada de cargar los prestamos de los empleados
-    # @classmethod
-    # def import_csv_loans(cls, lineas):
-    #     pool = Pool()
-    #     Loan = pool.get('staff.loan')
-    #     Party = pool.get('party.party')
-    #     PayMode = pool.get('account.voucher.paymode')
-    #     PaymentTerm  = pool.get('staff.loan.payment_term')
-    #     PaymentTermLine  = pool.get('staff.loan.payment_term.line')
-    #     Delta = pool.get('staff.loan.payment_term.line.delta')
-    #     Currency = pool.get('currency.currency')
-    #     to_save = []
-    #     first = True
-    #     for linea in lineas:
-    #         linea = linea.strip()
-    #         if not linea:
-    #             continue            
-    #         linea = linea.split(';')
-    #         if len(linea) != 7:
-    #             raise UserError('Error plantilla', 'party | date_effective | type | payment_mode | amount | amount_fee')
-    #         # Se verifica que es la primera linea (encabezado) para omitirla
-    #         if first:
-    #             first = False
-    #             continue
-    #         party = linea[0].strip()
-    #         date = cls.convert_str_date(linea[1].strip())
-    #         party, = Party.search([('id_number', '=', party)])
-    #         paymode = linea[3].strip()
-    #         paymode, = PayMode.search([('name', '=', paymode)])
-    #         amount = Decimal(linea[4].strip())
-    #         amount_fee = Decimal(linea[5].strip())
-    #         days = (linea[6].strip()).split('-')
-    #         if not days:
-    #             days = [linea[6].strip()]
-    #         loan = Loan()
-    #         loan.party = party
-    #         loan.date_effective = date
-    #         loan.type = linea[2].strip()
-    #         loan.payment_mode = paymode
-    #         loan.amount = amount
-    #         #se procede a buscar y/o crear el plazo de pago
-    #         cant = math.ceil(amount/amount_fee)
-    #         name_payment_term  = f"{cant} CUOTAS DE {len(days)} VEZ/VECES AL MES DE ${amount_fee}"
-    #         payment_term = PaymentTerm.search([('name', '=', name_payment_term)])
-    #         if not payment_term:
-    #             payment_term = PaymentTerm()
-    #             payment_term.name = name_payment_term
-    #             fee = (days*cant)
-    #             months = 0
-    #             cont = 0
-    #             _lines = []
-    #             for i in fee:
-    #                 cont+=1
-    #                 line = PaymentTermLine()
-    #                 delta = Delta()
-    #                 delta.months = months
-    #                 delta.day = int(i)
-    #                 line.relativedeltas = [delta]
-    #                 if len(_lines) == cant-1:
-    #                     line.type = 'remainder'
-    #                     _lines.append(line)
-    #                     break
-    #                 line.type = 'fixed'
-    #                 line.amount = amount_fee
-    #                 line.currency = Currency(1)
-    #                 _lines.append(line)
-    #                 if cont == len(days):
-    #                     cont = 0
-    #                     months += 1
-    #             payment_term.lines = _lines
-    #         else:
-    #             payment_term = payment_term[0]
-    #         loan.payment_term = payment_term
-    #         to_save.append(loan)
-    #     Loan.save(to_save)
-    #     Loan.calculate(to_save)
-    #     print('FIN')
-
-    # Funcion encargada de cargar los ingresos y salidas de los empleados (access biometric)
     
 class ConectorLog(ModelSQL, ModelView):
     'Conector Log'

@@ -22,8 +22,9 @@ class LiquidationReport(metaclass=PoolMeta):
                 for liq_line in record.lines:
                     if liq_line.wage.type_concept == 'holidays' and liq_line.wage.type_concept_electronic in ('VacacionesComunes','VacacionesCompensadas'):
                         event = Event.search([('staff_liquidation', '=', liq_line.liquidation.id)])
-                        start_date = event[0].start_date
-                        end_date = event[0].end_date
+                        if event:
+                            start_date = event[0].start_date
+                            end_date = event[0].end_date
                         total_days_holidays += liq_line.days
                     if liq_line.wage.type_concept == 'salary' and liq_line.wage.type_concept_electronic == 'Basico':
                         total_salaries += liq_line.days
