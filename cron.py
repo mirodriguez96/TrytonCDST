@@ -1,8 +1,23 @@
 from trytond.pool import PoolMeta
+from trytond.pyson import Eval, Not, If, Bool
+from trytond.model import fields
+
+STATE = {
+        'invisible':  Not(Bool(Eval('access_register')))
+    }
 
 class Cron(metaclass=PoolMeta):
     'Cron'
     __name__ = 'ir.cron'
+
+    access_register = fields.Boolean('Access register', states={
+        'invisible': (Eval('method') != 'conector.actualizacion|biometric_access_dom'),
+    }, depends=['method'])
+
+    enter_timestamp = fields.Time('Enter',format='%H:%M:%S', states=STATE)
+    
+    exit_timestamp = fields.Time('Exit',format='%H:%M:%S', states=STATE)
+    
 
     @classmethod
     def __setup__(cls):
@@ -84,4 +99,10 @@ class Cron(metaclass=PoolMeta):
         )
         cls.method.selection.append(
             ('stock.shipment.internal|import_tecnocarnes', 'Importar traslados'),
+        )
+        cls.method.selection.append(
+            ('conector.actualizacion|biometric_access_dom', 'Generar Ingresos Domingos'),
+        )
+        cls.method.selection.append(
+            ('conector.actualizacion|holidays_access_fes', 'Generar Ingresos Festivos'),
         )
