@@ -102,6 +102,7 @@ def register():
         payment_bank.AccountBankParty,
         payment_bank.BankPayment,
         sale.SaleShopDetailedCDSStart,
+        payroll.PayrollElectronicCDS,
         module='conector', type_='model')
 
     Pool.register(
