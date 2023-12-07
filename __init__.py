@@ -103,6 +103,7 @@ def register():
         payment_bank.BankPayment,
         sale.SaleShopDetailedCDSStart,
         payroll.PayrollElectronicCDS,
+        stock.MoveCDT,
         module='conector', type_='model')
 
     Pool.register(
@@ -145,6 +146,7 @@ def register():
         payroll.PayrollIBCWizard,
         sale.SaleShopDetailedCDS,
         loan.LoanForceDraft,
+        stock.ModifyCostPrice,
         module='conector', type_='wizard')
 
     Pool.register(

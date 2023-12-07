@@ -10,6 +10,7 @@ from trytond.wizard import (
 from trytond.transaction import Transaction
 from sql import Table
 
+
 #Heredamos del modelo sale.sale para agregar el campo id_tecno
 class Production(metaclass=PoolMeta):
     'Production'
@@ -20,14 +21,49 @@ class Production(metaclass=PoolMeta):
     @classmethod
     def done(cls, records):
         super(Production, cls).done(records)
+        pool = Pool()
+        Revision = pool.get('product.cost_price.revision')
+        AverageCost = pool.get('product.average_cost')
         to_update = {} 
+        done_revision = []
+        done_cost = []
         for rec in records:
+            print(rec)
+            for inputs in rec.inputs:
+                inputs.origin = rec
+                inputs.save()
             cls.create_account_move(rec)
             for move in rec.outputs:
+                move.origin = rec
+                move.save()
                 product = move.product
+                revision = {
+                    "company": 1,
+                    "product": product.id,
+                    "template": product.template.id,
+                    "cost_price": product.cost_price,
+                    "date": datetime.date.today(),
+                }
+                done_revision.append(revision)
+
+                data = {
+                    "stock_move": move.id,
+                    "product": product.id,
+                    "effective_date": datetime.date.today(),
+                    "cost_price": product.cost_price,
+                }
+                done_cost.append(data)
+
                 if product not in to_update:
                     to_update[product.code] = product
+
+        if done_revision:         
+            Revision.create(done_revision)
+        if data:
+            AverageCost.create(done_cost)
+
         if to_update:
+
             # Se actualiza el costo para los productos (relacioandos) hijos
             Product = Pool().get('product.product')
             Product.update_product_parent(to_update)
@@ -170,6 +206,13 @@ class Production(metaclass=PoolMeta):
                 production['outputs'] = [('create', salidas)]
                 #Se crea y procesa las producciones
                 producciones = Production.create([production])
+                for productions in producciones:
+                    for inputs in productions.inputs:
+                        inputs.origin = productions
+                        inputs.save()
+                    for outputs in productions.output:
+                        outputs.origin = productions
+                        outputs.save()
                 Production.wait(producciones)
                 Production.assign(producciones)
                 Production.run(producciones)

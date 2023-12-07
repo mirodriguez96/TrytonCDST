@@ -4,6 +4,9 @@ from trytond.transaction import Transaction
 from operator import itemgetter
 from decimal import Decimal
 from .additional import validate_documentos
+from trytond.wizard import (
+    Wizard, StateTransition, StateAction, StateView, Button)
+from collections import defaultdict
 
 SW = 16
 
@@ -236,6 +239,7 @@ class ShipmentInternal(metaclass=PoolMeta):
     def import_tecnocarnes(cls):
         print('RUN import_tecnocarnes')
         pool = Pool()
+        Product = pool.get('product.product')
         Config = pool.get('conector.configuration')
         configuration = Config.get_configuration()
         if not configuration:
@@ -246,9 +250,69 @@ class ShipmentInternal(metaclass=PoolMeta):
         Actualizacion = pool.get('conector.actualizacion')
         actualizacion = Actualizacion.create_or_update('TRASLADOS')
         result = validate_documentos(data)
+
+        numero_docs = []
+        tipo_docs = []
+
+        for traslado in result.values():
+            for doc in traslado:
+                if doc not in ['T','E']:
+                    document = doc.split('-')
+                    print(document)
+                    numero_docs.append(int(document[2]))
+                    tipo_docs.append(int(document[1]))
+
+        
+        tipo_docs = set(tipo_docs)
+        tipo_docs = list(tipo_docs)
+
+        if len(tipo_docs) > 1:
+            tipo_docs = ', '.join(tipo_docs)
+        else:
+            tipo_docs = tipo_docs[0]
+
+        if len(numero_docs) > 1:
+            numero_docs = ', '.join(numero_docs)
+        else:
+            numero_docs = numero_docs[0]
+
+        dictprodut = {}
+        select = f"SELECT tr.IdProducto, tr.IdResponsable,tr.Tiempo_Del_Ciclo, tu.Unidad  \
+                FROM TblProducto tr \
+                join Documentos_Lin dl  \
+                on tr.IdProducto = dl.IdProducto \
+                join TblUnidad tu \
+                on tu.idUnidad = tr.unidad_Inventario \
+                WHERE dl.Numero_Documento in ({numero_docs}) and dl.tipo in ({tipo_docs});"
+
+        set_data = Config.get_data(select)
+
+        for item in set_data:
+            
+            dictprodut[item[0]] = {
+                'idresponsable': str(item[1]),
+            }
+
         try:
             shipments = cls.create(result["tryton"].values())
             # with Transaction().set_context(_skip_warnings=True):
+
+            for shipment in shipments:
+                for productmove in shipment.outgoing_moves:
+                    
+                    idTecno = int(productmove.product.id_tecno)
+
+                    if idTecno in dictprodut.keys():
+                        id_ = dictprodut[idTecno]['idresponsable']
+
+                        producto = Product.search(['OR', ('id_tecno', '=', id_), ('code', '=', id_)])
+                        if producto:
+                            product, = producto
+                            if productmove.product.default_uom.symbol == product.default_uom.symbol:
+                                productmove.product = product
+
+
+                        productmove.save()
             cls.wait(shipments)
             cls.assign(shipments)
             cls.ship(shipments)
@@ -272,3 +336,95 @@ class ShipmentInternal(metaclass=PoolMeta):
                 result.append(shipment)
         # Se valida que solo procese los que no se han importado de TecnoCarnes
         super(ShipmentInternal, cls).create_account_move(result)
+
+
+class ModifyCostPrice(metaclass=PoolMeta):
+    "Modify Cost Price"
+    __name__ = 'product.modify_cost_price'
+
+    def transition_modify(self):
+        pool = Pool()
+        Product = pool.get('product.product')
+        Revision = pool.get('product.cost_price.revision')
+        AverageCost = Pool().get('product.average_cost')
+        Date = pool.get('ir.date')
+        today = Date.today()
+        revisions = []
+        costs = defaultdict(list)
+        if self.model.__name__ == 'product.product':
+            records = list(self.records)
+            for product in list(records):
+                revision = self.get_revision(Revision)
+                revision.product = product
+                revision.template = product.template
+                revisions.append(revision)
+                if ((
+                            product.cost_price_method == 'fixed'
+                            and revision.date == today)
+                        or product.type == 'service'):
+                    cost = revision.get_cost_price(product.cost_price)
+                    costs[cost].append(product)
+                    records.remove(product)
+        elif self.model.__name__ == 'product.template':
+            records = list(self.records)
+            for template in list(records):
+                revision = self.get_revision(Revision)
+                revision.template = template
+                revisions.append(revision)
+                if ((
+                            template.cost_price_method == 'fixed'
+                            and revision.date == today)
+                        or template.type == 'service'):
+                    for product in template.products:
+                        cost = revision.get_cost_price(product.cost_price)
+                        costs[cost].append(product)
+                    records.remove(template)
+                else:
+                    print('actualiza')
+                    product, = template.products
+                    cost = revision.get_cost_price(product.cost_price)
+                    AverageCost.create([{
+                        "product": product.id,
+                        "effective_date": self.start.date,
+                        "cost_price": cost,
+                    }])
+        Revision.save(revisions)
+        if costs:
+            Product.update_cost_price(costs)
+        if records:
+            start = min((r.date for r in revisions), default=None)
+            self.model.recompute_cost_price(records, start=start)
+        return 'end'
+    
+
+
+class MoveCDT(metaclass=PoolMeta):
+    "Stock Move"
+    __name__ = 'stock.move'
+
+
+    def set_average_cost(self):
+        Product = Pool().get('product.product')
+        AverageCost = Pool().get('product.average_cost')
+        Revision = Pool().get('product.cost_price.revision')
+        revision = {
+                    "company": 1,
+                    "product": self.product.id,
+                    "template": self.product.template.id,
+                    "cost_price": self.product.cost_price,
+                    "date": self.effective_date,
+                }
+        data = {
+            "stock_move": self.id,
+            "product": self.product.id,
+            "effective_date": self.effective_date,
+            "cost_price": self.product.cost_price,
+        }
+        Revision.create([revision])
+        AverageCost.create([data])
+        Product.recompute_cost_price([self.product], start=self.effective_date)
+
+
+    @classmethod
+    def _get_origin(cls):
+        return super(MoveCDT, cls)._get_origin() + ['production']
