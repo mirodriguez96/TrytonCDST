@@ -13,6 +13,10 @@ from sql.aggregate import Sum
 from trytond.pyson import Eval, If
 
 
+UNIT = {
+    'UND': 'u',
+    'KILOS': 'kg'
+}
 
 #Heredamos del modelo sale.sale para agregar el campo id_tecno
 class Sale(metaclass=PoolMeta):
@@ -379,7 +383,7 @@ class Sale(metaclass=PoolMeta):
                     Sale.quote([sale])
                     Sale.confirm([sale])
                     Sale.process([sale])
-                    cls.finish_shipment_process(sale)
+                    cls.finish_shipment_process(sale,numero_doc,Config,tipo_doc)
                     cls._post_invoices(sale, venta, logs, to_exception)
                     if id_venta in to_exception:
                         continue
@@ -412,11 +416,52 @@ class Sale(metaclass=PoolMeta):
 
     # Funcion encargada de finalizar el proceso de envío de la venta
     @classmethod
-    def finish_shipment_process(cls, sale):
+    def finish_shipment_process(cls, sale, numero_doc, Config, tipo_doc):
+        pool = Pool()
+        Product = pool.get('product.product')
+
+        dictprodut = {}
+        select = f"SELECT tr.IdProducto, tr.IdResponsable,tr.Tiempo_Del_Ciclo, tu.Unidad  \
+                FROM TblProducto tr \
+                join Documentos_Lin dl  \
+                on tr.IdProducto = dl.IdProducto \
+                join TblUnidad tu \
+                on tu.idUnidad = tr.unidad_Inventario \
+                WHERE dl.Numero_Documento = {numero_doc} and dl.tipo = {tipo_doc};"
+
+        result = Config.get_data(select)
+        
+
+        for item in result:
+            
+            dictprodut[item[0]] = {
+                'idresponsable': str(item[1]),
+                'factor_converter': item[2],
+                'unit': UNIT[item[3].strip()],
+            }
+
         for shipment in sale.shipments:
             shipment.reference = sale.number
             shipment.effective_date = sale.sale_date
             shipment.save()
+            
+            for productmove in shipment.outgoing_moves:
+                
+                idTecno = int(productmove.product.id_tecno)
+
+                if idTecno in dictprodut.keys():
+                    id_ = dictprodut[idTecno]['idresponsable']
+
+                    producto = Product.search(['OR', ('id_tecno', '=', id_), ('code', '=', id_)])
+                    if producto:
+                        product, = producto
+                        if productmove.product.default_uom.symbol == product.default_uom.symbol:
+                            productmove.product = product
+
+
+                    productmove.save()
+
+
             shipment.wait([shipment])
             shipment.pick([shipment])
             shipment.pack([shipment])
