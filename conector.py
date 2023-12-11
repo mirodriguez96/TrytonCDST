@@ -510,7 +510,6 @@ class Actualizacion(ModelSQL, ModelView):
                 Rest.save(to_rest[nit])
                 acess.rests = to_rest[nit]
             # to_create.append(acess)
-            breakpoint()
             acess.on_change_rests()
             acess.save()
         # Access.save(to_create)
