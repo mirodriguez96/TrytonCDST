@@ -13,11 +13,6 @@ from sql.aggregate import Sum
 from trytond.pyson import Eval, If
 
 
-UNIT = {
-    'UND': 'u',
-    'KILOS': 'kg'
-}
-
 #Heredamos del modelo sale.sale para agregar el campo id_tecno
 class Sale(metaclass=PoolMeta):
     'Sale'
@@ -421,12 +416,10 @@ class Sale(metaclass=PoolMeta):
         Product = pool.get('product.product')
 
         dictprodut = {}
-        select = f"SELECT tr.IdProducto, tr.IdResponsable,tr.Tiempo_Del_Ciclo, tu.Unidad  \
+        select = f"SELECT tr.IdProducto, tr.IdResponsable\
                 FROM TblProducto tr \
                 join Documentos_Lin dl  \
                 on tr.IdProducto = dl.IdProducto \
-                join TblUnidad tu \
-                on tu.idUnidad = tr.unidad_Inventario \
                 WHERE dl.Numero_Documento = {numero_doc} and dl.tipo = {tipo_doc};"
 
         result = Config.get_data(select)
@@ -436,22 +429,16 @@ class Sale(metaclass=PoolMeta):
             
             dictprodut[item[0]] = {
                 'idresponsable': str(item[1]),
-                'factor_converter': item[2],
-                'unit': UNIT[item[3].strip()],
             }
 
         for shipment in sale.shipments:
             shipment.reference = sale.number
             shipment.effective_date = sale.sale_date
             shipment.save()
-            
             for productmove in shipment.outgoing_moves:
-                
                 idTecno = int(productmove.product.id_tecno)
-
                 if idTecno in dictprodut.keys():
                     id_ = dictprodut[idTecno]['idresponsable']
-
                     producto = Product.search(['OR', ('id_tecno', '=', id_), ('code', '=', id_)])
                     if producto:
                         product, = producto
@@ -460,7 +447,6 @@ class Sale(metaclass=PoolMeta):
 
 
                     productmove.save()
-
 
             shipment.wait([shipment])
             shipment.pick([shipment])
