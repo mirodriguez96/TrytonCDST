@@ -40,9 +40,8 @@ class Product(metaclass=PoolMeta):
                     continue
                 product_inactive = Product.search([('code', '=', id_producto), ('active', '=', False)])
                 if product_inactive:
-                    msg = f"EL PRODUCTO CON CODIGO {id_producto} ESTA MARCADO COMO INACTIVO EN TRYTON"
+                    msg = f"EL PRODUCTO CON CODIGO {id_producto} TIENE UNA VARIANTE MARCADA COMO INACTIVO EN TRYTON"
                     logs[id_producto] = msg
-                    continue
                 existe = Product.search([('code', '=', id_producto), ('active', '=', True)])
                 id_categoria = producto.contable
                 categoria_contable = Category.search([('id_tecno', '=', id_categoria)])
