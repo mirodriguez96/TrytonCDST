@@ -210,7 +210,7 @@ class Production(metaclass=PoolMeta):
                     for inputs in productions.inputs:
                         inputs.origin = productions
                         inputs.save()
-                    for outputs in productions.output:
+                    for outputs in productions.outputs:
                         outputs.origin = productions
                         outputs.save()
                 Production.wait(producciones)
