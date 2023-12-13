@@ -281,8 +281,6 @@ class ShipmentInternal(metaclass=PoolMeta):
                 FROM TblProducto tr \
                 join Documentos_Lin dl  \
                 on tr.IdProducto = dl.IdProducto \
-                join TblUnidad tu \
-                on tu.idUnidad = tr.unidad_Inventario \
                 WHERE dl.Numero_Documento in ({numero_docs}) and dl.tipo in ({tipo_docs});"
 
         set_data = Config.get_data(select)
