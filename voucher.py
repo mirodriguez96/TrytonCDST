@@ -671,7 +671,7 @@ class Voucher(ModelSQL, ModelView):
             line_ajuste = OthersConcepts()
             line_ajuste.description = 'REDONDEO'
             line_ajuste.account = config_voucher.account_adjust_income
-            line_ajuste.amount = Decimal(difference * -1)
+            line_ajuste.amount = round(Decimal(difference * -1),2)
             to_others.append(line_ajuste)
         return to_others
 
@@ -906,9 +906,9 @@ class MultiRevenue(metaclass=PoolMeta):
         line_paid = []
         concept_ids = []
         for transaction in multirevenue.transactions:
-            payment_mode = transaction.payment_mode
-            amount_tr = transaction.amount
             for line in multirevenue.lines:
+                payment_mode = transaction.payment_mode
+                amount_tr = transaction.amount
                 if line.id in line_paid or not line.amount:
                     continue
                 # Se crea el diccionario de los vouchers por crear
@@ -963,7 +963,7 @@ class MultiRevenue(metaclass=PoolMeta):
                     concept_amounts += concept.amount
                     concept_ids.append(concept.id)
                 net_payment = line.amount + concept_amounts
-                if net_payment < amount_tr:
+                if net_payment <= amount_tr:
                     _line_amount = line.amount
                     amount_tr -= net_payment
                     line_paid.append(line.id)
