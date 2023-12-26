@@ -73,6 +73,8 @@ def get_products(values):
 
 #
 def validate_documentos(data):
+    pool = Pool()
+    Config = pool.get('conector.configuration')
     result = {
         "tryton": {},
         "logs": {},
@@ -81,7 +83,6 @@ def validate_documentos(data):
             "E": [],
         },
     }
-    pool = Pool()
     Internal = pool.get('stock.shipment.internal')
     # Verificar y seleccionar el primer centro de operaciones
     operation_center = get_operation_center(Internal)
@@ -94,6 +95,32 @@ def validate_documentos(data):
     bodegas = []
     productos = []
     # to_create = []
+    selecto_product = []
+    dictprodut = {}
+
+    for p in data:
+        if p.IdProducto not in selecto_product:
+            selecto_product.append(p.IdProducto)
+
+    selecto_product = tuple(selecto_product)
+
+    if len(selecto_product) <= 1:
+        selecto_product = f'({selecto_product[0]})'
+
+    select = f"SELECT tr.IdProducto, tr.IdResponsable \
+                FROM TblProducto tr \
+                WHERE tr.IdProducto in {selecto_product};"
+
+    set_data = Config.get_data(select)
+
+    for item in set_data:
+            
+        dictprodut[item[0]] = {
+            'idresponsable': str(item[1]),
+        }
+
+    print(dictprodut)
+    move = {}
     for d in data:
         tipo = str(d.tipo)
         reference = f"{tipo}-{d.Numero_Documento}"
@@ -136,7 +163,7 @@ def validate_documentos(data):
         else:
             moves = shipment["moves"][0][1]
         # Se crea el movimiento
-        producto = str(d.IdProducto)
+        producto = dictprodut[d.IdProducto]['idresponsable'] if dictprodut[d.IdProducto] and dictprodut[d.IdProducto]['idresponsable'] != '0' else str(d.IdProducto)
         if producto not in productos:
             productos.append(producto)
         quantity = float(round(d.Cantidad_Facturada, 2))
@@ -145,16 +172,25 @@ def validate_documentos(data):
             result["exportado"]["E"].append(id_tecno)
             del(result["tryton"][id_tecno])
             continue
-        move = {
-            "from_location": shipment["from_location"],
-            "to_location": shipment["to_location"],
-            "product": producto,
-            "company": id_company,
-            "quantity": quantity,
-            "planned_date": shipment["planned_date"],
-            "effective_date": shipment["effective_date"],
-        }
-        moves.append(move)
+        
+        if producto not in move:
+            move[producto] = {
+                "from_location": shipment["from_location"],
+                "to_location": shipment["to_location"],
+                "product": producto,
+                "company": id_company,
+                "quantity": 0,
+                "planned_date": shipment["planned_date"],
+                "effective_date": shipment["effective_date"],
+            }
+
+        move[producto]["quantity"] += quantity
+
+
+    for key, line_move in  move.items():
+        print(key, line_move)
+        moves.append(line_move)
+
     products = get_products(productos)
     locations = get_locations(bodegas)
     analytic_types = None
