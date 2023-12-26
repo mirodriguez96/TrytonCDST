@@ -447,7 +447,6 @@ class Sale(metaclass=PoolMeta):
 
 
                     productmove.save()
-
             shipment.wait([shipment])
             shipment.pick([shipment])
             shipment.pack([shipment])
@@ -455,6 +454,18 @@ class Sale(metaclass=PoolMeta):
         for shipment in sale.shipment_returns:
             shipment.reference = sale.number
             shipment.effective_date = sale.sale_date
+            for productmove in shipment.incoming_moves:
+                idTecno = int(productmove.product.id_tecno)
+                if idTecno in dictprodut.keys():
+                    id_ = dictprodut[idTecno]['idresponsable']
+                    producto = Product.search(['OR', ('id_tecno', '=', id_), ('code', '=', id_)])
+                    if producto:
+                        product, = producto
+                        if productmove.product.default_uom.symbol == product.default_uom.symbol:
+                            productmove.product = product
+
+
+                    productmove.save()
             shipment.save()
             shipment.receive([shipment])
             shipment.done([shipment])
