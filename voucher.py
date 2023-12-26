@@ -5,6 +5,7 @@ from trytond.transaction import Transaction
 from decimal import Decimal
 import datetime
 from sql import Table
+import time
 
 _ZERO = Decimal('0.0')
 
@@ -671,7 +672,7 @@ class Voucher(ModelSQL, ModelView):
             line_ajuste = OthersConcepts()
             line_ajuste.description = 'REDONDEO'
             line_ajuste.account = config_voucher.account_adjust_income
-            line_ajuste.amount = Decimal(difference * -1)
+            line_ajuste.amount = round(Decimal(difference * -1),2)
             to_others.append(line_ajuste)
         return to_others
 
@@ -963,7 +964,7 @@ class MultiRevenue(metaclass=PoolMeta):
                     concept_amounts += concept.amount
                     concept_ids.append(concept.id)
                 net_payment = line.amount + concept_amounts
-                if net_payment < amount_tr:
+                if net_payment <= amount_tr:
                     _line_amount = line.amount
                     amount_tr -= net_payment
                     line_paid.append(line.id)
@@ -1058,10 +1059,12 @@ class Note(metaclass=PoolMeta):
         # Se procede a procesar las facturas que cumplen con la condicion
         config = Config.get_configuration()
         # print(len(new_inv_adjustment))
-        print(len(inv_adjustment))
+        index = 0
         for inv in inv_adjustment:
+            if index == 50:
+                index = 0
+                time.sleep(60)
             lines_to_create = []
-            print(inv)
             operation_center = None
             for ml in inv.move.lines:
                 if ml.account == inv.account and (ml.account.type.payable or ml.account.type.receivable):
@@ -1132,3 +1135,4 @@ class Note(metaclass=PoolMeta):
             with Transaction().set_context(_skip_warnings=True):
                 Invoice.process([inv])
             Transaction().connection.commit()
+            index += 1

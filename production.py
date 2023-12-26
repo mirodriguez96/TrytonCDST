@@ -210,7 +210,7 @@ class Production(metaclass=PoolMeta):
                     for inputs in productions.inputs:
                         inputs.origin = productions
                         inputs.save()
-                    for outputs in productions.output:
+                    for outputs in productions.outputs:
                         outputs.origin = productions
                         outputs.save()
                 Production.wait(producciones)
@@ -415,29 +415,74 @@ class ProductionDetailedReport(Report):
     def get_context(cls, records, header, data):
         report_context = super().get_context(records, header, data)
         Production = Pool().get('production')
+        production = {}
         domain = [
             ('company', '=', data['company']),
             ('effective_date', '>=', data['start_date']),
             ('effective_date', '<=', data['end_date']),
-            ]
-        fields_names = ['warehouse.name', 'location.name', 'effective_date',
-            'number', 'uom.name', 'quantity', 'cost', 'product.name', 'product.id']
-        productions = Production.search_read(domain, fields_names=fields_names)
-        if not data['grouped']:
-            records = productions
-        else:
-            records = {}
-            for p in productions:
-                key = str(p['product.']['id']) + p['location.']['name']
-                try:
-                    records[key]['quantity'] += p['quantity']
-                    records[key]['cost'] += p['cost']
-                except:
-                    records[key] = p
-                    records[key]['effective_date'] = None
-                    records[key]['numero'] = None
-            records = records.values() if records else []
-        report_context['records'] = records
+            ('write_uid', '!=', 0),
+            ('state', '!=', 'draft'),]
+
+        productions = Production.search(domain)
+
+        # if not data['grouped']:
+        #     records = productions
+        # else:
+        #     records = {}
+        #     for p in productions:
+        #         key = str(p.product.id) + p.location.name
+        #         try:
+        #             records[key]['quantity'] += p['quantity']
+        #             records[key]['cost'] += p['cost']
+        #         except:
+        #             records[key] = p
+        #             records[key]['effective_date'] = None
+        #             records[key]['numero'] = None
+        #     records = records.values() if records else []
+
+        for record in productions:
+            for pro in record.outputs:
+                if record.number not in production:
+                    production[record.number] = {
+                        'werehouse': record.warehouse.name,
+                        'location': record.location.name,
+                        'date': record.effective_date,
+                        'estimated_amount': Decimal(record.quantity),
+                        'not_production_amount_total':Decimal(record.quantity),
+                        'cost_base': record.cost,
+                        'unit_cost': Decimal(record.cost)/Decimal(record.quantity) if record.quantity > 0 else 0,
+                        'percentage': 0,
+                        'percentage_merma': 0,
+                        'merma_cost_total': 0,
+                        'outputs': {}
+                    }
+
+                if pro.product.name not in production[record.number]['outputs']:
+                    production[record.number]['outputs'][pro.product.name] ={
+                        'udm': pro.product.template.default_uom.symbol,
+                        'production_amount': 0,
+                        'unit_cost_estimated': 0,
+                        'unit_cost_production': 0,
+                    }
+
+
+                production_amount = Decimal(pro.quantity)
+                cost_estimated = Decimal(record.cost)/Decimal(record.quantity) if record.quantity > 0 else 0
+                unit_cost_production = Decimal(record.cost)/Decimal(pro.quantity) if pro.quantity > 0 else 0
+                unit_cost_estimated = production_amount*cost_estimated
+
+
+                production[record.number]['outputs'][pro.product.name]['production_amount'] += production_amount
+                production[record.number]['outputs'][pro.product.name]['unit_cost_estimated'] += unit_cost_estimated
+                production[record.number]['outputs'][pro.product.name]['unit_cost_production'] += unit_cost_production
+                production[record.number]['percentage'] += production_amount
+                production[record.number]['percentage_merma'] += Decimal(record.quantity) - production_amount
+                production[record.number]['not_production_amount_total'] -= production_amount
+                production[record.number]['merma_cost_total'] = cost_estimated*production[record.number]['not_production_amount_total']
+
+
+
+        report_context['records'] = production
         report_context['Decimal'] = Decimal
         return report_context
 

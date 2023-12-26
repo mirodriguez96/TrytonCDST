@@ -1,12 +1,15 @@
 from trytond.pool import Pool, PoolMeta
-from trytond.model import fields
+from trytond.model import fields, Workflow, ModelView
 from trytond.transaction import Transaction
 from operator import itemgetter
 from decimal import Decimal
 from .additional import validate_documentos
 from trytond.wizard import (
-    Wizard, StateTransition, StateAction, StateView, Button)
+    StateReport, StateView, Button)
 from collections import defaultdict
+from trytond.pyson import Eval, If, Bool
+from datetime import timedelta
+import copy
 
 SW = 16
 
@@ -237,11 +240,14 @@ class ShipmentInternal(metaclass=PoolMeta):
 
     @classmethod
     def import_tecnocarnes(cls):
-        print('RUN import_tecnocarnes')
+        print('RUN TRASLADOS INTERNOS')
         pool = Pool()
         Product = pool.get('product.product')
         Config = pool.get('conector.configuration')
         configuration = Config.get_configuration()
+        logs = {}
+        to_exception = []
+        id_ = 0
         if not configuration:
             return
         data = Config.get_documentos_traslados()
@@ -251,78 +257,54 @@ class ShipmentInternal(metaclass=PoolMeta):
         actualizacion = Actualizacion.create_or_update('TRASLADOS')
         result = validate_documentos(data)
 
-        numero_docs = []
-        tipo_docs = []
-
-        for traslado in result.values():
-            for doc in traslado:
-                if doc not in ['T','E']:
-                    document = doc.split('-')
-                    print(document)
-                    numero_docs.append(int(document[2]))
-                    tipo_docs.append(int(document[1]))
-
-        
-        tipo_docs = set(tipo_docs)
-        tipo_docs = list(tipo_docs)
-
-        if len(tipo_docs) > 1:
-            tipo_docs = ', '.join(tipo_docs)
-        else:
-            tipo_docs = tipo_docs[0]
-
-        if len(numero_docs) > 1:
-            numero_docs = ', '.join(numero_docs)
-        else:
-            numero_docs = numero_docs[0]
-
-        dictprodut = {}
-        select = f"SELECT tr.IdProducto, tr.IdResponsable,tr.Tiempo_Del_Ciclo, tu.Unidad  \
-                FROM TblProducto tr \
-                join Documentos_Lin dl  \
-                on tr.IdProducto = dl.IdProducto \
-                join TblUnidad tu \
-                on tu.idUnidad = tr.unidad_Inventario \
-                WHERE dl.Numero_Documento in ({numero_docs}) and dl.tipo in ({tipo_docs});"
-
-        set_data = Config.get_data(select)
-
-        for item in set_data:
-            
-            dictprodut[item[0]] = {
-                'idresponsable': str(item[1]),
-            }
-
         try:
             shipments = cls.create(result["tryton"].values())
             # with Transaction().set_context(_skip_warnings=True):
-
             for shipment in shipments:
-                for productmove in shipment.outgoing_moves:
-                    
-                    idTecno = int(productmove.product.id_tecno)
+            #     create_line = []
+            #     acomulate_lines = {}
+            #     validate = True
+            #     for productmove in shipment.outgoing_moves:
+                #     if not productmove.product.id_tecno:
+                #         msg = f"EXCEPCION: No se encontro id_tecno del producto {productmove.product.template.name}"
+                #         logs[productmove.product] = msg
+                #         to_exception.append(productmove.product)
+                #         continue
+                #     idTecno = int(productmove.product.id_tecno)
 
-                    if idTecno in dictprodut.keys():
-                        id_ = dictprodut[idTecno]['idresponsable']
+                #     if idTecno in dictprodut.keys():
+                #         id_ = dictprodut[idTecno]['idresponsable']
 
-                        producto = Product.search(['OR', ('id_tecno', '=', id_), ('code', '=', id_)])
-                        if producto:
-                            product, = producto
-                            if productmove.product.default_uom.symbol == product.default_uom.symbol:
-                                productmove.product = product
+                #         producto = Product.search(['OR', ('id_tecno', '=', id_), ('code', '=', id_)])
+                #         if producto:
+                #             product, = producto
+                #             if productmove.product.default_uom.symbol == product.default_uom.symbol:
+                #                 productmove.product = product
 
 
-                        productmove.save()
-            cls.wait(shipments)
-            cls.assign(shipments)
-            cls.ship(shipments)
-            cls.done(shipments)
+                #         productmove.save()
+                #     if productmove.product not in acomulate_lines:
+                #         acomulate_lines[productmove.product] = {
+                #             'line': productmove
+                #         }
+                        
+                #     amount = round(productmove.quantity,1)
+                #     if validate:
+                #         acomulate_lines[productmove.product]['line'].quantity = 0
+                #         validate = False
+                #     acomulate_lines[productmove.product]['line'].quantity += amount
+                #     acomulate_lines[productmove.product]['line'].quantity = round( acomulate_lines[productmove.product]['line'].quantity,3)
+                # for item in acomulate_lines.values():
+                #     create_line.append(item['line'])
+                # shipment.outgoing_moves = list(create_line)
+                shipment.save()
         except Exception as e:
             result["logs"]["try_except"] = str(e)
             actualizacion.add_logs(result["logs"])
             return
         actualizacion.add_logs(result["logs"])
         for exportado, idt in result["exportado"].items():
+            print(exportado,idt)
             if idt:
                 Config.update_exportado_list(idt, exportado)
         print('FINISH import_tecnocarnes')
