@@ -5,6 +5,7 @@ from trytond.transaction import Transaction
 from decimal import Decimal
 import datetime
 from sql import Table
+import time
 
 _ZERO = Decimal('0.0')
 
@@ -906,9 +907,9 @@ class MultiRevenue(metaclass=PoolMeta):
         line_paid = []
         concept_ids = []
         for transaction in multirevenue.transactions:
+            payment_mode = transaction.payment_mode
+            amount_tr = transaction.amount
             for line in multirevenue.lines:
-                payment_mode = transaction.payment_mode
-                amount_tr = transaction.amount
                 if line.id in line_paid or not line.amount:
                     continue
                 # Se crea el diccionario de los vouchers por crear
@@ -1058,10 +1059,12 @@ class Note(metaclass=PoolMeta):
         # Se procede a procesar las facturas que cumplen con la condicion
         config = Config.get_configuration()
         # print(len(new_inv_adjustment))
-        print(len(inv_adjustment))
+        index = 0
         for inv in inv_adjustment:
+            if index == 50:
+                index = 0
+                time.sleep(60)
             lines_to_create = []
-            print(inv)
             operation_center = None
             for ml in inv.move.lines:
                 if ml.account == inv.account and (ml.account.type.payable or ml.account.type.receivable):
@@ -1132,3 +1135,4 @@ class Note(metaclass=PoolMeta):
             with Transaction().set_context(_skip_warnings=True):
                 Invoice.process([inv])
             Transaction().connection.commit()
+            index += 1
