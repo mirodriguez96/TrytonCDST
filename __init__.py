@@ -147,6 +147,7 @@ def register():
         sale.SaleShopDetailedCDS,
         loan.LoanForceDraft,
         stock.ModifyCostPrice,
+        wiz.GroupDatafonoLines,
         module='conector', type_='wizard')
 
     Pool.register(
