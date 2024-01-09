@@ -104,6 +104,7 @@ def register():
         sale.SaleShopDetailedCDSStart,
         payroll.PayrollElectronicCDS,
         stock.MoveCDT,
+        product.Template,
         module='conector', type_='model')
 
     Pool.register(
