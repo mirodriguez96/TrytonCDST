@@ -1,7 +1,7 @@
 from decimal import Decimal
 from datetime import timedelta, datetime,date
 
-from trytond.model import ModelSQL, ModelView, fields
+from trytond.model import ModelSQL, ModelView, fields, Workflow
 from trytond.pool import Pool, PoolMeta
 from trytond.wizard import (
     Wizard, StateView, Button, StateReport, StateTransition
@@ -12,9 +12,9 @@ from trytond.pyson import Eval, Or, Not, If, Bool
 from trytond.transaction import Transaction
 from trytond.report import Report
 from trytond.exceptions import UserError, UserWarning
-from itertools import chain
-from . it_supplier_noova import ElectronicPayrollCdst
 
+from . it_supplier_noova import ElectronicPayrollCdst
+from itertools import chain
 import mimetypes
 from email.encoders import encode_base64
 from email.header import Header
@@ -32,49 +32,16 @@ from dateutil import tz
 from_zone = tz.gettz('UTC')
 to_zone = tz.gettz('America/Bogota')
 
-_ZERO = Decimal('0.0')
-WORKDAY_DEFAULT = Decimal(7.83)
-RESTDAY_DEFAULT = 0
-WEEK_DAYS = {
-    1: 'monday',
-    2: 'tuesday',
-    3: 'wednesday',
-    4: 'thursday',
-    5: 'friday',
-    6: 'saturday',
-    7: 'sunday',
-}
 
-_TYPES_BANK_ACCOUNT_ = {
-    'Cuenta de Ahorros': '37',
-    'Cuenta Corriente': '27',
+CONCEPT_ACCESS = {
+    'HED': 'hedo',
+    'HEN': 'heno',
+    'HRN': 'hedf',
+    'HEDDF': 'recf',
+    'HENDF': 'henf',
+    'HRDDF': 'reco',
+    'HRNDF': 'recf',
 }
-
-_TYPES_BANKS = {
-    'Cuenta de Ahorros': 'S',
-    'Cuenta Corriente': 'D',
-}
-
-MONTH = {
-    '01': 'ENERO',
-    '02': 'FEBRERO',
-    '03': 'MARZO',
-    '04': 'ABRIL',
-    '05': 'MAYO',
-    '06': 'JUNIO',
-    '07': 'JULIO',
-    '08':  'AGOSTO',
-    '09': 'SEPTIEMBRE',
-    '10': 'OCTUBRE',
-    '11': 'NOVIEMBRE',
-    '12': 'DICIEMBRE'
-}
-
-STATE = {
-    'invisible':  Not(Bool(Eval('access_register'))),
-    'readonly': Bool(Eval('state') != 'draft'),
-}
-
 
 TYPE_CONCEPT_ELECTRONIC = [
     ('', ''),
@@ -142,6 +109,69 @@ TYPE_CONCEPT_ELECTRONIC = [
     ('Reintegro', 'Re-integro'),
     ('Deuda', 'Deuda'),
 ]
+
+EXTRAS = {
+    'HED': {'code': 1, 'percentaje': '25.00'},
+    'HEN': {'code': 2, 'percentaje': '75.00'},
+    'HRN': {'code': 3, 'percentaje': '35.00'},
+    'HEDDF': {'code': 4, 'percentaje': '100.00'},
+    'HRDDF': {'code': 5, 'percentaje': '75.00'},
+    'HENDF': {'code': 6, 'percentaje': '150.00'},
+    'HRNDF': {'code': 7, 'percentaje': '110.00'},
+}
+
+
+
+_ZERO = Decimal('0.0')
+WORKDAY_DEFAULT = Decimal(7.83)
+RESTDAY_DEFAULT = 0
+WEEK_DAYS = {
+    1: 'monday',
+    2: 'tuesday',
+    3: 'wednesday',
+    4: 'thursday',
+    5: 'friday',
+    6: 'saturday',
+    7: 'sunday',
+}
+
+CONCEPT = [
+    'health', 'retirement'
+    ]
+
+CONCEPT_ELECTRONIC = [
+'Libranza'
+]
+
+_TYPES_BANK_ACCOUNT_ = {
+    'Cuenta de Ahorros': '37',
+    'Cuenta Corriente': '27',
+}
+
+_TYPES_BANKS = {
+    'Cuenta de Ahorros': 'S',
+    'Cuenta Corriente': 'D',
+}
+
+MONTH = {
+    '01': 'ENERO',
+    '02': 'FEBRERO',
+    '03': 'MARZO',
+    '04': 'ABRIL',
+    '05': 'MAYO',
+    '06': 'JUNIO',
+    '07': 'JULIO',
+    '08':  'AGOSTO',
+    '09': 'SEPTIEMBRE',
+    '10': 'OCTUBRE',
+    '11': 'NOVIEMBRE',
+    '12': 'DICIEMBRE'
+}
+
+STATE = {
+    'invisible':  Not(Bool(Eval('access_register'))),
+    'readonly': Bool(Eval('state') != 'draft'),
+}
 
 
 try:
@@ -219,23 +249,33 @@ _TYPE_TRANSACTION = [
 class Bank(metaclass=PoolMeta):
     'Bank'
     __name__ = 'bank'
-    bank_code_sap = fields.Char('Bank code SAP', help='bank code used for the bancolombia payment template')
+    bank_code_sap = fields.Char(
+        'Bank code SAP', help='bank code used for the bancolombia payment template')
+
 
 class WageType(metaclass=PoolMeta):
     __name__ = 'staff.wage_type'
-    non_working_days = fields.Boolean('Non-working days', 
+    non_working_days = fields.Boolean('Non-working days',
                                       states={'invisible': (Eval('type_concept') != 'holidays')
                                               })
+    
     excluded_payroll_electronic = fields.Boolean('Excluded Payroll',
                                       states={'invisible': (Eval('type_concept') != 'holidays')
                                               })
+    
+    pay_liqudation = fields.Boolean('Pay Liquidation',
+                                      states={'invisible': (Eval('type_concept_electronic') not in ['Deuda','Libranza'])
+                                              })
+
 class Liquidation(metaclass=PoolMeta):
     __name__ = "staff.liquidation"
     sended_mail = fields.Boolean('Sended Email')
 
     # Funcion encargada de contar los días festivos
-    def count_holidays(self, start_date, end_date):
+    def count_holidays(self, start_date, end_date, event):
         sundays = 0
+        if event.category.wage_type.type_concept == 'holidays' and event.category.wage_type.type_concept_electronic == 'VacacionesCompensadas':
+            return sundays
         day = timedelta(days=1)
         # Iterar sobre todas las fechas dentro del rango
         current_date = start_date
@@ -257,11 +297,13 @@ class Liquidation(metaclass=PoolMeta):
                 line = l
         if not line:
             return
-        amount_day = (self.contract.salary / 30)
+        if event.edit_amount:
+            amount_day = event.amount
+        else:
+            amount_day = (self.contract.salary / 30) 
         # amount = amount_day * event.days_of_vacations
-        holidays = self.count_holidays(event.start_date, event.end_date)
+        holidays = self.count_holidays(event.start_date, event.end_date, event)
         workdays = event.days - holidays
-        # breakpoint()
         amount_workdays = round(amount_day * workdays, 2)
         amount_holidays = round(amount_day * holidays, 2)
         # line, = self.lines
@@ -308,6 +350,191 @@ class Liquidation(metaclass=PoolMeta):
                 }])]
             }
             self.write([self], {'lines': [('create', [value])]})
+
+
+    def create_move(self):
+        pool = Pool()
+        Move = pool.get('account.move')
+        MoveLine = pool.get('account.move.line')
+        Period = pool.get('account.period')
+        if self.move:
+            return
+
+        move_lines, grouped = self.get_moves_lines()
+        if move_lines:
+            period_id = Period.find(self.company.id, date=self.liquidation_date)
+            move, = Move.create([{
+                'journal': self.journal.id,
+                'origin': str(self),
+                'period': period_id,
+                'date': self.liquidation_date,
+                'description': self.description,
+                'lines': [('create', move_lines)],
+            }])
+            self.write([self], {'move': move.id})
+            for ml in move.lines:
+                if ml.account.id not in grouped.keys() or (
+                    ml.account.type.statement not in ('balance')):
+                    continue
+                to_reconcile = [ml]
+                to_reconcile.extend(grouped[ml.account.id]['lines'])
+                if len(to_reconcile) > 1:
+                    MoveLine.reconcile(set(to_reconcile))
+            Move.post([move])
+
+
+    def get_moves_lines(self):
+        lines_moves = []
+        to_reconcile = []
+        grouped = {}
+        amount = []
+        validate = True
+        validate_health = True
+        result = ''
+        wages = [wage_type for wage_type in self.employee.mandatory_wages if wage_type.wage_type.type_concept == 'retirement' and self.kind == 'holidays']
+        wages_health = [wage_type for wage_type in self.employee.mandatory_wages if wage_type.wage_type.type_concept == 'health' and self.kind == 'holidays']
+        for line in self.lines:
+            if line.move_lines:
+                for moveline in line.move_lines:
+                    to_reconcile.append(moveline)
+                    account_id = moveline.account.id
+                    amount_line = moveline.debit - moveline.credit * -1
+                    if account_id not in grouped.keys():
+                        grouped[account_id] = {
+                            'amount': [],
+                            'description':  line.description,
+                            'lines': [],
+                        }
+                    grouped[account_id]['amount'].append(amount_line)
+                    grouped[account_id]['lines'].append(moveline)
+                    amount.append(amount_line)
+            elif line.wage.definition == 'discount':
+                account_id = line.account.id
+                if account_id not in grouped.keys():
+                    grouped[account_id] = {
+                        'amount': [],
+                        'description':  line.description,
+                        'lines': [],
+                    }
+                grouped[account_id]['amount'].append(line.amount)
+                amount.append(line.amount)
+            for adjust in line.adjustments:
+                key = adjust.account.id
+                if key not in grouped.keys():
+                    grouped[key] = {
+                        'amount': [],
+                        'description': adjust.description,
+                        'lines': [],
+                    }
+                    if hasattr(adjust, 'analytic_account') and adjust.analytic_account:
+                        grouped[key]['analytic'] = adjust.analytic_account
+                grouped[adjust.account.id]['amount'].append(adjust.amount)
+                amount.append(adjust.amount)
+
+        for account_id, values in grouped.items():
+            party_payment = None
+            for wage_health in wages_health:
+                if wage_health.wage_type.credit_account.name == values['description']:
+                    party_payment = wage_health.party.id
+                    validate_health = False
+
+            for wage in wages:
+                if validate:
+                    if wage.wage_type.credit_account.name == values['description']:
+                            validate = False
+                            result = self._prepare_line(values['description'],
+                            wages[0].wage_type.debit_account.id, debit=round(self.gross_payments * Decimal(0.12),2),credit=_ZERO,analytic=values.get('analytic',  None))
+
+                            party_payment = wage.party.id
+                            values['amount'] = [round(self.gross_payments * Decimal(0.16),2)*-1]
+                            
+            _amount = sum(values['amount'])
+            debit = _amount
+            credit = _ZERO
+            lines_moves.append(self._prepare_line(values['description'],
+                account_id, debit=debit, credit=credit, party_to_pay_concept=party_payment,analytic=values.get('analytic',  None)))
+            
+        if result != '':
+            lines_moves.append(result)
+
+        if lines_moves:
+            lines_moves.append(self._prepare_line(
+                self.description,
+                self.account,
+                credit=sum(amount),
+                party_to_pay=self.party_to_pay,
+            ))
+        return lines_moves, grouped
+
+    def _prepare_line(self, description, account_id, debit=_ZERO, credit=_ZERO, party_to_pay=None, analytic=None,party_to_pay_concept=None):
+        if debit < _ZERO:
+            credit = debit
+            debit = _ZERO
+        elif credit < _ZERO:
+            debit = credit
+            credit = _ZERO
+
+        credit = abs(credit)
+        debit = abs(debit)
+
+        party_id = self.employee.party.id
+        if party_to_pay:
+            party_id = self.party_to_pay.id
+        if party_to_pay_concept:
+            party_id = party_to_pay_concept
+
+        res = {
+            'description': description,
+            'debit': debit,
+            'credit': credit,
+            'account': account_id,
+            'party': party_id,
+        }
+
+        if analytic:
+            res['analytic_lines'] = [
+                ('create', [{
+                    'debit': res['debit'],
+                    'credit': res['credit'],
+                    'account': analytic.id,
+                    'date': self.liquidation_date
+                }])]
+        return res
+
+    def set_liquidation_lines(self):
+        super(Liquidation, self).set_liquidation_lines()
+        if self.kind == 'holidays':
+            self.process_loans_to_pay_holidays()
+        
+
+    def process_loans_to_pay_holidays(self):
+        pool = Pool()
+        MoveLine = pool.get('account.move.line')
+        LoanLine = pool.get('staff.loan.line')
+        LiquidationLine = pool.get('staff.liquidation.line')
+        dom = [
+            ('loan.wage_type', '!=', None),
+            ('loan.party', '=', self.employee.party.id),
+            ('state', 'in', ['pending', 'partial']),
+            ('loan.wage_type.pay_liqudation', '=', True),
+            ('maturity_date', '>=', self.start_period.start),
+            ('maturity_date', '<=', self.end_period.end),
+        ]
+
+        lines_loan = LoanLine.search(dom)
+        for m in lines_loan:
+
+            move_lines = MoveLine.search([
+                ('origin', 'in', ['staff.loan.line,' + str(m)]),
+            ])
+            party = m.loan.party_to_pay.id if m.loan.party_to_pay else None
+            res = self.get_line_(m.loan.wage_type, m.amount * -1, 1, m.loan.account_debit.id, party=party)
+            res['move_lines'] = [('add', move_lines)]
+            res['liquidation'] = self.id
+            line_, = LiquidationLine.create([res])
+            m.amount = abs(m.amount * -1)
+            m.save()
+            LoanLine.write([m], {'state': 'paid', 'origin': line_})
 
 
 
@@ -1066,12 +1293,17 @@ class StaffEvent(metaclass=PoolMeta):
     analytic_account = fields.Char('Analytic account code', states={
                                    'readonly': (Eval('state') != 'draft')})
 
-    staff_liquidation = fields.Many2One('staff.liquidation', 'liquidation')
-
-    access_register = fields.Boolean('Access register', states={
+    edit_amount = fields.Boolean('Edit Amount', states={
         'invisible': Not(Bool(Eval('absenteeism'))),
         'readonly': Bool(Eval('state') != 'draft'),
     }, depends=['absenteeism', 'state'])
+
+    staff_liquidation = fields.Many2One('staff.liquidation', 'liquidation')
+
+    access_register = fields.Boolean('Access register', states={
+        'invisible': Not(Bool(Eval('amount'))),
+        'readonly': Bool(Eval('state') != 'draft'),
+    }, depends=['amount', 'state'])
 
     enter_timestamp = fields.DateTime('Enter', states=STATE, domain=[
         If(Eval('exit_timestamp') & Eval('enter_timestamp'),
@@ -1127,6 +1359,19 @@ class StaffEvent(metaclass=PoolMeta):
             }
         })
 
+    def get_line_(self, wage, amount, days, account_id, party=None):
+        value = {
+            'sequence': wage.sequence,
+            'wage': wage.id,
+            'account': account_id,
+            'description': wage.name,
+            'amount': amount,
+            'days': days,
+            'party_to_pay': party,
+        }
+        return value
+        
+
     @classmethod
     @ModelView.button
     def create_liquidation(cls, records):
@@ -1161,9 +1406,88 @@ class StaffEvent(metaclass=PoolMeta):
             liquidation.save()
             # Se procesa la liquidación
             Liquidation.compute_liquidation([liquidation])
+
+            wages = [wage_type for wage_type in event.employee.mandatory_wages if wage_type.wage_type.type_concept in CONCEPT or wage_type.wage_type.type_concept_electronic in CONCEPT_ELECTRONIC]
+            if wages:
+                if event.edit_amount:
+                    amount_day = event.amount
+                else:
+                    amount_day = (liquidation.contract.salary / 30)
+                workdays = event.days
+                amount_workdays = round(amount_day * workdays * Decimal(0.04), 2) 
+
+                
+                for concept in wages:
+                    amount = amount_workdays * -1
+                    if concept.fix_amount:
+                        amount = concept.fix_amount * -1   
+                    value = {
+                        'sequence': concept.wage_type.sequence,
+                        'wage': concept.wage_type.id,
+                        'description': concept.wage_type.name,
+                        'amount': amount,
+                        'account': concept.wage_type.credit_account,
+                        'days': event.days,
+                        'party_to_pay': concept.party,
+                        'adjustments': [('create', [{
+                            'account': concept.wage_type.credit_account.id,
+                            'amount': amount_workdays * -1,
+                            'description': concept.wage_type.credit_account.name,
+                        }])]
+                    }
+                    liquidation.write([liquidation], {'lines': [('create', [value])]})
+
             liquidation._validate_holidays_lines(event)
             event.staff_liquidation = liquidation
             event.save()
+
+    @classmethod
+    def process_event(cls, events):
+        super(StaffEvent, cls).process_event(events)
+        pool = Pool()
+        Contract = pool.get('staff.contract')
+        Access = pool.get('staff.access')
+
+        for event in events:
+            if event.category and event.is_vacations:
+                contract = event.contract
+                Contract.write([contract], {'events_vacations': [
+                    ('add', [event])]})
+
+            if event.category and event.access_register and event.enter_timestamp and event.exit_timestamp:
+                for i in range(0,event.days):
+                    print(event.category, event.employee, i)
+                    is_access = Access.search([
+                        ('enter_timestamp', '<=', event.enter_timestamp + timedelta(days=i)),
+                        ('exit_timestamp', '>=', event.exit_timestamp + timedelta(days=i)),
+                        ('employee', '=', event.employee)])
+                    print(is_access)
+                    if not is_access:
+                        to_save = Access()
+                        to_save.employee = event.employee
+                        to_save.payment_method = 'extratime'
+                        to_save.enter_timestamp = event.enter_timestamp + timedelta(days=i)
+                        to_save.exit_timestamp = event.exit_timestamp + timedelta(days=i)
+                        to_save.line_event = event
+                        to_save.save()
+
+    @classmethod
+    def force_draft(cls, events):
+        super(StaffEvent, cls).force_draft(events)
+        pool = Pool()
+        Contract = pool.get('staff.contract')
+        Access = pool.get('staff.access')
+        for event in events:
+            print(event)
+            is_access = Access.search([('line_event', '=', event)])
+            print(is_access)
+            if event.category and event.contract and event.id in event.contract.events_vacations:
+                contract = event.contract
+                Contract.write(
+                    [contract], {'events_vacations': [('remove', [event])]}
+                )
+            if is_access:
+                Access.delete(is_access)
 
 class Payroll(metaclass=PoolMeta):
     __name__ = "staff.payroll"
