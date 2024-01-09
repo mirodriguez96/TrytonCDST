@@ -4,12 +4,9 @@ from trytond.transaction import Transaction
 from operator import itemgetter
 from decimal import Decimal
 from .additional import validate_documentos
-from trytond.wizard import (
-    StateReport, StateView, Button)
 from collections import defaultdict
-from trytond.pyson import Eval, If, Bool
-from datetime import timedelta
-import copy
+from trytond.i18n import gettext
+from trytond.exceptions import UserError
 
 SW = 16
 
@@ -319,6 +316,89 @@ class ShipmentInternal(metaclass=PoolMeta):
         # Se valida que solo procese los que no se han importado de TecnoCarnes
         super(ShipmentInternal, cls).create_account_move(result)
 
+    @classmethod
+    def get_account_move(cls, shipment):
+        pool = Pool()
+        Uom = pool.get('product.uom')
+        Configuration = pool.get('account.configuration')
+        Period = pool.get('account.period')
+
+        configuration = Configuration(1)
+        if not configuration.stock_journal:
+            raise UserError(gettext(
+                'account_stock_latin.msg_missing_journal_stock_configuration'
+            ))
+        journal = configuration.stock_journal
+        period_id = Period.find(shipment.company.id, date=shipment.effective_date)
+
+        lines_to_create = []
+        moves_error = []
+        for move in shipment.moves:
+            try:
+                account_debit = move.product.account_expense_used
+                if account_debit.party_required:
+                    party = shipment.company.party.id
+                else:
+                    party = None
+
+                cost_price = Uom.compute_price(move.product.default_uom,
+                    move.product.cost_price, move.uom)
+                amount = shipment.company.currency.round(
+                    Decimal(str(move.quantity)) * cost_price)
+                line_debit = {
+                    'account': account_debit,
+                    'party': party,
+                    'debit': amount,
+                    'credit': Decimal(0),
+                    'description': move.product.name,
+                }
+                op = True if hasattr(shipment, 'operation_center') else False
+                if op:
+                    line_debit.update({'operation_center': shipment.operation_center})
+
+                if shipment.analytic_account and account_debit.type.statement != 'balance':
+                    line_analytic = {
+                        'account': shipment.analytic_account,
+                        'debit': amount,
+                        'credit': Decimal(0)
+                        }
+                    line_debit['analytic_lines'] = [
+                        ('create', [line_analytic])]
+                lines_to_create.append(line_debit)
+
+                account_credit = move.product.account_stock_used
+
+                if account_credit.party_required:
+                    party = shipment.company.party.id
+                else:
+                    party = None
+
+                line_credit = {
+                    'account': account_credit,
+                    'party': party,
+                    'debit': Decimal(0),
+                    'credit': amount,
+                    'description': move.product.name,
+                }
+                lines_to_create.append(line_credit)
+            except Exception as e:
+                print(e)
+                moves_error.append(['error:', move.product.name, shipment.number])
+                raise UserError(gettext(
+                    'account_stock_latin.msg_missing_account_stock',
+                    product=move.product.name
+                ))
+        if moves_error:
+            return None
+        account_move = {
+            'journal': journal,
+            'date': shipment.effective_date,
+            'origin': shipment,
+            'company': shipment.company,
+            'period': period_id,
+            'lines': [('create', lines_to_create)]
+        }
+        return account_move
 
 class ModifyCostPrice(metaclass=PoolMeta):
     "Modify Cost Price"
@@ -410,3 +490,168 @@ class MoveCDT(metaclass=PoolMeta):
     @classmethod
     def _get_origin(cls):
         return super(MoveCDT, cls)._get_origin() + ['production']
+
+
+    def _get_account_stock_move_lines(self, type_):
+        '''
+        Return move lines for stock move
+        '''
+        pool = Pool()
+        Uom = pool.get('product.uom')
+        AccountMoveLine = pool.get('account.move.line')
+        assert type_.startswith('in_') or type_.startswith('out_'), \
+            'wrong type'
+
+        move_line = AccountMoveLine()
+        if ((
+                    type_.endswith('supplier')
+                    or type_ in {'in_production', 'in_warehouse'})
+                and self.product.cost_price_method != 'fixed'):
+            unit_price = self.unit_price_company
+        else:
+            unit_price = self.cost_price
+        unit_price = Uom.compute_price(self.product.default_uom,
+            unit_price, self.uom)
+        amount = self.company.currency.round(
+                Decimal(str(self.quantity)) * unit_price)
+        
+        account = self.product.account_expense_used
+
+        if self.product.template.salable:
+            account = self.product.account_cogs_used
+        
+        if type_.startswith('in_'):
+            move_line.debit = Decimal('0.0')
+            move_line.credit = amount
+            move_line.account = account
+            move_line.party = self.company.party.id
+        else:
+            move_line.debit = amount
+            move_line.credit = Decimal('0.0')
+            move_line.account = account
+            move_line.party = self.company.party.id
+        return [move_line]
+
+    def _get_account_stock_move_line(self, amount):
+        '''
+        Return counterpart move line value for stock move
+        '''
+        pool = Pool()
+        AccountMoveLine = pool.get('account.move.line')
+        move_line = AccountMoveLine(
+            account=self.product.account_stock_used,
+            )
+        if not amount:
+            return
+        if amount >= Decimal('0.0'):
+            move_line.debit = Decimal('0.0')
+            move_line.credit = amount
+            move_line.party = self.company.party.id
+        else:
+            move_line.debit = - amount
+            move_line.credit = Decimal('0.0')
+            move_line.party = self.company.party.id
+        return move_line
+    
+
+
+    def _get_account_stock_move_type(self):
+        '''
+        Get account move type
+        '''
+
+        type_ = (self.from_location.type, self.to_location.type)
+        if type_ in [('supplier', 'storage'), ('supplier', 'drop')]:
+            return 'in_supplier'
+        elif type_ in [('storage', 'supplier'), ('drop', 'supplier')]:
+            return 'out_supplier'
+        elif type_ in [('storage', 'customer'), ('drop', 'customer')]:
+            return 'out_customer'
+        elif type_ in [('customer', 'storage'), ('customer', 'drop')]:
+            return 'in_customer'
+        elif type_ == ('storage', 'lost_found'):
+            return 'out_lost_found'
+        elif type_ == ('lost_found', 'storage'):
+            return 'in_lost_found'
+        elif type_ == ('supplier', 'customer'):
+            return 'supplier_customer'
+        elif type_ == ('customer', 'supplier'):
+            return 'customer_supplier'
+        elif type_ == ('storage', 'production'):
+            return 'out_production'
+        elif type_ == ('production', 'storage'):
+            return 'in_production'
+
+    def _get_account_stock_move(self):
+        '''
+        Return account move for stock move
+        '''
+        pool = Pool()
+        AccountMove = pool.get('account.move')
+        Date = pool.get('ir.date')
+        Period = pool.get('account.period')
+        AccountConfiguration = pool.get('account.configuration')
+
+        if self.product.type != 'goods':
+            return
+
+        date = self.effective_date or Date.today()
+        period_id = Period.find(self.company.id, date=date)
+        period = Period(period_id)
+        if not period.fiscalyear.account_stock_method:
+            return
+        
+        type_ = self._get_account_stock_move_type()
+        if not type_:
+            return
+        with Transaction().set_context(
+                company=self.company.id, date=date):
+            if type_ == 'supplier_customer':
+                account_move_lines = self._get_account_stock_move_lines(
+                    'in_supplier')
+                account_move_lines.extend(self._get_account_stock_move_lines(
+                        'out_customer'))
+            elif type_ == 'customer_supplier':
+                account_move_lines = self._get_account_stock_move_lines(
+                    'in_customer')
+                account_move_lines.extend(self._get_account_stock_move_lines(
+                        'out_supplier'))
+            else:
+                account_move_lines = self._get_account_stock_move_lines(type_)
+
+        amount = Decimal('0.0')
+        for line in account_move_lines:
+            amount += line.debit - line.credit
+
+        if not amount:
+            return
+        move_line = self._get_account_stock_move_line(amount)
+        if move_line:
+            account_move_lines.append(move_line)
+
+
+        account_configuration = AccountConfiguration(1)
+        journal = account_configuration.get_multivalue(
+            'stock_journal', company=self.company.id)
+        return AccountMove(
+            journal=journal,
+            period=period_id,
+            date=date,
+            origin=self,
+            lines=account_move_lines,
+            )
+
+    @classmethod
+    @ModelView.button
+    @Workflow.transition('done')
+    def do(cls, moves):
+        pool = Pool()
+        AccountMove = pool.get('account.move')
+        super(MoveCDT, cls).do(moves)
+        account_moves = []
+        for move in moves:
+            account_move = move._get_account_stock_move()
+            if account_move:
+                account_moves.append(account_move)
+        AccountMove.save(account_moves)
+        AccountMove.post(account_moves)
