@@ -434,3 +434,43 @@ class GroupMultirevenueLines(Wizard):
                 BankStatementLine.save(to_save)
                 BankStatementLine.delete(to_delete)
         return 'end'
+
+class GroupDatafonoLines(Wizard):
+    __name__ = 'account.bank_statement.group_datafono_lines'
+    start_state = 'run'
+    run = StateTransition()
+
+    def transition_run(self):
+        pool = Pool()
+        BankStatement = pool.get('account.bank_statement')
+        BankStatementLine = pool.get('account.bank_statement.line')
+        ids = Transaction().context['active_ids']
+        if ids:
+            for statement in BankStatement.browse(ids):
+                lines = BankStatementLine.search([
+                    ('statement', '=', statement.id),
+                    ('statement.state', '=', 'draft'),])
+                    # ('description', 'like', 'VENTA-POS%')
+                to_group = {}
+                lines_group = {}
+                to_save = []
+                to_delete = []
+                for line in lines:
+                    if line.bank_move_lines[0].move_origin and str(line.bank_move_lines[0].move_origin).split(',')[0] in ['account.statement']:
+                        reference = str(line.bank_move_lines[0].move_origin.journal.name)+'-'+str(line.bank_move_lines[0].move_origin.date)
+                        # key = (reference, payment_mode)
+                        if reference not in to_group.keys():
+                            to_group[reference] = list(line.bank_move_lines)
+                            lines_group[reference] = line
+                        else:
+                            to_group[reference] += list(line.bank_move_lines)
+                            to_delete.append(line)
+                for reference, lines in to_group.items():
+                    description = reference
+                    lines_group[reference].description = description
+                    lines_group[reference].bank_move_lines = lines
+                    to_save.append(lines_group[reference])
+
+                BankStatementLine.save(to_save)
+                BankStatementLine.delete(to_delete)
+        return 'end'
