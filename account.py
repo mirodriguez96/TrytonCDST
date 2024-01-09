@@ -92,8 +92,8 @@ class Move(metaclass=PoolMeta):
 
     @classmethod
     def _get_origin(cls):
-        return super(Move, cls)._get_origin() + ['production']
-    
+        return super(Move, cls)._get_origin() + ['stock.move',
+            'product.product', 'product.template','production']
 
 class MoveLine(metaclass=PoolMeta):
     __name__ = 'account.move.line'
