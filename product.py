@@ -5,9 +5,77 @@ from trytond.transaction import Transaction
 from decimal import Decimal
 
 
+class Template(metaclass=PoolMeta):
+    __name__ = 'product.template'
+
+    @classmethod
+    def write(cls, *args):
+        pool = Pool()
+        active = True
+        Product = pool.get('product.product')
+
+        product = args[0]
+        id_product = product[0].id
+        domain = (['template', '=', id_product])
+        variante = Product.search(domain)
+
+        if not variante:
+            domain = [('template', '=', id_product), ('active', '=', [])]
+            variante = Product.search(domain)
+
+        super().write(*args)
+
+        for arg in args:
+            if "active" in arg:
+                variante = {"variante": variante, "active": active}
+
+        Product.sync_code(variante)
+
+
 class Product(metaclass=PoolMeta):
     __name__ = 'product.product'
     id_tecno = fields.Char('Id TecnoCarnes', required=False)
+
+    @classmethod
+    def sync_code(cls, products):
+        pool = Pool()
+        Template = pool.get('product.template')
+        active = False
+        id_tecno = False
+
+        if "active" in products:
+            products = products["variante"]
+            active = True
+
+        for product in products:
+            if product.id_tecno:
+                products = [product]
+
+        if not id_tecno:
+            if len(products) >= 2:
+                products = [products[-1]]
+            else:
+                if products:
+                    products = [products[0]]
+
+        for product in products:
+            if active:
+                template = Template.search(["id", "=", product.template])
+                if template:
+                    status = template[0].active
+                    if status and not product.active:
+                        product.active = True
+
+            code = ''.join(
+                filter(None, [product.prefix_code, product.suffix_code]))
+
+            if not code:
+                code = None
+
+            if code != product.code:
+                product.code = code
+
+        cls.save(products)
 
     # Función encargada de crear o actualizar los productos y categorias de db TecnoCarnes,
     # teniendo en cuenta la ultima fecha de actualizacion y si existe o no.
@@ -18,7 +86,8 @@ class Product(metaclass=PoolMeta):
         Config = pool.get('conector.configuration')
         Actualizacion = pool.get('conector.actualizacion')
         actualizacion = Actualizacion.create_or_update('PRODUCTOS')
-        fecha_actualizacion = Actualizacion.get_fecha_actualizacion(actualizacion)
+        fecha_actualizacion = Actualizacion.get_fecha_actualizacion(
+            actualizacion)
         productos_tecno = Config.get_tblproducto(fecha_actualizacion)
         if not productos_tecno:
             actualizacion.save()
@@ -38,19 +107,22 @@ class Product(metaclass=PoolMeta):
                     msg = f"EL PRODUCTO CON CODIGO {id_producto} ESTA MARCADO COMO ANULADO EN TECNOCARNES"
                     logs[id_producto] = msg
                     continue
-                product_inactive = Product.search([('code', '=', id_producto), ('active', '=', False)])
+                product_inactive = Product.search([('code', '=', id_producto),
+                                                   ('active', '=', False)])
                 if product_inactive:
                     msg = f"EL PRODUCTO CON CODIGO {id_producto} TIENE UNA VARIANTE MARCADA COMO INACTIVO EN TRYTON"
                     logs[id_producto] = msg
-                existe = Product.search([('code', '=', id_producto), ('active', '=', True)])
+                existe = Product.search([('code', '=', id_producto),
+                                         ('active', '=', True)])
                 id_categoria = producto.contable
-                categoria_contable = Category.search([('id_tecno', '=', id_categoria)])
+                categoria_contable = Category.search([('id_tecno', '=',
+                                                       id_categoria)])
                 if categoria_contable:
                     categoria_contable = categoria_contable[0]
                 else:
                     categoria = Category()
                     categoria.id_tecno = id_categoria
-                    categoria.name = str(id_categoria)+' - sin modelo'
+                    categoria.name = str(id_categoria) + ' - sin modelo'
                     categoria.accounting = True
                     categoria.save()
                     categoria_contable = categoria
@@ -70,11 +142,15 @@ class Product(metaclass=PoolMeta):
                     write_date = None
                     #LA HORA DEL SISTEMA DE TRYTON TIENE UNA DIFERENCIA HORARIA DE 5 HORAS CON LA DE TECNO
                     if existe.write_date:
-                        write_date = (existe.write_date - datetime.timedelta(hours=5))
+                        write_date = (existe.write_date -
+                                      datetime.timedelta(hours=5))
                     elif existe.create_date:
-                        create_date = (existe.create_date - datetime.timedelta(hours=5))
+                        create_date = (existe.create_date -
+                                       datetime.timedelta(hours=5))
                     #print(ultimo_cambio, create_date, write_date)
-                    if (ultimo_cambio and write_date and ultimo_cambio > write_date) or (ultimo_cambio and not write_date and ultimo_cambio > create_date):
+                    if (ultimo_cambio and write_date and ultimo_cambio
+                            > write_date) or (ultimo_cambio and not write_date
+                                              and ultimo_cambio > create_date):
                         existe.template.name = nombre_producto
                         existe.template.type = tipo_producto
                         existe.template.default_uom = udm_producto
@@ -116,7 +192,6 @@ class Product(metaclass=PoolMeta):
         actualizacion.add_logs(logs)
         print('FINISH PRODUCTOS')
 
-
     # FIX (REPETICION METODO)
     def get_avg_cost_price(self, name=None):
         super(Product, self).get_avg_cost_price(name)
@@ -128,12 +203,13 @@ class Product(metaclass=PoolMeta):
         avg_product = AverageCost.search([
             ('product', '=', self.id),
             ('effective_date', '<=', target_date),
-        ], order=[('create_date', 'DESC')], limit=1)
+        ],
+                                         order=[('create_date', 'DESC')],
+                                         limit=1)
         if avg_product:
             return avg_product[0].cost_price
         else:
             return self.cost_price
-
 
     #Función encargada de retornar que tipo de producto será un al realizar la equivalencia con el manejo de inventario de la bd de TecnoCarnes
     @classmethod
@@ -164,7 +240,6 @@ class Product(metaclass=PoolMeta):
         else:
             return False
 
-
     @classmethod
     def update_product_parent(cls, _products=None):
         print("RUN update_product_parent")
@@ -181,7 +256,7 @@ class Product(metaclass=PoolMeta):
             _products = {}
             for pr in products:
                 _products[pr.code] = pr
-        result = Config.get_tblproducto_parent() 
+        result = Config.get_tblproducto_parent()
         if not result:
             return
         revisions = []
@@ -221,18 +296,19 @@ class ProductCategory(metaclass=PoolMeta):
     __name__ = 'product.category'
     id_tecno = fields.Char('Id TecnoCarnes', required=False)
 
-
     @classmethod
     def import_categories_tecno(cls):
         print("RUN CATEGORIAS DE PRODUCTOS")
         pool = Pool()
         Config = pool.get('conector.configuration')
         Actualizacion = pool.get('conector.actualizacion')
-        actualizacion = Actualizacion.create_or_update('CATEGORIAS DE PRODUCTOS')
+        actualizacion = Actualizacion.create_or_update(
+            'CATEGORIAS DE PRODUCTOS')
         logs = {}
         modelos = Config.get_data_table('vistamodelos')
         if not modelos:
-            logs['vistamodelos'] = "No se encontraron valores para importar en la tabla vistamodelos"
+            logs[
+                'vistamodelos'] = "No se encontraron valores para importar en la tabla vistamodelos"
             actualizacion.add_logs(logs)
             return
         # Creación o actualización de las categorias de los productos
@@ -242,7 +318,7 @@ class ProductCategory(metaclass=PoolMeta):
         for modelo in modelos:
             id_tecno = modelo.IDMODELOS
             try:
-                name = str(id_tecno)+' - '+modelo.MODELOS.strip()
+                name = str(id_tecno) + ' - ' + modelo.MODELOS.strip()
                 category = Category.search([('id_tecno', '=', id_tecno)])
                 if not category:
                     category = {
@@ -254,21 +330,24 @@ class ProductCategory(metaclass=PoolMeta):
                     #Gastos
                     l_expense = list(modelo.CUENTA1)
                     if int(l_expense[0]) >= 5:
-                        expense = Account.search([('code', '=', modelo.CUENTA1)])
+                        expense = Account.search([('code', '=', modelo.CUENTA1)
+                                                  ])
                         if expense:
                             category['account_expense'] = expense[0]
-                    
+
                     #Ingresos
                     l_revenue = list(modelo.CUENTA3)
                     if l_revenue[0] == '4':
-                        revenue = Account.search([('code', '=', modelo.CUENTA3)])
+                        revenue = Account.search([('code', '=', modelo.CUENTA3)
+                                                  ])
                         if revenue:
                             category['account_revenue'] = revenue[0]
-                    
+
                     #Devolucion venta
                     l_return_sale = list(modelo.CUENTA4)
                     if int(l_return_sale[0]) >= 4:
-                        return_sale = Account.search([('code', '=', modelo.CUENTA4)])
+                        return_sale = Account.search([('code', '=',
+                                                       modelo.CUENTA4)])
                         if return_sale:
                             category['account_return_sale'] = return_sale[0]
 
