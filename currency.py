@@ -1,4 +1,4 @@
-"""CURRENCY MODEL"""
+"""CURRENCY MODULE"""
 from datetime import date
 from trytond.pool import PoolMeta, Pool
 import requests

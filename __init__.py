@@ -24,7 +24,7 @@ from . import statement
 from . import payment_bank
 from . import loan
 from . import liquidation
-
+from . import currency
 
 def register():
     Pool.register(
@@ -35,6 +35,7 @@ def register():
         account.AnalyticAccountEntry,
         company.Company,
         conector.Actualizacion,
+        currency.Cron,
         party.Party,
         party.PartyAddress,
         party.ContactMechanism,
