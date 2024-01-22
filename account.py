@@ -1081,3 +1081,229 @@ class IncomeStatementReport(Report):
         return report_context
     
 
+class TrialBalanceDetailedCds(metaclass=PoolMeta):
+    __name__ = 'account_col.trial_balance_detailed'
+
+    @classmethod
+    def get_context(cls, records, header, data):
+        print("entrando aqui")
+        report_context = super().get_context(records, header, data)
+        pool = Pool()
+        Account = pool.get('account.account')
+        Move = pool.get('account.move')
+        Line = pool.get('account.move.line')
+        Period = pool.get('account.period')
+        Company = pool.get('company.company')
+        Party = pool.get('party.party')
+        FiscalYear = pool.get('account.fiscalyear')
+        cursor = Transaction().connection.cursor()
+
+        move = Move.__table__()
+        line = Line.__table__()
+        start_period_name = None
+        end_period_name = None
+
+        start_periods = []
+        result_start = []
+        result_in = []
+        accs_ids = []
+        parties_ids = []
+
+        if data['start_period']:
+            start_period = Period(data['start_period'])
+            start_periods = Period.search([
+                ('end_date', '<', start_period.start_date),
+            ])
+            start_period_name = start_period.name
+        else:
+            fiscalyear = FiscalYear(data['fiscalyear'])
+            start_periods = Period.search([
+                ('end_date', '<=', fiscalyear.start_date),
+            ])
+
+        if data['end_period']:
+            end_period = Period(data['end_period'])
+            end_periods = Period.search([
+                ('fiscalyear', '=', data['fiscalyear']),
+                ('end_date', '<=', end_period.start_date),
+            ])
+            end_periods = list(set(end_periods).difference(set(start_periods)))
+            end_period_name = end_period.name
+            if end_period not in end_periods:
+                end_periods.append(end_period)
+        else:
+            end_periods = Period.search([
+                ('fiscalyear', '=', data['fiscalyear']),
+                ('end_date', '>=', start_period.start_date),
+            ])
+            end_periods = list(set(end_periods).difference(set(start_periods)))
+
+        # Select Query for In
+        in_periods = [p.id for p in end_periods]
+        if in_periods:
+            join1 = line.join(move)
+            join1.condition = join1.right.id == line.move
+
+            entity = line.party
+            default_entity = 0
+            if not data['party'] and data['by_reference']:
+                entity = line.reference
+                default_entity = '0'
+
+            select1 = join1.select(
+                line.account,
+                Coalesce(entity, default_entity),
+                Sum(line.debit),
+                Sum(line.credit),
+                group_by=(line.account, entity),
+                order_by=line.account,
+            )
+
+            select1.where = (join1.right.period.in_(in_periods))
+            if data['party']:
+                select1.where = select1.where & (line.party == data['party'])
+
+            if data['accounts']:
+                select1.where = select1.where & (line.account.in_(
+                    data['accounts']))
+            if data['posted']:
+                select1.where = select1.where & (move.state == 'posted')
+
+            cursor.execute(*select1)
+            result_in = cursor.fetchall()
+
+        # Select Query for Start
+        start_periods_ids = [p.id for p in start_periods]
+        if start_periods_ids:
+
+            join1 = line.join(move)
+            join1.condition = join1.right.id == line.move
+
+            select2 = join1.select(
+                line.account,
+                Coalesce(entity, default_entity),
+                Sum(line.debit) - Sum(line.credit),
+                group_by=(line.account, entity),
+                order_by=line.account,
+            )
+            select2.where = (join1.right.period.in_(start_periods_ids))
+
+            if data['party']:
+                select2.where = select2.where & (line.party == data['party'])
+
+            if data['accounts']:
+                select2.where = select2.where & (line.account.in_(
+                    data['accounts']))
+
+            cursor.execute(*select2)
+            result_start = cursor.fetchall()
+
+        all_result = result_in + result_start
+
+        for result in all_result:
+            accs_ids.append(result[0])
+            parties_ids.append(result[1])
+
+        accounts = OrderedDict()
+
+        if accs_ids:
+            acc_records = Account.search_read([
+                ('id', 'in', list(set(accs_ids))),
+                ('active', 'in', [False, True]),
+            ],
+                                              order=[('code', 'ASC')],
+                                              fields_names=['code', 'name'])
+
+            for acc in acc_records:
+                accounts[acc['id']] = [
+                    acc, {}, {
+                        'debits': [],
+                        'credits': [],
+                        'start_balance': [],
+                        'end_balance': [],
+                    }
+                ]
+
+            parties_obj = Party.search_read([
+                ('id', 'in', parties_ids),
+                ('active', 'in', [False, True]),
+            ],
+                                            fields_names=['id_number', 'name'])
+
+            parties = {p['id']: p for p in parties_obj}
+
+            cls._get_process_result(accounts,
+                                    parties,
+                                    kind='in',
+                                    values=result_in)
+            cls._get_process_result(accounts,
+                                    parties,
+                                    kind='start',
+                                    values=result_start)
+
+        if accounts:
+            records = accounts.values()
+        else:
+            records = accounts
+        report_context['accounts'] = records
+        report_context['fiscalyear'] = FiscalYear(data['fiscalyear'])
+        report_context['start_period'] = start_period_name
+        report_context['end_period'] = end_period_name
+        report_context['company'] = Company(data['company'])
+        return report_context
+
+    @classmethod
+    def _get_process_result(cls, accounts, parties, kind, values):
+        for val in values:
+            party_id = 0
+            id_number = ''
+            party_name = ''
+            debit = 0
+            credit = 0
+            start_balance = 0
+
+            if val[1]:
+                acc_id = val[0]
+                party_id = val[1]
+                id_number = parties[party_id]['id_number']
+                party_name = parties[party_id]['name']
+
+            if kind == 'in':
+                debit = val[2]
+                credit = val[3]
+                amount = debit - credit
+            else:  # kind == start
+                start_balance = val[2]
+                amount = val[2]
+
+            if debit == credit == start_balance == 0:
+                continue
+
+            if party_id not in accounts[acc_id][1].keys():
+                end_balance = start_balance + debit - credit
+                rec = {
+                    'id_number': id_number,
+                    'party': party_name,
+                    'start_balance': start_balance,
+                    'debit': debit,
+                    'credit': credit,
+                    'end_balance': end_balance,
+                }
+                accounts[acc_id][1][party_id] = rec
+                amount = end_balance
+            else:
+                dictval = accounts[acc_id][1][party_id]
+                if kind == 'in':
+                    dictval['debit'] = debit
+                    dictval['credit'] = credit
+                else:
+                    dictval['start_balance'] = start_balance
+
+                end_balance = dictval['start_balance'] + dictval[
+                    'debit'] - dictval['credit']
+                dictval['end_balance'] = end_balance
+
+            accounts[acc_id][2]['debits'].append(debit)
+            accounts[acc_id][2]['credits'].append(credit)
+            accounts[acc_id][2]['start_balance'].append(start_balance)
+            accounts[acc_id][2]['end_balance'].append(amount)
