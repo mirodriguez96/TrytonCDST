@@ -941,7 +941,7 @@ class WarehouseCdsKardexReport(Report):
                     move_quantity = products[product['id']]["end"]
                     new_quantity = move_quantity - move.quantity
 
-            products[product['id']].update({"end": new_quantity})
+                    products[product['id']].update({"end": new_quantity})
 
         products[product['id']].update({"input": moves_in})
         products[product['id']].update({"output": moves_out})
