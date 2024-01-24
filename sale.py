@@ -54,6 +54,7 @@ class Sale(metaclass=PoolMeta):
             return
         Sale = pool.get('sale.sale')
         SaleLine = pool.get('sale.line')
+        Period = pool.get('account.period')
         Product = pool.get('product.product')
         SaleDevice = pool.get('sale.device')
         Location = pool.get('stock.location')
@@ -98,6 +99,14 @@ class Sale(metaclass=PoolMeta):
                 existe = Sale.search([('id_tecno', '=', id_venta)])
                 if existe:
                     if venta.anulado == 'S':
+                        dat = str(venta.fecha_hora).split()[0].split('-')
+                        name = f"{dat[0]}-{dat[1]}"                 
+                        validate_period = Period.search([('name', '=', name)])
+                        if validate_period[0].state == 'close':
+                            to_exception.append(id_venta)
+                            logs[id_venta] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
+                            Y NO ES POSIBLE SU ELIMINACION O MODIFICACION"
+                            continue
                         logs[id_venta] = "El documento fue eliminado de tryton porque fue anulado en TecnoCarnes"
                         cls.delete_imported_sales(existe)
                         not_import.append(id_venta)
@@ -122,6 +131,14 @@ class Sale(metaclass=PoolMeta):
                     to_exception.append(id_venta)
                     continue
                 analytic_account = None
+                dat = str(venta.fecha_hora).split()[0].split('-')
+                name = f"{dat[0]}-{dat[1]}"                 
+                validate_period = Period.search([('name', '=', name)])
+                if validate_period[0].state == 'close':
+                    to_exception.append(id_venta)
+                    logs[id_venta] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
+                    Y NO ES POSIBLE SU CREACION"
+                    continue
                 if hasattr(SaleLine, 'analytic_accounts'):
                     tbltipodocto = Config.get_tbltipodoctos(tipo_doc)
                     if tbltipodocto and tbltipodocto[0].Encabezado != '0':

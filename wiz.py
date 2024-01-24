@@ -74,6 +74,9 @@ class DeleteVoucherTecno(Wizard):
 
     def transition_do_submit(self):
         pool = Pool()
+        Actualizacion = pool.get('conector.actualizacion')
+        actualizacion = Actualizacion.create_or_update('ACCIONES')
+        logs = {}
         Warning = pool.get('res.user.warning')
         Voucher = pool.get('account.voucher')
         ids = Transaction().context['active_ids']
@@ -82,11 +85,23 @@ class DeleteVoucherTecno(Wizard):
         if Warning.check(warning_name):
             raise UserWarning(warning_name, "Los comprobantes debieron ser desconciliado primero.")
         to_delete = []
+        to_period_close = []
         for voucher in Voucher.browse(ids):
+            if voucher.move:
+                if voucher.move.period.state == 'close':
+                    logs[voucher.number] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
+                    Y NO ES POSIBLE SU ELIMINACION O MODIFICACION"
+                    to_period_close.append(voucher.number)
+                    continue
             if voucher.number and '-' in voucher.number and voucher.id_tecno:
                 to_delete.append(voucher)
             else:
                 raise UserError("Revisar el número del comprobante (tipo-numero): ")
+                
+        if to_period_close:
+            actualizacion.add_logs(logs)
+            raise UserError(f"Los documentos {to_period_close} no pueden ser eliminados porque su periodo se encuentra cerrado")
+    
         Voucher.delete_imported_vouchers(to_delete)
         return 'end'
 
@@ -101,6 +116,10 @@ class ForceDraftVoucher(Wizard):
 
     def transition_do_force(self):
         pool = Pool()
+        Actualizacion = pool.get('conector.actualizacion')
+        actualizacion = Actualizacion.create_or_update('FORZAR BORRADOR COMPROBANTES')
+        logs = {}
+        exceptions = []
         Warning = pool.get('res.user.warning')
         Voucher = pool.get('account.voucher')
         ids = Transaction().context['active_ids']
@@ -110,8 +129,15 @@ class ForceDraftVoucher(Wizard):
             raise UserWarning(warning_name, "Los comprobantes debieron ser desconciliado primero.")
         to_force = []
         for voucher in Voucher.browse(ids):
+            if  voucher.move.state == 'close':
+                exceptions.append(voucher.id)
+                logs[voucher.id] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
+                Y NO ES POSIBLE FORZAR A BORRADOR"
+                continue
             to_force.append(voucher)
         Voucher.force_draft_voucher(to_force)
+        if exceptions:    
+            actualizacion.add_logs(logs)
         return 'end'
 
 

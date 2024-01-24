@@ -169,6 +169,11 @@ class Invoice(metaclass=PoolMeta):
         # id_company = Transaction().context.get('company')
         # company = pool.get('company.company')(id_company)
         Tax = pool.get('account.tax')
+        Period = pool.get('account.period')
+        Actualizacion = pool.get('conector.actualizacion')
+        actualizacion = Actualizacion.create_or_update('VALIDAR CREAR NOTAS')
+        logs = {}
+        to_exception = []
         _type = None
         _type_note = None
         # Se valida si el módulo centro de operaciones está activo y es requerido en la línea de la factura
@@ -188,6 +193,16 @@ class Invoice(metaclass=PoolMeta):
             if doc.anulado.upper() == 'S':
                 data['logs'][id_tecno] = f"Documento anulado en TecnoCarnes"
                 data['exportado'][id_tecno] = 'X'
+                continue
+            # Proceso de validacion del periodo, si este se encuentra cerrado, 
+            # no permitira ninguna operacion con el documento
+            validate_period = Period.search([('start_date', '>=', doc.fecha_hora),
+                                            ('end_date', '<=', doc.fecha_hora),])
+                
+            if validate_period.state == 'close':
+                to_exception.append(id_tecno)
+                logs[id_tecno] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
+                Y NO ES POSIBLE SU CREACION"
                 continue
             if id_tecno not in tecno:
                 tecno[id_tecno] = doc
@@ -399,6 +414,8 @@ class Invoice(metaclass=PoolMeta):
                     if id_tecno in data['tryton']:
                         # Se elimina de las facturas a crear
                         del data['tryton'][id_tecno]
+        if to_exception:
+            actualizacion.add_logs(logs)
         return data
     
 
@@ -821,16 +838,30 @@ class UpdateInvoiceTecno(Wizard):
 
     def transition_do_submit(self):
         pool = Pool()
+        Actualizacion = pool.get('conector.actualizacion')
+        actualizacion = Actualizacion.create_or_update('ACCIONES')
+        Dunning = pool.get('account.dunning')
+        logs = {}
+        exceptions = []
         Invoice = pool.get('account.invoice')
         Sale = pool.get('sale.sale')
         Purchase = pool.get('purchase.purchase')
+        Reclamacion = pool.get('account.dunning')
+        Mails = pool.get('account.dunning.email.log')
 
         ids = Transaction().context['active_ids']
-
+        cursor = Transaction().connection.cursor()
         to_delete_sales = []
         to_delete_purchases = []
         to_delete_note = []
         for invoice in Invoice.browse(ids):
+            id_tecno = invoice.id_tecno or invoice.reference
+            if invoice.move.period.state == 'close':
+                exceptions.append(id_tecno)
+                logs[id_tecno] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
+                Y NO ES POSIBLE SU ELIMINACION O MODIFICACION"
+                continue
+            reclamacion = Reclamacion.search([('line.move.origin', '=', invoice)])
             rec_name = invoice.rec_name
             party_name = invoice.party.name
             rec_party = rec_name+' de '+party_name
@@ -848,6 +879,26 @@ class UpdateInvoiceTecno(Wizard):
                     purchase = Purchase.search([('number', '=', invoice.number)])
                     if purchase:
                         to_delete_purchases.append(purchase[0])
+
+                if reclamacion:
+                    dunningTable = Dunning.__table__()
+                    emails_delete = Mails.search([('dunning', 'in', reclamacion)])
+                    if emails_delete:
+                        Mails.delete(emails_delete)
+
+                    if reclamacion[0].state != 'draft':
+                        cursor.execute(*dunningTable.update(
+                            columns=[
+                                dunningTable.state,
+                            ],
+                            values=["draft"],
+                            where=dunningTable.id == reclamacion[0].id)
+                        )
+
+                    cursor.execute(*dunningTable.delete(
+                        where=dunningTable.id == reclamacion[0].id)
+                    )
+
             else:
                 raise UserError("Revisa el número de la factura (tipo-numero): ", rec_party)
         if to_delete_sales:
@@ -856,6 +907,10 @@ class UpdateInvoiceTecno(Wizard):
             Purchase.delete_imported_purchases(to_delete_purchases)
         if to_delete_note:
             Invoice.delete_imported_notes(to_delete_note)
+            
+        if exceptions:
+            actualizacion.add_logs(logs)
+            raise UserError(f"Los documentos {exceptions} no pueden ser eliminados porque su periodo se encuentra cerrado")
         return 'end'
 
     def end(self):
@@ -877,12 +932,21 @@ class UpdateNoteDate(Wizard):
         note_table = Table('account_note')
         cursor = Transaction().connection.cursor()
         ids = Transaction().context['active_ids']
+        Actualizacion = pool.get('conector.actualizacion')
+        logs = {}
+        exceptions = []
+        actualizacion = Actualizacion.create_or_update('CAMBIO DE FECHA DE ASIENTO DE FACTURAS')
 
         warning_name = 'warning_udate_note_%s' % ids
         if Warning.check(warning_name):
             raise UserWarning(warning_name, "Se va a actualizar las fechas de los anticipos cruzados con respecto a la fecha de la factura.")
 
         for invoice in Invoice.browse(ids):
+            if invoice.move.period.state == 'close':
+                exceptions.append(invoice.id_tecno)
+                logs[invoice.id_tecno] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
+                Y NO ES POSIBLE SU ELIMINACION O MODIFICACION"
+                continue
             rec_name = invoice.rec_name
             party_name = invoice.party.name
             rec_party = rec_name+' de '+party_name
@@ -903,4 +967,7 @@ class UpdateNoteDate(Wizard):
                             )
             else:
                 raise UserError("La factura debe estar en estado contabilizada o pagada.", rec_party)
+        if exceptions:
+            actualizacion.add_logs(logs)
+            raise UserError(f"Los documentos {exceptions} no pueden ser eliminados porque su periodo se encuentra cerrado")
         return 'end'

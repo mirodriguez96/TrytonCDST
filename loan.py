@@ -109,6 +109,11 @@ class LoanForceDraft(Wizard):
 
     def transition_force_draft(self):
         pool = Pool()
+        Actualizacion = pool.get('conector.actualizacion')
+        actualizacion = Actualizacion.create_or_update('FORZAR BORRADOR PRESTAMOS')
+        Period = pool.get('account.period')
+        logs = {}
+        exceptions = []
         Loan = pool.get('staff.loan')
         move_table = Table('account_move')
         cursor = Transaction().connection.cursor()
@@ -118,7 +123,22 @@ class LoanForceDraft(Wizard):
         for id_ in ids_:
             loan = Loan(id_)
             loanTable = Loan.__table__()
-            
+
+            # Validamos si existe un movimiento contables, si no es asi, 
+            # le asignamos la fecha efectiva del prestamo
+            if loan.account_move:
+                validate = loan.account_move.state
+            else:
+                dat = str(loan.date_effective).split()[0].split('-')
+                name = f"{dat[0]}-{dat[1]}"                 
+                validate_period = Period.search([('name', '=', name)])
+                validate = validate_period[0].state
+
+            if  validate == 'close':
+                exceptions.append(loan.id)
+                logs[loan.id] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
+                Y NO ES POSIBLE FORZAR A BORRADOR"
+                continue
             #Validacion para saber si el activo se encuentra cerrado
             if loan.state == 'paid' or loan.state == 'cancelled':
                 raise UserError('AVISO', f'El prestamo {loan.number} se encuentra en estado {loan.state} y no es posible forzar su borrado')
@@ -156,5 +176,6 @@ class LoanForceDraft(Wizard):
                 values=["draft",''],
                 where=loanTable.id.in_(to_draft))
             )
-            
+        if exceptions:    
+            actualizacion.add_logs(logs)
         return 'end'
