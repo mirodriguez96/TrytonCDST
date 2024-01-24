@@ -36,6 +36,7 @@ def register():
                   company.Company,
                   conector.Actualizacion,
                   currency.Cron,
+                  currency.CurrencyRate,
                   party.Party,
                   party.PartyAddress,
                   party.ContactMechanism,

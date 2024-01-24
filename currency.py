@@ -1,8 +1,19 @@
 """CURRENCY MODULE"""
 from datetime import date
+from decimal import Decimal, ROUND_HALF_UP
 from trytond.pool import PoolMeta, Pool
 import requests
-from decimal import Decimal, ROUND_HALF_UP
+
+
+class CurrencyRate(metaclass=PoolMeta):
+    "Currency Rate"
+    __name__ = 'currency.currency.rate'
+
+    @classmethod
+    def __setup__(cls):
+        # pylint: disable=no-member
+        super().__setup__()
+        cls.rate.digits = (2, 12)
 
 
 class Cron(metaclass=PoolMeta):
@@ -41,7 +52,8 @@ class Cron(metaclass=PoolMeta):
                 if cron.source == "bdc":
                     dollar_price = Decimal(cls.get_price_dollar_bdc())
                     dollar_rate = Decimal(1) / dollar_price
-                    dollar_rate = dollar_rate.quantize(Decimal('0.000001'), rounding=ROUND_HALF_UP)
+                    dollar_rate = dollar_rate.quantize(Decimal('0.000000000001'),
+                                                       rounding=ROUND_HALF_UP)
 
                     currency_id = cron.currency
                     currency_symbol = cron.currency.symbol
