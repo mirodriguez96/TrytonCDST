@@ -75,6 +75,7 @@ class Production(metaclass=PoolMeta):
         pool = Pool()
         Config = pool.get('conector.configuration')
         Actualizacion = pool.get('conector.actualizacion')
+        Period = pool.get('account.period')
         actualizacion = Actualizacion.create_or_update('PRODUCCION')
         parametro = Config.get_data_parametros('177')
         valor_parametro = parametro[0].Valor.split(',')
@@ -113,6 +114,13 @@ class Production(metaclass=PoolMeta):
                     continue
                 fecha = str(transformacion.Fecha_Hora_Factura).split()[0].split('-')
                 fecha = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
+                name = f"{fecha[0]}-{fecha[1]}"                 
+                validate_period = Period.search([('name', '=', name)])
+                if validate_period[0].state == 'close':
+                    to_exception.append(id_tecno)
+                    logs[id_tecno] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
+                    Y NO ES POSIBLE SU CREACION"
+                    continue
                 reference = tipo_doc+'-'+str(numero_doc)
                 id_bodega = transformacion.bodega
                 bodega, = Location.search([('id_tecno', '=', id_bodega)])
@@ -496,13 +504,33 @@ class ProductionForceDraft(Wizard):
     def transition_force_draft(self):
         ids_ = Transaction().context['active_ids']
         if ids_:
+            Actualizacion = Pool().get('conector.actualizacion')
+            actualizacion = Actualizacion.create_or_update('FORZAR BORRADOR PRESTAMOS')
             Production = Pool().get('production')
             stock_move = Table('stock_move')
+            logs = {}
+            exceptions = []
             account_move = Table('account_move')
+            Period = Pool().get('account.period')
             cursor = Transaction().connection.cursor()
             to_save = []
             to_delete = []
             for prod in Production.browse(ids_):
+
+                if prod.move:
+                    validate = prod.move.state
+                else:
+                    dat = str(prod.effective_date).split()[0].split('-')
+                    name = f"{dat[0]}-{dat[1]}"                 
+                    validate_period = Period.search([('name', '=', name)])
+                    validate = validate_period[0].state
+
+                if  validate == 'close':
+                    exceptions.append(prod.id)
+                    logs[prod.id] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
+                    Y NO ES POSIBLE FORZAR A BORRADOR"
+                    continue
+
                 if prod.state == 'draft':
                     continue
                 if prod.move:
@@ -530,4 +558,7 @@ class ProductionForceDraft(Wizard):
                     )
             if to_save:
                 Production.save(to_save)
+        if exceptions:    
+            actualizacion.add_logs(logs)
+            raise UserError('AVISO', f'Los documentos {exceptions} no pueden ser forzados a borrador porque su periodo se encuentra cerrado')
         return 'end'

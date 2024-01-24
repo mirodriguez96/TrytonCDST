@@ -75,6 +75,7 @@ class Purchase(metaclass=PoolMeta):
         PaymentLine = pool.get('account.invoice-account.move.line')
         Party = pool.get('party.party')
         Address = pool.get('party.address')
+        Period = pool.get('account.period')
         Tax = pool.get('account.tax')
         Module = pool.get('ir.module')
         company_operation = Module.search([('name', '=', 'company_operation'), ('state', '=', 'activated')])
@@ -96,6 +97,14 @@ class Purchase(metaclass=PoolMeta):
                 existe = Purchase.search([('id_tecno', '=', id_compra)])
                 if existe:
                     if compra.anulado == 'S':
+                        dat = str(compra.fecha_hora).split()[0].split('-')
+                        name = f"{dat[0]}-{dat[1]}"                 
+                        validate_period = Period.search([('name', '=', name)])
+                        if validate_period[0].state == 'close':
+                            to_exception.append(id_compra)
+                            logs[id_compra] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
+                            Y NO ES POSIBLE SU ELIMINACION O MODIFICACION"
+                            continue
                         logs[id_compra] = "El documento fue eliminado de tryton porque fue anulado en TecnoCarnes"
                         cls.delete_imported_purchases(existe)
                         not_import.append(id_compra)
@@ -109,6 +118,14 @@ class Purchase(metaclass=PoolMeta):
                 if company_operation and not operation_center:
                     logs[id_compra] = "Falta el centro de operación"
                     to_exception.append(id_compra)
+                    continue
+                dat = str(compra.fecha_hora).split()[0].split('-')
+                name = f"{dat[0]}-{dat[1]}"                 
+                validate_period = Period.search([('name', '=', name)])
+                if validate_period[0].state == 'close':
+                    to_exception.append(id_compra)
+                    logs[id_compra] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
+                    Y NO ES POSIBLE SU CREACION"
                     continue
                 purchase = Purchase()
                 purchase.number = tipo_doc+'-'+str(numero_doc)

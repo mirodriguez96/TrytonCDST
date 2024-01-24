@@ -4,8 +4,9 @@ from trytond.exceptions import UserError
 from trytond.transaction import Transaction
 from decimal import Decimal
 import datetime
-from sql import Table
+from sql import Table, Null
 import time
+from . import fixes
 
 _ZERO = Decimal('0.0')
 
@@ -83,6 +84,11 @@ class Voucher(ModelSQL, ModelView):
                 comprobante = cls.find_voucher(id_tecno)
                 if comprobante:
                     if doc.anulado == 'S':
+                        if comprobante.move.period.state == 'close':
+                            exceptions.append(id_tecno)
+                            logs[id_tecno] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
+                            Y NO ES POSIBLE SU ELIMINACION O MODIFICACION"
+                            continue
                         if comprobante.__name__ == 'account.voucher':
                             cls.unreconcilie_move_voucher([comprobante])
                             cls.force_draft_voucher([comprobante])
@@ -230,13 +236,22 @@ class Voucher(ModelSQL, ModelView):
                 comprobante = cls.find_voucher(id_tecno)
                 if comprobante:
                     if doc.anulado == 'S':
+                        if  comprobante.__name__ == 'account.voucher':
+                            if comprobante.move:
+                                if comprobante.move.period.state == 'close':
+                                    exceptions.append(id_tecno)
+                                    logs[id_tecno] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
+                                    Y NO ES POSIBLE SU ELIMINACION O MODIFICACION"
+                                    continue
                         if comprobante.__name__ == 'account.voucher':
                             cls.unreconcilie_move_voucher([comprobante])
+                            cls.delete_note([comprobante])
                             cls.force_draft_voucher([comprobante])
                             Voucher.delete([comprobante])
                         if comprobante.__name__ == 'account.multirevenue':
                             vouchers = Voucher.search([('reference', '=', comprobante.code)])
                             cls.unreconcilie_move_voucher(vouchers)
+                            cls.delete_note(vouchers)
                             cls.force_draft_voucher(vouchers)
                             Voucher.delete(vouchers)
                             for line in comprobante.lines:
@@ -697,6 +712,29 @@ class Voucher(ModelSQL, ModelView):
             if reconciliations:
                 Reconciliation.delete(reconciliations)
         return reconciliations
+    
+    @classmethod
+    def delete_note(cls, vouchers):
+        pool = Pool()
+        Note = pool.get('account.note')
+        try:
+            for voucher in vouchers:
+                if voucher:
+                    if voucher.move:
+                        for lines in voucher.move.lines:
+                            if lines.origin:
+                                if lines.origin.move_line.move.origin:
+                                    for notes in lines.origin.move_line.move.origin.payment_lines:
+                                        if notes.origin and notes.origin.__name__ == 'account.note.line':
+                                            note = notes.origin.note
+                                            fixes.desconciliar_borrar_asientos(ids_=None,id_tecno=note.move.id)
+                                            Note.draft([note])
+                                            note.lines[0].delete(note.lines)
+                                            note.number = Null
+                                            Note.delete([note])
+        except Exception as e:
+            print(e)
+        # return reconciliations
 
     # Función que se encarga de forzar a borrador los comprobantes
     @classmethod
@@ -709,7 +747,7 @@ class Voucher(ModelSQL, ModelView):
         for voucher in vouchers:
             if voucher.move:
                 move_ids.append(voucher.move.id)
-            voucher.number = None
+            voucher.number = Null
         if move_ids:
             cursor.execute(*move_table.update(
                 columns=[move_table.state],
@@ -1014,14 +1052,27 @@ class MultiRevenue(metaclass=PoolMeta):
     @classmethod
     def mark_rimport(cls, multirevenue):
         pool = Pool()
+        Actualizacion = pool.get('conector.actualizacion')
+        actualizacion = Actualizacion.create_or_update('ELIMINAR MULTI-INGRESOS')
+        logs = {}
+        exceptions = []
         Conexion = pool.get('conector.configuration')
         MultiRevenue = pool.get('account.multirevenue')
         Line = pool.get('account.multirevenue.line')
         OthersConcepts = pool.get('account.multirevenue.others_concepts')
         Transaction = pool.get('account.multirevenue.transaction')
         Voucher = pool.get('account.voucher')
+        Period = pool.get('account.period')
         ids_tecno = []
         for multi in multirevenue:
+            dat = str(multi.date).split('-')
+            name = f"{dat[0]}-{dat[1]}"                 
+            validate_period = Period.search([('name', '=', name)])
+            if validate_period[0].state == 'close':
+                exceptions.append(multi.id_tecno)
+                logs[multi.id_tecno] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
+                Y NO ES POSIBLE SU ELIMINACION O MODIFICACION"
+                continue
             ids_tecno.append(multi.id_tecno)
             vouchers = Voucher.search([('reference', '=', multi.code)])
             Voucher.force_draft_voucher(vouchers)
@@ -1031,6 +1082,8 @@ class MultiRevenue(metaclass=PoolMeta):
             Line.delete(multi.lines)
             Transaction.delete(multi.transactions)
         MultiRevenue.delete(multirevenue)
+        if exceptions:
+            actualizacion.add_logs(logs)
         for idt in ids_tecno:
             Conexion.update_exportado(idt, 'N')
 

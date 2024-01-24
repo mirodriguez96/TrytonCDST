@@ -65,31 +65,90 @@ class VoucherMoveUnreconcile(Wizard):
             Voucher.unreconcilie_move_voucher(vouchers)
         return 'end'
 
+# Asistente encargado de marcar el voucher (documento) para re-importar y elimina los vouchers (comprobantes) creados
+class DeleteVoucherTecnoStart(ModelView):
+    'Delete Voucher Tecno Start'
+    __name__ = 'delete.voucher.wizard.start'
+    user = fields.Many2One('res.user', 'User', readonly=True)
+    validate = fields.Boolean('Validate', readonly=True, on_change_with='on_change_with_validate')
 
+    @staticmethod
+    def default_user():
+        return Transaction().user
+
+    
+    @fields.depends('user')
+    def on_change_with_validate(self):
+        pool = Pool()
+        user_permission = pool.get('conector.permissions')
+        permission = pool.get('res.user-ir.action.wizard')
+        action = user_permission.search([('user_permission', '=', Transaction().user)])
+
+        validated = permission.search([('user_permission', 'in', action),
+                                       ('wizard.wiz_name', '=', 'account.voucher.delete_voucher_tecno'),])
+        if validated:
+            return True
+        return False
+        
 class DeleteVoucherTecno(Wizard):
     'Delete Voucher Tecno'
     __name__ = 'account.voucher.delete_voucher_tecno'
-    start_state = 'do_submit'
+
+    start = StateView('delete.voucher.wizard.start',
+        'conector.validated_identity_view_form', [
+            Button('Cancel', 'end', 'tryton-cancel'),
+            Button('Confirm', 'do_submit', 'tryton-ok', default=True),
+            ])
+    
     do_submit = StateTransition()
 
     def transition_do_submit(self):
         pool = Pool()
-        Warning = pool.get('res.user.warning')
-        Voucher = pool.get('account.voucher')
-        ids = Transaction().context['active_ids']
-        #Se agrega un nombre unico a la advertencia
-        warning_name = 'warning_delete_voucher_tecno'
-        if Warning.check(warning_name):
-            raise UserWarning(warning_name, "Los comprobantes debieron ser desconciliado primero.")
-        to_delete = []
-        for voucher in Voucher.browse(ids):
-            if voucher.number and '-' in voucher.number and voucher.id_tecno:
-                to_delete.append(voucher)
-            else:
-                raise UserError("Revisar el número del comprobante (tipo-numero): ")
-        Voucher.delete_imported_vouchers(to_delete)
-        return 'end'
+        Actualizacion = pool.get('conector.actualizacion')
+        actualizacion = Actualizacion.create_or_update('ACCIONES')
+        logs = {}
+        Validated = False
+        if self.start.validate:
+            Warning = pool.get('res.user.warning')
+            Voucher = pool.get('account.voucher')
+            ids = Transaction().context['active_ids']
+            #Se agrega un nombre unico a la advertencia
+            warning_name = 'warning_delete_voucher_tecno'
+            if Warning.check(warning_name):
+                raise UserWarning(warning_name, "Los comprobantes debieron ser desconciliado primero.")
+            to_delete = []
+            to_period_close = []
+            for voucher in Voucher.browse(ids):
+                if voucher.move:
+                    if voucher.move.period.state == 'close':
+                        logs[voucher.number] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
+                        Y NO ES POSIBLE SU ELIMINACION O MODIFICACION"
+                        to_period_close.append(voucher.number)
+                        continue
+                if voucher.number and '-' in voucher.number and voucher.id_tecno:
+                    to_delete.append(voucher)
+                else:
+                    raise UserError("Revisar el número del comprobante (tipo-numero): ")
+                
+            if to_period_close:
+                raise UserError(f"Los documentos {to_period_close} no pueden ser eliminados porque su periodo se encuentra cerrado")
+            
+            log_delete = [i.number for i in to_delete]
 
+            Voucher.delete_imported_vouchers(to_delete)
+
+            logs[self.start.user.name] = f"El usuario {self.start.user.name}, realizo la accion de eliminar y reimportar comprobantes de ingresos \
+            eliminando los siguientes documentos {log_delete}"
+            actualizacion.add_logs(logs)
+            return 'end'
+        
+        logs[self.start.user.name] = f"El usuario {self.start.user.name}, \
+        intento ejecutar el asistente de eliminar y reimportar comprobantes de ingresos \
+        para el cual, no cuenta con los permisos requeridos"
+        actualizacion.add_logs(logs)
+        if not Validated:
+            raise UserError(f"EL usuario {self.start.user.name}, no cuenta con los permisos para realizar esta accion")
+    
     def end(self):
         return 'reload'
 
@@ -101,6 +160,10 @@ class ForceDraftVoucher(Wizard):
 
     def transition_do_force(self):
         pool = Pool()
+        Actualizacion = pool.get('conector.actualizacion')
+        actualizacion = Actualizacion.create_or_update('FORZAR BORRADOR COMPROBANTES')
+        logs = {}
+        exceptions = []
         Warning = pool.get('res.user.warning')
         Voucher = pool.get('account.voucher')
         ids = Transaction().context['active_ids']
@@ -110,8 +173,15 @@ class ForceDraftVoucher(Wizard):
             raise UserWarning(warning_name, "Los comprobantes debieron ser desconciliado primero.")
         to_force = []
         for voucher in Voucher.browse(ids):
+            if  voucher.move.state == 'close':
+                exceptions.append(voucher.id)
+                logs[voucher.id] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
+                Y NO ES POSIBLE FORZAR A BORRADOR"
+                continue
             to_force.append(voucher)
         Voucher.force_draft_voucher(to_force)
+        if exceptions:    
+            actualizacion.add_logs(logs)
         return 'end'
 
 
@@ -235,24 +305,71 @@ class UnreconcilieMulti(Wizard):
         return 'end'
 
 # Asistente encargado de marcar el multi-ingreso (documento) para re-importar y elimina los vouchers (comprobantes) creados
+class MarkImportMultiStart(ModelView):
+    'Delete Multi Tecno Start'
+    __name__ = 'delete.multi.wizard.start'
+    user = fields.Many2One('res.user', 'User', readonly=True)
+    validate = fields.Boolean('Validate', readonly=True, on_change_with='on_change_with_validate')
+
+    @staticmethod
+    def default_user():
+        return Transaction().user
+
+    
+    @fields.depends('user')
+    def on_change_with_validate(self):
+        pool = Pool()
+        user_permission = pool.get('conector.permissions')
+        permission = pool.get('res.user-ir.action.wizard')
+        action = user_permission.search([('user_permission', '=', Transaction().user)])
+
+        validated = permission.search([('user_permission', 'in', action),
+                                       ('wizard.wiz_name', '=', 'account.multirevenue.mark_rimport'),])
+        if validated:
+            return True
+        return False
+
 class MarkImportMulti(Wizard):
     'Check Imported Documnets'
     __name__ = 'account.multirevenue.mark_rimport'
-    start_state = 'mark_import'
+
+    start = StateView('delete.multi.wizard.start',
+        'conector.validated_identity_multi_view_form', [
+            Button('Cancel', 'end', 'tryton-cancel'),
+            Button('Confirm', 'mark_import', 'tryton-ok', default=True),
+            ])
+    
     mark_import = StateTransition()
 
     def transition_mark_import(self):
         pool = Pool()
-        Warning = pool.get('res.user.warning')
-        MultiRevenue = pool.get('account.multirevenue')
-        warning_name = 'warning_mark_rimport_multirevenue'
-        if Warning.check(warning_name):
-            raise UserWarning(warning_name, "Primero se debe desconciliar los asientos de los multi-ingresos (Desconciliar Asientos Multi-ingreso)")
-        ids = Transaction().context['active_ids']
-        if ids:
-            multingresos = MultiRevenue.browse(ids)
-            MultiRevenue.mark_rimport(multingresos)
-        return 'end'
+        Actualizacion = pool.get('conector.actualizacion')
+        actualizacion = Actualizacion.create_or_update('ACCIONES')
+        logs = {}
+        if self.start.validate:
+            Warning = pool.get('res.user.warning')
+            MultiRevenue = pool.get('account.multirevenue')
+            warning_name = 'warning_mark_rimport_multirevenue'
+            if Warning.check(warning_name):
+                raise UserWarning(warning_name, "Primero se debe desconciliar los asientos de los multi-ingresos (Desconciliar Asientos Multi-ingreso)")
+            ids = Transaction().context['active_ids']
+            if ids:
+                multingresos = MultiRevenue.browse(ids)
+                log_delete = [i.id_tecno for i in multingresos]
+                MultiRevenue.mark_rimport(multingresos)
+
+            logs[self.start.user.name] = f"El usuario {self.start.user.name}, realizo la accion de eliminar y reimportar multi-ingresos \
+            eliminando los siguientes documentos {log_delete}"
+
+            actualizacion.add_logs(logs)
+            return 'end'
+        
+
+        logs[self.start.user.name] = f"El usuario {self.start.user.name},\
+        intento ejecutar el asistente de eliminar y reimportar de multi-ingresos\
+        para el cual, no cuenta con los permisos requeridos"
+        actualizacion.add_logs(logs)
+        raise UserError(f"EL usuario {self.start.user.name}, no cuenta con los permisos para realizar esta accion")
 
     def end(self):
         return 'reload'

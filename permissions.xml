@@ -1,0 +1,54 @@
+<?xml version="1.0"?>
+<tryton>
+    <data>
+        <record model="ir.ui.view" id="permissions_lines_view_tree">
+            <field name="model">conector.permissions.line</field>
+            <field name="type">tree</field>
+            <field name="name">permissions_line_tree</field>
+        </record>
+        <record model="ir.ui.view" id="permissions_lines_view_form">
+            <field name="model">conector.permissions.line</field>
+            <field name="type">form</field>
+            <field name="name">permissions_line_form</field>
+        </record>
+
+        <record model="ir.ui.view" id="permissions_view_form">
+            <field name="model">conector.permissions</field>
+            <field name="type">form</field>
+            <!-- Campo que hace referencia a la vista name.xml -->
+            <field name="name">permissions_form</field>
+        </record>
+
+        <record model="ir.ui.view" id="permissions_view_list">
+            <field name="model">conector.permissions</field>
+            <field name="type">tree</field>
+            <field name="name">permissions_tree</field>
+        </record>
+
+        <!-- Vista que acciona la vista -->
+        <record model="ir.action.act_window" id="act_permissions">
+            <field name="name">Permisos de usuarios</field>
+            <field name="res_model">conector.permissions</field>
+        </record>
+
+        <record model="ir.action.act_window.view" id="act_permissions_view_list">
+            <field name="sequence" eval="10"/>
+            <field name="view" ref="permissions_view_list"/>
+            <field name="act_window" ref="act_permissions"/>
+        </record>
+
+        <record model="ir.action.act_window.view" id="act_permissions_view_form">
+            <field name="sequence" eval="20"/>
+            <field name="view" ref="permissions_view_form"/>
+            <field name="act_window" ref="act_permissions"/>
+        </record>
+
+        <menuitem 
+        parent="menu_importa"
+        sequence="3"
+        action="act_permissions"
+        id="menu_act_permissions"
+        icon="tryton-settings"/>
+
+    </data>
+</tryton>
