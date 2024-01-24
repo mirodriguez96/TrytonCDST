@@ -1,4 +1,7 @@
+"""PARTY MODULE"""
+
 import datetime
+import requests
 from trytond.model import fields
 from trytond.pool import Pool, PoolMeta
 from trytond.pyson import Eval
@@ -6,19 +9,27 @@ from trytond.transaction import Transaction
 
 RECEIVABLE_PAYABLE_TECNO = {}
 
+
 #Herencia del party.party e insercción de la función actualizar terceros
 class Party(metaclass=PoolMeta):
     'Party'
     __name__ = 'party.party'
-    receivable_tecno = fields.Function(fields.Numeric('Receivable Tecno',
-            digits=(16, Eval('currency_digits', 2)),
-            depends=['currency_digits']),
-            'get_receivable_payable_tecno')
-    payable_tecno = fields.Function(fields.Numeric('Payable Tecno',
-            digits=(16, Eval('currency_digits', 2)),
-            depends=['currency_digits']),
-            'get_receivable_payable_tecno')
-    number_pay_payroll = fields.Char('number_payroll', size=5, states={'invisible': Eval('type_document') != '41'})
+    receivable_tecno = fields.Function(
+        fields.Numeric('Receivable Tecno',
+                       digits=(16, Eval('currency_digits', 2)),
+                       depends=['currency_digits']),
+        'get_receivable_payable_tecno')
+    payable_tecno = fields.Function(
+        fields.Numeric('Payable Tecno',
+                       digits=(16, Eval('currency_digits', 2)),
+                       depends=['currency_digits']),
+        'get_receivable_payable_tecno')
+    number_pay_payroll = fields.Char(
+        'number_payroll',
+        size=5,
+        states={'invisible': Eval('type_document') != '41'})
+
+    validate_dian = fields.Boolean('Validate DIAN', states={'invisible': True})
 
     # Funcion encargada de consultar en TecnoCarnes el saldo por pagar y cobrar de los terceros
     def get_receivable_payable_tecno(self, name):
@@ -32,10 +43,13 @@ class Party(metaclass=PoolMeta):
             return None
         value = 0
         now = datetime.datetime.now()
-        date_time = datetime.datetime(now.year, now.month, now.day, now.hour, now.minute)
-        
+        date_time = datetime.datetime(now.year, now.month, now.day, now.hour,
+                                      now.minute)
+
         global RECEIVABLE_PAYABLE_TECNO
-        if not RECEIVABLE_PAYABLE_TECNO or (RECEIVABLE_PAYABLE_TECNO and RECEIVABLE_PAYABLE_TECNO['date_time'] < date_time):
+        if not RECEIVABLE_PAYABLE_TECNO or (
+                RECEIVABLE_PAYABLE_TECNO
+                and RECEIVABLE_PAYABLE_TECNO['date_time'] < date_time):
             query = "SELECT nit_cedula, sum(porcobrar), sum(porpagar) from VIEWCTASPORPAGARYCOBRAR GROUP BY nit_cedula"
             result = Config.get_data(query)
             for val in result:
@@ -63,7 +77,8 @@ class Party(metaclass=PoolMeta):
         Mcontact = Pool().get('party.contact_mechanism')
         actualizacion = Actualizacion.create_or_update("TERCEROS")
         # Se trae los terceros que cumplan con la fecha establecida
-        fecha_actualizacion = Actualizacion.get_fecha_actualizacion(actualizacion)
+        fecha_actualizacion = Actualizacion.get_fecha_actualizacion(
+            actualizacion)
         terceros_db = Config.get_tblterceros(fecha_actualizacion)
         if not terceros_db:
             return
@@ -75,13 +90,17 @@ class Party(metaclass=PoolMeta):
         # Comenzamos a recorrer los terceros traidos por la consulta
         for tercero in terceros_db:
             try:
-                nit_cedula = tercero.nit_cedula.replace('\n',"")
+                nit_cedula = tercero.nit_cedula.replace('\n', "")
                 tipo_identificacion = cls.id_type(tercero.tipo_identificacion)
                 nombre = cls.delete_caracter(tercero.nombre.strip()).upper()
-                PrimerNombre = cls.delete_caracter(tercero.PrimerNombre.strip()).upper()
-                SegundoNombre = cls.delete_caracter(tercero.SegundoNombre.strip()).upper()
-                PrimerApellido = cls.delete_caracter(tercero.PrimerApellido.strip()).upper()
-                SegundoApellido = cls.delete_caracter(tercero.SegundoApellido.strip()).upper()
+                PrimerNombre = cls.delete_caracter(
+                    tercero.PrimerNombre.strip()).upper()
+                SegundoNombre = cls.delete_caracter(
+                    tercero.SegundoNombre.strip()).upper()
+                PrimerApellido = cls.delete_caracter(
+                    tercero.PrimerApellido.strip()).upper()
+                SegundoApellido = cls.delete_caracter(
+                    tercero.SegundoApellido.strip()).upper()
                 mail = tercero.mail.strip()
                 telefono = tercero.telefono.strip()
                 TipoPersona = cls.person_type(tercero.TipoPersona.strip())
@@ -91,7 +110,8 @@ class Party(metaclass=PoolMeta):
                 if nit_cedula in parties['active']:
                     party = parties['active'][nit_cedula]
                 elif nit_cedula in parties['inactive']:
-                    values['logs'][nit_cedula] = "El tercero esta marcado como inactivo"
+                    values['logs'][
+                        nit_cedula] = "El tercero esta marcado como inactivo"
                     continue
                 # Ahora verificamos si el tercero existe en tryton
                 if party:
@@ -102,17 +122,22 @@ class Party(metaclass=PoolMeta):
                     write_date = None
                     #LA HORA DEL SISTEMA DE TRYTON TIENE UNA DIFERENCIA HORARIA DE 5 HORAS CON LA DE TECNO
                     if party.write_date:
-                        write_date = (party.write_date - datetime.timedelta(hours=5))
+                        write_date = (party.write_date -
+                                      datetime.timedelta(hours=5))
                     else:
-                        create_date = (party.create_date - datetime.timedelta(hours=5))
+                        create_date = (party.create_date -
+                                       datetime.timedelta(hours=5))
                     #Ahora vamos a verificar si el cambio más reciente fue hecho en la bd sqlserver para actualizarlo
-                    if (write_date and ultimo_cambio > write_date) or (not write_date and ultimo_cambio > create_date):
+                    if (write_date and ultimo_cambio > write_date) or (
+                            not write_date and ultimo_cambio > create_date):
+                        if not party.validate_dian:
+                            party.name = nombre
+                            party.first_name = PrimerNombre
+                            party.second_name = SegundoNombre
+                            party.first_family_name = PrimerApellido
+                            party.second_family_name = SegundoApellido
+
                         party.type_document = tipo_identificacion
-                        party.name = nombre
-                        party.first_name = PrimerNombre
-                        party.second_name = SegundoNombre
-                        party.first_family_name = PrimerApellido
-                        party.second_family_name = SegundoApellido
                         party.type_person = TipoPersona
                         if party.type_person == 'persona_juridica':
                             party.declarante = True
@@ -120,7 +145,9 @@ class Party(metaclass=PoolMeta):
                         if ciiu and ciiu != 0:
                             party.ciiu_code = ciiu
                         party.regime_tax = regime_tax
-                        contact_mail = Mcontact.search([('id_tecno', '=', nit_cedula+'-mail')])
+                        contact_mail = Mcontact.search([
+                            ('id_tecno', '=', nit_cedula + '-mail')
+                        ])
                         if contact_mail:
                             contact_mail, = contact_mail
                             contact_mail.value = mail
@@ -131,7 +158,8 @@ class Party(metaclass=PoolMeta):
                             contact_mail.value = mail
                             contact_mail.party = party
                             contact_mail.save()
-                        contact_tel = Mcontact.search([('id_tecno', '=', nit_cedula+'-tel')])
+                        contact_tel = Mcontact.search([('id_tecno', '=',
+                                                        nit_cedula + '-tel')])
                         if contact_tel:
                             contact_tel, = contact_tel
                             contact_tel.type = 'other'
@@ -139,7 +167,7 @@ class Party(metaclass=PoolMeta):
                             contact_tel.name = 'telefono'
                             if len(telefono) == 10:
                                 contact_tel.type = 'phone'
-                                contact_tel.value = '+57'+telefono
+                                contact_tel.value = '+57' + telefono
                             contact_tel.save()
                         elif len(telefono) > 4:
                             contact_tel = Mcontact()
@@ -149,7 +177,7 @@ class Party(metaclass=PoolMeta):
                             contact_tel.party = party
                             if len(telefono) == 10:
                                 contact_tel.type = 'phone'
-                                contact_tel.value = '+57'+telefono
+                                contact_tel.value = '+57' + telefono
                             contact_tel.save()
                         party.save()
                 else:
@@ -166,7 +194,7 @@ class Party(metaclass=PoolMeta):
                         'type_person': TipoPersona,
                     }
                     # Equivalencia tipo de persona y asignación True en declarante
-                    if TipoPersona== 'persona_juridica':
+                    if TipoPersona == 'persona_juridica':
                         party['declarante'] = True
                     # Verificación e inserción codigo ciiu
                     if ciiu and ciiu != 0:
@@ -182,18 +210,18 @@ class Party(metaclass=PoolMeta):
                     contacts = []
                     if len(telefono) > 4:
                         phone = {
-                            'id_tecno': nit_cedula+'-tel',
+                            'id_tecno': nit_cedula + '-tel',
                             'type': 'other',
                             'name': 'telefono',
                             'value': telefono
                         }
                         if len(telefono) == 10:
                             phone['type'] = 'phone'
-                            phone['value'] = '+57'+telefono
+                            phone['value'] = '+57' + telefono
                         contacts.append(phone)
                     if len(mail) > 4:
                         email = {
-                            'id_tecno': nit_cedula+'-mail',
+                            'id_tecno': nit_cedula + '-mail',
                             'type': 'email',
                             'name': 'mail',
                             'value': mail
@@ -210,7 +238,6 @@ class Party(metaclass=PoolMeta):
         actualizacion.add_logs(values['logs'])
         print("FINISH TERCEROS")
 
-
     @classmethod
     def import_addresses_tecno(cls):
         print("RUN DIRECCION TERCEROS")
@@ -224,7 +251,8 @@ class Party(metaclass=PoolMeta):
         City = pool.get('party.city_code')
         actualizacion = Actualizacion.create_or_update("DIRECCION TERCEROS")
         # Se trae los terceros que cumplan con la fecha establecida
-        fecha_actualizacion = Actualizacion.get_fecha_actualizacion(actualizacion)
+        fecha_actualizacion = Actualizacion.get_fecha_actualizacion(
+            actualizacion)
         # Actualización de direcciones
         direcciones_db = Config.get_tercerosdir(fecha_actualizacion)
         if not direcciones_db:
@@ -239,12 +267,12 @@ class Party(metaclass=PoolMeta):
         print(country_code)
         for dir in direcciones_db:
             try:
-                nit = (dir.nit).replace('\n',"")
+                nit = (dir.nit).replace('\n', "")
                 party = Party.search([('id_number', '=', nit)])
                 if not party:
                     values['logs'][nit] = "NO SE ENCONTRO EL TERCERO"
                     continue
-                id_tecno = nit+'-'+str(dir.codigo_direccion)
+                id_tecno = nit + '-' + str(dir.codigo_direccion)
                 address = Address.search([('id_tecno', '=', id_tecno)])
                 if address:
                     address = address[0]
@@ -252,20 +280,25 @@ class Party(metaclass=PoolMeta):
                     create_date = None
                     write_date = None
                     if address.write_date:
-                        write_date = (address.write_date - datetime.timedelta(hours=5))
+                        write_date = (address.write_date -
+                                      datetime.timedelta(hours=5))
                     elif address.create_date:
-                        create_date = (address.create_date - datetime.timedelta(hours=5))
+                        create_date = (address.create_date -
+                                       datetime.timedelta(hours=5))
                     if (ultimo_cambiod and write_date and ultimo_cambiod > write_date) or \
                         (ultimo_cambiod and not write_date and ultimo_cambiod > create_date):
                         region = list(dir.CodigoSucursal.strip())
                         if len(region) > 4:
-                            department_code = Department.search([('code', '=', region[0]+region[1])])
+                            department_code = Department.search([
+                                ('code', '=', region[0] + region[1])
+                            ])
                             if department_code:
                                 address.department_code = department_code[0]
                                 city_code = City.search([
-                                    ('code', '=', region[2]+region[3]+region[4]),
+                                    ('code', '=',
+                                     region[2] + region[3] + region[4]),
                                     ('department', '=', department_code[0])
-                                    ])
+                                ])
                                 if city_code:
                                     address.city_code = city_code[0]
                         address.country_code = country_code
@@ -292,32 +325,33 @@ class Party(metaclass=PoolMeta):
         actualizacion.add_logs(values['logs'])
         print("FINISH DIRECCION TERCEROS")
 
-
     @classmethod
     def create_address_new(cls, party, data):
         Country = Pool().get('party.country_code')
         Department = Pool().get('party.department_code')
         City = Pool().get('party.city_code')
         if data.codigo_direccion == 1:
-            comercial_name = cls.delete_caracter(data.NombreSucursal.strip()).upper()
+            comercial_name = cls.delete_caracter(
+                data.NombreSucursal.strip()).upper()
             if len(comercial_name) > 2:
                 party['commercial_name'] = comercial_name
         country_code, = Country.search([('code', '=', '169')])
-        nit = (data.nit).replace('\n',"")
+        nit = (data.nit).replace('\n', "")
         adress = {
-            'id_tecno': nit+'-'+str(data.codigo_direccion),
+            'id_tecno': nit + '-' + str(data.codigo_direccion),
             'country_code': country_code,
             'party_name': party['name'],
         }
         region = list(data.CodigoSucursal.strip())
         if len(region) > 4:
-            department_code = Department.search([('code', '=', region[0]+region[1])])
+            department_code = Department.search([('code', '=',
+                                                  region[0] + region[1])])
             if department_code:
                 adress['department_code'] = department_code[0].id
                 city_code = City.search([
-                    ('code', '=', region[2]+region[3]+region[4]),
+                    ('code', '=', region[2] + region[3] + region[4]),
                     ('department', '=', department_code[0])
-                    ])
+                ])
                 if city_code:
                     adress['city_code'] = city_code[0].id
         barrio = data.Barrio.strip()
@@ -328,7 +362,6 @@ class Party(metaclass=PoolMeta):
             adress['street'] = street
         return adress
 
-
     #Función encargada de eliminar caracteres especiales y convertir string en alfanumerico
     @classmethod
     def delete_caracter(cls, word):
@@ -337,7 +370,7 @@ class Party(metaclass=PoolMeta):
         for word in list_word:
             res = ''.join(filter(str.isalnum, word))
             if result != '':
-                result = result+' '+res
+                result = result + ' ' + res
             else:
                 result = res
         return result
@@ -383,7 +416,7 @@ class Party(metaclass=PoolMeta):
         elif tercero.IdTipoContribuyente == 1 or tercero.IdTipoContribuyente == 4:
             regime_tax = 'gran_contribuyente'
         return regime_tax
-    
+
     @classmethod
     def _get_party_documentos(cls, documentos, nombre_variable):
         if not documentos:
@@ -394,7 +427,7 @@ class Party(metaclass=PoolMeta):
         ids_number = []
         for obj in documentos:
             nit_cedula = getattr(obj, nombre_variable)
-            nit_cedula = nit_cedula.replace('\n',"")
+            nit_cedula = nit_cedula.replace('\n', "")
             ids_number.append(nit_cedula)
         if len(ids_number) > 1:
             ids_number = tuple(ids_number)
@@ -408,18 +441,18 @@ class Party(metaclass=PoolMeta):
         Se crea un diccionario dónde se almacenara los terceros existentes
         de acuerdo a su estado correspondiente activo o inactivo
         """
-        parties = {
-            'active': {},
-            'inactive': []
-        }
+        parties = {'active': {}, 'inactive': []}
         for r in result:
             if r[2]:
                 parties['active'][r[1]] = Party(r[0])
             else:
                 if nombre_variable == 'nit_Cedula':
-                    cursor.execute(f"UPDATE party_party SET active = True WHERE id = {r[0]}")
-                parties['inactive'].append(r[1])    
+                    cursor.execute(
+                        f"UPDATE party_party SET active = True WHERE id = {r[0]}"
+                    )
+                parties['inactive'].append(r[1])
         return parties
+
 
 #Herencia del party.address e insercción del campo id_tecno
 class PartyAddress(metaclass=PoolMeta):
@@ -433,3 +466,104 @@ class ContactMechanism(metaclass=PoolMeta):
     'ContactMechanism'
     __name__ = 'party.contact_mechanism'
     id_tecno = fields.Char('Id TecnoCarnes', required=False)
+
+
+class CheckVIESResult(metaclass=PoolMeta):
+    'Check VIES'
+    __name__ = 'party.check_vies.result'
+
+    parties_succeed = fields.Many2Many('party.party',
+                                       None,
+                                       None,
+                                       'Parties Succeed',
+                                       readonly=True,
+                                       states={
+                                           'invisible':
+                                           ~Eval('parties_succeed'),
+                                       })
+
+    parties_failed = fields.Many2Many('party.party',
+                                      None,
+                                      None,
+                                      'Parties Failed',
+                                      readonly=True,
+                                      states={
+                                          'invisible': ~Eval('parties_failed'),
+                                      })
+
+
+class CheckVIES(metaclass=PoolMeta):
+    'Check VIES'
+    __name__ = 'party.check_vies'
+
+    def transition_check(self):
+        """Function that consult document in DIAN and update data"""
+        # pylint: disable=no-member
+
+        parties_succeed = []
+        parties_failed = []
+
+        if self.records:
+            for party in self.records:
+                party_id = party.id_number
+                try:
+                    report = self.report_dian(party_id)
+                    if report:
+                        if not report['success']:
+                            parties_failed.append(party.id)
+                        else:
+                            info = report["result"]
+
+                            if info["estado"] == "REGISTRO ACTIVO":
+                                if "razon_social" in info:
+                                    party.name = info["razon_social"]
+                                else:
+                                    first_name = info["primer_nombre"]
+                                    second_name = info["otros_nombres"]
+                                    first_family_name = info["primer_apellido"]
+                                    second_family_name = info[
+                                        "segundo_apellido"]
+
+                                    if len(second_name) > 0:
+                                        party_name = f'{first_name} {second_name} {first_family_name} {second_family_name}'
+                                    else:
+                                        party_name = f'{first_name} {first_family_name} {second_family_name}'
+
+                                    party.first_name = first_name
+                                    party.second_name = second_name
+                                    party.first_family_name = first_family_name
+                                    party.second_family_name = second_family_name
+                                    party.name = party_name
+
+                                party.validate_dian = True
+                                parties_succeed.append(party.id)
+                                party.save()
+
+                except Exception as e:
+                    print(f"no entro {e}")
+
+            self.result.parties_succeed = parties_succeed
+            self.result.parties_failed = parties_failed
+            return 'result'
+
+    @classmethod
+    def report_dian(cls, nit):
+        """Function that consult document in DIAN"""
+
+        api_url = "http://api.consulta.fenix-erp.net/v1/82e414d56b9d4243c3efc98025685f4a/dian/"
+        params = {'nit': nit}
+
+        try:
+            response = requests.get(api_url, params=params, timeout=10)
+            response.raise_for_status(
+            )  # Lanza una excepción para errores HTTP
+
+            if response.status_code == 200:
+                data = response.json()
+                return data
+            else:
+                print(f"Error en la respuesta HTTP: {response.status_code}")
+                return None
+        except requests.exceptions.RequestException as e:
+            print(f"Error en la solicitud: {e}")
+            return None
