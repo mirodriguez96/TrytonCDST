@@ -105,6 +105,7 @@ def register():
         payroll.PayrollElectronicCDS,
         stock.MoveCDT,
         product.Template,
+        tax.TaxesConsolidationStart,
         module='conector', type_='model')
 
     Pool.register(
@@ -149,6 +150,7 @@ def register():
         loan.LoanForceDraft,
         stock.ModifyCostPrice,
         wiz.GroupDatafonoLines,
+        tax.TaxesConsolidation,
         module='conector', type_='wizard')
 
     Pool.register(

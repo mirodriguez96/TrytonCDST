@@ -8,10 +8,17 @@ this repository contains the full copyright notices and license terms. -->
             <field name="inherit" ref="account.tax_view_form"/>
             <field name="name">tax_form</field>
         </record>
+        
         <record model="ir.ui.view" id="tax_rule_line_view_form">
             <field name="model">account.tax.rule.line</field>
             <field name="inherit" ref="account.tax_rule_line_view_form"/>
             <field name="name">tax_rule_line_form</field>
+        </record>
+
+        <record model="ir.ui.view" id="taxes_consolidation_start_view_form">
+            <field name="model">account_voucher.taxes_consolidation.start</field>
+            <field name="inherit" ref="account_voucher.taxes_consolidation_start_view_form"/>
+            <field name="name">taxes_consolidation_start_form</field>
         </record>
     </data>
 </tryton>
