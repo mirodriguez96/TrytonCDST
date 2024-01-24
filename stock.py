@@ -1,12 +1,20 @@
+"""STOCK MOVEMENTS MODULE"""
+
+from operator import itemgetter
+from decimal import Decimal
+from collections import defaultdict
+from datetime import timedelta
+import copy
+
 from trytond.pool import Pool, PoolMeta
 from trytond.model import fields, Workflow, ModelView
 from trytond.transaction import Transaction
-from operator import itemgetter
-from decimal import Decimal
-from .additional import validate_documentos
-from collections import defaultdict
-from trytond.i18n import gettext
+from trytond.wizard import (StateReport, StateView, Button, Wizard)
+from trytond.report import Report
 from trytond.exceptions import UserError
+from trytond.i18n import gettext
+from trytond.pyson import Eval, Bool
+from .additional import validate_documentos
 
 SW = 16
 
@@ -45,30 +53,31 @@ class Location(metaclass=PoolMeta):
                 if existe[0].name != nombre:
                     existe[0].name = nombre
                     _warehouses.append(existe[0])
-                    logs[id_tecno] = f'Se actualiza nombre de la bodega "{nombre}"'
+                    logs[
+                        id_tecno] = f'Se actualiza nombre de la bodega "{nombre}"'
                 continue
             #zona de entrada
             ze = Location()
-            ze.id_tecno = 'ze-'+str(id_tecno)
-            ze.name = 'ZE '+nombre
+            ze.id_tecno = 'ze-' + str(id_tecno)
+            ze.name = 'ZE ' + nombre
             ze.type = 'storage'
             _zones.append(ze)
             #zona de salida
             zs = Location()
-            zs.id_tecno = 'zs-'+str(id_tecno)
-            zs.name = 'ZS '+nombre
+            zs.id_tecno = 'zs-' + str(id_tecno)
+            zs.name = 'ZS ' + nombre
             zs.type = 'storage'
-            _zones.append(zs)            
+            _zones.append(zs)
             #zona de almacenamiento
             za = Location()
-            za.id_tecno = 'za-'+str(id_tecno)
-            za.name = 'ZA '+nombre
+            za.id_tecno = 'za-' + str(id_tecno)
+            za.name = 'ZA ' + nombre
             za.type = 'storage'
             _zones.append(za)
             #zona de producción
             prod = Location()
-            prod.id_tecno = 'prod-'+str(id_tecno)
-            prod.name = 'PROD '+nombre
+            prod.id_tecno = 'prod-' + str(id_tecno)
+            prod.name = 'PROD ' + nombre
             prod.type = 'production'
             _zones.append(prod)
             # Bodega
@@ -92,7 +101,6 @@ class ShipmentDetailedReport(metaclass=PoolMeta):
     'Shipment Detailed Report'
     __name__ = 'stock.shipment.shipment_detailed.report'
 
-
     @classmethod
     def get_context(cls, records, header, data):
         report_context = super().get_context(records, header, data)
@@ -104,28 +112,30 @@ class ShipmentDetailedReport(metaclass=PoolMeta):
         ModelShipment = pool.get(model)
         Move = pool.get('stock.move')
         Product = pool.get('product.product')
-        dom_shipment = [
-            ('company', '=', data['company']),
-            ('effective_date', '>=', data['start_date']),
-            ('effective_date', '<=', data['end_date'])
-        ]
+        dom_shipment = [('company', '=', data['company']),
+                        ('effective_date', '>=', data['start_date']),
+                        ('effective_date', '<=', data['end_date'])]
         if data['from_locations']:
-            dom_shipment.append(('from_location' , 'in', data['from_locations']))
+            dom_shipment.append(
+                ('from_location', 'in', data['from_locations']))
         if data['to_locations']:
-            dom_shipment.append(('to_location' , 'in', data['to_locations']))
+            dom_shipment.append(('to_location', 'in', data['to_locations']))
 
         fields_names = ['id']
         shipments = ModelShipment.search_read(dom_shipment,
                                               fields_names=fields_names,
-                                              order=[('effective_date', 'ASC')]
-                                              )
+                                              order=[('effective_date', 'ASC')
+                                                     ])
         shipments_id = [model + ',' + str(sh['id']) for sh in shipments]
         fields_names = [
-            'product.account_category.name', 'product.name', 'product.cost_price',
-            'quantity', 'to_location.name', 'from_location.name', 'shipment.reference',
-            'effective_date', 'shipment.number', 'unit_price'
+            'product.account_category.name', 'product.name',
+            'product.cost_price', 'quantity', 'to_location.name',
+            'from_location.name', 'shipment.reference', 'effective_date',
+            'shipment.number', 'unit_price'
         ]
-        fields = ModelShipment.fields_get(fields_names=['operation_center', 'customer', 'supplier', 'incoming_moves'])
+        fields = ModelShipment.fields_get(fields_names=[
+            'operation_center', 'customer', 'supplier', 'incoming_moves'
+        ])
         if 'operation_center' in fields.keys():
             fields_names.append('shipment.operation_center.rec_name')
 
@@ -134,11 +144,10 @@ class ShipmentDetailedReport(metaclass=PoolMeta):
         elif type_shipment_ == 'out':
             fields_names.append('shipment.customer.name')
 
-        moves = Move.search_read(
-            ('shipment', 'in', shipments_id),
-            fields_names=fields_names,
-            order=[('to_location', 'DESC'), ('create_date', 'ASC')]
-        )
+        moves = Move.search_read(('shipment', 'in', shipments_id),
+                                 fields_names=fields_names,
+                                 order=[('to_location', 'DESC'),
+                                        ('create_date', 'ASC')])
 
         dgetter = itemgetter('product.', 'quantity')
         product_browse = Product.browse
@@ -158,7 +167,7 @@ class ShipmentDetailedReport(metaclass=PoolMeta):
                 party = m['shipment.']['customer.']['name']
             else:
                 party = ''
-            
+
             category = product.get('account_category.', '')
             if category:
                 category = category['name']
@@ -173,8 +182,8 @@ class ShipmentDetailedReport(metaclass=PoolMeta):
                 'cost_price': cost_price,
                 'category': category,
                 'category_ad': category_ad,
-                'cost_base': Decimal(str(round(float(cost_price) * quantity, 2))),
-
+                'cost_base':
+                Decimal(str(round(float(cost_price) * quantity, 2))),
             }
             try:
                 value['cost_unit_w_tax'] = float(product_.cost_price_taxed)
@@ -278,7 +287,6 @@ class ShipmentInternal(metaclass=PoolMeta):
             if idt:
                 Config.update_exportado_list(idt, exportado)
         print('FINISH import_tecnocarnes')
-        
 
     @classmethod
     def create_account_move(cls, shipments):
@@ -298,11 +306,13 @@ class ShipmentInternal(metaclass=PoolMeta):
 
         configuration = Configuration(1)
         if not configuration.stock_journal:
-            raise UserError(gettext(
-                'account_stock_latin.msg_missing_journal_stock_configuration'
-            ))
+            raise UserError(
+                gettext(
+                    'account_stock_latin.msg_missing_journal_stock_configuration'
+                ))
         journal = configuration.stock_journal
-        period_id = Period.find(shipment.company.id, date=shipment.effective_date)
+        period_id = Period.find(shipment.company.id,
+                                date=shipment.effective_date)
 
         lines_to_create = []
         moves_error = []
@@ -315,7 +325,8 @@ class ShipmentInternal(metaclass=PoolMeta):
                     party = None
 
                 cost_price = Uom.compute_price(move.product.default_uom,
-                    move.product.cost_price, move.uom)
+                                               move.product.cost_price,
+                                               move.uom)
                 amount = shipment.company.currency.round(
                     Decimal(str(move.quantity)) * cost_price)
                 line_debit = {
@@ -327,16 +338,17 @@ class ShipmentInternal(metaclass=PoolMeta):
                 }
                 op = True if hasattr(shipment, 'operation_center') else False
                 if op:
-                    line_debit.update({'operation_center': shipment.operation_center})
+                    line_debit.update(
+                        {'operation_center': shipment.operation_center})
 
                 if shipment.analytic_account and account_debit.type.statement != 'balance':
                     line_analytic = {
                         'account': shipment.analytic_account,
                         'debit': amount,
                         'credit': Decimal(0)
-                        }
-                    line_debit['analytic_lines'] = [
-                        ('create', [line_analytic])]
+                    }
+                    line_debit['analytic_lines'] = [('create', [line_analytic])
+                                                    ]
                 lines_to_create.append(line_debit)
 
                 account_credit = move.product.account_stock_used
@@ -356,11 +368,11 @@ class ShipmentInternal(metaclass=PoolMeta):
                 lines_to_create.append(line_credit)
             except Exception as e:
                 print(e)
-                moves_error.append(['error:', move.product.name, shipment.number])
-                raise UserError(gettext(
-                    'account_stock_latin.msg_missing_account_stock',
-                    product=move.product.name
-                ))
+                moves_error.append(
+                    ['error:', move.product.name, shipment.number])
+                raise UserError(
+                    gettext('account_stock_latin.msg_missing_account_stock',
+                            product=move.product.name))
         if moves_error:
             return None
         account_move = {
@@ -372,6 +384,7 @@ class ShipmentInternal(metaclass=PoolMeta):
             'lines': [('create', lines_to_create)]
         }
         return account_move
+
 
 class ModifyCostPrice(metaclass=PoolMeta):
     "Modify Cost Price"
@@ -393,10 +406,8 @@ class ModifyCostPrice(metaclass=PoolMeta):
                 revision.product = product
                 revision.template = product.template
                 revisions.append(revision)
-                if ((
-                            product.cost_price_method == 'fixed'
-                            and revision.date == today)
-                        or product.type == 'service'):
+                if ((product.cost_price_method == 'fixed'
+                     and revision.date == today) or product.type == 'service'):
                     cost = revision.get_cost_price(product.cost_price)
                     costs[cost].append(product)
                     records.remove(product)
@@ -406,9 +417,8 @@ class ModifyCostPrice(metaclass=PoolMeta):
                 revision = self.get_revision(Revision)
                 revision.template = template
                 revisions.append(revision)
-                if ((
-                            template.cost_price_method == 'fixed'
-                            and revision.date == today)
+                if ((template.cost_price_method == 'fixed'
+                     and revision.date == today)
                         or template.type == 'service'):
                     for product in template.products:
                         cost = revision.get_cost_price(product.cost_price)
@@ -430,25 +440,23 @@ class ModifyCostPrice(metaclass=PoolMeta):
             start = min((r.date for r in revisions), default=None)
             self.model.recompute_cost_price(records, start=start)
         return 'end'
-    
 
 
 class MoveCDT(metaclass=PoolMeta):
     "Stock Move"
     __name__ = 'stock.move'
 
-
     def set_average_cost(self):
         Product = Pool().get('product.product')
         AverageCost = Pool().get('product.average_cost')
         Revision = Pool().get('product.cost_price.revision')
         revision = {
-                    "company": 1,
-                    "product": self.product.id,
-                    "template": self.product.template.id,
-                    "cost_price": self.product.cost_price,
-                    "date": self.effective_date,
-                }
+            "company": 1,
+            "product": self.product.id,
+            "template": self.product.template.id,
+            "cost_price": self.product.cost_price,
+            "date": self.effective_date,
+        }
         data = {
             "stock_move": self.id,
             "product": self.product.id,
@@ -459,11 +467,9 @@ class MoveCDT(metaclass=PoolMeta):
         AverageCost.create([data])
         Product.recompute_cost_price([self.product], start=self.effective_date)
 
-
     @classmethod
     def _get_origin(cls):
         return super(MoveCDT, cls)._get_origin() + ['production']
-
 
     def _get_account_stock_move_lines(self, type_):
         '''
@@ -476,23 +482,22 @@ class MoveCDT(metaclass=PoolMeta):
             'wrong type'
 
         move_line = AccountMoveLine()
-        if ((
-                    type_.endswith('supplier')
-                    or type_ in {'in_production', 'in_warehouse'})
+        if ((type_.endswith('supplier')
+             or type_ in {'in_production', 'in_warehouse'})
                 and self.product.cost_price_method != 'fixed'):
             unit_price = self.unit_price_company
         else:
             unit_price = self.cost_price
-        unit_price = Uom.compute_price(self.product.default_uom,
-            unit_price, self.uom)
+        unit_price = Uom.compute_price(self.product.default_uom, unit_price,
+                                       self.uom)
         amount = self.company.currency.round(
-                Decimal(str(self.quantity)) * unit_price)
-        
+            Decimal(str(self.quantity)) * unit_price)
+
         account = self.product.account_expense_used
 
         if self.product.template.salable:
             account = self.product.account_cogs_used
-        
+
         if type_.startswith('in_'):
             move_line.debit = Decimal('0.0')
             move_line.credit = amount
@@ -511,9 +516,7 @@ class MoveCDT(metaclass=PoolMeta):
         '''
         pool = Pool()
         AccountMoveLine = pool.get('account.move.line')
-        move_line = AccountMoveLine(
-            account=self.product.account_stock_used,
-            )
+        move_line = AccountMoveLine(account=self.product.account_stock_used, )
         if not amount:
             return
         if amount >= Decimal('0.0'):
@@ -521,12 +524,10 @@ class MoveCDT(metaclass=PoolMeta):
             move_line.credit = amount
             move_line.party = self.company.party.id
         else:
-            move_line.debit = - amount
+            move_line.debit = -amount
             move_line.credit = Decimal('0.0')
             move_line.party = self.company.party.id
         return move_line
-    
-
 
     def _get_account_stock_move_type(self):
         '''
@@ -557,22 +558,21 @@ class MoveCDT(metaclass=PoolMeta):
         period = Period(period_id)
         if not period.fiscalyear.account_stock_method:
             return
-        
+
         type_ = self._get_account_stock_move_type()
         if not type_:
             return
-        with Transaction().set_context(
-                company=self.company.id, date=date):
+        with Transaction().set_context(company=self.company.id, date=date):
             if type_ == 'supplier_customer':
                 account_move_lines = self._get_account_stock_move_lines(
                     'in_supplier')
-                account_move_lines.extend(self._get_account_stock_move_lines(
-                        'out_customer'))
+                account_move_lines.extend(
+                    self._get_account_stock_move_lines('out_customer'))
             elif type_ == 'customer_supplier':
                 account_move_lines = self._get_account_stock_move_lines(
                     'in_customer')
-                account_move_lines.extend(self._get_account_stock_move_lines(
-                        'out_supplier'))
+                account_move_lines.extend(
+                    self._get_account_stock_move_lines('out_supplier'))
             else:
                 account_move_lines = self._get_account_stock_move_lines(type_)
 
@@ -586,17 +586,16 @@ class MoveCDT(metaclass=PoolMeta):
         if move_line:
             account_move_lines.append(move_line)
 
-
         account_configuration = AccountConfiguration(1)
-        journal = account_configuration.get_multivalue(
-            'stock_journal', company=self.company.id)
+        journal = account_configuration.get_multivalue('stock_journal',
+                                                       company=self.company.id)
         return AccountMove(
             journal=journal,
             period=period_id,
             date=date,
             origin=self,
             lines=account_move_lines,
-            )
+        )
 
     @classmethod
     @ModelView.button
@@ -612,3 +611,326 @@ class MoveCDT(metaclass=PoolMeta):
                 account_moves.append(account_move)
         AccountMove.save(account_moves)
         AccountMove.post(account_moves)
+
+
+class WarehouseKardexStockStartCds(ModelView):
+    'Warehouse Kardex Stock Start'
+    __name__ = 'stock_co.warehouse_kardex_cds_stock.start'
+    company = fields.Many2One('company.company', 'Company', required=True)
+
+    from_date = fields.Date('From Date', required=True)
+    to_date = fields.Date('To Date', required=True)
+    categories = fields.Many2Many('product.category', None, None, 'Categories')
+
+    locations = fields.Many2Many('stock.location',
+                                 None,
+                                 None,
+                                 "Location",
+                                 domain=[('type', 'in',
+                                          ['warehouse', 'storage']),
+                                         ('active', '=', True)],
+                                 required=True)
+
+    detail_by_product = fields.Boolean('Detail By Product')
+
+    products = fields.Many2Many('product.product',
+                                None,
+                                None,
+                                'Products',
+                                domain=[
+                                    ('active', '=', True),
+                                    ('template.active', '=', True),
+                                    ('type', '=', 'goods'),
+                                    ('consumable', '=', False),
+                                    ('quantity', '!=', 0),
+                                ],
+                                states={
+                                    'required':
+                                    Bool(Eval('detail_by_product')),
+                                    'invisible':
+                                    ~Bool(Eval('detail_by_product'))
+                                },
+                                depends=['detail_by_product'])
+
+    @staticmethod
+    def default_company():
+        return Transaction().context.get('company')
+
+    @staticmethod
+    def default_to_date():
+        Date_ = Pool().get('ir.date')
+        return Date_.today()
+
+
+class WarehouseKardexStockCds(Wizard):
+    'Warehouse Kardex Stock'
+    __name__ = 'stock_co.warehouse_kardex_cds_stock'
+    start = StateView('stock_co.warehouse_kardex_cds_stock.start',
+                      'conector.warehouse_kardex_stock_start_cds_view_form', [
+                          Button('Cancel', 'end', 'tryton-cancel'),
+                          Button('Print', 'print_', 'tryton-ok', default=True),
+                      ])
+    print_ = StateReport('stock_co.warehouse_kardex_cds_stock.report')
+
+    def do_print_(self, action):
+        data = {
+            'company': self.start.company.id,
+            'from_date': self.start.from_date,
+            'to_date': self.start.to_date,
+            'detail_by_product': self.start.detail_by_product,
+            'categories': [l.id for l in self.start.categories],
+            'locations': [l.id for l in self.start.locations],
+            'products': [l.id for l in self.start.products],
+        }
+        return action, data
+
+
+class WarehouseCdsKardexReport(Report):
+    'Warehouse Kardex Report'
+    __name__ = 'stock_co.warehouse_kardex_cds_stock.report'
+
+    @classmethod
+    def get_context(cls, records, header, data):
+        """Function that take context of report and import it"""
+        report_context = super().get_context(records, header, data)
+
+        pool = Pool()
+        inventories = pool.get('stock.inventory')
+        company = pool.get('company.company')
+        product = pool.get('product.product')
+        location = pool.get('stock.location')
+        stock_move = pool.get('stock.move')
+
+        wh_name = ""
+        products = {}
+        init_date = data['from_date']
+        end_date = data['to_date']
+
+        warehouses = location.browse(data['locations'])
+        id_locations = data['locations']
+        tup_locations = tuple(id_locations)
+        detail_by_product = data['detail_by_product']
+
+        dom_inventory = [
+            ('OR', ('state', '=', "done"), ('state', '=', "pre_count")),
+            ('date', '>=', init_date),
+            ('date', '<=', end_date),
+            ('location', 'in', tup_locations),
+        ]
+        inventory = inventories.search(dom_inventory)
+
+        dom_products = [
+            ('active', '=', True),
+            ('template.active', '=', True),
+            ('type', '=', 'goods'),
+            ('consumable', '=', False),
+        ]
+        if data['categories']:
+            dom_products.append([
+                'AND',
+                [
+                    'OR',
+                    [
+                        ('account_category', 'in', data['categories']),
+                    ],
+                    [
+                        ('categories', 'in', data['categories']),
+                    ],
+                ]
+            ])
+
+        stock_context_start = {
+            'stock_date_end': (data['from_date'] - timedelta(1)),
+            'locations': id_locations,
+        }
+        stock_context_end = {
+            'stock_date_end': data['to_date'],
+            'locations': id_locations,
+        }
+        fields_names = ['code', 'name', 'quantity']
+
+        if not detail_by_product:
+            with Transaction().set_context(stock_context_start):
+                products_start = product.search_read(dom_products,
+                                                     fields_names=fields_names)
+            if products_start:
+                for product in products_start:
+                    cls.set_value(product, 'start', products)
+                    moves = {}
+                    dom_moves = [('product', '=', product["id"]),
+                                 ('OR', ('state', '=', "done"), ('state', '=',
+                                                                 "assigned")),
+                                 ('effective_date', '>=', init_date),
+                                 ('effective_date', '<=', end_date),
+                                 ('OR', ('to_location', 'in', tup_locations),
+                                  ('from_location', 'in', tup_locations))]
+
+                    moves = stock_move.search(dom_moves)
+                    if moves:
+                        cls.set_moves(product, moves, products, tup_locations)
+            with Transaction().set_context(stock_context_end):
+                products_end = product.search_read(dom_products,
+                                                   fields_names=fields_names)
+            if products_end:
+                for product in products_end:
+                    cls.set_value(product, 'end', products)
+                if inventory:
+                    for product in products_end:
+                        cls.set_inventory(product, inventory, products, "end")
+        else:
+            for prod in data["products"]:
+                dom_products = [
+                    ('active', '=', True),
+                    ('template.active', '=', True),
+                    ('type', '=', 'goods'),
+                    ('consumable', '=', False),
+                    ('id', '=', prod),
+                ]
+                with Transaction().set_context(stock_context_start):
+                    products_start = product.search_read(
+                        dom_products, fields_names=fields_names)
+
+                with Transaction().set_context(stock_context_end):
+                    products_end = product.search_read(
+                        dom_products, fields_names=fields_names)
+
+                if products_start:
+                    for product in products_start:
+                        cls.set_value(product, 'start', products)
+                        moves = {}
+                        dom_moves = [('product', '=', product["id"]),
+                                     ('state', 'in', ['done', 'assigned']),
+                                     ('effective_date', '>=', init_date),
+                                     ('effective_date', '<=', end_date),
+                                     ('OR', ('to_location', 'in',
+                                             tup_locations),
+                                      ('from_location', 'in', tup_locations))]
+                        moves = stock_move.search(dom_moves)
+                        if moves:
+                            cls.set_moves(product, moves, products,
+                                          tup_locations)
+                if products_end:
+                    for product in products_end:
+                        cls.set_value(product, 'end', products)
+                    if inventory:
+                        for product in products_end:
+                            cls.set_inventory(product, inventory, products,
+                                              "end")
+
+        if len(warehouses) > 1:
+            for warehouse in warehouses:
+                wh_name += (warehouse.name + ' | ')
+        else:
+            wh_name = warehouses[0].name
+        report_context['products'] = products.values()
+        report_context['warehouse'] = wh_name
+        report_context['company'] = company(data['company'])
+        return report_context
+
+    @classmethod
+    def set_value(cls, product, key, products):
+        """Function that update list of data by report"""
+        pool = Pool()
+        id_product = int(product["id"])
+        product_template = pool.get('product.template')
+        product_oum = product_template.search(["id", "=", id_product])
+        uom_product = ""
+
+        if product_oum:
+            uom_product = product_oum[0].default_uom.name
+
+        defaults = {
+            'name': "",
+            'code': "",
+            'udm': "",
+            'start': 0,
+            'input': 0,
+            'output': 0,
+            'end': 0,
+            'inventory': 0,
+            'difference': 0,
+            'difference_porcent': "",
+            'line_product': {
+                'input': 0,
+                'output': 0,
+            },
+            'detail_by_product': False
+        }
+
+        if id_product not in products:
+            products[id_product] = copy.deepcopy(defaults)
+
+        if key == "start":
+            products[id_product].update({key: product['quantity']})
+
+        if key == "end":
+            move_quantity = products[product['id']]["end"]
+            new_quantity = move_quantity + product['quantity']
+            products[id_product].update({key: new_quantity})
+
+        products[id_product].update({
+            'code': product['code'],
+            'name': product['name'],
+            'udm': uom_product
+        })
+
+    @classmethod
+    def set_moves(cls, product, moves, products, tup_locations):
+        """Function that update stock moves by list of data by report"""
+
+        moves_in = 0
+        moves_out = 0
+
+        for move in moves:
+            if move.to_location.id in tup_locations:
+                moves_in += move.quantity
+                if move.state == "assigned":
+                    move_quantity = products[product['id']]["end"]
+                    new_quantity = move_quantity + move.quantity
+                    products[product['id']].update({"end": new_quantity})
+            else:
+                moves_out += move.quantity
+                if move.state == "assigned":
+                    move_quantity = products[product['id']]["end"]
+                    new_quantity = move_quantity - move.quantity
+                    products[product['id']].update({"end": new_quantity})
+
+        products[product['id']].update({"input": moves_in})
+        products[product['id']].update({"output": moves_out})
+
+    @classmethod
+    def set_inventory(cls, product, inventories, products, key):
+        """function that compare data info with physic inventory"""
+
+        pool = Pool()
+        stock_inventory_line = pool.get('stock.inventory.line')
+
+        for inventory in inventories:
+            id_inventory = inventory.id
+            dom_inventory = [('product', '=', product["id"]),
+                             ('inventory', '=', id_inventory)]
+            inventory_lines = stock_inventory_line.search(dom_inventory)
+            quantity = 0
+            inventory_quantity = 0
+            difference = 0
+            difference_porcent = Decimal(0)
+
+            if inventory_lines:
+                quantity = inventory_lines[0].quantity
+                products[product['id']].update({"inventory": quantity})
+
+            if key == "end":
+                final_quantity = abs(products[product['id']]['end'])
+                inventory_quantity = products[product['id']]['inventory']
+
+                if inventory_quantity:
+                    inventory_quantity = abs(inventory_quantity)
+                    difference = final_quantity - inventory_quantity
+                    difference_porcent = round(
+                        ((final_quantity - inventory_quantity) /
+                         inventory_quantity) * 100)
+                    difference_porcent = f"{difference_porcent}%"
+
+                products[product['id']].update({"difference": difference})
+                products[product['id']].update(
+                    {"difference_porcent": difference_porcent})

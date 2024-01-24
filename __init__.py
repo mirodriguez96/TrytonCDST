@@ -1,3 +1,5 @@
+"""--------INIT MODULE---------"""
+
 from trytond.pool import Pool
 from . import conector
 from . import party
@@ -28,6 +30,7 @@ from . import permissions
 
 
 def register():
+    """Function that register model view, wizard and reports with pool"""
     Pool.register(account.Account,
                   account.Move,
                   account.MoveLine,
@@ -47,6 +50,7 @@ def register():
                   sale_device.Journal,
                   stock.Location,
                   stock.ShipmentInternal,
+                  stock.WarehouseKardexStockStartCds,
                   configuration.Configuration,
                   voucher.Voucher,
                   voucher.MultiRevenue,
@@ -153,6 +157,7 @@ def register():
                   stock.ModifyCostPrice,
                   wiz.GroupDatafonoLines,
                   tax.TaxesConsolidation,
+                  stock.WarehouseKardexStockCds,
                   module='conector',
                   type_='wizard')
 
@@ -166,6 +171,7 @@ def register():
                   payment_bank.PaymentBankGroupReport,
                   payment_bank.BankReportBancolombia,
                   stock.ShipmentDetailedReport,
+                  stock.WarehouseCdsKardexReport,
                   account.AuxiliaryBookCDS,
                   payroll.StaffAccessReport,
                   account.IncomeStatementReport,
