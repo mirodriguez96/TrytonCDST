@@ -665,13 +665,13 @@ class WarehouseKardexStockStartCds(ModelView):
     categories = fields.Many2Many('product.category', None, None, 'Categories')
 
     locations = fields.Many2Many('stock.location',
-                                None,
-                                None,
-                                "Location",
-                                domain=[('type', 'in',
-                                         ['warehouse', 'storage']),
-                                        ('active', '=', True)],
-                                required=True)
+                                 None,
+                                 None,
+                                 "Location",
+                                 domain=[('type', 'in',
+                                          ['warehouse', 'storage']),
+                                         ('active', '=', True)],
+                                 required=True)
 
     detail_by_product = fields.Boolean('Detail By Product')
 
@@ -733,32 +733,33 @@ class WarehouseCdsKardexReport(Report):
 
     @classmethod
     def get_context(cls, records, header, data):
+        """Function that take context of report and import it"""
         report_context = super().get_context(records, header, data)
 
         pool = Pool()
-        Inventory = pool.get('stock.inventory')
-        Company = pool.get('company.company')
-        Product = pool.get('product.product')
-        Location = pool.get('stock.location')
-        Moves = pool.get('stock.move')
+        inventories = pool.get('stock.inventory')
+        company = pool.get('company.company')
+        product = pool.get('product.product')
+        location = pool.get('stock.location')
+        stock_move = pool.get('stock.move')
 
         wh_name = ""
         products = {}
         init_date = data['from_date']
         end_date = data['to_date']
 
-        warehouses = Location.browse(data['locations'])
+        warehouses = location.browse(data['locations'])
         id_locations = data['locations']
         tup_locations = tuple(id_locations)
         detail_by_product = data['detail_by_product']
 
-        dom_Inventory = [
+        dom_inventory = [
             ('OR', ('state', '=', "done"), ('state', '=', "pre_count")),
             ('date', '>=', init_date),
             ('date', '<=', end_date),
             ('location', 'in', tup_locations),
         ]
-        inventory = Inventory.search(dom_Inventory)
+        inventory = inventories.search(dom_inventory)
 
         dom_products = [
             ('active', '=', True),
@@ -792,7 +793,7 @@ class WarehouseCdsKardexReport(Report):
 
         if not detail_by_product:
             with Transaction().set_context(stock_context_start):
-                products_start = Product.search_read(dom_products,
+                products_start = product.search_read(dom_products,
                                                      fields_names=fields_names)
             if products_start:
                 for product in products_start:
@@ -806,11 +807,11 @@ class WarehouseCdsKardexReport(Report):
                                  ('OR', ('to_location', 'in', tup_locations),
                                   ('from_location', 'in', tup_locations))]
 
-                    moves = Moves.search(dom_moves)
+                    moves = stock_move.search(dom_moves)
                     if moves:
                         cls.set_moves(product, moves, products, tup_locations)
             with Transaction().set_context(stock_context_end):
-                products_end = Product.search_read(dom_products,
+                products_end = product.search_read(dom_products,
                                                    fields_names=fields_names)
             if products_end:
                 for product in products_end:
@@ -828,11 +829,11 @@ class WarehouseCdsKardexReport(Report):
                     ('id', '=', prod),
                 ]
                 with Transaction().set_context(stock_context_start):
-                    products_start = Product.search_read(
+                    products_start = product.search_read(
                         dom_products, fields_names=fields_names)
 
                 with Transaction().set_context(stock_context_end):
-                    products_end = Product.search_read(
+                    products_end = product.search_read(
                         dom_products, fields_names=fields_names)
 
                 if products_start:
@@ -846,7 +847,7 @@ class WarehouseCdsKardexReport(Report):
                                      ('OR', ('to_location', 'in',
                                              tup_locations),
                                       ('from_location', 'in', tup_locations))]
-                        moves = Moves.search(dom_moves)
+                        moves = stock_move.search(dom_moves)
                         if moves:
                             cls.set_moves(product, moves, products,
                                           tup_locations)
@@ -865,15 +866,16 @@ class WarehouseCdsKardexReport(Report):
             wh_name = warehouses[0].name
         report_context['products'] = products.values()
         report_context['warehouse'] = wh_name
-        report_context['company'] = Company(data['company'])
+        report_context['company'] = company(data['company'])
         return report_context
 
     @classmethod
     def set_value(cls, product, key, products):
+        """Function that update list of data by report"""
         pool = Pool()
         id_product = int(product["id"])
-        Product = pool.get('product.template')
-        product_oum = Product.search(["id", "=", id_product])
+        product_template = pool.get('product.template')
+        product_oum = product_template.search(["id", "=", id_product])
         uom_product = ""
 
         if product_oum:
@@ -916,6 +918,8 @@ class WarehouseCdsKardexReport(Report):
 
     @classmethod
     def set_moves(cls, product, moves, products, tup_locations):
+        """Function that update stock moves by list of data by report"""
+
         moves_in = 0
         moves_out = 0
 
@@ -938,14 +942,16 @@ class WarehouseCdsKardexReport(Report):
 
     @classmethod
     def set_inventory(cls, product, inventories, products, key):
+        """function that compare data info with physic inventory"""
+
         pool = Pool()
-        InventoryLines = pool.get('stock.inventory.line')
+        stock_inventory_line = pool.get('stock.inventory.line')
 
         for inventory in inventories:
             id_inventory = inventory.id
             dom_inventory = [('product', '=', product["id"]),
                              ('inventory', '=', id_inventory)]
-            inventory_lines = InventoryLines.search(dom_inventory)
+            inventory_lines = stock_inventory_line.search(dom_inventory)
             quantity = 0
             inventory_quantity = 0
             difference = 0
