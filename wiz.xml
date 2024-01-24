@@ -32,7 +32,20 @@
             <field name="model">account.invoice,-1</field>
             <field name="action" ref="act_update_invoice_tecno"/>
         </record>
+
+        <record model="ir.ui.view" id="validated_identity_invoice_view_form">
+            <field name="model">delete.invoice.wizard.start</field>
+            <field name="type">form</field>
+            <field name="name">validated_identity_invoice_form</field>
+        </record>
+
+
+
         <!--Asistente para eliminar los voucher importados de TecnoCarnes-->
+        <!-- ############################# -->
+        <!-- # Validador de identificacion # -->
+        <!-- ############################# -->
+
         <record model="ir.action.wizard" id="act_delete_voucher_tecno">
             <field name="name">Delete voucher imported</field>
             <field name="wiz_name">account.voucher.delete_voucher_tecno</field>
@@ -42,6 +55,15 @@
             <field name="model">account.voucher,-1</field>
             <field name="action" ref="act_delete_voucher_tecno"/>
         </record>
+        
+        <record model="ir.ui.view" id="validated_identity_view_form">
+            <field name="model">delete.voucher.wizard.start</field>
+            <field name="type">form</field>
+            <field name="name">validated_identity_form</field>
+        </record>
+
+
+
         <!--Asistente para forzar los voucher a borrador-->
         <record model="ir.action.wizard" id="act_force_draft_voucher">
             <field name="name">Force draft voucher</field>
@@ -122,6 +144,13 @@
             <field name="model">account.multirevenue,-1</field>
             <field name="action" ref="act_multirevenue_mark_rimport"/>
         </record>
+
+        <record model="ir.ui.view" id="validated_identity_multi_view_form">
+            <field name="model">delete.multi.wizard.start</field>
+            <field name="type">form</field>
+            <field name="name">validated_identity_multi_form</field>
+        </record>
+
         <!--Asistente para desconciliar los asientos creados por los comprobantes creados del multi-ingresos-->
         <record model="ir.action.wizard" id="act_unreconcilie_multi">
             <field name="name">Unreconcile multirevenue move</field>

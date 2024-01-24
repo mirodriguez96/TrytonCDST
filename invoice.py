@@ -10,6 +10,8 @@ from trytond.exceptions import UserError, UserWarning
 from sql import Table
 import sentry_sdk
 from sentry_sdk.integrations.trytond import TrytondWSGIIntegration
+from trytond.wizard import Wizard, StateTransition, StateView, Button
+
 
 # Configura Sentry con tu DSN
 sentry_sdk.init(
@@ -830,10 +832,41 @@ class InvoiceLine(metaclass=PoolMeta):
                 line.write([line], {'account': account_id})
 
 
+
+class UpdateInvoiceTecnoStart(ModelView):
+    'Delete Invoice Tecno Start'
+    __name__ = 'delete.invoice.wizard.start'
+    user = fields.Many2One('res.user', 'User', readonly=True)
+    validate = fields.Boolean('Validate', readonly=True, on_change_with='on_change_with_validate')
+
+    @staticmethod
+    def default_user():
+        return Transaction().user
+
+    
+    @fields.depends('user')
+    def on_change_with_validate(self):
+        pool = Pool()
+        user_permission = pool.get('conector.permissions')
+        permission = pool.get('res.user-ir.action.wizard')
+        action = user_permission.search([('user_permission', '=', Transaction().user)])
+        action = [i.id for i in action]
+        validated = permission.search([('user_permission', 'in', action),
+                                       ('wizard.wiz_name', '=', 'account.invoice.update_invoice_tecno'),])
+        if validated:
+            return True
+        return False
+    
 class UpdateInvoiceTecno(Wizard):
     'Update Invoice Tecno'
     __name__ = 'account.invoice.update_invoice_tecno'
-    start_state = 'do_submit'
+
+    start = StateView('delete.invoice.wizard.start',
+        'conector.validated_identity_invoice_view_form', [
+            Button('Cancel', 'end', 'tryton-cancel'),
+            Button('Confirm', 'do_submit', 'tryton-ok', default=True),
+            ])
+    
     do_submit = StateTransition()
 
     def transition_do_submit(self):
@@ -843,75 +876,94 @@ class UpdateInvoiceTecno(Wizard):
         Dunning = pool.get('account.dunning')
         logs = {}
         exceptions = []
-        Invoice = pool.get('account.invoice')
-        Sale = pool.get('sale.sale')
-        Purchase = pool.get('purchase.purchase')
-        Reclamacion = pool.get('account.dunning')
-        Mails = pool.get('account.dunning.email.log')
+        log_delete_note = []
+        log_delete_purchase = []
+        log_delete_sale = []
+        if self.start.validate:
+            Invoice = pool.get('account.invoice')
+            Sale = pool.get('sale.sale')
+            Purchase = pool.get('purchase.purchase')
+            Reclamacion = pool.get('account.dunning')
+            Mails = pool.get('account.dunning.email.log')
 
-        ids = Transaction().context['active_ids']
-        cursor = Transaction().connection.cursor()
-        to_delete_sales = []
-        to_delete_purchases = []
-        to_delete_note = []
-        for invoice in Invoice.browse(ids):
-            id_tecno = invoice.id_tecno or invoice.reference
-            if invoice.move.period.state == 'close':
-                exceptions.append(id_tecno)
-                logs[id_tecno] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
-                Y NO ES POSIBLE SU ELIMINACION O MODIFICACION"
-                continue
-            reclamacion = Reclamacion.search([('line.move.origin', '=', invoice)])
-            rec_name = invoice.rec_name
-            party_name = invoice.party.name
-            rec_party = rec_name+' de '+party_name
-            if invoice.number and '-' in invoice.number:
-                if invoice.id_tecno:
-                    sw = invoice.id_tecno.split('-')[0]
-                    if sw in _SW.keys():
-                        to_delete_note.append(invoice)
-                        continue
-                if invoice.type == 'out':
-                    sale = Sale.search([('number', '=', invoice.number)])
-                    if sale:
-                        to_delete_sales.append(sale[0])
-                elif invoice.type == 'in':
-                    purchase = Purchase.search([('number', '=', invoice.number)])
-                    if purchase:
-                        to_delete_purchases.append(purchase[0])
+            ids = Transaction().context['active_ids']
+            cursor = Transaction().connection.cursor()
+            to_delete_sales = []
+            to_delete_purchases = []
+            to_delete_note = []
+            for invoice in Invoice.browse(ids):
+                id_tecno = invoice.id_tecno or invoice.reference
+                if invoice.move.period.state == 'close':
+                    exceptions.append(id_tecno)
+                    logs[id_tecno] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
+                    Y NO ES POSIBLE SU ELIMINACION O MODIFICACION"
+                    continue
+                reclamacion = Reclamacion.search([('line.move.origin', '=', invoice)])
+                rec_name = invoice.rec_name
+                party_name = invoice.party.name
+                rec_party = rec_name+' de '+party_name
+                if invoice.number and '-' in invoice.number:
+                    if invoice.id_tecno:
+                        sw = invoice.id_tecno.split('-')[0]
+                        if sw in _SW.keys():
+                            to_delete_note.append(invoice)
+                            continue
+                    if invoice.type == 'out':
+                        sale = Sale.search([('number', '=', invoice.number)])
+                        if sale:
+                            to_delete_sales.append(sale[0])
+                    elif invoice.type == 'in':
+                        purchase = Purchase.search([('number', '=', invoice.number)])
+                        if purchase:
+                            to_delete_purchases.append(purchase[0])
 
-                if reclamacion:
-                    dunningTable = Dunning.__table__()
-                    emails_delete = Mails.search([('dunning', 'in', reclamacion)])
-                    if emails_delete:
-                        Mails.delete(emails_delete)
+                    if reclamacion:
+                        dunningTable = Dunning.__table__()
+                        emails_delete = Mails.search([('dunning', 'in', reclamacion)])
+                        if emails_delete:
+                            Mails.delete(emails_delete)
 
-                    if reclamacion[0].state != 'draft':
-                        cursor.execute(*dunningTable.update(
-                            columns=[
-                                dunningTable.state,
-                            ],
-                            values=["draft"],
+                        if reclamacion[0].state != 'draft':
+                            cursor.execute(*dunningTable.update(
+                                columns=[
+                                    dunningTable.state,
+                                ],
+                                values=["draft"],
+                                where=dunningTable.id == reclamacion[0].id)
+                            )
+
+                        cursor.execute(*dunningTable.delete(
                             where=dunningTable.id == reclamacion[0].id)
                         )
 
-                    cursor.execute(*dunningTable.delete(
-                        where=dunningTable.id == reclamacion[0].id)
-                    )
-
-            else:
-                raise UserError("Revisa el número de la factura (tipo-numero): ", rec_party)
-        if to_delete_sales:
-            Sale.delete_imported_sales(to_delete_sales)
-        if to_delete_purchases:
-            Purchase.delete_imported_purchases(to_delete_purchases)
-        if to_delete_note:
-            Invoice.delete_imported_notes(to_delete_note)
+                else:
+                    raise UserError("Revisa el número de la factura (tipo-numero): ", rec_party)
+            if to_delete_sales:
+                Sale.delete_imported_sales(to_delete_sales)
+                log_delete_sale = [i.number for i in to_delete_sales]
+            if to_delete_purchases:
+                Purchase.delete_imported_purchases(to_delete_purchases)
+                log_delete_purchase = [i.number for i in to_delete_purchases]
+            if to_delete_note:
+                Invoice.delete_imported_notes(to_delete_note)
+                log_delete_note = [i.number for i in to_delete_note]
             
-        if exceptions:
+            if exceptions:
+                actualizacion.add_logs(logs)
+                return 'end'
+            logs[self.start.user.name] = f"El usuario {self.start.user.name}, realizo la accion de eliminar y reimportar facturas \
+            eliminando los siguientes documentos \
+            ventas:{log_delete_sale},\
+            compras:{log_delete_purchase},\
+            notas:{log_delete_note}"
             actualizacion.add_logs(logs)
-            raise UserError(f"Los documentos {exceptions} no pueden ser eliminados porque su periodo se encuentra cerrado")
-        return 'end'
+            return 'end'
+
+        logs[self.start.user.name] = f"El usuario {self.start.user.name}, \
+        intento ejecutar el asistente de eliminar y reimportar facturas \
+        para el cual, no cuenta con los permisos requeridos"
+        actualizacion.add_logs(logs)
+        raise UserError(f"EL usuario {self.start.user.name}, no cuenta con los permisos para realizar esta accion")
 
     def end(self):
         return 'reload'

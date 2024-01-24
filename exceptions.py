@@ -42,3 +42,6 @@ class GeneratePayrollMoveError(UserError):
 
 class MissingTemplateEmailPayroll(ValidationError):
     pass
+
+class DuplicateUserPermission(ValidationError):
+    pass

@@ -24,7 +24,7 @@ from . import statement
 from . import payment_bank
 from . import loan
 from . import liquidation
-
+from . import permissions
 
 def register():
     Pool.register(
@@ -106,6 +106,8 @@ def register():
         stock.MoveCDT,
         product.Template,
         tax.TaxesConsolidationStart,
+        permissions.Permissions,
+        permissions.LinePermissions,
         module='conector', type_='model')
 
     Pool.register(
