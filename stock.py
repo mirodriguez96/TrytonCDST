@@ -236,15 +236,26 @@ class ShipmentInternal(metaclass=PoolMeta):
     id_tecno = fields.Char('Id TecnoCarnes', required=False)
 
     @classmethod
+    def __setup__(cls):
+        super(ShipmentInternal, cls).__setup__()
+        cls.from_location.domain = [
+            ('type', 'in', ['storage', 'lost_found']),
+            ('active', '=', True)
+        ]
+
+        cls.to_location.domain = [
+            ('type', 'in', ['storage', 'lost_found']),
+            ('active', '=', True)
+        ]
+
+
+    @classmethod
     def import_tecnocarnes(cls):
         print('RUN TRASLADOS INTERNOS')
         pool = Pool()
         Product = pool.get('product.product')
         Config = pool.get('conector.configuration')
         configuration = Config.get_configuration()
-        logs = {}
-        to_exception = []
-        id_ = 0
         if not configuration:
             return
         data = Config.get_documentos_traslados()
@@ -256,44 +267,7 @@ class ShipmentInternal(metaclass=PoolMeta):
 
         try:
             shipments = cls.create(result["tryton"].values())
-            # with Transaction().set_context(_skip_warnings=True):
             for shipment in shipments:
-            #     create_line = []
-            #     acomulate_lines = {}
-            #     validate = True
-            #     for productmove in shipment.outgoing_moves:
-                #     if not productmove.product.id_tecno:
-                #         msg = f"EXCEPCION: No se encontro id_tecno del producto {productmove.product.template.name}"
-                #         logs[productmove.product] = msg
-                #         to_exception.append(productmove.product)
-                #         continue
-                #     idTecno = int(productmove.product.id_tecno)
-
-                #     if idTecno in dictprodut.keys():
-                #         id_ = dictprodut[idTecno]['idresponsable']
-
-                #         producto = Product.search(['OR', ('id_tecno', '=', id_), ('code', '=', id_)])
-                #         if producto:
-                #             product, = producto
-                #             if productmove.product.default_uom.symbol == product.default_uom.symbol:
-                #                 productmove.product = product
-
-
-                #         productmove.save()
-                #     if productmove.product not in acomulate_lines:
-                #         acomulate_lines[productmove.product] = {
-                #             'line': productmove
-                #         }
-                        
-                #     amount = round(productmove.quantity,1)
-                #     if validate:
-                #         acomulate_lines[productmove.product]['line'].quantity = 0
-                #         validate = False
-                #     acomulate_lines[productmove.product]['line'].quantity += amount
-                #     acomulate_lines[productmove.product]['line'].quantity = round( acomulate_lines[productmove.product]['line'].quantity,3)
-                # for item in acomulate_lines.values():
-                #     create_line.append(item['line'])
-                # shipment.outgoing_moves = list(create_line)
                 shipment.save()
         except Exception as e:
             result["logs"]["try_except"] = str(e)
@@ -301,7 +275,6 @@ class ShipmentInternal(metaclass=PoolMeta):
             return
         actualizacion.add_logs(result["logs"])
         for exportado, idt in result["exportado"].items():
-            print(exportado,idt)
             if idt:
                 Config.update_exportado_list(idt, exportado)
         print('FINISH import_tecnocarnes')
@@ -561,26 +534,10 @@ class MoveCDT(metaclass=PoolMeta):
         '''
 
         type_ = (self.from_location.type, self.to_location.type)
-        if type_ in [('supplier', 'storage'), ('supplier', 'drop')]:
-            return 'in_supplier'
-        elif type_ in [('storage', 'supplier'), ('drop', 'supplier')]:
-            return 'out_supplier'
-        elif type_ in [('storage', 'customer'), ('drop', 'customer')]:
-            return 'out_customer'
-        elif type_ in [('customer', 'storage'), ('customer', 'drop')]:
-            return 'in_customer'
-        elif type_ == ('storage', 'lost_found'):
+        if type_ == ('storage', 'lost_found'):
             return 'out_lost_found'
         elif type_ == ('lost_found', 'storage'):
             return 'in_lost_found'
-        elif type_ == ('supplier', 'customer'):
-            return 'supplier_customer'
-        elif type_ == ('customer', 'supplier'):
-            return 'customer_supplier'
-        elif type_ == ('storage', 'production'):
-            return 'out_production'
-        elif type_ == ('production', 'storage'):
-            return 'in_production'
 
     def _get_account_stock_move(self):
         '''
