@@ -180,6 +180,7 @@ def register():
                   account.AuxiliaryBookCDS,
                   payroll.StaffAccessReport,
                   account.IncomeStatementReport,
+                  account.TrialBalanceDetailedCds,
                   production.ProductionDetailedReport,
                   payroll.PayrollIBCReport,
                   sale.SaleShopDetailedCDSReport,

@@ -11,11 +11,10 @@ except ImportError:
 from trytond.report import Report
 
 from sql import Column, Null, Literal, functions, Cast
-from sql.aggregate import Sum,Max, Min
+from sql.aggregate import Sum, Max, Min
 from sql.conditionals import Coalesce
 from collections import OrderedDict
 from sql.operators import Like, Between
-
 
 from trytond.model.exceptions import AccessError
 from trytond.i18n import gettext
@@ -24,50 +23,47 @@ from trytond.model import ModelView, fields, Workflow, ModelSQL
 from trytond.pyson import Eval, Or, If, Bool, Not
 from trytond.transaction import Transaction
 from trytond.tools import grouped_slice, reduce_ids, lstrip_wildcard
-from trytond.wizard import Wizard, StateView, StateAction, Button,StateReport, StateTransition
+from trytond.wizard import Wizard, StateView, StateAction, Button, StateReport, StateTransition
 from trytond.modules.stock.exceptions import PeriodCloseError
 from trytond.pool import Pool, PoolMeta
 
-TYPES_PRODUCT = [
-    ('no_consumable', 'No consumable'),
-    ('consumable', 'Consumable')
-]
+TYPES_PRODUCT = [('no_consumable', 'No consumable'),
+                 ('consumable', 'Consumable')]
 
 _ZERO = Decimal('0.0')
 
+
 def _get_structured_json_data(json_data):
-    data = [] 
+    data = []
     for i in json_data:
         date_json = list(i)
-        dic = dict(zip(date_json,date_json))
-        structured_json_body = {'reference': dic[date_json[0]] or "", 
-                                'credit': dic[date_json[1]] or 0, 
-                                'account': dic[date_json[2]] or "", 
-                                'debit': dic[date_json[3]] or 0, 
-                                'id': dic[date_json[4]] or "", 
-                                'description': dic[date_json[5]] or "", 
-                                'date': dic[date_json[6]] or "", 
-                                'party.': {
-                                    'name': dic[date_json[10]] or "", 
-                                    'id_number': dic[date_json[11]] or "", 
-                                    'id': dic[date_json[9]] or "", 
-                                           }, 
-                                'move.': {
-                                    'number': dic[date_json[7]] or "", 
-                                    'id': dic[date_json[8]] or ""
-                                }, 
-                                'move_origin.': {
-                                    'id': '', 
-                                    'rec_name': ''
-                                }
-                                }
-        
-        
+        dic = dict(zip(date_json, date_json))
+        structured_json_body = {
+            'reference': dic[date_json[0]] or "",
+            'credit': dic[date_json[1]] or 0,
+            'account': dic[date_json[2]] or "",
+            'debit': dic[date_json[3]] or 0,
+            'id': dic[date_json[4]] or "",
+            'description': dic[date_json[5]] or "",
+            'date': dic[date_json[6]] or "",
+            'party.': {
+                'name': dic[date_json[10]] or "",
+                'id_number': dic[date_json[11]] or "",
+                'id': dic[date_json[9]] or "",
+            },
+            'move.': {
+                'number': dic[date_json[7]] or "",
+                'id': dic[date_json[8]] or ""
+            },
+            'move_origin.': {
+                'id': '',
+                'rec_name': ''
+            }
+        }
+
         data.append(structured_json_body)
 
-
     return data
-
 
 
 class Account(metaclass=PoolMeta):
@@ -92,8 +88,10 @@ class Move(metaclass=PoolMeta):
 
     @classmethod
     def _get_origin(cls):
-        return super(Move, cls)._get_origin() + ['stock.move',
-            'product.product', 'product.template','production']
+        return super(Move, cls)._get_origin() + [
+            'stock.move', 'product.product', 'product.template', 'production'
+        ]
+
 
 class MoveLine(metaclass=PoolMeta):
     __name__ = 'account.move.line'
@@ -106,24 +104,26 @@ class MoveLine(metaclass=PoolMeta):
 class BalanceStockStart(ModelView):
     'Balance Stock Start'
     __name__ = 'account.fiscalyear.balance_stock.start'
-    journal = fields.Many2One(
-        'account.journal', "Journal", required=True)
-    fiscalyear = fields.Many2One(
-        'account.fiscalyear', "Fiscal Year", required=True,
-        domain=[
-            ('state', '=', 'open'),
-            ])
+    journal = fields.Many2One('account.journal', "Journal", required=True)
+    fiscalyear = fields.Many2One('account.fiscalyear',
+                                 "Fiscal Year",
+                                 required=True,
+                                 domain=[
+                                     ('state', '=', 'open'),
+                                 ])
     fiscalyear_start_date = fields.Function(
         fields.Date("Fiscal Year Start Date"),
         'on_change_with_fiscalyear_start_date')
     fiscalyear_end_date = fields.Function(
         fields.Date("Fiscal Year End Date"),
         'on_change_with_fiscalyear_end_date')
-    date = fields.Date("Date", required=True,
+    date = fields.Date(
+        "Date",
+        required=True,
         domain=[
             ('date', '>=', Eval('fiscalyear_start_date')),
             ('date', '<=', Eval('fiscalyear_end_date')),
-            ],
+        ],
         depends=['fiscalyear_start_date', 'fiscalyear_end_date'])
     type = fields.Selection(TYPES_PRODUCT, 'Type', required=True)
     # arbitrary_cost = fields.Boolean('Arbitrary cost')
@@ -153,29 +153,30 @@ class BalanceStockStart(ModelView):
 class BalanceStock(Wizard):
     'Balance Stock Move'
     __name__ = 'account.fiscalyear.balance_stock'
-    start = StateView('account.fiscalyear.balance_stock.start',
+    start = StateView(
+        'account.fiscalyear.balance_stock.start',
         'conector.balance_stock_start_view_form', [
             Button('Cancel', 'end', 'tryton-cancel'),
             Button('Create Move', 'balance', 'tryton-ok', default=True),
-            ])
+        ])
     balance = StateAction('account.act_move_form')
 
     def stock_balance_context(self):
         pool = Pool()
         Location = pool.get('stock.location')
         locations = Location.search([
-                ('type', '=', 'warehouse'),
-                ])
+            ('type', '=', 'warehouse'),
+        ])
         return {
             'stock_date_end': self.start.date,
             'locations': list(map(int, locations)),
             'with_childs': True,
-            }
+        }
 
     def product_domain(self):
         product_domain = [
             ('type', '=', 'goods'),
-            ]
+        ]
         if self.start.type == 'no_consumable':
             product_domain.append(('consumable', '=', False))
         else:
@@ -186,7 +187,7 @@ class BalanceStock(Wizard):
         return {
             'fiscalyear': self.start.fiscalyear.id,
             'date': self.start.date,
-            }
+        }
 
     # Funcion encargada de crear un asiento con las diferentes cuentas de inventario ajustadas a una fecha dada
     def create_move(self):
@@ -204,28 +205,32 @@ class BalanceStock(Wizard):
             with Transaction().set_context(self.stock_balance_context()):
                 for product in Product.search(self.product_domain()):
                     if not product.account_category:
-                        raise UserError('msg_error_balance_stock', f'{product} account_category_missing')
+                        raise UserError('msg_error_balance_stock',
+                                        f'{product} account_category_missing')
                     if not product.account_category.account_stock:
-                        raise UserError('msg_error_balance_stock', f'{product} account_stock_missing')
+                        raise UserError('msg_error_balance_stock',
+                                        f'{product} account_stock_missing')
                     stock_account = product.account_category.account_stock
                     cost_price = product.avg_cost_price
                     # if self.start.arbitrary_cost:
                     #     cost_price = Decimal(product.arbitrary_cost(self.start.date))
-                    balances[stock_account] += (Decimal(product.quantity) * cost_price) or Decimal(0)
+                    balances[stock_account] += (Decimal(product.quantity) *
+                                                cost_price) or Decimal(0)
                     stock_accounts.add(stock_account.id)
             current_balances = {}
             with Transaction().set_context(self.account_balance_context()):
                 for sub_accounts in grouped_slice(
                         Account.search([
-                                ('company', '=', self.start.fiscalyear.company.id),
-                                ('id', 'in', list(stock_accounts)),
-                                ])):
+                            ('company', '=', self.start.fiscalyear.company.id),
+                            ('id', 'in', list(stock_accounts)),
+                        ])):
                     for account in sub_accounts:
                         current_balances[account.id] = account.balance
             lines = []
             for stock_account in balances.keys():
                 currency = stock_account.company.currency
-                amount = currency.round(current_balances[stock_account.id] - balances[stock_account])
+                amount = currency.round(current_balances[stock_account.id] -
+                                        balances[stock_account])
                 if currency.is_zero(amount):
                     continue
                 line = Line()
@@ -262,19 +267,21 @@ class BalanceStock(Wizard):
         Period = pool.get('stock.period')
         Lang = pool.get('ir.lang')
         periods = Period.search([
-                ('company', '=', self.start.fiscalyear.company.id),
-                ('state', '=', 'closed'),
-                ('date', '>=', self.start.date),
-                ], limit=1)
+            ('company', '=', self.start.fiscalyear.company.id),
+            ('state', '=', 'closed'),
+            ('date', '>=', self.start.date),
+        ],
+                                limit=1)
         if not periods:
             lang = Lang.get()
             raise PeriodCloseError(
                 gettext('account_stock.msg_missing_closed_period',
-                    date=lang.strftime(self.start.date)))
+                        date=lang.strftime(self.start.date)))
         move = self.create_move()
         if not move:
             lang = Lang.get()
-            raise UserError('account_stock.msg_no_move', lang.strftime(self.start.date))
+            raise UserError('account_stock.msg_no_move',
+                            lang.strftime(self.start.date))
         action['res_id'] = [move.id]
         action['views'].reverse()
         return action, {}
@@ -283,27 +290,26 @@ class BalanceStock(Wizard):
 class AnalyticAccountEntry(metaclass=PoolMeta):
     'Analytic Account Entry'
     __name__ = 'analytic.account.entry'
-
     """
     Se hereda la función get_analytic_lines para pasarle la fecha efectiva
     del asiento, para que la línea analitica no tome por defecto Date.today()
     """
+
     def get_analytic_lines(self, line, date):
         if hasattr(line, 'move'):
             date = line.move.date or line.move.post_date
-        analytic_lines = super(AnalyticAccountEntry, self).get_analytic_lines(line, date)
+        analytic_lines = super(AnalyticAccountEntry,
+                               self).get_analytic_lines(line, date)
         return analytic_lines
 
 
 class AccountAsset(metaclass=PoolMeta):
     __name__ = 'account.asset'
-    
-    accumulated_depreciation = fields.Function(fields.Numeric(
-            "Accumulated depreciation",
-            digits=(16, Eval('currency_digits', 2)),
-            depends=['currency_digits']),
-        'get_depreciating_value')
 
+    accumulated_depreciation = fields.Function(
+        fields.Numeric("Accumulated depreciation",
+                       digits=(16, Eval('currency_digits', 2)),
+                       depends=['currency_digits']), 'get_depreciating_value')
 
     @classmethod
     def default_accumulated_depreciation(cls):
@@ -317,8 +323,10 @@ class AccountAsset(metaclass=PoolMeta):
         accountAsset = AccountAsset.__table__()
 
         where = accountAsset.asset == self.id
-        where &= accountAsset.move == accountAsset.select(Max(accountAsset.move), where= (accountAsset.asset == self.id))
-        select = accountAsset.select(accountAsset.accumulated_depreciation, where=where)
+        where &= accountAsset.move == accountAsset.select(
+            Max(accountAsset.move), where=(accountAsset.asset == self.id))
+        select = accountAsset.select(accountAsset.accumulated_depreciation,
+                                     where=where)
 
         cursor.execute(*select)
         response = cursor.fetchall()
@@ -332,49 +340,59 @@ class AccountAsset(metaclass=PoolMeta):
 class AuxiliaryBookStartCDS(ModelView):
     'Auxiliary Book Start'
     __name__ = 'account_col.auxiliary_book_cds.start'
-    fiscalyear = fields.Many2One('account.fiscalyear', 'Fiscal Year',
-        required=True)
-    start_period = fields.Many2One('account.period', 'Start Period',
-        domain=[
-            ('fiscalyear', '=', Eval('fiscalyear')),
-            ('start_date', '<=', (Eval('end_period'), 'start_date')),
-            ], depends=['fiscalyear', 'end_period'], required=True)
-    end_period = fields.Many2One('account.period', 'End Period',
-        domain=[
-            ('fiscalyear', '=', Eval('fiscalyear')),
-            ('start_date', '>=', (Eval('start_period'), 'start_date'))
-            ],
-        depends=['fiscalyear', 'start_period'], required=True)
-    start_account = fields.Many2One('account.account', 'Start Account',
-            domain=[
-                ('type', '!=', None),
-                ('code', '!=', None),
-            ])
-    end_account = fields.Many2One('account.account', 'End Account',
-            domain=[
-                ('type', '!=', None),
-                ('code', '!=', None),
-            ])
+    fiscalyear = fields.Many2One('account.fiscalyear',
+                                 'Fiscal Year',
+                                 required=True)
+    start_period = fields.Many2One('account.period',
+                                   'Start Period',
+                                   domain=[
+                                       ('fiscalyear', '=', Eval('fiscalyear')),
+                                       ('start_date', '<=',
+                                        (Eval('end_period'), 'start_date')),
+                                   ],
+                                   depends=['fiscalyear', 'end_period'],
+                                   required=True)
+    end_period = fields.Many2One('account.period',
+                                 'End Period',
+                                 domain=[
+                                     ('fiscalyear', '=', Eval('fiscalyear')),
+                                     ('start_date', '>=',
+                                      (Eval('start_period'), 'start_date'))
+                                 ],
+                                 depends=['fiscalyear', 'start_period'],
+                                 required=True)
+    start_account = fields.Many2One('account.account',
+                                    'Start Account',
+                                    domain=[
+                                        ('type', '!=', None),
+                                        ('code', '!=', None),
+                                    ])
+    end_account = fields.Many2One('account.account',
+                                  'End Account',
+                                  domain=[
+                                      ('type', '!=', None),
+                                      ('code', '!=', None),
+                                  ])
     start_code = fields.Char('Start Code Account')
     end_code = fields.Char('End Code Account')
-    party = fields.Many2One(
-        'party.party', "Party",
-        context={
-            'company': Eval('company', -1),
-            },
-        depends=['company'])
+    party = fields.Many2One('party.party',
+                            "Party",
+                            context={
+                                'company': Eval('company', -1),
+                            },
+                            depends=['company'])
     company = fields.Many2One('company.company', 'Company', required=True)
     posted = fields.Boolean('Posted Move', help='Show only posted move')
     colgaap = fields.Boolean('Colgaap')
     reference = fields.Char('Reference')
     empty_account = fields.Boolean('Empty Account',
-            help='With account without move')
+                                   help='With account without move')
 
     @staticmethod
     def default_fiscalyear():
         FiscalYear = Pool().get('account.fiscalyear')
-        return FiscalYear.find(
-            Transaction().context.get('company'), exception=False)
+        return FiscalYear.find(Transaction().context.get('company'),
+                               exception=False)
 
     @staticmethod
     def default_company():
@@ -397,12 +415,12 @@ class AuxiliaryBookStartCDS(ModelView):
 class PrintAuxiliaryBookCDS(Wizard):
     'Print Auxiliary Book'
     __name__ = 'account_col.auxiliary_book_print'
-    start = StateView('account_col.auxiliary_book_cds.start',
+    start = StateView(
+        'account_col.auxiliary_book_cds.start',
         'conector.print_auxiliary_book_start_view_form', [
             Button('Cancel', 'end', 'tryton-cancel'),
             Button('Print', 'print_', 'tryton-print', default=True),
-        ]
-    )
+        ])
     print_ = StateReport('account_col.auxiliary_book_cds.report')
 
     def _search_records(self):
@@ -458,14 +476,13 @@ class PrintAuxiliaryBookCDS(Wizard):
 class AuxiliaryBookCDS(Report):
     __name__ = 'account_col.auxiliary_book_cds.report'
 
-
     @classmethod
     def get_context(cls, records, header, data):
 
         start = timer()
         report_context = super().get_context(records, header, data)
         pool = Pool()
-        
+
         Account = pool.get('account.account')
         Move = pool.get('account.move')
         Line = pool.get('account.move.line')
@@ -488,17 +505,13 @@ class AuxiliaryBookCDS(Report):
         if data['start_account']:
             start_acc = Account(data['start_account'])
             start_code = start_acc.code
-            dom_accounts.append(
-                ('code', '>=', start_acc.code)
-            )
+            dom_accounts.append(('code', '>=', start_acc.code))
         end_code = None
         if data['end_account']:
             end_acc = Account(data['end_account'])
             end_code = end_acc.code
-            dom_accounts.append(
-                ('code', '<=', end_acc.code)
-            )
-        
+            dom_accounts.append(('code', '<=', end_acc.code))
+
         accounts = Account.search(dom_accounts, order=[('code', 'ASC')])
 
         # --------------------------------------------------------------
@@ -507,49 +520,50 @@ class AuxiliaryBookCDS(Report):
         if data['start_period']:
             start_period = Period(data['start_period'])
             start_periods = Period.search([
-                    ('fiscalyear', '=', data['fiscalyear']),
-                    ('end_date', '<=', start_period.start_date),
-                ])
+                ('fiscalyear', '=', data['fiscalyear']),
+                ('end_date', '<=', start_period.start_date),
+            ])
             start_period_ids += [p.id for p in start_periods]
             start_period_name = start_period.name
 
-        noSelectPerid =  Period.search([('fiscalyear', '<', data['fiscalyear'])])
+        noSelectPerid = Period.search([('fiscalyear', '<', data['fiscalyear'])
+                                       ])
         start_date = [p.id for p in noSelectPerid]
         # --------------------------------------------------------------
         end_period_ids = []
         if data['end_period']:
             end_period = Period(data['end_period'])
             end_periods = Period.search([
-                    ('fiscalyear', '=', data['fiscalyear']),
-                    ('end_date', '<=', end_period.start_date),
-                ])
+                ('fiscalyear', '=', data['fiscalyear']),
+                ('end_date', '<=', end_period.start_date),
+            ])
             if end_period not in end_periods:
                 end_periods.append(end_period)
             end_period_name = end_period.name
         else:
             end_periods = Period.search([
-                    ('fiscalyear', '=', data['fiscalyear']),
-                ])
+                ('fiscalyear', '=', data['fiscalyear']),
+            ])
         end_period_ids = [p.id for p in end_periods]
 
-
         party = None
+
         def get_party(account=None, party=None):
             # --------------------------------------------------------------
 
-            # Consulta para los saldos debitos y creeditos iniciales 
+            # Consulta para los saldos debitos y creeditos iniciales
             initial = ''
             date_initial = ''
             if noSelectPerid:
                 date_initial = start_date + start_period_ids
                 if data['start_period'] != start_date[0]:
-                    initial = str(data['start_period']-1)
+                    initial = str(data['start_period'] - 1)
                 else:
-                   initial = str(start_date[0])
-            else: 
+                    initial = str(start_date[0])
+            else:
                 date_initial = start_period_ids
                 initial = str(data['start_period'])
-            
+
             print(initial, date_initial)
             if account:
                 where = accountLine.account == account
@@ -561,39 +575,49 @@ class AuxiliaryBookCDS(Report):
                 where &= accountmove.state == 'posted'
 
             # Consulta para el balance inicial
-            select2 = accountLine.join(accountmove, 'LEFT', condition= (accountLine.move == accountmove.id)
-                    ).select(Sum(accountLine.credit), Sum(accountLine.debit), Sum(Coalesce(accountLine.debit,0) - Coalesce(accountLine.credit,0))
-                    ,where=where)
-
+            select2 = accountLine.join(
+                accountmove,
+                'LEFT',
+                condition=(accountLine.move == accountmove.id)).select(
+                    Sum(accountLine.credit),
+                    Sum(accountLine.debit),
+                    Sum(
+                        Coalesce(accountLine.debit, 0) -
+                        Coalesce(accountLine.credit, 0)),
+                    where=where)
 
             cursor.execute(*select2)
             result_start = cursor.fetchall()
-
 
             # initial = str(data['start_period']-1) if data['start_period'] and data['start_period'] != start_date[0]  else str(start_date[0])
             where &= accountmove.period == initial
             if data['posted']:
                 where &= accountmove.state == 'posted'
 
-            query = accountLine.join(accountmove, 'LEFT', condition= (accountLine.move == accountmove.id)
-                    ).select(Sum(accountLine.credit), Sum(accountLine.debit), Sum(Coalesce(accountLine.debit,0) - Coalesce(accountLine.credit,0))
-                    ,where=where)
+            query = accountLine.join(
+                accountmove,
+                'LEFT',
+                condition=(accountLine.move == accountmove.id)).select(
+                    Sum(accountLine.credit),
+                    Sum(accountLine.debit),
+                    Sum(
+                        Coalesce(accountLine.debit, 0) -
+                        Coalesce(accountLine.credit, 0)),
+                    where=where)
 
-                    
             cursor.execute(*query)
             initial_balance = cursor.fetchall()
             print(initial_balance)
             #retornamos la consulta con los saldos debitos, credito y el balance inicial, ademas, con la cuenta respectiva para asociarlos
             return initial_balance, result_start, account
 
-        with Transaction().set_context(
-                fiscalyear=data['fiscalyear'],
-                periods=start_period_ids,
-                party=data['party'],
-                posted=data['posted'],
-                colgaap=data['colgaap']):
+        with Transaction().set_context(fiscalyear=data['fiscalyear'],
+                                       periods=start_period_ids,
+                                       party=data['party'],
+                                       posted=data['posted'],
+                                       colgaap=data['colgaap']):
             start_accounts = Account.browse(accounts)
-        
+
         end1 = timer()
         delta1 = (end1 - start)
         id2start_account = {}
@@ -604,22 +628,28 @@ class AuxiliaryBookCDS(Report):
             #Evalua si el reporte fue filtrado por tercero o no, si lo esta ingresa a realiza la consulta del tercero por cada una de las cuentas seleccionadas
             if data['party'] != None:
                 party, = Party.search([('id', '=', data['party'])])
-                initial_balance, result_start, accountId = get_party(account=account.id, party=data['party']) # se obtiene los balances iniciales de los terceros con cada una de las cuentas
-                if (None in list(initial_balance[0])) or (None in list(result_start[0])):
+                initial_balance, result_start, accountId = get_party(
+                    account=account.id, party=data['party']
+                )  # se obtiene los balances iniciales de los terceros con cada una de las cuentas
+                if (None in list(initial_balance[0])) or (None in list(
+                        result_start[0])):
                     print('esta entrando aqui')
-                    accountBalance[accountId] = result_start[0][2] # En este diccionario se agrega cada saldos inciales asociado a cada una de las cuentas
-                    id2start_account[accountId].credit = initial_balance[0][0] or 0
-                    id2start_account[accountId].debit = initial_balance[0][1] or 0
-                    id2start_account[accountId].balance = result_start[0][2] or 0
+                    accountBalance[accountId] = result_start[0][
+                        2]  # En este diccionario se agrega cada saldos inciales asociado a cada una de las cuentas
+                    id2start_account[
+                        accountId].credit = initial_balance[0][0] or 0
+                    id2start_account[
+                        accountId].debit = initial_balance[0][1] or 0
+                    id2start_account[
+                        accountId].balance = result_start[0][2] or 0
 
         # --------------------------------------------------------------
 
-        with Transaction().set_context(
-                fiscalyear=data['fiscalyear'],
-                periods=end_period_ids,
-                party=data['party'],
-                posted=data['posted'],
-                colgaap=['colgaap']):
+        with Transaction().set_context(fiscalyear=data['fiscalyear'],
+                                       periods=end_period_ids,
+                                       party=data['party'],
+                                       posted=data['posted'],
+                                       colgaap=['colgaap']):
             end_accounts = Account.browse(accounts)
 
         end2 = timer()
@@ -628,27 +658,26 @@ class AuxiliaryBookCDS(Report):
         for account in end_accounts:
             id2end_account[account.id] = account
 
-
         if not data['empty_account']:
             accounts_ids = [a.id for a in accounts]
-            account2lines = dict(cls.get_lines(accounts,
-                end_periods, data['posted'], data['party'],
-                data['reference'], data['colgaap']))
+            account2lines = dict(
+                cls.get_lines(accounts, end_periods, data['posted'],
+                              data['party'], data['reference'],
+                              data['colgaap']))
 
             accounts_ = account2lines.keys()
-            with Transaction().set_context(
-                party=data['party'],
-                posted=data['posted'],
-                colgaap=['colgaap']):
-                accounts = Account.browse([a for a in accounts_ids if a in accounts_])
+            with Transaction().set_context(party=data['party'],
+                                           posted=data['posted'],
+                                           colgaap=['colgaap']):
+                accounts = Account.browse(
+                    [a for a in accounts_ids if a in accounts_])
 
         end3 = timer()
         delta3 = (end3 - end2)
-        
-        account_id2lines, result = cls.lines(accounts,
-            list(set(end_periods).difference(set(start_periods))),
+
+        account_id2lines, result = cls.lines(
+            accounts, list(set(end_periods).difference(set(start_periods))),
             data['posted'], data['party'], data['reference'], data['colgaap'])
-        
 
         if party != None:
             for start_account in accountBalance:
@@ -659,8 +688,8 @@ class AuxiliaryBookCDS(Report):
                     balance = accountBalance.get(start_account) or 0
                     id2end_account[start_account].credit = credit
                     id2end_account[start_account].debit = debit
-                    id2end_account[start_account].balance = (( debit - credit ) + balance)
-
+                    id2end_account[start_account].balance = ((debit - credit) +
+                                                             balance)
 
         report_context['start_period_name'] = start_period_name
         report_context['end_period_name'] = end_period_name
@@ -671,7 +700,8 @@ class AuxiliaryBookCDS(Report):
         report_context['id2start_account'] = id2start_account
         report_context['id2end_account'] = id2end_account
         report_context['digits'] = company.currency.digits
-        report_context['lines'] = lambda account_id: account_id2lines[account_id]
+        report_context['lines'] = lambda account_id: account_id2lines[
+            account_id]
         report_context['company'] = company
 
         end4 = timer()
@@ -682,7 +712,13 @@ class AuxiliaryBookCDS(Report):
         return report_context
 
     @classmethod
-    def get_lines(cls, accounts, periods, posted, party=None, reference=None, colgaap=False):
+    def get_lines(cls,
+                  accounts,
+                  periods,
+                  posted,
+                  party=None,
+                  reference=None,
+                  colgaap=False):
         cursor = Transaction().connection.cursor()
         _lineas = None
         where = None
@@ -693,7 +729,7 @@ class AuxiliaryBookCDS(Report):
         moveLine = MoveLine.__table__()
         account = Account.__table__()
         partys = Party.__table__()
-        
+
         accountfilter = [a.id for a in accounts]
         periodsfilter = [p.id for p in periods]
 
@@ -710,28 +746,48 @@ class AuxiliaryBookCDS(Report):
             where &= moveLine.reference.like_(reference)
         print(accountfilter, periodsfilter)
         #Consulta que trae cada una de las lineas de las cuentas
-        query = moveLine.join(partys, 'LEFT', condition=(partys.id == moveLine.party)
-        ).join(account, 'LEFT',condition=(moveLine.move == account.id)
-        ).select(moveLine.reference, moveLine.credit, moveLine.account, moveLine.debit, moveLine.id, moveLine.description, account.date, account.number, account.id, moveLine.party, partys.name, partys.id_number
-        ,where=where) 
+        query = moveLine.join(
+            partys, 'LEFT', condition=(partys.id == moveLine.party)).join(
+                account, 'LEFT',
+                condition=(moveLine.move == account.id)).select(
+                    moveLine.reference,
+                    moveLine.credit,
+                    moveLine.account,
+                    moveLine.debit,
+                    moveLine.id,
+                    moveLine.description,
+                    account.date,
+                    account.number,
+                    account.id,
+                    moveLine.party,
+                    partys.name,
+                    partys.id_number,
+                    where=where)
 
         cursor.execute(*query)
-        _lineas = cursor.fetchall()    
+        _lineas = cursor.fetchall()
 
-
-
-        lines  = _get_structured_json_data(_lineas)#Aqui se obtiene la estructura de json que pasara para generar el reporte
+        lines = _get_structured_json_data(
+            _lineas
+        )  #Aqui se obtiene la estructura de json que pasara para generar el reporte
         key = operator.itemgetter('account')
         lines.sort(key=key)
         val = groupby(lines, key)
         return val
 
     @classmethod
-    def lines(cls, accounts, periods, posted, party=None, reference=None, colgaap=False):  
+    def lines(cls,
+              accounts,
+              periods,
+              posted,
+              party=None,
+              reference=None,
+              colgaap=False):
         res = dict((a.id, []) for a in accounts)
         result = {}
         if res:
-            account2lines = cls.get_lines(accounts, periods, posted, party, reference, colgaap)
+            account2lines = cls.get_lines(accounts, periods, posted, party,
+                                          reference, colgaap)
             for account_id, lines in account2lines:
                 balance = _ZERO
                 credit = _ZERO
@@ -739,7 +795,7 @@ class AuxiliaryBookCDS(Report):
                 rec_append = res[account_id].append
                 for line in lines:
                     line['move'] = line['move.']['number']
-                    balance += line['debit'] - line['credit']                      
+                    balance += line['debit'] - line['credit']
                     if line['party.']:
                         line['party'] = line['party.']['name']
                         line['party_id'] = line['party.']['id_number']
@@ -751,15 +807,17 @@ class AuxiliaryBookCDS(Report):
                     rec_append(line)
                 if party != None:
                     # Se acomulan los valores creditos y debitos de cada cuenta para realizar el calculo del saldo inicial para el proximo periodo
-                    result[account_id]  = {
+                    result[account_id] = {
                         'credit': credit,
                         'debit': debit,
-                        }
-        else: 
+                    }
+        else:
             # Si el reporte no cuenta con informacion, el usuario recibira este mensaje y no se ejectara el reporte.
-            raise UserError( message=None, description=f"El reporte no contiene informacion, no es posible generarlo")
+            raise UserError(
+                message=None,
+                description=
+                f"El reporte no contiene informacion, no es posible generarlo")
         return res, result
-    
 
 
 #Forzar a borrador de activo fijo
@@ -778,65 +836,82 @@ class ActiveForceDraft(Wizard):
             assetTable = Asset.__table__()
             #Validacion para saber si el activo se encuentra cerrado
             if asset.state == 'closed':
-                raise UserError('AVISO', f'El activo numero {asset.number} se encuentra cerrado y no es posible forzar su borrado')
+                raise UserError(
+                    'AVISO',
+                    f'El activo numero {asset.number} se encuentra cerrado y no es posible forzar su borrado'
+                )
             #Validacion para saber si el activo ya se encuentra en borrador
             if asset.state == 'draft':
                 return 'end'
             cursor = Transaction().connection.cursor()
             #Consulta que le asigna el estado borrado al activo
             if id_:
-                cursor.execute(*assetTable.update(
-                    columns=[
-                        assetTable.state,
-                    ],
-                    values=["draft"],
-                    where=assetTable.id == id_)
-                )
-            
+                cursor.execute(*assetTable.update(columns=[
+                    assetTable.state,
+                ],
+                                                  values=["draft"],
+                                                  where=assetTable.id == id_))
+
         return 'end'
 
-    
-# Reporte de estado de resultado integral 
+
+# Reporte de estado de resultado integral
 class IncomeStatementView(ModelView):
     'Income Statement View'
     __name__ = 'account.income_statement.start'
     company = fields.Many2One('company.company', 'Company', required=True)
     from_date = fields.Date("From Date",
-        domain=[
-            If(Eval('to_date') & Eval('from_date'),
-                ('from_date', '<=', Eval('to_date')),
-                ()),
-            ],
-        depends=['to_date'], required=True)
+                            domain=[
+                                If(
+                                    Eval('to_date') & Eval('from_date'),
+                                    ('from_date', '<=', Eval('to_date')), ()),
+                            ],
+                            depends=['to_date'],
+                            required=True)
     to_date = fields.Date("To Date",
-        domain=[
-            If(Eval('from_date') & Eval('to_date'),
-                ('to_date', '>=', Eval('from_date')),
-                ()),
-            ],
-        depends=['from_date'], required=True)
-    
+                          domain=[
+                              If(
+                                  Eval('from_date') & Eval('to_date'),
+                                  ('to_date', '>=', Eval('from_date')), ()),
+                          ],
+                          depends=['from_date'],
+                          required=True)
 
     posted = fields.Boolean('Posted Move', help='Show only posted move')
 
-    accumulated = fields.Boolean('Accumulated', help='Show detailed report', on_change_with='on_change_with_accumulated')
+    accumulated = fields.Boolean('Accumulated',
+                                 help='Show detailed report',
+                                 on_change_with='on_change_with_accumulated')
 
-    Analitic_filter = fields.Boolean('Analytic Detailed', help='Show Analytic Detailed', on_change_with='on_change_with_Analitic_filter')
+    Analitic_filter = fields.Boolean(
+        'Analytic Detailed',
+        help='Show Analytic Detailed',
+        on_change_with='on_change_with_Analitic_filter')
 
-    analytic_accounts = fields.Many2Many('analytic_account.account', None, None, 'Analytic Account', states={
-            'readonly': ~Not(Eval('allstart')),
-            'required': ~Bool(Eval('allstart'))}, depends=['allstart'],domain=[('active', '=', True),])
+    analytic_accounts = fields.Many2Many('analytic_account.account',
+                                         None,
+                                         None,
+                                         'Analytic Account',
+                                         states={
+                                             'readonly':
+                                             ~Not(Eval('allstart')),
+                                             'required':
+                                             ~Bool(Eval('allstart'))
+                                         },
+                                         depends=['allstart'],
+                                         domain=[
+                                             ('active', '=', True),
+                                         ])
 
-    allstart = fields.Boolean('All', help='Show all Analytic', on_change_with='on_change_with_allstart' )
-    
-
-        
+    allstart = fields.Boolean('All',
+                              help='Show all Analytic',
+                              on_change_with='on_change_with_allstart')
 
     @staticmethod
     def default_fiscalyear():
         FiscalYear = Pool().get('account.fiscalyear')
-        return FiscalYear.find(
-            Transaction().context.get('company'), exception=False)
+        return FiscalYear.find(Transaction().context.get('company'),
+                               exception=False)
 
     @staticmethod
     def default_company():
@@ -853,11 +928,11 @@ class IncomeStatementView(ModelView):
     @staticmethod
     def default_allstart():
         return True
-    
+
     @fields.depends('Analitic_filter')
     def on_change_with_accumulated(self, name=None):
         res = True
-        if self.Analitic_filter :
+        if self.Analitic_filter:
             res = False
 
         return res
@@ -876,16 +951,17 @@ class IncomeStatementView(ModelView):
         if self.analytic_accounts:
             res = False
         return res
-    
-    
+
+
 class IncomeStatementWizard(Wizard):
     'Income Statement Wizard'
     __name__ = 'account.income_statement_wizard_cds'
-    start = StateView('account.income_statement.start',
+    start = StateView(
+        'account.income_statement.start',
         'conector.detailed_income_statement_form', [
             Button('Cancel', 'end', 'tryton-cancel'),
             Button('Print', 'print_', 'tryton-print', default=True),
-            ])
+        ])
     print_ = StateReport('account.income_statement_report')
 
     def do_print_(self, action):
@@ -901,7 +977,9 @@ class IncomeStatementWizard(Wizard):
             allstart = True
 
         if self.start.analytic_accounts and not allstart:
-            analytic_accounts_ids = [acc.id for acc in self.start.analytic_accounts]
+            analytic_accounts_ids = [
+                acc.id for acc in self.start.analytic_accounts
+            ]
 
         data = {
             'company': self.start.company.id,
@@ -916,9 +994,8 @@ class IncomeStatementWizard(Wizard):
         print(data)
         return action, data
 
-        
     def transition_print_(self):
-        
+
         return 'end'
 
 
@@ -937,8 +1014,8 @@ class IncomeStatementReport(Report):
         AccountType = pool.get('account.account.type')
         Company = pool.get('company.company')
         AnalyticAccount = pool.get('analytic_account.account')
-        AnalyticAccountLine = pool.get('analytic_account.line') 
-        
+        AnalyticAccountLine = pool.get('analytic_account.line')
+
         account = Account.__table__()
         accountType = AccountType.__table__()
         move = Move.__table__()
@@ -946,9 +1023,8 @@ class IncomeStatementReport(Report):
         analyticAccount = AnalyticAccount.__table__()
         analyticAccountLine = AnalyticAccountLine.__table__()
 
-
         # Realizamos las condiciones para la busqueda en la base de datos
-        where = analyticAccountLine.date >= data['from_date'] 
+        where = analyticAccountLine.date >= data['from_date']
         where &= analyticAccountLine.date <= data['to_date']
         where &= accountType.statement == 'income'
         where &= analyticAccount.active == True
@@ -956,13 +1032,12 @@ class IncomeStatementReport(Report):
         # if data['posted']:
         #     where &= move.state == 'posted'
 
-        # si cumple la siguiente codicion, se 
-        # agregan los id de las cuentas analiticas 
+        # si cumple la siguiente codicion, se
+        # agregan los id de las cuentas analiticas
         # seleccionadas en los parametros de entrada
         if data['analytic_accounts'] and not data['allstart']:
 
-            where &=  analyticAccount.id.in_(data['analytic_accounts'])
-
+            where &= analyticAccount.id.in_(data['analytic_accounts'])
 
         # Aqui se asignan las columnas para los parametros que extraeremos de la db
         columns = {
@@ -971,30 +1046,42 @@ class IncomeStatementReport(Report):
             'sequence': accountType.sequence,
             'id_analytic': analyticAccount.code,
             'name_analytic': analyticAccount.name,
-            'account' : account.code,
+            'account': account.code,
             'name': account.name,
             'date': analyticAccountLine.date,
             'description_line': line.description,
-            'debit': analyticAccountLine.debit,  
-            'credit' :analyticAccountLine.credit,  
-            'neto':  Sum(analyticAccountLine.debit - analyticAccountLine.credit),
+            'debit': analyticAccountLine.debit,
+            'credit': analyticAccountLine.credit,
+            'neto':
+            Sum(analyticAccountLine.debit - analyticAccountLine.credit),
         }
 
-
-        # Construccion de la consulta a la 
+        # Construccion de la consulta a la
         # base de datos, con sintaxis de pythom-sql
-        selected = analyticAccountLine.join(line, 'LEFT', condition = analyticAccountLine.move_line == line.id
-                                    ).join(account, 'LEFT', condition = account.id == line.account
-                                    ).join(accountType, 'LEFT', condition = accountType.id == account.type
-                                    ).join(analyticAccount, 'LEFT', condition = analyticAccountLine.account == analyticAccount.id
-                                    ).select(*columns.values(), where=where, 
-                                             group_by=(accountType.sequence,  analyticAccountLine.id, account.name,  account.code, 
-                                                       line.description, analyticAccount.code, analyticAccount.name, accountType.name,accountType.parent),
-                                                       order_by=(account.code))
-        
+        selected = analyticAccountLine.join(
+            line, 'LEFT',
+            condition=analyticAccountLine.move_line == line.id).join(
+                account, 'LEFT', condition=account.id == line.account).join(
+                    accountType,
+                    'LEFT',
+                    condition=accountType.id == account.type).join(
+                        analyticAccount,
+                        'LEFT',
+                        condition=analyticAccountLine.account ==
+                        analyticAccount.id).select(
+                            *columns.values(),
+                            where=where,
+                            group_by=(accountType.sequence,
+                                      analyticAccountLine.id, account.name,
+                                      account.code, line.description,
+                                      analyticAccount.code,
+                                      analyticAccount.name, accountType.name,
+                                      accountType.parent),
+                            order_by=(account.code))
+
         # ejecuta la consulta, el * se asigna para que lo pase como un string
         cursor.execute(*selected)
-        
+
         # Realizamos un fetch a la consulta para extraer los datos obtenidos
         result = cursor.fetchall()
 
@@ -1002,15 +1089,16 @@ class IncomeStatementReport(Report):
 
         print(result)
         # Realizamos validacion para saber si existen datos extraidos de la db
-        if result:  
+        if result:
             finalitems = {}
             items = {}
-             
-            for index, record in enumerate(result):
-                fila_dict =  OrderedDict() # Le damos la extructura de diccionario
 
-                # con esta funcion lo que hacemos es crear el 
-                # diccionario con las claves de las columnas 
+            for index, record in enumerate(result):
+                fila_dict = OrderedDict(
+                )  # Le damos la extructura de diccionario
+
+                # con esta funcion lo que hacemos es crear el
+                # diccionario con las claves de las columnas
                 # y asi sea mas facil acceder a los datos
                 fila_dict = dict(zip(columns.keys(), record))
 
@@ -1019,65 +1107,302 @@ class IncomeStatementReport(Report):
                 analytic_name = fila_dict['name_analytic']
                 sequence = fila_dict['sequence']
 
-
-                # Si se selecciono la opcion de 'Analitic_filter' 
-                # en los parametros de entrada, ingresamos 
+                # Si se selecciono la opcion de 'Analitic_filter'
+                # en los parametros de entrada, ingresamos
                 # directamente a ingresar el diccionario de datos
                 if data['Analitic_filter']:
-                    
+
                     records.append(fila_dict)
 
-
                 elif data['accumulated']:
-                    
+
                     if analytic_name not in items:
-                        items[analytic_name] = {
-                            'account_type': {}
-                            }
+                        items[analytic_name] = {'account_type': {}}
 
                     if sequence not in items[analytic_name]['account_type']:
                         items[analytic_name]['account_type'][sequence] = {
                             'account_type': type_account,
                             'neto': 0
-                            }
-                        
-                    items[analytic_name]['account_type'][sequence]['neto'] += fila_dict['neto']   
+                        }
 
+                    items[analytic_name]['account_type'][sequence][
+                        'neto'] += fila_dict['neto']
 
-                # Es este tramo de codigo, realizamos una acomulacion 
-                # de los datos para la extrutura de el estado de 
-                # resultado, utilidas bruta, utilidad antes de 
+                # Es este tramo de codigo, realizamos una acomulacion
+                # de los datos para la extrutura de el estado de
+                # resultado, utilidas bruta, utilidad antes de
                 # impuesto y utilidad neta
                 if analytic_name not in finalitems:
-                    name = AccountType.search_read([('name', '=', 'UTILIDAD NETA')], fields_names=['sequence', 'name'])
+                    name = AccountType.search_read(
+                        [('name', '=', 'UTILIDAD NETA')],
+                        fields_names=['sequence', 'name'])
                     finalitems[analytic_name] = {
                         'parent_results': {},
                         'sequence': name[0]['sequence'],
                         'name': name[0]['name'],
-                        'UTILIDAD_NETA' : 0
+                        'UTILIDAD_NETA': 0
                     }
 
-                if parent_results not in finalitems[analytic_name]['parent_results']:
-                    name = AccountType.search_read([('id', '=', parent_results)], fields_names=['name', 'sequence'])
-                    finalitems[analytic_name]['parent_results'][parent_results] = {
-                        'account_type_result': name[0]['name'],
-                        'sequence': name[0]['sequence'], 
-                        'neto_secuence' : 0,
-                    }
+                if parent_results not in finalitems[analytic_name][
+                        'parent_results']:
+                    name = AccountType.search_read(
+                        [('id', '=', parent_results)],
+                        fields_names=['name', 'sequence'])
+                    finalitems[analytic_name]['parent_results'][
+                        parent_results] = {
+                            'account_type_result': name[0]['name'],
+                            'sequence': name[0]['sequence'],
+                            'neto_secuence': 0,
+                        }
 
-                finalitems[analytic_name]['parent_results'][parent_results]['neto_secuence'] += fila_dict['neto']
+                finalitems[analytic_name]['parent_results'][parent_results][
+                    'neto_secuence'] += fila_dict['neto']
                 finalitems[analytic_name]['UTILIDAD_NETA'] += fila_dict['neto']
 
-        else: 
+        else:
             # Si el reporte no cuenta con informacion, el usuario recibira este mensaje y no se ejectara el reporte.
-            raise UserError( message=None, description=f"El reporte no contiene informacion, no es posible generarlo") 
+            raise UserError(
+                message=None,
+                description=
+                f"El reporte no contiene informacion, no es posible generarlo")
 
         report_context['accumulated'] = str(data['accumulated'])
         report_context['Analitic_filter'] = str(data['Analitic_filter'])
         report_context['finalitems'] = finalitems
         report_context['records'] = records if records else items
-        report_context['company'] = Company(Transaction().context.get('company'))
+        report_context['company'] = Company(
+            Transaction().context.get('company'))
         report_context['date'] = Transaction().context.get('date')
         return report_context
-    
 
+
+class TrialBalanceDetailedCds(metaclass=PoolMeta):
+    'Detail Balanced Report (metaclass report)'
+    __name__ = 'account_col.trial_balance_detailed'
+
+    @classmethod
+    def get_context(cls, records, header, data):
+        """Function that take context of wizard"""
+        # pylint: disable=no-member
+        report_context = super().get_context(records, header, data)
+        pool = Pool()
+        account = pool.get('account.account')
+        account_move = pool.get('account.move')
+        account_line = pool.get('account.move.line')
+        period = pool.get('account.period')
+        company = pool.get('company.company')
+        party = pool.get('party.party')
+        fiscal_year = pool.get('account.fiscalyear')
+        cursor = Transaction().connection.cursor()
+
+        move = account_move.__table__()
+        line = account_line.__table__()
+        start_period_name = None
+        end_period_name = None
+
+        start_periods = []
+        result_start = []
+        result_in = []
+        accs_ids = []
+        parties_ids = []
+
+        if data['start_period']:
+            start_period = period(data['start_period'])
+            start_periods = period.search([
+                ('end_date', '<', start_period.start_date),
+            ])
+            start_period_name = start_period.name
+        else:
+            fiscalyear = fiscal_year(data['fiscalyear'])
+            start_periods = period.search([
+                ('end_date', '<=', fiscalyear.start_date),
+            ])
+
+        if data['end_period']:
+            end_period = period(data['end_period'])
+            end_periods = period.search([
+                ('fiscalyear', '=', data['fiscalyear']),
+                ('end_date', '<=', end_period.start_date),
+            ])
+            end_periods = list(set(end_periods).difference(set(start_periods)))
+            end_period_name = end_period.name
+            if end_period not in end_periods:
+                end_periods.append(end_period)
+        else:
+            end_periods = period.search([
+                ('fiscalyear', '=', data['fiscalyear']),
+                ('end_date', '>=', start_period.start_date),
+            ])
+            end_periods = list(set(end_periods).difference(set(start_periods)))
+
+        # Select Query for In
+        in_periods = [p.id for p in end_periods]
+        if in_periods:
+            join1 = line.join(move)
+            join1.condition = join1.right.id == line.move
+
+            entity = line.party
+            default_entity = 0
+            if not data['party'] and data['by_reference']:
+                entity = line.reference
+                default_entity = '0'
+
+            select1 = join1.select(
+                line.account,
+                Coalesce(entity, default_entity),
+                Sum(line.debit),
+                Sum(line.credit),
+                group_by=(line.account, entity),
+                order_by=line.account,
+            )
+
+            select1.where = join1.right.period.in_(in_periods)
+            if data['party']:
+                select1.where = select1.where & (line.party == data['party'])
+
+            if data['accounts']:
+                select1.where = select1.where & (line.account.in_(
+                    data['accounts']))
+            if data['posted']:
+                select1.where = select1.where & (move.state == 'posted')
+
+            cursor.execute(*select1)
+            result_in = cursor.fetchall()
+
+        # Select Query for Start
+        start_periods_ids = [p.id for p in start_periods]
+        if start_periods_ids:
+
+            join1 = line.join(move)
+            join1.condition = join1.right.id == line.move
+
+            select2 = join1.select(
+                line.account,
+                Coalesce(entity, default_entity),
+                Sum(line.debit) - Sum(line.credit),
+                group_by=(line.account, entity),
+                order_by=line.account,
+            )
+            select2.where = join1.right.period.in_(start_periods_ids)
+
+            if data['party']:
+                select2.where = select2.where & (line.party == data['party'])
+
+            if data['accounts']:
+                select2.where = select2.where & (line.account.in_(
+                    data['accounts']))
+
+            cursor.execute(*select2)
+            result_start = cursor.fetchall()
+
+        all_result = result_in + result_start
+
+        for result in all_result:
+            accs_ids.append(result[0])
+            parties_ids.append(result[1])
+
+        accounts = OrderedDict()
+
+        if accs_ids:
+            acc_records = account.search_read([
+                ('id', 'in', list(set(accs_ids))),
+                ('active', 'in', [False, True]),
+            ],
+                                              order=[('code', 'ASC')],
+                                              fields_names=['code', 'name'])
+
+            for acc in acc_records:
+                accounts[acc['id']] = [
+                    acc, {}, {
+                        'debits': [],
+                        'credits': [],
+                        'start_balance': [],
+                        'end_balance': [],
+                    }
+                ]
+
+            parties_obj = party.search_read([
+                ('id', 'in', parties_ids),
+                ('active', 'in', [False, True]),
+            ],
+                                            fields_names=['id_number', 'name'])
+
+            parties = {p['id']: p for p in parties_obj}
+
+            cls._get_process_result(accounts,
+                                    parties,
+                                    kind='in',
+                                    values=result_in)
+            cls._get_process_result(accounts,
+                                    parties,
+                                    kind='start',
+                                    values=result_start)
+
+        if accounts:
+            records = accounts.values()
+        else:
+            records = accounts
+        report_context['accounts'] = records
+        report_context['fiscalyear'] = fiscal_year(data['fiscalyear'])
+        report_context['start_period'] = start_period_name
+        report_context['end_period'] = end_period_name
+        report_context['company'] = company(data['company'])
+        return report_context
+
+    @classmethod
+    def _get_process_result(cls, accounts, parties, kind, values):
+        """Function that get debits, credits, start balance and end balance"""
+
+        for val in values:
+            party_id = 0
+            id_number = ''
+            party_name = ''
+            debit = 0
+            credit = 0
+            start_balance = 0
+
+            if val[1]:
+                acc_id = val[0]
+                party_id = val[1]
+                id_number = parties[party_id]['id_number']
+                party_name = parties[party_id]['name']
+
+            if kind == 'in':
+                debit = val[2]
+                credit = val[3]
+                amount = debit - credit
+            else:  # kind == start
+                start_balance = val[2]
+                amount = val[2]
+
+            if debit == credit == start_balance == 0:
+                continue
+
+            if party_id not in accounts[acc_id][1].keys():
+                end_balance = start_balance + debit - credit
+                rec = {
+                    'id_number': id_number,
+                    'party': party_name,
+                    'start_balance': start_balance,
+                    'debit': debit,
+                    'credit': credit,
+                    'end_balance': end_balance,
+                }
+                accounts[acc_id][1][party_id] = rec
+                amount = end_balance
+            else:
+                dictval = accounts[acc_id][1][party_id]
+                if kind == 'in':
+                    dictval['debit'] = debit
+                    dictval['credit'] = credit
+                else:
+                    dictval['start_balance'] = start_balance
+
+                end_balance = dictval['start_balance'] + dictval[
+                    'debit'] - dictval['credit']
+                dictval['end_balance'] = end_balance
+
+            accounts[acc_id][2]['debits'].append(debit)
+            accounts[acc_id][2]['credits'].append(credit)
+            accounts[acc_id][2]['start_balance'].append(start_balance)
+            accounts[acc_id][2]['end_balance'].append(amount)
