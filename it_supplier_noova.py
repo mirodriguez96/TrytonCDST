@@ -1,12 +1,17 @@
+"""SEND DOCUMENTS BY NOOVA"""
 #!/usr/bin/python
 #! -*- coding: utf8 -*-
 import json
-from . builder_phase import ElectronicPayroll
-from .builder_phase2 import ElectronicInvoice_2
-import requests
 import base64
+import requests
+import sentry_sdk
+
+from .builder_phase import ElectronicPayroll
+from .builder_phase2 import ElectronicInvoice_2
+
 
 class ElectronicPayrollCdst(object):
+    """This function do and send electronic payroll"""
 
     def __init__(self, payroll, config):
         self.payroll = payroll
@@ -27,7 +32,6 @@ class ElectronicPayrollCdst(object):
         #print(data)
         self._send_noova(data)
 
-
     # Consumo API noova
     def _send_noova(self, data):
         #Validamos que los datos del proveedor tecnologico este completo
@@ -43,36 +47,48 @@ class ElectronicPayrollCdst(object):
         auth = auth.decode('utf-8')
         #Se crea el encabezado que se enviara al proveedor it
         header = {
-            'Authorization': 'Basic '+auth,
+            'Authorization': 'Basic ' + auth,
             'Content-Type': 'application/json',
             'Host': host,
             'Content-Length': '967',
             'Expect': '100-continue',
             'Connection': 'Keep-Alive'
         }
-        response = requests.post(url, headers=header, data=data)
-        print(response.text)
-        if response.status_code == 200:
-            res = json.loads(response.text)
-            #print(res)
-            self.payroll.xml_payroll = data.encode('utf8')
-            electronic_state = 'rejected'
-            if res['Result'] == 0 and res['State'] == 'Exitosa':
-                electronic_state = 'authorized'
-            self.payroll.electronic_state = electronic_state
-            self.payroll.cune = res['Cune']
-            self.payroll.electronic_message = res['State']
-            if res['Result'] == 1:
-                self.payroll.electronic_message = res['Description']
-            if res['ErrorList']:
-                self.payroll.rules_fail = res['ErrorList']
-            self.payroll.save()
-            print("ENVIO EXITOSO !")
-        else:
-            self.payroll.get_message(response.text)
+
+        try:
+            response = requests.post(url,
+                                     headers=header,
+                                     data=data,
+                                     timeout=20)
+
+            response.raise_for_status()
+
+            if response.status_code == 200:
+                res = json.loads(response.text)
+                self.payroll.xml_payroll = data.encode('utf8')
+                electronic_state = 'rejected'
+                if res['Result'] == 0 and res['State'] == 'Exitosa':
+                    electronic_state = 'authorized'
+                self.payroll.electronic_state = electronic_state
+                self.payroll.cune = res['Cune']
+                self.payroll.electronic_message = res['State']
+                if res['Result'] == 1:
+                    self.payroll.electronic_message = res['Description']
+                if res['ErrorList']:
+                    self.payroll.rules_fail = res['ErrorList']
+                self.payroll.save()
+
+            else:
+                self.payroll.get_message(response.text)
+
+        except requests.exceptions.ConnectionError as ce:
+            sentry_sdk.capture_exception(ce)
+        except requests.exceptions.RequestException as re:
+            sentry_sdk.capture_exception(re)
 
 
 class SendElectronicInvoice(object):
+    """This function do and send electronic invoice"""
 
     def __init__(self, invoice, auth):
         self.invoice = invoice
@@ -91,7 +107,6 @@ class SendElectronicInvoice(object):
         print(data)
         self._send_noova(data)
 
-
     # Consumo API noova
     def _send_noova(self, data):
         url = self.invoice.company.url_ds_itsupplier
@@ -105,30 +120,40 @@ class SendElectronicInvoice(object):
         auth = auth.decode('utf-8')
         #Se crea el encabezado que se enviara al proveedor it
         header = {
-            'Authorization': 'Basic '+auth,
+            'Authorization': 'Basic ' + auth,
             'Content-Type': 'application/json',
             'Host': host,
             'Content-Length': '967',
             'Expect': '100-continue',
             'Connection': 'Keep-Alive'
         }
-        response = requests.post(url, headers=header, data=data)
-        print(response.text)
-        if response.status_code == 200:
-            res = json.loads(response.text)
-            #print(res)
-            self.invoice.xml_face_ = data.encode('utf8')
-            electronic_state = 'rejected'
-            if res['Result'] == 0 and res['State'] == 'Exitosa':
-                electronic_state = 'authorized'
-            self.invoice.electronic_state = electronic_state
-            self.invoice.cufe = res['Cufe']
-            self.invoice.electronic_message = res['State']
-            if res['Result'] == 1:
-                self.invoice.electronic_message = res['Description']
-            if res['ErrorList']:
-                self.invoice.rules_fail = res['ErrorList']
-            self.invoice.save()
-            print("ENVIO EXITOSO !")
-        else:
-            self.invoice.get_message(response.text)
+
+        try:
+            response = requests.post(url,
+                                     headers=header,
+                                     data=data,
+                                     timeout=20)
+
+            response.raise_for_status()
+
+            if response.status_code == 200:
+                res = json.loads(response.text)
+                self.invoice.xml_face_ = data.encode('utf8')
+                electronic_state = 'rejected'
+                if res['Result'] == 0 and res['State'] == 'Exitosa':
+                    electronic_state = 'authorized'
+                self.invoice.electronic_state = electronic_state
+                self.invoice.cufe = res['Cufe']
+                self.invoice.electronic_message = res['State']
+                if res['Result'] == 1:
+                    self.invoice.electronic_message = res['Description']
+                if res['ErrorList']:
+                    self.invoice.rules_fail = res['ErrorList']
+                self.invoice.save()
+            else:
+                self.invoice.get_message(response.text)
+
+        except requests.exceptions.ConnectionError as ce:
+            sentry_sdk.capture_exception(ce)
+        except requests.exceptions.RequestException as re:
+            sentry_sdk.capture_exception(re)
