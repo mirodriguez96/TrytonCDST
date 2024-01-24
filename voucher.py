@@ -6,6 +6,7 @@ from decimal import Decimal
 import datetime
 from sql import Table, Null
 import time
+from . import fixes
 
 _ZERO = Decimal('0.0')
 
@@ -244,11 +245,13 @@ class Voucher(ModelSQL, ModelView):
                                     continue
                         if comprobante.__name__ == 'account.voucher':
                             cls.unreconcilie_move_voucher([comprobante])
+                            cls.delete_note([comprobante])
                             cls.force_draft_voucher([comprobante])
                             Voucher.delete([comprobante])
                         if comprobante.__name__ == 'account.multirevenue':
                             vouchers = Voucher.search([('reference', '=', comprobante.code)])
                             cls.unreconcilie_move_voucher(vouchers)
+                            cls.delete_note(vouchers)
                             cls.force_draft_voucher(vouchers)
                             Voucher.delete(vouchers)
                             for line in comprobante.lines:
@@ -709,6 +712,29 @@ class Voucher(ModelSQL, ModelView):
             if reconciliations:
                 Reconciliation.delete(reconciliations)
         return reconciliations
+    
+    @classmethod
+    def delete_note(cls, vouchers):
+        pool = Pool()
+        Note = pool.get('account.note')
+        try:
+            for voucher in vouchers:
+                if voucher:
+                    if voucher.move:
+                        for lines in voucher.move.lines:
+                            if lines.origin:
+                                if lines.origin.move_line.move.origin:
+                                    for notes in lines.origin.move_line.move.origin.payment_lines:
+                                        if notes.origin and notes.origin.__name__ == 'account.note.line':
+                                            note = notes.origin.note
+                                            fixes.desconciliar_borrar_asientos(ids_=None,id_tecno=note.move.id)
+                                            Note.draft([note])
+                                            note.lines[0].delete(note.lines)
+                                            note.number = Null
+                                            Note.delete([note])
+        except Exception as e:
+            print(e)
+        # return reconciliations
 
     # Función que se encarga de forzar a borrador los comprobantes
     @classmethod
