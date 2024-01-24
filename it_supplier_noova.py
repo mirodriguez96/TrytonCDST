@@ -59,7 +59,7 @@ class ElectronicPayrollCdst(object):
             response = requests.post(url,
                                      headers=header,
                                      data=data,
-                                     timeout=20)
+                                     timeout=30)
 
             response.raise_for_status()
 
@@ -132,7 +132,7 @@ class SendElectronicInvoice(object):
             response = requests.post(url,
                                      headers=header,
                                      data=data,
-                                     timeout=20)
+                                     timeout=30)
 
             response.raise_for_status()
 
