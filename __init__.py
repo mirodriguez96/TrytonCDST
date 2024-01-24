@@ -27,6 +27,7 @@ from . import payment_bank
 from . import loan
 from . import liquidation
 from . import permissions
+from . import currency
 
 
 def register():
@@ -38,10 +39,12 @@ def register():
                   account.AnalyticAccountEntry,
                   company.Company,
                   conector.Actualizacion,
+                  party.CheckVIESResult,
+                  currency.Cron,
+                  currency.CurrencyRate,
                   party.Party,
                   party.PartyAddress,
                   party.ContactMechanism,
-                  party.CheckVIESResult,
                   product.Product,
                   product.ProductCategory,
                   sale.Sale,
