@@ -1,6 +1,8 @@
 from trytond.pool import Pool
 from trytond.transaction import Transaction
 from trytond.exceptions import UserError
+from decimal import Decimal
+import math 
 
 # Función encargada de convertir una lista a un string tipo tupla
 def list_to_tuple(value, string=False):
@@ -75,6 +77,11 @@ def get_products(values):
 def validate_documentos(data):
     pool = Pool()
     Config = pool.get('conector.configuration')
+    Actualizacion = pool.get('conector.actualizacion')
+    actualizacion = Actualizacion.create_or_update('CREAR ENVIOS INTERNOS VALIDACION DE PERIODOS')
+    Period = pool.get('account.period')
+    logs = {}
+    to_exception = []
     result = {
         "tryton": {},
         "logs": {},
@@ -119,9 +126,16 @@ def validate_documentos(data):
             'idresponsable': str(item[1]),
         }
 
-    print(dictprodut)
     move = {}
-    for d in data:
+    for value ,d in enumerate(data):
+        dat = str(d.Fecha_Documento.date()).split('-')
+        name = f"{dat[0]}-{dat[1]}"                 
+        validate_period = Period.search([('name', '=', name)])
+        if validate_period[0].state == 'close':
+            to_exception.append(f"{d.sw}-{reference}")
+            logs[f"{d.sw}-{reference}"] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
+            Y NO ES POSIBLE SU CREACION"
+            continue
         tipo = str(d.tipo)
         reference = f"{tipo}-{d.Numero_Documento}"
         id_tecno = f"{d.sw}-{reference}"
@@ -157,39 +171,46 @@ def validate_documentos(data):
             result["tryton"][id_tecno] = shipment
             # to_create.append(shipment) #
         shipment = result["tryton"][id_tecno]
-        moves = []
         if "moves" not in shipment:
-            shipment["moves"] = [('create', moves)]
-        else:
-            moves = shipment["moves"][0][1]
+            shipment["moves"] = []
         # Se crea el movimiento
         producto = dictprodut[d.IdProducto]['idresponsable'] if dictprodut[d.IdProducto] and dictprodut[d.IdProducto]['idresponsable'] != '0' else str(d.IdProducto)
         if producto not in productos:
             productos.append(producto)
-        quantity = float(round(d.Cantidad_Facturada, 2))
+        quantity = round(float(round(d.Cantidad_Facturada, 3)),3)
+
+
         if quantity < 0:
             result["logs"][id_tecno] = f"Cantidad en negativo: {quantity} Producto: {producto}"
             result["exportado"]["E"].append(id_tecno)
             del(result["tryton"][id_tecno])
             continue
-        
-        if producto not in move:
-            move[producto] = {
+
+
+        if id_tecno not in move:
+            move[id_tecno] = {
+                'move_product':{}
+            }
+        if producto not in move[id_tecno]['move_product']:
+           
+           move[id_tecno]['move_product'][producto] = {
                 "from_location": shipment["from_location"],
                 "to_location": shipment["to_location"],
                 "product": producto,
                 "company": id_company,
-                "quantity": 0,
+                "quantity":  round(float(0),3),
                 "planned_date": shipment["planned_date"],
                 "effective_date": shipment["effective_date"],
             }
 
-        move[producto]["quantity"] += quantity
+        quantity_float = move[id_tecno]['move_product'][producto]["quantity"]
+        move[id_tecno]['move_product'][producto]["quantity"] = round(quantity + quantity_float,3)
 
 
-    for key, line_move in  move.items():
-        print(key, line_move)
-        moves.append(line_move)
+    for id_tec , line_move in result['tryton'].items():
+
+        if result['tryton'][id_tec]:
+            result['tryton'][id_tec]['moves'] = [('create', [i for i in move[id_tec]['move_product'].values()])]
 
     products = get_products(productos)
     locations = get_locations(bodegas)
@@ -230,7 +251,7 @@ def validate_documentos(data):
                 mv["uom"] = product.default_uom.id
                 mv["product"] = product.id
                 if product.default_uom.symbol.upper() == 'U':
-                    mv["quantity"] = float(int(mv["quantity"]))
+                    mv["quantity"] = round(float(int(mv["quantity"])),3)
             else:
                 products_exist = False
                 result["logs"][id_tecno] = f"No se encontro el producto: {mv['product']}"
@@ -242,4 +263,6 @@ def validate_documentos(data):
     for to_delete in result["exportado"]["E"]:
         if to_delete in result["tryton"]:
             del(result["tryton"][to_delete])
+    if to_exception:
+        actualizacion.add_logs(logs)
     return result
