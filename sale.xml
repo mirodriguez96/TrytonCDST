@@ -22,7 +22,6 @@ this repository contains the full copyright notices and license terms. -->
             <field name="translatable">False</field>
         </record>
 
-        <menuitem parent="sale.menu_reporting" id="menu_sale_shop_detailed_cds"
-            action="wizard_print_sale_shop_detailed_cds"/>
+        <menuitem parent="sale.menu_reporting" id="menu_sale_shop_detailed_cds" action="wizard_print_sale_shop_detailed_cds"/>
     </data>
 </tryton>

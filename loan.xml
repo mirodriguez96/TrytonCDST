@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 
 <tryton>
-    <data>        
-        
+    <data>
+
         <!--Forzar borrado Prestamos-->
         <record model="ir.action.wizard" id="act_staff_loan_force_draft">
             <field name="name">Loan Force Draft</field>

@@ -32,12 +32,7 @@
             <field name="act_window" ref="act_config"/>
         </record>
 
-        <menuitem 
-        parent="menu_importa"
-        sequence="0"
-        action="act_config"
-        id="menu_act_config"
-        icon="tryton-settings"/>
+        <menuitem parent="menu_importa" sequence="0" action="act_config" id="menu_act_config" icon="tryton-settings"/>
 
     </data>
 </tryton>

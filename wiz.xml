@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <tryton>
-    
+
     <data>
         <!-- ################## -->
         <!-- # Mark Documents # -->
@@ -55,7 +55,7 @@
             <field name="model">account.voucher,-1</field>
             <field name="action" ref="act_delete_voucher_tecno"/>
         </record>
-        
+
         <record model="ir.ui.view" id="validated_identity_view_form">
             <field name="model">delete.voucher.wizard.start</field>
             <field name="type">form</field>
@@ -238,6 +238,6 @@
             <field name="model">account.bank_statement,-1</field>
             <field name="action" ref="act_group_datafono_lines"/>
         </record>
-        
+
     </data>
 </tryton>

@@ -9,7 +9,7 @@ this repository contains the full copyright notices and license terms. -->
     <label name="start_period"/>
     <field name="start_period" widget="selection"/>
     <label name="end_period"/>
-    <field name="end_period"  widget="selection"/>
+    <field name="end_period" widget="selection"/>
     <label name="start_account"/>
     <field name="start_account"/>
     <label name="end_account"/>

@@ -35,7 +35,9 @@ class SaleDevice(metaclass=PoolMeta):
         Shop = pool.get('sale.shop')
         Location = pool.get('stock.location')
         payment_term = pool.get('account.invoice.payment_term')
-        payment_term, = payment_term.search([], order=[('id', 'DESC')], limit=1)
+        payment_term, = payment_term.search([],
+                                            order=[('id', 'DESC')],
+                                            limit=1)
         currency = pool.get('currency.currency')
         moneda, = currency.search([('code', '=', 'COP')])
         # Se concuerda que las bodegas de SqlServer (TecnoCarnes) equivalen a las tiendas en Tryton
@@ -129,13 +131,14 @@ class SaleDevice(metaclass=PoolMeta):
         Shop = pool.get('sale.shop')
         equipos = Config.get_data_table('TblEquipo')
         bodegas = Config.get_data_table('TblBodega')
-        
+
         to_create = []
         for equipo in equipos:
             for bodega in bodegas:
-                id_tecno = equipo.IdEquipo+'-'+str(bodega.IdBodega)
-                nombre = equipo.Equipo+' - '+bodega.Bodega
-                shop = Shop.search([('warehouse.id_tecno', '=', bodega.IdBodega)])
+                id_tecno = equipo.IdEquipo + '-' + str(bodega.IdBodega)
+                nombre = equipo.Equipo + ' - ' + bodega.Bodega
+                shop = Shop.search([('warehouse.id_tecno', '=',
+                                     bodega.IdBodega)])
                 if not shop:
                     shop = Shop.search([], order=[('id', 'DESC')], limit=1)
                 #En caso de ser un nombre vacio se continua con el siguiente
@@ -145,10 +148,10 @@ class SaleDevice(metaclass=PoolMeta):
                     break
 
                 journals = Journal.search([()])
-                device = SaleDevice.search(['OR',
-                    ('id_tecno', '=', id_tecno),
-                    ['AND',
-                        ('id_tecno', '=', equipo.IdEquipo),
+                device = SaleDevice.search([
+                    'OR', ('id_tecno', '=', id_tecno),
+                    [
+                        'AND', ('id_tecno', '=', equipo.IdEquipo),
                         ('shop.warehouse.id_tecno', '=', bodega.IdBodega)
                     ]
                 ])
@@ -171,7 +174,6 @@ class SaleDevice(metaclass=PoolMeta):
             if not device.journals and journals:
                 device.journals = journals
                 device.save()
-
 
     #Libro de Ventas Pos
     @classmethod

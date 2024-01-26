@@ -21,7 +21,7 @@ CLASIFICATION_TAX = {
     'NA': 'No Aceptada',
     'renta': 'renta',
     'autorenta': 'autorenta',
-    }
+}
 
 TAXES_CODE_VALID = [key for key in CLASIFICATION_TAX.keys() if key.isdigit()]
 
@@ -58,10 +58,14 @@ MESSAGES = {
     'company_department': 'Falta el departamento de la empresa',
     'company_department_code': 'Falta el departamento de la empresa',
     'company_ciiu_code': 'Falta el codigo CIIU en el tercero de la empresa',
-    'company_postal_zone': 'Falta el codigo Postal en el tercero de la empresa',
-    'company_type_id': 'Falta el tipo de documento que identifica a la compañía',
-    'fiscal_regimen_company': 'Falta el Regimen Fiscal del tercero de la compañia',
-    'company_tax_level_code': 'Falta el Regimen de Impuestos del tercero de la compañia',
+    'company_postal_zone':
+    'Falta el codigo Postal en el tercero de la empresa',
+    'company_type_id':
+    'Falta el tipo de documento que identifica a la compañía',
+    'fiscal_regimen_company':
+    'Falta el Regimen Fiscal del tercero de la compañia',
+    'company_tax_level_code':
+    'Falta el Regimen de Impuestos del tercero de la compañia',
     'currency': 'Falta el codigo de la moneda',
     'party_name': 'Falta el nombre del cliente',
     'party_id': 'Falta el id del cliente',
@@ -76,13 +80,15 @@ MESSAGES = {
     'party_phone': 'Falta el telefono del cliente',
     'party_email': 'Falta el correo del cliente',
     'party_type_id': 'Falta el tipo de documento que identifica al cliente',
-    'party_tax_level_code': 'Falta definir el tipo de persona juridica / natural del cliente',
+    'party_tax_level_code':
+    'Falta definir el tipo de persona juridica / natural del cliente',
     'payment_term': 'Falta el metodo de pago',
     'fiscal_regimen_party': 'Falta el Regimen Fiscal del cliente',
     'invoice_authorization': 'El campo Autorización de factura esta vacio',
     'operation_type': 'El campo Tipo de Operación de factura esta vacio',
     'invoice_type_code': 'El campo Tipo de Factura de factura esta vacio',
-    'payment_type': 'Falta el tipo de concepto en el plazo de pago de la factura',
+    'payment_type':
+    'Falta el tipo de concepto en el plazo de pago de la factura',
     #'company_tributes': 'Falta definir el grupo de tributos de impuesto al que es responsable la compañía',
 }
 
@@ -100,6 +106,7 @@ def tax_valid(tax):
     if code in TAXES_CODE_VALID and (rate and rate > 0 or fixed and fixed > 0):
         return True
     return False
+
 
 def tax_valid_witholding(tax):
     rate = hasattr(tax, 'rate')
@@ -124,14 +131,16 @@ class ElectronicInvoice_2(object):
         self.company_name = invoice.company.party.name
         self.company_phone = invoice.company.party.phone or invoice.company.party.mobile
         self.company_city = invoice.company.party.city_name
-        self.company_city_code = invoice.company.party.department_code+invoice.company.party.city_code
+        self.company_city_code = invoice.company.party.department_code + invoice.company.party.city_code
         self.company_department_code = invoice.company.party.department_code
         self.company_currency_id = invoice.company.currency.id
         self.company_address = invoice.company.party.street.replace('\n', '')
         self.company_check_digit = invoice.company.party.check_digit
         self.company_country_code = 'CO'
         self.company_country_name = 'Colombia'
-        self.company_postal_zone = [address.postal_code for address in invoice.company.party.addresses]
+        self.company_postal_zone = [
+            address.postal_code for address in invoice.company.party.addresses
+        ]
         self.company_ciiu_code = invoice.company.party.ciiu_code
         self.company_tributes = invoice.company.party.party_tributes or []
         #self.company_party_obligations = self.invoice.company.party.party_obligation_tax
@@ -139,7 +148,8 @@ class ElectronicInvoice_2(object):
         #    MESSAGES['company_party_obligations'] = 'Falta definir la obligaciones fiscales de la compañía'
 
         if TYPE_PERSON.get(invoice.company.party.type_person):
-            self.company_tax_level_code = TYPE_PERSON[invoice.company.party.type_person]
+            self.company_tax_level_code = TYPE_PERSON[
+                invoice.company.party.type_person]
         self.company_department = invoice.company.party.department_name
         self.company_email = invoice.company.party.email
         self.fiscal_regimen_company = invoice.company.party.fiscal_regimen
@@ -148,7 +158,7 @@ class ElectronicInvoice_2(object):
         #    self.shop_address = self.invoice.shop.address or self.invoice.company.party.street
         #    if not self.shop_address:
         #        MESSAGES['shop_address'] = 'Falta la dirección de la tienda'
-        
+
         self.company_resolution_number = self.invoice.company.itsupplier_billing_resolution or ''
         self.company_resolution_number_note = self.invoice.company.itsupplier_billing_resolution_note or ''
         self.company_branch_code = self.invoice.company.itsupplier_code_ds or ''
@@ -163,9 +173,12 @@ class ElectronicInvoice_2(object):
         self.party_second_family_name = invoice.party.second_family_name or ''
         self.party_department_code = invoice.party.department_code or ''
         self.party_city_code = invoice.party.city_code or ''
-        self.party_city_code = self.party_department_code+self.party_city_code
+        self.party_city_code = self.party_department_code + self.party_city_code
         self.party_name = invoice.party.name or invoice.party.commercial_name
-        self.party_postal_zone = [address.postal_code for address in invoice.party.addresses if address.postal_code]
+        self.party_postal_zone = [
+            address.postal_code for address in invoice.party.addresses
+            if address.postal_code
+        ]
         self.party_id = invoice.party.id_number
         self.party_ciiu_code = invoice.party.ciiu_code or ''
         self.party_check_digit = invoice.party.check_digit
@@ -183,18 +196,27 @@ class ElectronicInvoice_2(object):
         if self.invoice_type_code in ['1', '2', '3', '4']:
             self.invoice_type_code = '0' + invoice.invoice_type
         if self.invoice_type_code == '02':
-            self.brands = ['not_brand' for line in self.lines
-                           if hasattr(line.product.template, 'brand') and not line.product.brand]
-            self.models = ['not_reference' for line in self.lines
-                           if hasattr(line.product.template, 'reference') and not line.product.reference]
+            self.brands = [
+                'not_brand' for line in self.lines
+                if hasattr(line.product.template, 'brand')
+                and not line.product.brand
+            ]
+            self.models = [
+                'not_reference' for line in self.lines
+                if hasattr(line.product.template, 'reference')
+                and not line.product.reference
+            ]
 
         self.invoice_type_name = invoice.invoice_type_string
         # if TYPE_PERSON.get(invoice.party.type_person):
-        self.party_tax_level_code = TYPE_PERSON[invoice.party.type_person] if invoice.party.type_person else None
+        self.party_tax_level_code = TYPE_PERSON[
+            invoice.party.type_person] if invoice.party.type_person else None
         self.fiscal_regimen_party = invoice.party.fiscal_regimen
         self.party_address = invoice.party.street
-        self.party_country_code = invoice.party.get_country_iso(invoice.party.country_code, 'code')  # 'CO'
-        self.party_country_name = invoice.party.get_country_iso(invoice.party.country_code, 'name')  # 'CO'
+        self.party_country_code = invoice.party.get_country_iso(
+            invoice.party.country_code, 'code')  # 'CO'
+        self.party_country_name = invoice.party.get_country_iso(
+            invoice.party.country_code, 'name')  # 'CO'
         self.party_department = invoice.party.department_name
         self.party_city = invoice.party.city_name
         self.party_phone = invoice.party.phone or invoice.party.mobile
@@ -213,9 +235,13 @@ class ElectronicInvoice_2(object):
         self.total_amount = str(abs(invoice.total_amount))
         self.tax_amount = str(abs(invoice.tax_amount))
         self.taxes = invoice.taxes
-        self.not_classification_tax = [taxline.tax.name for taxline in self.taxes if not taxline.tax.classification_tax]
+        self.not_classification_tax = [
+            taxline.tax.name for taxline in self.taxes
+            if not taxline.tax.classification_tax
+        ]
         self.currency = invoice.currency.code
-        self.invoice_date = date.strftime(self.invoice.invoice_date, '%Y-%m-%d')
+        self.invoice_date = date.strftime(self.invoice.invoice_date,
+                                          '%Y-%m-%d')
         # self.issue_time = str(self.invoice.company.convert_timezone(invoice.create_date).time())[:8]
         self.issue_date, self.issue_time = invoice.get_datetime_local()
         self.status = 'ok'
@@ -245,7 +271,8 @@ class ElectronicInvoice_2(object):
 
         if invoice.operation_type in ('20', '30') or invoice.type == 'in':
             if invoice.date_document_reference:
-                self.original_invoice_date = date.strftime(invoice.date_document_reference, '%Y-%m-%d')
+                self.original_invoice_date = date.strftime(
+                    invoice.date_document_reference, '%Y-%m-%d')
             self.original_invoice_number = invoice.number_document_reference
             self.original_invoice_cufe = invoice.cufe_document_reference
             self.original_invoice_invoice_type = invoice.type_invoice_reference
@@ -255,14 +282,18 @@ class ElectronicInvoice_2(object):
         for k in MESSAGES.keys():
 
             field_value = getattr(self, k)
-            party_inf = ['party_department_code', 'party_city_code', 'party_department', 'party_city']
+            party_inf = [
+                'party_department_code', 'party_city_code', 'party_department',
+                'party_city'
+            ]
             if k in party_inf and getattr(self, 'party_country_code') != 'CO':
                 continue
             elif not field_value:
                 self.status = MESSAGES[k]
                 break
             if self.not_classification_tax:
-                self.status = 'Falta Asignar Clasificación a un impuesto'+";".join(self.not_classification_tax)
+                self.status = 'Falta Asignar Clasificación a un impuesto' + ";".join(
+                    self.not_classification_tax)
                 break
             if len(self.brands) > 0:
                 self.status = 'Las marcas de productos son obligatorias para tipo Exportación'
@@ -288,11 +319,11 @@ class ElectronicInvoice_2(object):
             "Nvpro_docu": self.party_id,
             "Nvpro_mail": self.party_email,
             "Nvpro_depa": self.party_department,
-            "Nvpro_ciud": self.party_city+"@"+self.party_city_code,
-            "Nvpro_loca":"",
+            "Nvpro_ciud": self.party_city + "@" + self.party_city_code,
+            "Nvpro_loca": "",
             "Nvpro_pais": self.party_country_code,
             "Nvpro_dire": self.party_address,
-            "Nvpro_regi": self.fiscal_regimen_party, #FIX
+            "Nvpro_regi": self.fiscal_regimen_party,  #FIX
         }
         if self.party_country_code != 'CO':
             provider['Nvpro_ciud'] = self.party_city.upper()
@@ -309,7 +340,8 @@ class ElectronicInvoice_2(object):
             provider["Nvpro_nomb"] = self.party_name
             provider["Nvpro_pnom"] = self.party_first_name
             provider["Nvpro_snom"] = self.party_second_name
-            provider["Nvpro_apel"] = self.party_first_family_name+" "+self.party_second_family_name
+            provider[
+                "Nvpro_apel"] = self.party_first_family_name + " " + self.party_second_family_name
         else:
             provider["Nvpro_nomb"] = self.party_name
             provider["Nvpro_pnom"] = ""
@@ -321,13 +353,12 @@ class ElectronicInvoice_2(object):
 
         return provider
 
-
     def _get_information(self):
         information = {
             "Nvfac_orig": "E",
             "Nvemp_nnit": self.company_id,
             "Nvres_nume": self.company_resolution_number,
-            "Nvfac_tipo": "DS", # Documento Soporte
+            "Nvfac_tipo": "DS",  # Documento Soporte
             "Nvfac_tcru": "",
             "Nvfac_cdet": len(self.invoice.lines),
             "Nvfac_nume": self.number,
@@ -340,11 +371,13 @@ class ElectronicInvoice_2(object):
             "Nvven_nomb": "",
             "Nvfac_fpag": self.payment_means_code,
             "Nvfac_obse": self.concept,
-            "Nvfac_stot": self.untaxed_amount, # Se omite el total con impuestos para el envío
+            "Nvfac_stot": self.
+            untaxed_amount,  # Se omite el total con impuestos para el envío
             "Nvdes_codi": "",
             "Nvfac_desc": "0.00",
-            "Nvfac_tota": self.untaxed_amount, # Campo con el mismo valor de Nvfac_stot
-            "Nvfac_totp": self.untaxed_amount, # Valor total sin impuestos
+            "Nvfac_tota":
+            self.untaxed_amount,  # Campo con el mismo valor de Nvfac_stot
+            "Nvfac_totp": self.untaxed_amount,  # Valor total sin impuestos
             "Nvfac_roun": "0.00",
             "Nvcon_codi": "",
             "Nvcon_desc": "",
@@ -352,7 +385,6 @@ class ElectronicInvoice_2(object):
         if self.company_email_ds:
             information["Nvema_copi"] = self.company_email_ds
         return information
-
 
     def _set_original_document_information(self, data):
         if self.original_invoice_number:
@@ -380,8 +412,8 @@ class ElectronicInvoice_2(object):
                 "Nvuni_desc": unit,
                 "Nvfac_cant": abs(line.quantity),
                 "Nvfac_valo": unit_price,
-                "Nvfac_pdes": "0.00", # Fix porcentaje descuento
-                "Nvfac_desc": "0.00", # Fix valor descuento
+                "Nvfac_pdes": "0.00",  # Fix porcentaje descuento
+                "Nvfac_desc": "0.00",  # Fix valor descuento
                 "Nvfac_stot": amount,
                 "Nvimp_cdia": "00",
                 "Nvdet_nota": line.note,
@@ -396,7 +428,7 @@ class ElectronicInvoice_2(object):
         document = self._get_information()
         document["proveedor"] = self._get_provider()
         document["lDetalle"] = self._get_lines()
-        if type == '95': # NOTA DE AJUSTE
+        if type == '95':  # NOTA DE AJUSTE
             document["Nvfac_tipo"] = "CS"
             document["Nvres_nume"] = self.company_resolution_number_note
             document["Nvfor_codi"] = self.print_format_note

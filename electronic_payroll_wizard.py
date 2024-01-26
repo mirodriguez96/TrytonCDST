@@ -1,7 +1,8 @@
 from trytond.wizard import Wizard, StateTransition
 from trytond.transaction import Transaction
 from trytond.pool import Pool
-from . it_supplier_noova import ElectronicPayrollCdst
+from .it_supplier_noova import ElectronicPayrollCdst
+
 
 # Asistente encargado de enviar las nóminas electronicas de los empleados
 class PayrollElectronicCdst(Wizard):
@@ -26,5 +27,7 @@ class PayrollElectronicCdst(Wizard):
                 else:
                     payroll.get_message('Nomina no valida para enviar')
             else:
-                payroll.get_message('Nomina no valida para enviar (revisar estado de la nómina).')
+                payroll.get_message(
+                    'Nomina no valida para enviar (revisar estado de la nómina).'
+                )
         return 'end'

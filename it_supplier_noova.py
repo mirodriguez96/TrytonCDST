@@ -1,10 +1,11 @@
 #!/usr/bin/python
 #! -*- coding: utf8 -*-
 import json
-from . builder_phase import ElectronicPayroll
+from .builder_phase import ElectronicPayroll
 from .builder_phase2 import ElectronicInvoice_2
 import requests
 import base64
+
 
 class ElectronicPayrollCdst(object):
 
@@ -27,7 +28,6 @@ class ElectronicPayrollCdst(object):
         #print(data)
         self._send_noova(data)
 
-
     # Consumo API noova
     def _send_noova(self, data):
         #Validamos que los datos del proveedor tecnologico este completo
@@ -43,7 +43,7 @@ class ElectronicPayrollCdst(object):
         auth = auth.decode('utf-8')
         #Se crea el encabezado que se enviara al proveedor it
         header = {
-            'Authorization': 'Basic '+auth,
+            'Authorization': 'Basic ' + auth,
             'Content-Type': 'application/json',
             'Host': host,
             'Content-Length': '967',
@@ -91,7 +91,6 @@ class SendElectronicInvoice(object):
         print(data)
         self._send_noova(data)
 
-
     # Consumo API noova
     def _send_noova(self, data):
         url = self.invoice.company.url_ds_itsupplier
@@ -105,7 +104,7 @@ class SendElectronicInvoice(object):
         auth = auth.decode('utf-8')
         #Se crea el encabezado que se enviara al proveedor it
         header = {
-            'Authorization': 'Basic '+auth,
+            'Authorization': 'Basic ' + auth,
             'Content-Type': 'application/json',
             'Host': host,
             'Content-Length': '967',

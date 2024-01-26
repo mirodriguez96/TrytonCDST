@@ -2,7 +2,8 @@ from trytond.pool import Pool
 from trytond.transaction import Transaction
 from trytond.exceptions import UserError
 from decimal import Decimal
-import math 
+import math
+
 
 # Función encargada de convertir una lista a un string tipo tupla
 def list_to_tuple(value, string=False):
@@ -13,6 +14,7 @@ def list_to_tuple(value, string=False):
         else:
             result = "(" + ", ".join(map(str, value)) + ")"
     return result
+
 
 # Se retorna las cuentas analiticas según los tipos de documentos que coinciden
 def get_analytic_types(tipos_doctos):
@@ -32,12 +34,14 @@ def get_analytic_types(tipos_doctos):
                 _values[encabezado].append(idtipod)
         if _values:
             AnalyticAccount = pool.get('analytic_account.account')
-            analytic_accounts = AnalyticAccount.search([('code', 'in', _values.keys())])
+            analytic_accounts = AnalyticAccount.search([('code', 'in',
+                                                         _values.keys())])
             for ac in analytic_accounts:
                 idstipo = _values[ac.code]
                 for idt in idstipo:
                     analytic_types[idt] = ac
     return analytic_types
+
 
 # Se retorna un diccionario con las ubicaciones encontradas
 def get_locations(bodegas):
@@ -49,36 +53,42 @@ def get_locations(bodegas):
             result[l.id_tecno] = l
     return result
 
+
 # Se valida y retorna el centro de operacion encontrado
 def get_operation_center(cls):
     operation_center = hasattr(cls, 'operation_center')
     if operation_center:
         OperationCenter = Pool().get('company.operation_center')
-        operation_center = OperationCenter.search([], order=[('id', 'DESC')], limit=1)
+        operation_center = OperationCenter.search([],
+                                                  order=[('id', 'DESC')],
+                                                  limit=1)
         if not operation_center:
-            raise UserError("operation_center", "the operation center is missing")
+            raise UserError("operation_center",
+                            "the operation center is missing")
         operation_center, = operation_center
     return operation_center
+
 
 #
 def get_products(values):
     result = {}
     if values:
         Product = Pool().get('product.product')
-        products = Product.search([['OR',
-            ('id_tecno', 'in', values),
-            ('code', 'in', values)],
-            ('active', '=', True)])
+        products = Product.search(
+            [['OR', ('id_tecno', 'in', values), ('code', 'in', values)],
+             ('active', '=', True)])
         for p in products:
             result[p.code] = p
     return result
+
 
 #
 def validate_documentos(data):
     pool = Pool()
     Config = pool.get('conector.configuration')
     Actualizacion = pool.get('conector.actualizacion')
-    actualizacion = Actualizacion.create_or_update('CREAR ENVIOS INTERNOS VALIDACION DE PERIODOS')
+    actualizacion = Actualizacion.create_or_update(
+        'CREAR ENVIOS INTERNOS VALIDACION DE PERIODOS')
     Period = pool.get('account.period')
     logs = {}
     to_exception = []
@@ -121,20 +131,22 @@ def validate_documentos(data):
     set_data = Config.get_data(select)
 
     for item in set_data:
-            
+
         dictprodut[item[0]] = {
             'idresponsable': str(item[1]),
         }
 
     move = {}
-    for value ,d in enumerate(data):
+    for value, d in enumerate(data):
         dat = str(d.Fecha_Documento.date()).split('-')
-        name = f"{dat[0]}-{dat[1]}"                 
+        name = f"{dat[0]}-{dat[1]}"
         validate_period = Period.search([('name', '=', name)])
         if validate_period[0].state == 'close':
             to_exception.append(f"{d.sw}-{reference}")
-            logs[f"{d.sw}-{reference}"] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
+            logs[
+                f"{d.sw}-{reference}"] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
             Y NO ES POSIBLE SU CREACION"
+
             continue
         tipo = str(d.tipo)
         reference = f"{tipo}-{d.Numero_Documento}"
@@ -174,43 +186,44 @@ def validate_documentos(data):
         if "moves" not in shipment:
             shipment["moves"] = []
         # Se crea el movimiento
-        producto = dictprodut[d.IdProducto]['idresponsable'] if dictprodut[d.IdProducto] and dictprodut[d.IdProducto]['idresponsable'] != '0' else str(d.IdProducto)
+        producto = dictprodut[d.IdProducto]['idresponsable'] if dictprodut[
+            d.IdProducto] and dictprodut[
+                d.IdProducto]['idresponsable'] != '0' else str(d.IdProducto)
         if producto not in productos:
             productos.append(producto)
-        quantity = round(float(round(d.Cantidad_Facturada, 3)),3)
-
+        quantity = round(float(round(d.Cantidad_Facturada, 3)), 3)
 
         if quantity < 0:
-            result["logs"][id_tecno] = f"Cantidad en negativo: {quantity} Producto: {producto}"
+            result["logs"][
+                id_tecno] = f"Cantidad en negativo: {quantity} Producto: {producto}"
             result["exportado"]["E"].append(id_tecno)
-            del(result["tryton"][id_tecno])
+            del (result["tryton"][id_tecno])
             continue
 
-
         if id_tecno not in move:
-            move[id_tecno] = {
-                'move_product':{}
-            }
+            move[id_tecno] = {'move_product': {}}
         if producto not in move[id_tecno]['move_product']:
-           
-           move[id_tecno]['move_product'][producto] = {
+
+            move[id_tecno]['move_product'][producto] = {
                 "from_location": shipment["from_location"],
                 "to_location": shipment["to_location"],
                 "product": producto,
                 "company": id_company,
-                "quantity":  round(float(0),3),
+                "quantity": round(float(0), 3),
                 "planned_date": shipment["planned_date"],
                 "effective_date": shipment["effective_date"],
             }
 
         quantity_float = move[id_tecno]['move_product'][producto]["quantity"]
-        move[id_tecno]['move_product'][producto]["quantity"] = round(quantity + quantity_float,3)
+        move[id_tecno]['move_product'][producto]["quantity"] = round(
+            quantity + quantity_float, 3)
 
-
-    for id_tec , line_move in result['tryton'].items():
+    for id_tec, line_move in result['tryton'].items():
 
         if result['tryton'][id_tec]:
-            result['tryton'][id_tec]['moves'] = [('create', [i for i in move[id_tec]['move_product'].values()])]
+            result['tryton'][id_tec]['moves'] = [
+                ('create', [i for i in move[id_tec]['move_product'].values()])
+            ]
 
     products = get_products(productos)
     locations = get_locations(bodegas)
@@ -223,7 +236,8 @@ def validate_documentos(data):
             if tipo in analytic_types:
                 shipment["analytic_account"] = analytic_types[tipo].id
             else:
-                result["logs"][id_tecno] = f"No se encontro la cuenta analitica para el tipo: {tipo}"
+                result["logs"][
+                    id_tecno] = f"No se encontro la cuenta analitica para el tipo: {tipo}"
                 result["exportado"]["E"].append(id_tecno)
                 continue
         from_location = shipment["from_location"]
@@ -231,7 +245,8 @@ def validate_documentos(data):
             storage_location_id = locations[from_location].storage_location.id
             shipment["from_location"] = storage_location_id
         else:
-            result["tryton"][id_tecno] = f"No se encontro la bodega con id_tecno: {from_location}"
+            result["tryton"][
+                id_tecno] = f"No se encontro la bodega con id_tecno: {from_location}"
             result["exportado"]["E"].append(id_tecno)
             continue
         to_location = shipment["to_location"]
@@ -239,7 +254,8 @@ def validate_documentos(data):
             storage_location_id = locations[to_location].storage_location.id
             shipment["to_location"] = storage_location_id
         else:
-            result["tryton"][id_tecno] = f"No se encontro la bodega con id_tecno: {to_location}"
+            result["tryton"][
+                id_tecno] = f"No se encontro la bodega con id_tecno: {to_location}"
             result["exportado"]["E"].append(id_tecno)
             continue
         products_exist = True
@@ -251,10 +267,11 @@ def validate_documentos(data):
                 mv["uom"] = product.default_uom.id
                 mv["product"] = product.id
                 if product.default_uom.symbol.upper() == 'U':
-                    mv["quantity"] = round(float(int(mv["quantity"])),3)
+                    mv["quantity"] = round(float(int(mv["quantity"])), 3)
             else:
                 products_exist = False
-                result["logs"][id_tecno] = f"No se encontro el producto: {mv['product']}"
+                result["logs"][
+                    id_tecno] = f"No se encontro el producto: {mv['product']}"
                 break
         if not products_exist:
             result["exportado"]["E"].append(id_tecno)
@@ -262,7 +279,7 @@ def validate_documentos(data):
         result["exportado"]["T"].append(id_tecno)
     for to_delete in result["exportado"]["E"]:
         if to_delete in result["tryton"]:
-            del(result["tryton"][to_delete])
+            del (result["tryton"][to_delete])
     if to_exception:
         actualizacion.add_logs(logs)
     return result

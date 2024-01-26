@@ -3,8 +3,6 @@ from trytond.transaction import Transaction
 from sql import Table
 from trytond.exceptions import UserError
 
-
-
 _SW = {
     '27': {
         'name': 'NOTA DEBITO COMPRAS',
@@ -28,7 +26,6 @@ _SW = {
     },
 }
 
-
 # def borrar_notas_de_adjuste(ids_ = None,id_tecno = None):
 #     pool = Pool()
 #     Actualizacion = pool.get('conector.actualizacion')
@@ -37,7 +34,7 @@ _SW = {
 #     exceptions = []
 #     if ids_ is None:
 #         raise UserError(f"No se ha ingresado ningun valor en el campos de ids")
-    
+
 #     if id_tecno == None:
 #         number = ids_.split(',')
 #         ids_ = [int(value) for value in number]
@@ -101,7 +98,8 @@ _SW = {
 #         actualizacion.add_logs(logs)
 #         print("ELIMINAR NOTAS DE AJUSTE")
 
-def eliminar_tecnocarnes_facturas(ids_ = None, id_tecno = None):
+
+def eliminar_tecnocarnes_facturas(ids_=None, id_tecno=None):
     pool = Pool()
     Actualizacion = pool.get('conector.actualizacion')
     actualizacion = Actualizacion.create_or_update('ELIMINAR FACTURA')
@@ -109,7 +107,7 @@ def eliminar_tecnocarnes_facturas(ids_ = None, id_tecno = None):
     exceptions = []
     if ids_ is None:
         raise UserError(f"No se ha ingresado ningun valor en el campos de ids")
-    
+
     if id_tecno == None:
         number = ids_.split(',')
         ids_ = [int(value) for value in number]
@@ -129,13 +127,17 @@ def eliminar_tecnocarnes_facturas(ids_ = None, id_tecno = None):
         for invoice in Invoice.browse(ids_):
             if invoice.move.period.state == 'close':
                 exceptions.append(invoice.reference)
-                logs[invoice.reference] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
+                logs[
+                    invoice.
+                    reference] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
                 Y NO ES POSIBLE SU ELIMINACION O MODIFICACION"
+
                 continue
-            reclamacion, = Reclamacion.search([('line.move.origin', '=', invoice)])
+            reclamacion, = Reclamacion.search([('line.move.origin', '=',
+                                                invoice)])
             rec_name = invoice.rec_name
             party_name = invoice.party.name
-            rec_party = rec_name+' de '+party_name
+            rec_party = rec_name + ' de ' + party_name
             if invoice.number and '-' in invoice.number:
                 if invoice.id_tecno:
                     sw = invoice.id_tecno.split('-')[0]
@@ -147,7 +149,8 @@ def eliminar_tecnocarnes_facturas(ids_ = None, id_tecno = None):
                     if sale:
                         to_delete_sales.append(sale[0])
                 elif invoice.type == 'in':
-                    purchase = Purchase.search([('number', '=', invoice.number)])
+                    purchase = Purchase.search([('number', '=', invoice.number)
+                                                ])
                     if purchase:
                         to_delete_purchases.append(purchase[0])
                 if reclamacion:
@@ -158,11 +161,9 @@ def eliminar_tecnocarnes_facturas(ids_ = None, id_tecno = None):
                                 dunningTable.state,
                             ],
                             values=["draft"],
-                            where=dunningTable.id == reclamacion.id)
-                        )
+                            where=dunningTable.id == reclamacion.id))
                     cursor.execute(*dunningTable.delete(
-                        where=dunningTable.id == reclamacion.id)
-                    )
+                        where=dunningTable.id == reclamacion.id))
         if to_delete_sales:
             Sale.delete_imported_sales(to_delete_sales)
         if to_delete_purchases:
@@ -174,7 +175,7 @@ def eliminar_tecnocarnes_facturas(ids_ = None, id_tecno = None):
         print("ELIMINAR FACTURAS")
 
 
-def desconciliar_borrar_asientos(ids_ = None, id_tecno = None):
+def desconciliar_borrar_asientos(ids_=None, id_tecno=None):
     pool = Pool()
     Actualizacion = pool.get('conector.actualizacion')
     actualizacion = Actualizacion.create_or_update('ELIMINAR MOVIMIENTOS')
@@ -195,15 +196,18 @@ def desconciliar_borrar_asientos(ids_ = None, id_tecno = None):
         moves = account_move.search([('id', 'in', ids_)])
         Reconciliation = pool.get('account.move.reconciliation')
         to_delete = []
-            
-            # moves = account_move.browse(ids_)
+
+        # moves = account_move.browse(ids_)
         for move in moves:
             for line in move.lines:
                 print(line.credit, line.id, line.debit)
             if move.period.state == 'close':
                 exceptions.append(move.id)
-                logs[move.id] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
+                logs[
+                    move.
+                    id] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
                 Y NO ES POSIBLE SU ELIMINACION O MODIFICACION"
+
                 continue
             to_delete.append(move.id)
             reconciliations = [
@@ -214,16 +218,12 @@ def desconciliar_borrar_asientos(ids_ = None, id_tecno = None):
 
             # account_move.draft(to_delete)
             # account_move.delete(to_delete)
-                    
+
         if to_delete:
-            cursor.execute(*Move.update(
-                columns=[Move.state],
-                values=['draft'],
-                where=Move.id.in_(to_delete))
-                )
-            cursor.execute(*Move.delete(
-                where=Move.id.in_(to_delete))
-                    )
-        
+            cursor.execute(*Move.update(columns=[Move.state],
+                                        values=['draft'],
+                                        where=Move.id.in_(to_delete)))
+            cursor.execute(*Move.delete(where=Move.id.in_(to_delete)))
+
         actualizacion.add_logs(logs)
         print("ELIMINAR MOVIMIENTOS")

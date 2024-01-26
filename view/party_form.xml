@@ -9,9 +9,9 @@ this repository contains the full copyright notices and license terms. -->
         <field name="payable_tecno"/>
     </xpath>
     <xpath expr="/form/notebook/page[@id='personal_information']/notebook/page[@id='personal_info']/group[@id='health']" position="before">
-    <group string="Payment Code For Foreigners" id="payment_code_for_foreigners" colspan="4">
-        <label name="number_pay_payroll"/>
-        <field name="number_pay_payroll"/>
-    </group>
+        <group string="Payment Code For Foreigners" id="payment_code_for_foreigners" colspan="4">
+            <label name="number_pay_payroll"/>
+            <field name="number_pay_payroll"/>
+        </group>
     </xpath>
 </data>

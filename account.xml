@@ -6,7 +6,7 @@ this repository contains the full copyright notices and license terms. -->
         <!--Campo para depreciacion acomulada-->
         <record model="ir.ui.view" id="asset_view_tree">
             <field name="model">account.asset</field>
-            <field name="inherit" ref="account_asset.asset_view_tree"/> 
+            <field name="inherit" ref="account_asset.asset_view_tree"/>
             <field name="name">asset_tree</field>
         </record>
 
@@ -20,11 +20,8 @@ this repository contains the full copyright notices and license terms. -->
             <field name="name">Balance Stock</field>
             <field name="wiz_name">account.fiscalyear.balance_stock</field>
         </record>
-        
-        <menuitem parent="account.menu_processing"
-            sequence="10"
-            action="act_balance_stock"
-            id="menu_balance_stock"/>
+
+        <menuitem parent="account.menu_processing" sequence="10" action="act_balance_stock" id="menu_balance_stock"/>
 
         <!-- Print Auxiliary Book -->
         <record model="ir.ui.view" id="print_auxiliary_book_start_view_form">
@@ -46,8 +43,7 @@ this repository contains the full copyright notices and license terms. -->
             <field name="template_extension">ods</field>
             <field name="translatable">False</field>
         </record>
-        <menuitem parent="account.menu_reporting" action="wizard_auxiliary_book_print"
-            id="menu_auxiliary_book_print" icon="tryton-print"/>
+        <menuitem parent="account.menu_reporting" action="wizard_auxiliary_book_print" id="menu_auxiliary_book_print" icon="tryton-print"/>
 
 
         <!--Forzar borrado activos-->
@@ -65,14 +61,14 @@ this repository contains the full copyright notices and license terms. -->
         <!-- Print comprehensive income statement -->
         <record model="ir.action.wizard" id="wizard_income_statement">
             <field name="name">Income statement Report</field>
-            <field name="wiz_name">account.income_statement_wizard_cds</field>    
+            <field name="wiz_name">account.income_statement_wizard_cds</field>
         </record>
 
-      <record model="ir.action.keyword" id="act_income_statement_keyword">
+        <record model="ir.action.keyword" id="act_income_statement_keyword">
             <field name="keyword">form_action</field>
             <field name="model">account.account.type,-1</field>
             <field name="action" ref="wizard_income_statement"/>
-      </record>  
+        </record>
 
         <record model="ir.ui.view" id="detailed_income_statement_form">
             <field name="model">account.income_statement.start</field>
@@ -88,6 +84,6 @@ this repository contains the full copyright notices and license terms. -->
             <field name="template_extension">ods</field>
             <field name="translatable">False</field>
         </record>
-        
+
     </data>
 </tryton>
