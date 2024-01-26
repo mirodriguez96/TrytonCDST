@@ -5,8 +5,8 @@ import datetime
 from trytond.exceptions import UserError
 from trytond.modules.company import CompanyReport
 from trytond.report import Report
-from trytond.wizard import (
-    Wizard, StateReport, StateView, Button, StateTransition)
+from trytond.wizard import (Wizard, StateReport, StateView, Button,
+                            StateTransition)
 from trytond.transaction import Transaction
 from sql import Table
 
@@ -16,7 +16,9 @@ class Production(metaclass=PoolMeta):
     'Production'
     __name__ = 'production'
     id_tecno = fields.Char('Id Tabla Sqlserver', required=False)
-    move = fields.Many2One('account.move', 'Account Move', states={'readonly': True})
+    move = fields.Many2One('account.move',
+                           'Account Move',
+                           states={'readonly': True})
 
     @classmethod
     def done(cls, records):
@@ -24,7 +26,7 @@ class Production(metaclass=PoolMeta):
         pool = Pool()
         Revision = pool.get('product.cost_price.revision')
         AverageCost = pool.get('product.average_cost')
-        to_update = {} 
+        to_update = {}
         done_revision = []
         done_cost = []
         for rec in records:
@@ -57,7 +59,7 @@ class Production(metaclass=PoolMeta):
                 if product not in to_update:
                     to_update[product.code] = product
 
-        if done_revision:         
+        if done_revision:
             Revision.create(done_revision)
         if data:
             AverageCost.create(done_cost)
@@ -101,7 +103,7 @@ class Production(metaclass=PoolMeta):
                 sw = transformacion.sw
                 numero_doc = transformacion.Numero_documento
                 tipo_doc = transformacion.tipo
-                id_tecno = str(sw)+'-'+tipo_doc+'-'+str(numero_doc)
+                id_tecno = str(sw) + '-' + tipo_doc + '-' + str(numero_doc)
                 print(id_tecno)
                 if transformacion.anulado == 'S':
                     logs[id_tecno] = "Documento anulado en TecnoCarnes"
@@ -112,16 +114,20 @@ class Production(metaclass=PoolMeta):
                     logs[id_tecno] = "La producción ya existe en Tryton"
                     to_created.append(id_tecno)
                     continue
-                fecha = str(transformacion.Fecha_Hora_Factura).split()[0].split('-')
-                fecha = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
-                name = f"{fecha[0]}-{fecha[1]}"                 
+                fecha = str(
+                    transformacion.Fecha_Hora_Factura).split()[0].split('-')
+                fecha = datetime.date(int(fecha[0]), int(fecha[1]),
+                                      int(fecha[2]))
+                name = f"{fecha[0]}-{fecha[1]}"
                 validate_period = Period.search([('name', '=', name)])
                 if validate_period[0].state == 'close':
                     to_exception.append(id_tecno)
-                    logs[id_tecno] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
+                    logs[
+                        id_tecno] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
                     Y NO ES POSIBLE SU CREACION"
+
                     continue
-                reference = tipo_doc+'-'+str(numero_doc)
+                reference = tipo_doc + '-' + str(numero_doc)
                 id_bodega = transformacion.bodega
                 bodega, = Location.search([('id_tecno', '=', id_bodega)])
                 production = {
@@ -140,14 +146,18 @@ class Production(metaclass=PoolMeta):
                 first = True
                 for line in lines:
                     cantidad = float(line.Cantidad_Facturada)
-                    bodega = Location.search([('id_tecno', '=', line.IdBodega)])
+                    bodega = Location.search([('id_tecno', '=', line.IdBodega)
+                                              ])
                     if not bodega:
                         msg = f"EXCEPCION: No se encontro la bodega {line.IdBodega}"
                         logs[id_tecno] = msg
                         to_exception.append(id_tecno)
                         break
                     bodega, = bodega
-                    producto = Product.search(['OR', ('id_tecno', '=', line.IdProducto), ('code', '=', line.IdProducto)])
+                    producto = Product.search([
+                        'OR', ('id_tecno', '=', line.IdProducto),
+                        ('code', '=', line.IdProducto)
+                    ])
                     if not producto:
                         msg = f"EXCEPCION: No se encontro el producto {line.IdProducto}"
                         logs[id_tecno] = msg
@@ -155,7 +165,8 @@ class Production(metaclass=PoolMeta):
                         break
                     producto, = producto
                     if not producto.account_category.account_stock:
-                        raise UserError('msg_missing_account_stock', producto.rec_name)
+                        raise UserError('msg_missing_account_stock',
+                                        producto.rec_name)
                     # Se valida si el producto esta creado en unidades para eliminar sus decimales
                     if producto.default_uom.symbol.upper() == 'U':
                         cantidad = float(int(cantidad))
@@ -174,7 +185,8 @@ class Production(metaclass=PoolMeta):
                             first = False
                             #Se actualiza el producto para que sea producible
                             if not producto.template.producible:
-                                Template.write([producto.template], {'producible': True})
+                                Template.write([producto.template],
+                                               {'producible': True})
                             production['product'] = producto.id
                             production['quantity'] = abs(cantidad)
                             production['uom'] = producto.default_uom.id
@@ -196,7 +208,7 @@ class Production(metaclass=PoolMeta):
                             to_write = {
                                 'sale_price_w_tax': valor_unitario,
                                 'list_price': valor_unitario
-                                }
+                            }
                             Template.write([producto.template], to_write)
                 if id_tecno in to_exception:
                     continue
@@ -238,8 +250,7 @@ class Production(metaclass=PoolMeta):
             Config.update_exportado(idt, 'T')
         print('FINISH PRODUCTION')
 
-
-    # Función que recibe una producción y de acuerdo a esa información crea un asiento contable 
+    # Función que recibe una producción y de acuerdo a esa información crea un asiento contable
     @classmethod
     def create_account_move(cls, rec):
         pool = Pool()
@@ -248,7 +259,8 @@ class Production(metaclass=PoolMeta):
         Period = pool.get('account.period')
         period = Period(Period.find(rec.company.id, date=rec.planned_date))
         account_configuration = AccountConfiguration(1)
-        journal = account_configuration.get_multivalue('stock_journal', company=rec.company.id)
+        journal = account_configuration.get_multivalue('stock_journal',
+                                                       company=rec.company.id)
         account_move = AccountMove()
         account_move.journal = journal
         account_move.period = period
@@ -276,7 +288,7 @@ class Production(metaclass=PoolMeta):
         if move_line_adj:
             account_move_lines.append(move_line_adj)
         # Se agrega las líneas del asiento de acuerdo a las entradas y salidas de produccion
-        account_move.lines=account_move_lines
+        account_move.lines = account_move_lines
         # Se crea y contabiliza el asiento
         AccountMove.save([account_move])
         AccountMove.post([account_move])
@@ -294,18 +306,25 @@ class Production(metaclass=PoolMeta):
         Uom = pool.get('product.uom')
         AccountMoveLine = pool.get('account.move.line')
         # instruccion que muestra error de tipo en caso que el movimiento de existencia no sea de entrada o salida
-        assert type_.startswith('in_') or type_.startswith('out_'), 'wrong type'
+        assert type_.startswith('in_') or type_.startswith(
+            'out_'), 'wrong type'
         # se comienza a crear la línea de asiento
         if not smove.product.account_category.account_stock:
-            raise UserError('msg_missing_account_stock', smove.product.rec_name)
-        move_line = AccountMoveLine(account=smove.product.account_category.account_stock, party=smove.company.party)
-        if ((type_ in {'in_production', 'in_warehouse'}) and smove.product.cost_price_method != 'fixed'):
+            raise UserError('msg_missing_account_stock',
+                            smove.product.rec_name)
+        move_line = AccountMoveLine(
+            account=smove.product.account_category.account_stock,
+            party=smove.company.party)
+        if ((type_ in {'in_production', 'in_warehouse'})
+                and smove.product.cost_price_method != 'fixed'):
             unit_price = smove.unit_price
         else:
             unit_price = smove.cost_price or smove.product.cost_price
-        unit_price = Uom.compute_price(smove.product.default_uom, unit_price, smove.uom)
+        unit_price = Uom.compute_price(smove.product.default_uom, unit_price,
+                                       smove.uom)
         # amount = Decimal(str(smove.quantity)) * unit_price
-        amount = smove.company.currency.round(Decimal(str(smove.quantity)) * unit_price)
+        amount = smove.company.currency.round(
+            Decimal(str(smove.quantity)) * unit_price)
         # print(smove.product, amount)
         if type_.startswith('in_'):
             move_line.debit = amount
@@ -325,15 +344,14 @@ class Production(metaclass=PoolMeta):
         AccountMoveLine = pool.get('account.move.line')
         move_line = AccountMoveLine(
             account=rec.product.account_category.account_stock,
-            party=rec.company.party
-            )
+            party=rec.company.party)
         if not amount:
             return
         if amount > Decimal('0.0'):
             move_line.debit = Decimal('0.0')
             move_line.credit = amount
         else:
-            move_line.debit = - amount
+            move_line.debit = -amount
             move_line.credit = Decimal('0.0')
         return move_line
 
@@ -393,12 +411,11 @@ class ProductionDetailedStart(ModelView):
 class ProductionDetailed(Wizard):
     'Production Detailed'
     __name__ = 'production.detailed'
-    start = StateView(
-        'production.detailed.start',
-        'conector.production_detailed_start_view_form', [
-            Button('Cancel', 'end', 'tryton-cancel'),
-            Button('Print', 'print_', 'tryton-ok', default=True),
-        ])
+    start = StateView('production.detailed.start',
+                      'conector.production_detailed_start_view_form', [
+                          Button('Cancel', 'end', 'tryton-cancel'),
+                          Button('Print', 'print_', 'tryton-ok', default=True),
+                      ])
     print_ = StateReport('production.detailed_report')
 
     def do_print_(self, action):
@@ -429,7 +446,8 @@ class ProductionDetailedReport(Report):
             ('effective_date', '>=', data['start_date']),
             ('effective_date', '<=', data['end_date']),
             ('write_uid', '!=', 0),
-            ('state', '!=', 'draft'),]
+            ('state', '!=', 'draft'),
+        ]
 
         productions = Production.search(domain)
 
@@ -452,43 +470,60 @@ class ProductionDetailedReport(Report):
             for pro in record.outputs:
                 if record.number not in production:
                     production[record.number] = {
-                        'werehouse': record.warehouse.name,
-                        'location': record.location.name,
-                        'date': record.effective_date,
-                        'estimated_amount': Decimal(record.quantity),
-                        'not_production_amount_total':Decimal(record.quantity),
-                        'cost_base': record.cost,
-                        'unit_cost': Decimal(record.cost)/Decimal(record.quantity) if record.quantity > 0 else 0,
-                        'percentage': 0,
-                        'percentage_merma': 0,
-                        'merma_cost_total': 0,
+                        'werehouse':
+                        record.warehouse.name,
+                        'location':
+                        record.location.name,
+                        'date':
+                        record.effective_date,
+                        'estimated_amount':
+                        Decimal(record.quantity),
+                        'not_production_amount_total':
+                        Decimal(record.quantity),
+                        'cost_base':
+                        record.cost,
+                        'unit_cost':
+                        Decimal(record.cost) /
+                        Decimal(record.quantity) if record.quantity > 0 else 0,
+                        'percentage':
+                        0,
+                        'percentage_merma':
+                        0,
+                        'merma_cost_total':
+                        0,
                         'outputs': {}
                     }
 
-                if pro.product.name not in production[record.number]['outputs']:
-                    production[record.number]['outputs'][pro.product.name] ={
+                if pro.product.name not in production[
+                        record.number]['outputs']:
+                    production[record.number]['outputs'][pro.product.name] = {
                         'udm': pro.product.template.default_uom.symbol,
                         'production_amount': 0,
                         'unit_cost_estimated': 0,
                         'unit_cost_production': 0,
                     }
 
-
                 production_amount = Decimal(pro.quantity)
-                cost_estimated = Decimal(record.cost)/Decimal(record.quantity) if record.quantity > 0 else 0
-                unit_cost_production = Decimal(record.cost)/Decimal(pro.quantity) if pro.quantity > 0 else 0
-                unit_cost_estimated = production_amount*cost_estimated
+                cost_estimated = Decimal(record.cost) / Decimal(
+                    record.quantity) if record.quantity > 0 else 0
+                unit_cost_production = Decimal(record.cost) / Decimal(
+                    pro.quantity) if pro.quantity > 0 else 0
+                unit_cost_estimated = production_amount * cost_estimated
 
-
-                production[record.number]['outputs'][pro.product.name]['production_amount'] += production_amount
-                production[record.number]['outputs'][pro.product.name]['unit_cost_estimated'] += unit_cost_estimated
-                production[record.number]['outputs'][pro.product.name]['unit_cost_production'] += unit_cost_production
+                production[record.number]['outputs'][
+                    pro.product.name]['production_amount'] += production_amount
+                production[record.number]['outputs'][pro.product.name][
+                    'unit_cost_estimated'] += unit_cost_estimated
+                production[record.number]['outputs'][pro.product.name][
+                    'unit_cost_production'] += unit_cost_production
                 production[record.number]['percentage'] += production_amount
-                production[record.number]['percentage_merma'] += Decimal(record.quantity) - production_amount
-                production[record.number]['not_production_amount_total'] -= production_amount
-                production[record.number]['merma_cost_total'] = cost_estimated*production[record.number]['not_production_amount_total']
-
-
+                production[record.number]['percentage_merma'] += Decimal(
+                    record.quantity) - production_amount
+                production[record.number][
+                    'not_production_amount_total'] -= production_amount
+                production[record.number][
+                    'merma_cost_total'] = cost_estimated * production[
+                        record.number]['not_production_amount_total']
 
         report_context['records'] = production
         report_context['Decimal'] = Decimal
@@ -505,7 +540,8 @@ class ProductionForceDraft(Wizard):
         ids_ = Transaction().context['active_ids']
         if ids_:
             Actualizacion = Pool().get('conector.actualizacion')
-            actualizacion = Actualizacion.create_or_update('FORZAR BORRADOR PRESTAMOS')
+            actualizacion = Actualizacion.create_or_update(
+                'FORZAR BORRADOR PRESTAMOS')
             Production = Pool().get('production')
             stock_move = Table('stock_move')
             logs = {}
@@ -521,14 +557,17 @@ class ProductionForceDraft(Wizard):
                     validate = prod.move.state
                 else:
                     dat = str(prod.effective_date).split()[0].split('-')
-                    name = f"{dat[0]}-{dat[1]}"                 
+                    name = f"{dat[0]}-{dat[1]}"
                     validate_period = Period.search([('name', '=', name)])
                     validate = validate_period[0].state
 
-                if  validate == 'close':
+                if validate == 'close':
                     exceptions.append(prod.id)
-                    logs[prod.id] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
+                    logs[
+                        prod.
+                        id] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
                     Y NO ES POSIBLE FORZAR A BORRADOR"
+
                     continue
 
                 if prod.state == 'draft':
@@ -540,25 +579,25 @@ class ProductionForceDraft(Wizard):
                 outputs = [mv.id for mv in prod.outputs]
                 moves = inputs + outputs
                 if moves:
-                    cursor.execute(*stock_move.update(
-                        columns=[stock_move.state],
-                        values=['draft'],
-                        where=stock_move.id.in_(moves))
-                    )
+                    cursor.execute(
+                        *stock_move.update(columns=[stock_move.state],
+                                           values=['draft'],
+                                           where=stock_move.id.in_(moves)))
                 prod.state = 'draft'
                 to_save.append(prod)
             if to_delete:
-                cursor.execute(*account_move.update(
-                    columns=[account_move.state],
-                    values=['draft'],
-                    where=account_move.id.in_(to_delete))
-                )
+                cursor.execute(
+                    *account_move.update(columns=[account_move.state],
+                                         values=['draft'],
+                                         where=account_move.id.in_(to_delete)))
                 cursor.execute(*account_move.delete(
-                    where=account_move.id.in_(to_delete))
-                    )
+                    where=account_move.id.in_(to_delete)))
             if to_save:
                 Production.save(to_save)
-        if exceptions:    
+        if exceptions:
             actualizacion.add_logs(logs)
-            raise UserError('AVISO', f'Los documentos {exceptions} no pueden ser forzados a borrador porque su periodo se encuentra cerrado')
+            raise UserError(
+                'AVISO',
+                f'Los documentos {exceptions} no pueden ser forzados a borrador porque su periodo se encuentra cerrado'
+            )
         return 'end'

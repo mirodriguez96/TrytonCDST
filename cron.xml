@@ -1,10 +1,10 @@
 <?xml version="1.0"?>
 <tryton>
-    <data>        
-    <record model="ir.ui.view" id="cron_view_form">
+    <data>
+        <record model="ir.ui.view" id="cron_view_form">
             <field name="model">ir.cron</field>
             <field name="inherit" ref="ir.cron_view_form"/>
             <field name="name">cron_form</field>
-    </record>
+        </record>
     </data>
 </tryton>

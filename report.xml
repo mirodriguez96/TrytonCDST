@@ -22,10 +22,9 @@ this repository contains the full copyright notices and license terms. -->
             <field name="template_extension">ods</field>
             <field name="translatable">False</field>
         </record>
-        <menuitem parent="party.menu_party" action="wizard_print_portfolio_status"
-            id="menu_print_expired_portfolio" icon="tryton-print" sequence="200"/>
+        <menuitem parent="party.menu_party" action="wizard_print_portfolio_status" id="menu_print_expired_portfolio" icon="tryton-print" sequence="200"/>
         -->
-        
+
         <!-- Reporte nómina -->
         <record model="ir.action.report" id="payroll_export_report">
             <field name="name">Payroll Export Report</field>
@@ -44,8 +43,7 @@ this repository contains the full copyright notices and license terms. -->
             <field name="name">Payroll Export Wizard</field>
             <field name="wiz_name">report.payroll.export</field>
         </record>
-        <menuitem parent="staff.menu_reporting" id="menu_payroll_export_wizard"
-            action="payroll_export_wizard"/>
+        <menuitem parent="staff.menu_reporting" id="menu_payroll_export_wizard" action="payroll_export_wizard"/>
 
         <!-- Report Income Daily report -->
         <record model="ir.action.report" id="cdsreport_sale_income_daily">
@@ -65,22 +63,20 @@ this repository contains the full copyright notices and license terms. -->
             <field name="name">Sale Report </field>
             <field name="wiz_name">sale_pos.cdssale_income_daily</field>
         </record>
-        <menuitem parent="sale.menu_reporting" id="menu_sale_income_daily"
-            action="wizard_printer_sale_income_daily" sequence="11"
-            icon="tryton-print"/>
+        <menuitem parent="sale.menu_reporting" id="menu_sale_income_daily" action="wizard_printer_sale_income_daily" sequence="11" icon="tryton-print"/>
 
         <!--Reporte de prestamo -->
         <record model="ir.action.report" id="report_loan_format">
-           <field name="name">Loan Format</field>
-           <field name="report_name">staff.loan.loan_format_report</field>
-           <field name="model">staff.loan</field>
-           <field name="report">conector/loan_format_report.fodt</field>
-           <field name="template_extension">odt</field>
+            <field name="name">Loan Format</field>
+            <field name="report_name">staff.loan.loan_format_report</field>
+            <field name="model">staff.loan</field>
+            <field name="report">conector/loan_format_report.fodt</field>
+            <field name="template_extension">odt</field>
         </record>
         <record model="ir.action.keyword" id="report_loan_format_keyword">
-           <field name="keyword">form_print</field>
-           <field name="model">staff.loan,-1</field>
-           <field name="action" ref="report_loan_format"/>
+            <field name="keyword">form_print</field>
+            <field name="model">staff.loan,-1</field>
+            <field name="action" ref="report_loan_format"/>
         </record>
 
     </data>

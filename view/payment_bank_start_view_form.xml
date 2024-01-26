@@ -15,5 +15,5 @@ this repository contains the full copyright notices and license terms. -->
     <field name="payment_type" widget="selection"/>
     <label name="tarjet"/>
     <field name="tarjet" widget="selection"/>
-    
+
 </form>

@@ -7,23 +7,25 @@ from decimal import Decimal
 from sql import Table
 from trytond.pyson import Eval
 
+
 class Configuration(metaclass=PoolMeta):
     'Configuration'
     __name__ = 'purchase.configuration'
     type_order_tecno = fields.Char('Type order TecnoCarnes')
+
 
 #Heredamos del modelo purchase.purchase para agregar el campo id_tecno
 class Purchase(metaclass=PoolMeta):
     'Purchase'
     __name__ = 'purchase.purchase'
     id_tecno = fields.Char('Id Tabla Sqlserver', required=False)
-    order_tecno = fields.Selection([('yes', 'Yes'), ('no', 'No')],
-                                   'Order TecnoCarnes',
-                                    states={
-                                        'readonly': Eval('state').in_(['processing', 'done']),
-                                        'required': Eval('state') == 'processing'
-                                        }
-                                    )
+    order_tecno = fields.Selection(
+        [('yes', 'Yes'), ('no', 'No')],
+        'Order TecnoCarnes',
+        states={
+            'readonly': Eval('state').in_(['processing', 'done']),
+            'required': Eval('state') == 'processing'
+        })
     order_tecno_sent = fields.Boolean('Order TecnoCarnes sent', readonly=True)
 
     @staticmethod
@@ -78,34 +80,43 @@ class Purchase(metaclass=PoolMeta):
         Period = pool.get('account.period')
         Tax = pool.get('account.tax')
         Module = pool.get('ir.module')
-        company_operation = Module.search([('name', '=', 'company_operation'), ('state', '=', 'activated')])
+        company_operation = Module.search([('name', '=', 'company_operation'),
+                                           ('state', '=', 'activated')])
         if company_operation:
             CompanyOperation = pool.get('company.operation_center')
-            operation_center = CompanyOperation.search([], order=[('id', 'DESC')], limit=1)
+            operation_center = CompanyOperation.search([],
+                                                       order=[('id', 'DESC')],
+                                                       limit=1)
         logs = {}
-        to_created = [] # lista utilizada para almacenar los documentos que se importaron correctamente
-        to_exception = [] # lista utilizada para almacenar los documentos que tuvieron alguna excepcion en el proceso de la importación
-        not_import = [] # lista utilizada para almacenar los documentos que NO se deben importar (anulados)
+        to_created = [
+        ]  # lista utilizada para almacenar los documentos que se importaron correctamente
+        to_exception = [
+        ]  # lista utilizada para almacenar los documentos que tuvieron alguna excepcion en el proceso de la importación
+        not_import = [
+        ]  # lista utilizada para almacenar los documentos que NO se deben importar (anulados)
         parties = Party._get_party_documentos(data, 'nit_Cedula')
         # Procedemos a realizar la compra
         for compra in data:
             sw = compra.sw
             numero_doc = compra.Numero_documento
             tipo_doc = compra.tipo
-            id_compra = str(sw)+'-'+tipo_doc+'-'+str(numero_doc)
+            id_compra = str(sw) + '-' + tipo_doc + '-' + str(numero_doc)
             try:
                 existe = Purchase.search([('id_tecno', '=', id_compra)])
                 if existe:
                     if compra.anulado == 'S':
                         dat = str(compra.fecha_hora).split()[0].split('-')
-                        name = f"{dat[0]}-{dat[1]}"                 
+                        name = f"{dat[0]}-{dat[1]}"
                         validate_period = Period.search([('name', '=', name)])
                         if validate_period[0].state == 'close':
                             to_exception.append(id_compra)
-                            logs[id_compra] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
+                            logs[
+                                id_compra] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
                             Y NO ES POSIBLE SU ELIMINACION O MODIFICACION"
+
                             continue
-                        logs[id_compra] = "El documento fue eliminado de tryton porque fue anulado en TecnoCarnes"
+                        logs[
+                            id_compra] = "El documento fue eliminado de tryton porque fue anulado en TecnoCarnes"
                         cls.delete_imported_purchases(existe)
                         not_import.append(id_compra)
                         continue
@@ -120,23 +131,27 @@ class Purchase(metaclass=PoolMeta):
                     to_exception.append(id_compra)
                     continue
                 dat = str(compra.fecha_hora).split()[0].split('-')
-                name = f"{dat[0]}-{dat[1]}"                 
+                name = f"{dat[0]}-{dat[1]}"
                 validate_period = Period.search([('name', '=', name)])
                 if validate_period[0].state == 'close':
                     to_exception.append(id_compra)
-                    logs[id_compra] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
+                    logs[
+                        id_compra] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
                     Y NO ES POSIBLE SU CREACION"
+
                     continue
                 purchase = Purchase()
-                purchase.number = tipo_doc+'-'+str(numero_doc)
+                purchase.number = tipo_doc + '-' + str(numero_doc)
                 purchase.id_tecno = id_compra
-                purchase.description = compra.notas.replace('\n', ' ').replace('\r', '')
+                purchase.description = compra.notas.replace('\n', ' ').replace(
+                    '\r', '')
                 purchase.order_tecno = 'no'
                 #Se trae la fecha de la compra y se adapta al formato correcto para Tryton
                 fecha = str(compra.fecha_hora).split()[0].split('-')
-                fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
+                fecha_date = datetime.date(int(fecha[0]), int(fecha[1]),
+                                           int(fecha[2]))
                 purchase.purchase_date = fecha_date
-                nit_cedula = compra.nit_Cedula.replace('\n',"")
+                nit_cedula = compra.nit_Cedula.replace('\n', "")
                 party = None
                 if nit_cedula in parties['active']:
                     party = parties['active'][nit_cedula]
@@ -161,7 +176,8 @@ class Purchase(metaclass=PoolMeta):
                 bodega = bodega[0]
                 purchase.warehouse = bodega
                 #Se le asigna el plazo de pago correspondiente
-                plazo_pago = payment_term.search([('id_tecno', '=', compra.condicion)])
+                plazo_pago = payment_term.search([('id_tecno', '=',
+                                                   compra.condicion)])
                 if not plazo_pago:
                     msg = f"EXCEPCION: No se econtro el plazo de pago {compra.condicion}"
                     logs[id_compra] = msg
@@ -170,7 +186,8 @@ class Purchase(metaclass=PoolMeta):
                 purchase.payment_term = plazo_pago[0]
                 lineas_tecno = Config.get_lineasd_tecno(id_compra)
                 if not lineas_tecno:
-                    logs[id_compra] = "EXCEPCION: No se encontraron líneas para la compra"
+                    logs[
+                        id_compra] = "EXCEPCION: No se encontraron líneas para la compra"
                     to_exception.append(id_compra)
                     continue
                 retencion_iva = False
@@ -183,13 +200,15 @@ class Purchase(metaclass=PoolMeta):
                 if compra.retencion_causada and compra.retencion_causada > 0:
                     if not retencion_iva and not retencion_ica:
                         retencion_rete = True
-                    elif (compra.retencion_iva + compra.retencion_ica) != compra.retencion_causada:
+                    elif (compra.retencion_iva +
+                          compra.retencion_ica) != compra.retencion_causada:
                         retencion_rete = True
                 #Ahora traemos las lineas de producto para la compra a procesar
                 #_lines = []
                 for lin in lineas_tecno:
                     #print(id_producto)
-                    producto = Product.search([('id_tecno', '=', str(lin.IdProducto))])
+                    producto = Product.search([('id_tecno', '=',
+                                                str(lin.IdProducto))])
                     if not producto:
                         msg = f"EXCEPCION: No se encontro el producto {str(lin.IdProducto)} - Revisar si tiene variante o esta inactivo"
                         logs[id_compra] = msg
@@ -197,21 +216,22 @@ class Purchase(metaclass=PoolMeta):
                         break
                     #mensaje si la busqueda de "Product" trae mas de un producto
                     elif len(producto) > 1:
-                      msg = f"EXCEPCION: Hay mas de un producto que tienen el mismo código o id_tecno."
-                      logs[id_compra] = msg
-                      to_exception.append(id_compra)
-                      break
+                        msg = f"EXCEPCION: Hay mas de un producto que tienen el mismo código o id_tecno."
+                        logs[id_compra] = msg
+                        to_exception.append(id_compra)
+                        break
                     producto, = producto
                     cantidad_facturada = abs(round(lin.Cantidad_Facturada, 3))
-                    if cantidad_facturada < 0: # negativo = devolucion (TecnoCarnes)
+                    if cantidad_facturada < 0:  # negativo = devolucion (TecnoCarnes)
                         cant = cantidad_facturada
                         for line in compra.lines:
                             line_quantity = line.quantity
                             if sw == 2:
                                 line_quantity = (line_quantity * -1)
                                 cant = (cantidad_facturada * -1)
-                            if line.product == producto and line_quantity > 0: # Mejorar
-                                total_quantity = round((line.quantity + cant), 3)
+                            if line.product == producto and line_quantity > 0:  # Mejorar
+                                total_quantity = round((line.quantity + cant),
+                                                       3)
                                 line.quantity = total_quantity
                                 line.save()
                                 break
@@ -225,10 +245,11 @@ class Purchase(metaclass=PoolMeta):
                     if sw == 4:
                         line.quantity = cantidad_facturada * -1
                         #Se indica a que documento hace referencia la devolucion
-                        purchase.reference = compra.Tipo_Docto_Base.strip()+'-'+str(compra.Numero_Docto_Base)
+                        purchase.reference = compra.Tipo_Docto_Base.strip(
+                        ) + '-' + str(compra.Numero_Docto_Base)
                     else:
                         line.quantity = cantidad_facturada
-                        purchase.reference = tipo_doc+'-'+str(numero_doc)
+                        purchase.reference = tipo_doc + '-' + str(numero_doc)
                     if company_operation:
                         line.operation_center = operation_center[0]
                     #Comprueba los cambios y trae los impuestos del producto
@@ -251,12 +272,13 @@ class Purchase(metaclass=PoolMeta):
                         elif impuestol.consumo and impuesto_consumo > 0:
                             #Se busca el impuesto al consumo con el mismo valor para aplicarlo
                             tax = Tax.search([
-                                ('consumo', '=', True),
-                                ('type', '=', 'fixed'),
+                                ('consumo', '=', True), ('type', '=', 'fixed'),
                                 ('amount', '=', impuesto_consumo),
-                                ['OR', ('group.kind', '=', 'purchase'),
-                                 ('group.kind', '=', 'both')]
-                                 ])
+                                [
+                                    'OR', ('group.kind', '=', 'purchase'),
+                                    ('group.kind', '=', 'both')
+                                ]
+                            ])
                             if tax:
                                 if len(tax) > 1:
                                     msg = "EXCEPCION: Se encontro mas de un impuesto de tipo consumo "\
@@ -282,7 +304,8 @@ class Purchase(metaclass=PoolMeta):
                     line.unit_price = lin.Valor_Unitario
                     #Verificamos si hay descuento para la linea de producto y se agrega su respectivo descuento
                     if lin.Porcentaje_Descuento_1 > 0:
-                        porcentaje = round((lin.Porcentaje_Descuento_1/100), 4)
+                        porcentaje = round((lin.Porcentaje_Descuento_1 / 100),
+                                           4)
                         line.gross_unit_price = lin.Valor_Unitario
                         line.discount = Decimal(str(porcentaje))
                         line.on_change_discount()
@@ -306,7 +329,7 @@ class Purchase(metaclass=PoolMeta):
                     shipment.done([shipment])
                 for shipment in purchase.shipment_returns:
                     shipment.reference = purchase.number
-                    shipment.planned_date = fecha_date 
+                    shipment.planned_date = fecha_date
                     shipment.effective_date = fecha_date
                     shipment.save()
                     shipment.wait([shipment])
@@ -327,10 +350,12 @@ class Purchase(metaclass=PoolMeta):
                     #     invoice.description = desc[0].TipoDoctos.replace('\n', ' ').replace('\r', '')
                     original_invoice = None
                     if compra.sw == 4:
-                        dcto_base = str(compra.Tipo_Docto_Base)+'-'+str(compra.Numero_Docto_Base)
+                        dcto_base = str(compra.Tipo_Docto_Base) + '-' + str(
+                            compra.Numero_Docto_Base)
                         invoice.reference = dcto_base
                         invoice.comment = f"DEVOLUCION DE LA FACTURA {dcto_base}"
-                        original_invoice = Invoice.search([('number', '=', dcto_base)])
+                        original_invoice = Invoice.search([('number', '=',
+                                                            dcto_base)])
                         if original_invoice:
                             original_invoice = original_invoice[0]
                         else:
@@ -342,7 +367,8 @@ class Purchase(metaclass=PoolMeta):
                         'retencion_causada': compra.retencion_causada,
                         'valor_total': compra.valor_total,
                     }
-                    result = Invoice._validate_total_tecno(invoice.total_amount, ttecno)
+                    result = Invoice._validate_total_tecno(
+                        invoice.total_amount, ttecno)
                     if not result['value']:
                         msg = f"REVISAR: ({id_compra}) "\
                         f"El total de Tryton {invoice.total_amount} "\
@@ -382,7 +408,6 @@ class Purchase(metaclass=PoolMeta):
             Config.update_exportado(idt, 'X')
         print('FINISH COMPRAS')
 
-
     # Se elimina vía base de datos las compras y pagos relacionados
     @classmethod
     def delete_imported_purchases(cls, purchases):
@@ -401,7 +426,8 @@ class Purchase(metaclass=PoolMeta):
             if purchase.id_tecno:
                 ids_tecno.append(purchase.id_tecno)
             else:
-                raise UserError("Error: ", f"No se encontró el id_tecno de {purchase}")
+                raise UserError("Error: ",
+                                f"No se encontró el id_tecno de {purchase}")
             for invoice in purchase.invoices:
                 if invoice.state == 'paid':
                     cls.unreconcile_move(invoice.move)
@@ -409,26 +435,24 @@ class Purchase(metaclass=PoolMeta):
                     cursor.execute(*move_table.update(
                         columns=[move_table.state],
                         values=['draft'],
-                        where=move_table.id == invoice.move.id)
-                    )
+                        where=move_table.id == invoice.move.id))
                     cursor.execute(*move_table.delete(
-                        where=move_table.id == invoice.move.id)
-                    )
+                        where=move_table.id == invoice.move.id))
                 cursor.execute(*invoice_table.update(
                     columns=[invoice_table.state, invoice_table.number],
                     values=['validate', None],
-                    where=invoice_table.id == invoice.id)
-                )
+                    where=invoice_table.id == invoice.id))
                 cursor.execute(*invoice_table.delete(
-                    where=invoice_table.id == invoice.id)
-                )
+                    where=invoice_table.id == invoice.id))
 
             if purchase.id:
                 cursor.execute(*purchase_table.update(
-                    columns=[purchase_table.state, purchase_table.shipment_state, purchase_table.invoice_state],
+                    columns=[
+                        purchase_table.state, purchase_table.shipment_state,
+                        purchase_table.invoice_state
+                    ],
                     values=['draft', 'none', 'none'],
-                    where=purchase_table.id == purchase.id)
-                )
+                    where=purchase_table.id == purchase.id))
             # The stock moves must be delete
             stock_moves = [m.id for line in purchase.lines for m in line.moves]
             shipments = []
@@ -443,47 +467,41 @@ class Purchase(metaclass=PoolMeta):
                 cursor.execute(*stock_move_table.update(
                     columns=[stock_move_table.state],
                     values=['draft'],
-                    where=stock_move_table.id.in_(stock_moves)
-                ))
+                    where=stock_move_table.id.in_(stock_moves)))
 
                 cursor.execute(*stock_move_table.delete(
-                    where=stock_move_table.id.in_(stock_moves))
-                )
+                    where=stock_move_table.id.in_(stock_moves)))
 
             if shipments:
                 cursor.execute(*shipment_table.update(
                     columns=[shipment_table.state],
                     values=['draft'],
-                    where=shipment_table.id.in_(shipments)
-                ))
+                    where=shipment_table.id.in_(shipments)))
                 #Eliminación de los envíos
                 cursor.execute(*shipment_table.delete(
-                    where=shipment_table.id.in_(shipments))
-                )
+                    where=shipment_table.id.in_(shipments)))
 
             if shipment_returns:
                 cursor.execute(*shipment_return_table.update(
                     columns=[shipment_return_table.state],
                     values=['draft'],
-                    where=shipment_return_table.id.in_(shipment_returns)
-                ))
+                    where=shipment_return_table.id.in_(shipment_returns)))
                 #Eliminación de las devoluciones de envíos
                 cursor.execute(*shipment_return_table.delete(
-                    where=shipment_return_table.id.in_(shipment_returns))
-                )
+                    where=shipment_return_table.id.in_(shipment_returns)))
 
             # Se elimina la compra
             cursor.execute(*purchase_table.delete(
-                where=purchase_table.id == purchase.id)
-            )
+                where=purchase_table.id == purchase.id))
         for idt in ids_tecno:
             Conexion.update_exportado(idt, 'N')
-
 
     @classmethod
     def unreconcile_move(self, move):
         Reconciliation = Pool().get('account.move.reconciliation')
-        reconciliations = [l.reconciliation for l in move.lines if l.reconciliation]
+        reconciliations = [
+            l.reconciliation for l in move.lines if l.reconciliation
+        ]
         if reconciliations:
             Reconciliation.delete(reconciliations)
 
@@ -497,9 +515,9 @@ class Purchase(metaclass=PoolMeta):
                 if configuration.type_order_tecno:
                     cls._send_order(purchase, configuration.type_order_tecno)
                 else:
-                    raise UserError('Order TecnoCarnes', 'missing type_order_tecno')
-                
-    
+                    raise UserError('Order TecnoCarnes',
+                                    'missing type_order_tecno')
+
     @classmethod
     def _send_order(cls, purchase, type_order):
         """
@@ -566,6 +584,7 @@ class Purchase(metaclass=PoolMeta):
             ' ', 0, ' ', 'N', ' ', 0,\
             ' ', {date_created}, 0, {date_created}, \
             0, 1)"
+
         # breakpoint()
         linea = f"SET DATEFORMAT ymd Insert into Documentos_Lin_Ped\
             (numero_pedido, IdProducto, cantidad, cantidad_despachada,\
@@ -575,7 +594,7 @@ class Purchase(metaclass=PoolMeta):
             MinCantidad, DireccionEnvio, IdVendedor, IdCliente, DireccionFactura,\
             Producto, Linea, Exportado, Numero_Lote, Tipo_Destino, Envase,\
             Porcentaje_ReteFuente, Serial, Cantidad_Orden) values "
-        
+
         lineas = ""
         cont = 1
         for line in purchase.lines:
@@ -590,8 +609,9 @@ class Purchase(metaclass=PoolMeta):
                 {quantity}, 1, 1, '{purchase.party.id_number}', 1,\
                 '{line.product.name}', {cont}, 'N', ' ', ' ', 0,\
                 0, ' ', {quantity})"
+
             if cont < len(purchase.lines):
-                lineas +=", "
+                lineas += ", "
             cont += 1
         linea += lineas
 
@@ -602,7 +622,6 @@ class Purchase(metaclass=PoolMeta):
         purchase.order_tecno_sent = True
         purchase.save()
 
-
     @classmethod
     def _create_shipment(cls, data):
         if not data:
@@ -612,7 +631,7 @@ class Purchase(metaclass=PoolMeta):
         # Se procede a crear los envíos segun la compra
         to_create = []
         for number in data:
-            purchase  = data[number]['purchase']
+            purchase = data[number]['purchase']
             if purchase.shipments:
                 continue
             shipment = {
@@ -648,25 +667,17 @@ class Purchase(metaclass=PoolMeta):
             Shipment.receive(shipments)
             Shipment.done(shipments)
 
-
     @classmethod
     def _validate_order(cls, lineas):
         pool = Pool()
         Purchase = pool.get('purchase.purchase')
         Product = pool.get('product.product')
         Location = pool.get('stock.location')
-        result = {
-            'tryton': {},
-            'logs': {},
-            'exportado': {}
-        }
+        result = {'tryton': {}, 'logs': {}, 'exportado': {}}
         excepcion = []
         # Se trae las ubicaciones existentes en Tryton
-        _locations = Location.search([
-            'OR',
-            ('type', '=', 'warehouse'), 
-            ('type', '=', 'supplier')
-        ])
+        _locations = Location.search(
+            ['OR', ('type', '=', 'warehouse'), ('type', '=', 'supplier')])
         locations = {}
         for location in _locations:
             if 'supplier' not in locations and location.type == 'supplier':
@@ -679,7 +690,7 @@ class Purchase(metaclass=PoolMeta):
         products = {}
         tecno = {}
         for linea in lineas:
-            id_tecno = f"{linea.sw}-{linea.tipo}-{linea.Numero_Documento}" 
+            id_tecno = f"{linea.sw}-{linea.tipo}-{linea.Numero_Documento}"
             if id_tecno in excepcion:
                 continue
             # Se valida la existencia del producto
@@ -733,7 +744,8 @@ class Purchase(metaclass=PoolMeta):
             number = linea.DescuentoOrdenVenta.split('-')[1]
             if number not in tecno:
                 fecha = str(linea.Fecha_Documento).split()[0].split('-')
-                _date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
+                _date = datetime.date(int(fecha[0]), int(fecha[1]),
+                                      int(fecha[2]))
                 tecno[number] = {
                     'id_tecno': id_tecno,
                     'date': _date,
@@ -742,18 +754,17 @@ class Purchase(metaclass=PoolMeta):
             tecno[number]['lines'].append(line)
 
         # Se trae todas las ordenes de compra que tecno nos indica faltan por entrar la mercancia
-        purchases = Purchase.search([
-            ('order_tecno', '=', 'yes'),
-            ('order_tecno_sent', '=', True),
-            ('number', 'in', tecno.keys())
-        ])
-        # Se valida las ordenes de compra según su estado de envío 
+        purchases = Purchase.search([('order_tecno', '=', 'yes'),
+                                     ('order_tecno_sent', '=', True),
+                                     ('number', 'in', tecno.keys())])
+        # Se valida las ordenes de compra según su estado de envío
         # y se agregan las líneas que van a ser creadas a la variable result
         for purchase in purchases:
             number = purchase.number
             if purchase.shipments:
                 id_tecno = tecno[number]['id_tecno']
-                result['logs'][id_tecno] = "EXCEPCION: el envío de la orden de compra ya se encuentra creado"
+                result['logs'][
+                    id_tecno] = "EXCEPCION: el envío de la orden de compra ya se encuentra creado"
                 excepcion.append(id_tecno)
                 result['exportado'][id_tecno] = 'E'
                 continue
@@ -769,11 +780,11 @@ class Purchase(metaclass=PoolMeta):
         for number in tecno.keys():
             id_tecno = tecno[number]['id_tecno']
             if number not in result['tryton'] and id_tecno not in excepcion:
-                result['logs'][id_tecno] = "EXCEPCION: no se encontro la orden de compra"
+                result['logs'][
+                    id_tecno] = "EXCEPCION: no se encontro la orden de compra"
                 excepcion.append(id_tecno)
                 result['exportado'][id_tecno] = 'E'
         return result
-    
 
     @classmethod
     def import_order_tecno(cls):
@@ -788,7 +799,7 @@ class Purchase(metaclass=PoolMeta):
         for idt, exportado in result['exportado'].items():
             Config.update_exportado(idt, exportado)
 
-        
+
 class PurchaseLine(metaclass=PoolMeta):
     __name__ = 'purchase.line'
 

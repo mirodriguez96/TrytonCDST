@@ -12,10 +12,10 @@ import sentry_sdk
 from sentry_sdk.integrations.trytond import TrytondWSGIIntegration
 from trytond.wizard import Wizard, StateTransition, StateView, Button
 
-
 # Configura Sentry con tu DSN
 sentry_sdk.init(
-    dsn="https://7e7c4557c2a9cbbed7aad24d58fd218f@o4506147189751808.ingest.sentry.io/4506147193028608",
+    dsn=
+    "https://7e7c4557c2a9cbbed7aad24d58fd218f@o4506147189751808.ingest.sentry.io/4506147193028608",
     integrations=[TrytondWSGIIntegration()],
     environment="produccion",
     traces_sample_rate=1.0,
@@ -24,7 +24,6 @@ sentry_sdk.init(
     # Control dinamico de usuario
     # profiles_sampler = Pool().get('res.user')(Transaction().user)
 )
-
 
 from .it_supplier_noova import SendElectronicInvoice
 
@@ -62,6 +61,7 @@ _SW = {
     },
 }
 
+
 class Invoice(metaclass=PoolMeta):
     'Invoice'
     __name__ = 'account.invoice'
@@ -92,11 +92,15 @@ class Invoice(metaclass=PoolMeta):
         Line = pool.get('account.invoice.line')
         InvoiceTax = Pool().get('account.invoice.tax')
         config = Config(1)
-        taxes_validate = [t for t in invoice.taxes if t.base and t.tax.base and t.tax.base > abs(t.base)]
+        taxes_validate = [
+            t for t in invoice.taxes
+            if t.base and t.tax.base and t.tax.base > abs(t.base)
+        ]
         if taxes_validate and config.remove_tax:
             lines_to_change = [l for l in invoice.lines if l.type == 'line']
-            Line.write(lines_to_change, {'taxes': [
-                ('remove', [t.tax.id for t in taxes_validate])]})
+            Line.write(
+                lines_to_change,
+                {'taxes': [('remove', [t.tax.id for t in taxes_validate])]})
             InvoiceTax.delete(taxes_validate)
             invoice.save()
 
@@ -123,10 +127,11 @@ class Invoice(metaclass=PoolMeta):
     @classmethod
     def unreconcile_move(self, move):
         Reconciliation = Pool().get('account.move.reconciliation')
-        reconciliations = [l.reconciliation for l in move.lines if l.reconciliation]
+        reconciliations = [
+            l.reconciliation for l in move.lines if l.reconciliation
+        ]
         if reconciliations:
             Reconciliation.delete(reconciliations)
-
 
     @classmethod
     def get_analytic_tipodocto(cls, tipos_doctos):
@@ -134,7 +139,8 @@ class Invoice(metaclass=PoolMeta):
         if tipos_doctos:
             pool = Pool()
             Config = pool.get('conector.configuration')
-            ids_tipos = ids_tipos = "(" + ", ".join(map(str, tipos_doctos)) + ")"
+            ids_tipos = ids_tipos = "(" + ", ".join(map(str,
+                                                        tipos_doctos)) + ")"
             tbltipodocto = Config.get_tbltipodoctos_encabezado(ids_tipos)
             _values = {}
             for tipodocto in tbltipodocto:
@@ -146,7 +152,8 @@ class Invoice(metaclass=PoolMeta):
                     _values[encabezado].append(idtipod)
             if _values:
                 AnalyticAccount = pool.get('analytic_account.account')
-                analytic_accounts = AnalyticAccount.search([('code', 'in', _values.keys())])
+                analytic_accounts = AnalyticAccount.search([('code', 'in',
+                                                             _values.keys())])
                 for ac in analytic_accounts:
                     idstipo = _values[ac.code]
                     for idt in idstipo:
@@ -182,9 +189,12 @@ class Invoice(metaclass=PoolMeta):
         operation_center = hasattr(Line, 'operation_center')
         if operation_center:
             OperationCenter = pool.get('company.operation_center')
-            operation_center = OperationCenter.search([], order=[('id', 'DESC')], limit=1)
+            operation_center = OperationCenter.search([],
+                                                      order=[('id', 'DESC')],
+                                                      limit=1)
             if not operation_center:
-                data['logs']['operation_center'] = "SE REQUIERE LA CREACION DE UN CENTRO DE OPERACION"
+                data['logs'][
+                    'operation_center'] = "SE REQUIERE LA CREACION DE UN CENTRO DE OPERACION"
                 return data
             data['operation_center'], = operation_center
         # Se comienza a recorrer los registros importados
@@ -196,15 +206,19 @@ class Invoice(metaclass=PoolMeta):
                 data['logs'][id_tecno] = f"Documento anulado en TecnoCarnes"
                 data['exportado'][id_tecno] = 'X'
                 continue
-            # Proceso de validacion del periodo, si este se encuentra cerrado, 
+            # Proceso de validacion del periodo, si este se encuentra cerrado,
             # no permitira ninguna operacion con el documento
-            validate_period = Period.search([('start_date', '>=', doc.fecha_hora),
-                                            ('end_date', '<=', doc.fecha_hora),])
-                
+            validate_period = Period.search([
+                ('start_date', '>=', doc.fecha_hora),
+                ('end_date', '<=', doc.fecha_hora),
+            ])
+
             if validate_period.state == 'close':
                 to_exception.append(id_tecno)
-                logs[id_tecno] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
+                logs[
+                    id_tecno] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
                 Y NO ES POSIBLE SU CREACION"
+
                 continue
             if id_tecno not in tecno:
                 tecno[id_tecno] = doc
@@ -258,11 +272,10 @@ class Invoice(metaclass=PoolMeta):
                 if linea.Impuesto_Consumo not in impuesto_consumo:
                     impuesto_consumo[linea.Impuesto_Consumo] = None
         # Se hace una consulta por todos los productos de las lineas y se guarda
-        products = Product.search(
-            ['OR', 
-             ('id_tecno', 'in', productos_lin.keys()), 
-             ('code', 'in', productos_lin.keys())
-             ])
+        products = Product.search([
+            'OR', ('id_tecno', 'in', productos_lin.keys()),
+            ('code', 'in', productos_lin.keys())
+        ])
         for product in products:
             productos_lin[product.code] = product
         # Se consulta los impuestos de tipo consumo
@@ -272,12 +285,13 @@ class Invoice(metaclass=PoolMeta):
             else:
                 kind = 'purchase'
             doamin_consumo = [
-                ('consumo', '=', True), 
-                ('type', '=', 'fixed'), 
+                ('consumo', '=', True),
+                ('type', '=', 'fixed'),
                 ('amount', 'in', impuesto_consumo.keys()),
-                ['OR',
-                 ('group.kind', '=', kind),
-                 ('group.kind', '=', 'both'),
+                [
+                    'OR',
+                    ('group.kind', '=', kind),
+                    ('group.kind', '=', 'both'),
                 ],
             ]
             _taxes = Tax.search(doamin_consumo)
@@ -295,10 +309,11 @@ class Invoice(metaclass=PoolMeta):
                 if id_tecno in data['exportado']:
                     continue
                 if id_tecno not in lineas_tecno:
-                    data['logs'][id_tecno] = "NO SE ENCONTRARON LINEAS PARA EL DOCUMENTO"
+                    data['logs'][
+                        id_tecno] = "NO SE ENCONTRARON LINEAS PARA EL DOCUMENTO"
                     data['exportado'][id_tecno] = 'E'
                     continue
-                nit_cedula = doc.nit_Cedula.replace('\n',"")
+                nit_cedula = doc.nit_Cedula.replace('\n', "")
                 party = None
                 if nit_cedula in parties['active']:
                     party = parties['active'][nit_cedula]
@@ -331,17 +346,20 @@ class Invoice(metaclass=PoolMeta):
                     data['exportado'][id_tecno] = 'E'
                     continue
                 fecha = str(doc.fecha_hora).split()[0].split('-')
-                invoice_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
+                invoice_date = datetime.date(int(fecha[0]), int(fecha[1]),
+                                             int(fecha[2]))
                 description = (doc.notas).replace('\n', ' ').replace('\r', '')
                 retencion_rete = False
                 if doc.retencion_causada > 0:
                     if doc.retencion_iva == 0 and doc.retencion_ica == 0:
                         retencion_rete = True
-                    elif (doc.retencion_iva + doc.retencion_ica) != doc.retencion_causada:
+                    elif (doc.retencion_iva +
+                          doc.retencion_ica) != doc.retencion_causada:
                         retencion_rete = True
                 invoice = {
                     'number': f"{doc.tipo}-{doc.Numero_documento}",
-                    'dcto_base': f"{doc.Tipo_Docto_Base}-{doc.Numero_Docto_Base}",
+                    'dcto_base':
+                    f"{doc.Tipo_Docto_Base}-{doc.Numero_Docto_Base}",
                     'party': party,
                     'payment_term': payment_term[condicion],
                     'invoice_date': invoice_date,
@@ -355,9 +373,7 @@ class Invoice(metaclass=PoolMeta):
                     'type': _type,
                     'type_note': _type_note,
                 }
-                data['tryton'][id_tecno] = {
-                    'invoice': invoice
-                }
+                data['tryton'][id_tecno] = {'invoice': invoice}
             except Exception as ex:
                 data['logs'][id_tecno] = f"EXCEPCION: {ex}"
                 data['exportado'][id_tecno] = 'E'
@@ -399,13 +415,17 @@ class Invoice(metaclass=PoolMeta):
                         'unit_price': linea.Valor_Unitario,
                     }
                     if str(doc.tipo) in analytic_types:
-                        line['analytic_account'] = analytic_types[str(doc.tipo)]
+                        line['analytic_account'] = analytic_types[str(
+                            doc.tipo)]
                     # Se verifica si la línea tiene descuento y se agrega su valor
                     if linea.Porcentaje_Descuento_1 > 0:
-                        descuento = (linea.Valor_Unitario * Decimal(linea.Porcentaje_Descuento_1)) / 100
-                        line['discount'] = Decimal(linea.Valor_Unitario - descuento)
+                        descuento = (linea.Valor_Unitario * Decimal(
+                            linea.Porcentaje_Descuento_1)) / 100
+                        line['discount'] = Decimal(linea.Valor_Unitario -
+                                                   descuento)
                     if linea.Impuesto_Consumo > 0:
-                        line['impuesto_consumo'] = impuesto_consumo[linea.Impuesto_Consumo]
+                        line['impuesto_consumo'] = impuesto_consumo[
+                            linea.Impuesto_Consumo]
                     if 'lines' not in data['tryton'][id_tecno]:
                         data['tryton'][id_tecno]['lines'] = [line]
                     else:
@@ -419,7 +439,6 @@ class Invoice(metaclass=PoolMeta):
         if to_exception:
             actualizacion.add_logs(logs)
         return data
-    
 
     @classmethod
     def _create_lines_tecno(cls, data, invoice):
@@ -469,12 +488,11 @@ class Invoice(metaclass=PoolMeta):
                 line.gross_unit_price = linea['unit_price']
             if _type == 'in':
                 line.account = line.product.account_category.account_expense
-            if  'analytic_account' in linea:
+            if 'analytic_account' in linea:
                 line.analytic_account = linea['analytic_account']
                 line.on_change_analytic_account()
             lines.append(line)
         return lines
-
 
     @classmethod
     def _create_invoice_tecno(cls, data):
@@ -512,7 +530,8 @@ class Invoice(metaclass=PoolMeta):
             to_post = []
             for invoice in to_save:
                 documento = data['tryton'][invoice.id_tecno]['invoice']
-                result = cls._validate_total_tecno(invoice.total_amount, documento)
+                result = cls._validate_total_tecno(invoice.total_amount,
+                                                   documento)
                 if not result['value']:
                     msg = f"REVISAR: ({invoice.id_tecno}) "\
                     f"El total de Tryton {invoice.total_amount} "\
@@ -526,7 +545,6 @@ class Invoice(metaclass=PoolMeta):
             if inv['type_note'] == 'credit' and to_post:
                 cls._check_cross_invoices(to_post)
         return data
-    
 
     # Función encargada de importar notas débito y crédito de TecnoCarnes
     @classmethod
@@ -553,7 +571,6 @@ class Invoice(metaclass=PoolMeta):
         actualizacion.add_logs(data['logs'])
         print(f"FINISH {_SW[sw]['name']}")
 
-
     # Metodo encargado de validar el total de la factura en Tryton y TecnoCarnes
     @classmethod
     def _validate_total_tecno(cls, total_tryton, documento):
@@ -570,7 +587,6 @@ class Invoice(metaclass=PoolMeta):
         result['total_tecno'] = total_tecno
         result['diferencia'] = diferencia
         return result
-
 
     # Nota de crédito
     @classmethod
@@ -592,27 +608,31 @@ class Invoice(metaclass=PoolMeta):
     def import_debit_note_purchase(cls):
         cls._import_notas_tecno('27')
 
-
     @classmethod
     def __setup__(cls):
         super(Invoice, cls).__setup__()
-        cls._buttons.update({
-            'submit': {
-                'invisible': True
-            },
-            'send_email': {
-                'invisible': True
-            },
-            'send_support_document': {
-                'invisible': Or(
-                    And(Eval('type') != 'out', ~Eval('equivalent_invoice')),
-                    Eval('electronic_state') == 'authorized',
-                    Eval('number', None) == None,
-                    Eval('authorization', None) == None,
-                    Eval('state') != 'validated',
-                )}
-            },)
-    
+        cls._buttons.update(
+            {
+                'submit': {
+                    'invisible': True
+                },
+                'send_email': {
+                    'invisible': True
+                },
+                'send_support_document': {
+                    'invisible':
+                    Or(
+                        And(
+                            Eval('type') != 'out',
+                            ~Eval('equivalent_invoice')),
+                        Eval('electronic_state') == 'authorized',
+                        Eval('number', None) == None,
+                        Eval('authorization', None) == None,
+                        Eval('state') != 'validated',
+                    )
+                }
+            }, )
+
     @classmethod
     def check_duplicated_reference(cls, invoice):
         if invoice.total_amount < 0:
@@ -628,12 +648,11 @@ class Invoice(metaclass=PoolMeta):
                 ('reference', '=', invoice.reference),
                 ('party', '=', invoice.party.id),
                 ('invoice_date', '>=', target_date),
-            ], fields_names=['reference'])
+            ],
+                                         fields_names=['reference'])
             if len(duplicates) >= 2:
-                raise UserError(gettext(
-                    'account_col.msg_duplicated_reference_invoice')
-                    )
-
+                raise UserError(
+                    gettext('account_col.msg_duplicated_reference_invoice'))
 
     # Boton (función) que sirve para enviar los documentos soporte al proveedor tecnologico
     @classmethod
@@ -645,8 +664,9 @@ class Invoice(metaclass=PoolMeta):
             if invoice.authorization and not invoice.event:
                 _ = SendElectronicInvoice(invoice, invoice.authorization)
             else:
-                invoice.get_message('El campo proveedor de autorización no ha sido seleccionado')
-
+                invoice.get_message(
+                    'El campo proveedor de autorización no ha sido seleccionado'
+                )
 
     @staticmethod
     def _check_cross_invoices(invoices=None):
@@ -662,6 +682,7 @@ class Invoice(metaclass=PoolMeta):
             # (FIX) CONSULTA SOLO PARA NOTAS CREDITO
             query = "SELECT id FROM account_invoice WHERE state = 'posted' AND invoice_type != '92' \
                 AND number != reference AND number like '%-%' AND reference like '%-%'"
+
             cursor.execute(query)
             invoices_id = cursor.fetchall()
             _ids = []
@@ -678,10 +699,8 @@ class Invoice(metaclass=PoolMeta):
             else:
                 cross[inv.reference].append(inv)
 
-        origin_invoices = Invoice.search([
-            ('number', 'in', numbers),
-            ('state', 'in', ['posted', 'paid'])
-        ])
+        origin_invoices = Invoice.search([('number', 'in', numbers),
+                                          ('state', 'in', ['posted', 'paid'])])
         logs = {}
         to_save = []
         for origin in origin_invoices:
@@ -736,11 +755,13 @@ class Invoice(metaclass=PoolMeta):
             ids_tecno.append(invoice.id_tecno)
             if hasattr(invoice, 'electronic_state') and \
                 invoice.electronic_state == 'submitted':
-                    raise UserError('account_col.msg_with_electronic_invoice')
+                raise UserError('account_col.msg_with_electronic_invoice')
             if invoice.state == 'paid':
                 for line in invoice.move.lines:
-                    if line.reconciliation and line.reconciliation.id not in to_delete['reconciliation']:
-                        to_delete['reconciliation'].append(line.reconciliation.id)
+                    if line.reconciliation and line.reconciliation.id not in to_delete[
+                            'reconciliation']:
+                        to_delete['reconciliation'].append(
+                            line.reconciliation.id)
             if invoice.move:
                 if invoice.move.id not in to_delete['move']:
                     to_delete['move'].append(invoice.move.id)
@@ -760,26 +781,22 @@ class Invoice(metaclass=PoolMeta):
         print(to_delete)
         if to_delete['reconciliation']:
             cursor.execute(*reconciliation_table.delete(
-                where=reconciliation_table.id.in_(to_delete['reconciliation']))
-            )
+                where=reconciliation_table.id.in_(
+                    to_delete['reconciliation'])))
         if to_delete['move']:
-            cursor.execute(*move_table.update(
-                columns=[move_table.state],
-                values=['draft'],
-                where=move_table.id.in_(to_delete['move']))
-            )
+            cursor.execute(
+                *move_table.update(columns=[move_table.state],
+                                   values=['draft'],
+                                   where=move_table.id.in_(to_delete['move'])))
             cursor.execute(*move_table.delete(
-                where=move_table.id.in_(to_delete['move']))
-                )
+                where=move_table.id.in_(to_delete['move'])))
         if to_delete['invoice']:
             cursor.execute(*invoice_table.update(
                 columns=[invoice_table.state, invoice_table.number],
                 values=['validate', None],
-                where=invoice_table.id.in_(to_delete['invoice']))
-            )
+                where=invoice_table.id.in_(to_delete['invoice'])))
             cursor.execute(*invoice_table.delete(
-                where=invoice_table.id.in_(to_delete['invoice']))
-            )
+                where=invoice_table.id.in_(to_delete['invoice'])))
 
     # Función encargada de eliminar y marcar para importar ventas de importadas de TecnoCarnes
     @classmethod
@@ -799,7 +816,9 @@ class InvoiceLine(metaclass=PoolMeta):
         super(InvoiceLine, cls).__setup__()
 
     def _get_latin_move_lines(self, amount, type_, account_stock_method):
-        result = super(InvoiceLine, self)._get_latin_move_lines(amount, type_, account_stock_method)
+        result = super(InvoiceLine,
+                       self)._get_latin_move_lines(amount, type_,
+                                                   account_stock_method)
         if self.invoice.id_tecno:
             id_tecno = self.invoice.id_tecno.split('-')
             if id_tecno[0] in _SW:
@@ -832,41 +851,46 @@ class InvoiceLine(metaclass=PoolMeta):
                 line.write([line], {'account': account_id})
 
 
-
 class UpdateInvoiceTecnoStart(ModelView):
     'Delete Invoice Tecno Start'
     __name__ = 'delete.invoice.wizard.start'
     user = fields.Many2One('res.user', 'User', readonly=True)
-    validate = fields.Boolean('Validate', readonly=True, on_change_with='on_change_with_validate')
+    validate = fields.Boolean('Validate',
+                              readonly=True,
+                              on_change_with='on_change_with_validate')
 
     @staticmethod
     def default_user():
         return Transaction().user
 
-    
     @fields.depends('user')
     def on_change_with_validate(self):
         pool = Pool()
         user_permission = pool.get('conector.permissions')
         permission = pool.get('res.user-ir.action.wizard')
-        action = user_permission.search([('user_permission', '=', Transaction().user)])
+        action = user_permission.search([('user_permission', '=',
+                                          Transaction().user)])
         action = [i.id for i in action]
-        validated = permission.search([('user_permission', 'in', action),
-                                       ('wizard.wiz_name', '=', 'account.invoice.update_invoice_tecno'),])
+        validated = permission.search([
+            ('user_permission', 'in', action),
+            ('wizard.wiz_name', '=', 'account.invoice.update_invoice_tecno'),
+        ])
         if validated:
             return True
         return False
-    
+
+
 class UpdateInvoiceTecno(Wizard):
     'Update Invoice Tecno'
     __name__ = 'account.invoice.update_invoice_tecno'
 
-    start = StateView('delete.invoice.wizard.start',
+    start = StateView(
+        'delete.invoice.wizard.start',
         'conector.validated_identity_invoice_view_form', [
             Button('Cancel', 'end', 'tryton-cancel'),
             Button('Confirm', 'do_submit', 'tryton-ok', default=True),
-            ])
-    
+        ])
+
     do_submit = StateTransition()
 
     def transition_do_submit(self):
@@ -895,13 +919,16 @@ class UpdateInvoiceTecno(Wizard):
                 id_tecno = invoice.id_tecno or invoice.reference
                 if invoice.move.period.state == 'close':
                     exceptions.append(id_tecno)
-                    logs[id_tecno] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
+                    logs[
+                        id_tecno] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
                     Y NO ES POSIBLE SU ELIMINACION O MODIFICACION"
+
                     continue
-                reclamacion = Reclamacion.search([('line.move.origin', '=', invoice)])
+                reclamacion = Reclamacion.search([('line.move.origin', '=',
+                                                   invoice)])
                 rec_name = invoice.rec_name
                 party_name = invoice.party.name
-                rec_party = rec_name+' de '+party_name
+                rec_party = rec_name + ' de ' + party_name
                 if invoice.number and '-' in invoice.number:
                     if invoice.id_tecno:
                         sw = invoice.id_tecno.split('-')[0]
@@ -913,13 +940,15 @@ class UpdateInvoiceTecno(Wizard):
                         if sale:
                             to_delete_sales.append(sale[0])
                     elif invoice.type == 'in':
-                        purchase = Purchase.search([('number', '=', invoice.number)])
+                        purchase = Purchase.search([('number', '=',
+                                                     invoice.number)])
                         if purchase:
                             to_delete_purchases.append(purchase[0])
 
                     if reclamacion:
                         dunningTable = Dunning.__table__()
-                        emails_delete = Mails.search([('dunning', 'in', reclamacion)])
+                        emails_delete = Mails.search([('dunning', 'in',
+                                                       reclamacion)])
                         if emails_delete:
                             Mails.delete(emails_delete)
 
@@ -929,15 +958,15 @@ class UpdateInvoiceTecno(Wizard):
                                     dunningTable.state,
                                 ],
                                 values=["draft"],
-                                where=dunningTable.id == reclamacion[0].id)
-                            )
+                                where=dunningTable.id == reclamacion[0].id))
 
                         cursor.execute(*dunningTable.delete(
-                            where=dunningTable.id == reclamacion[0].id)
-                        )
+                            where=dunningTable.id == reclamacion[0].id))
 
                 else:
-                    raise UserError("Revisa el número de la factura (tipo-numero): ", rec_party)
+                    raise UserError(
+                        "Revisa el número de la factura (tipo-numero): ",
+                        rec_party)
             if to_delete_sales:
                 Sale.delete_imported_sales(to_delete_sales)
                 log_delete_sale = [i.number for i in to_delete_sales]
@@ -947,23 +976,29 @@ class UpdateInvoiceTecno(Wizard):
             if to_delete_note:
                 Invoice.delete_imported_notes(to_delete_note)
                 log_delete_note = [i.number for i in to_delete_note]
-            
+
             if exceptions:
                 actualizacion.add_logs(logs)
                 return 'end'
-            logs[self.start.user.name] = f"El usuario {self.start.user.name}, realizo la accion de eliminar y reimportar facturas \
+            logs[
+                self.start.user.
+                name] = f"El usuario {self.start.user.name}, realizo la accion de eliminar y reimportar facturas \
             eliminando los siguientes documentos \
             ventas:{log_delete_sale},\
             compras:{log_delete_purchase},\
             notas:{log_delete_note}"
+
             actualizacion.add_logs(logs)
             return 'end'
 
         logs[self.start.user.name] = f"El usuario {self.start.user.name}, \
         intento ejecutar el asistente de eliminar y reimportar facturas \
         para el cual, no cuenta con los permisos requeridos"
+
         actualizacion.add_logs(logs)
-        raise UserError(f"EL usuario {self.start.user.name}, no cuenta con los permisos para realizar esta accion")
+        raise UserError(
+            f"EL usuario {self.start.user.name}, no cuenta con los permisos para realizar esta accion"
+        )
 
     def end(self):
         return 'reload'
@@ -987,39 +1022,56 @@ class UpdateNoteDate(Wizard):
         Actualizacion = pool.get('conector.actualizacion')
         logs = {}
         exceptions = []
-        actualizacion = Actualizacion.create_or_update('CAMBIO DE FECHA DE ASIENTO DE FACTURAS')
+        actualizacion = Actualizacion.create_or_update(
+            'CAMBIO DE FECHA DE ASIENTO DE FACTURAS')
 
         warning_name = 'warning_udate_note_%s' % ids
         if Warning.check(warning_name):
-            raise UserWarning(warning_name, "Se va a actualizar las fechas de los anticipos cruzados con respecto a la fecha de la factura.")
+            raise UserWarning(
+                warning_name,
+                "Se va a actualizar las fechas de los anticipos cruzados con respecto a la fecha de la factura."
+            )
 
         for invoice in Invoice.browse(ids):
             if invoice.move.period.state == 'close':
                 exceptions.append(invoice.id_tecno)
-                logs[invoice.id_tecno] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
+                logs[
+                    invoice.
+                    id_tecno] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
                 Y NO ES POSIBLE SU ELIMINACION O MODIFICACION"
+
                 continue
             rec_name = invoice.rec_name
             party_name = invoice.party.name
-            rec_party = rec_name+' de '+party_name
+            rec_party = rec_name + ' de ' + party_name
             if invoice.state == 'posted' or invoice.state == 'paid':
                 movelines = invoice.reconciliation_lines or invoice.payment_lines
                 if movelines:
                     for line in movelines:
-                        if line.move_origin and hasattr(line.move_origin, '__name__') and line.move_origin.__name__ == 'account.note':
+                        if line.move_origin and hasattr(
+                                line.move_origin, '__name__'
+                        ) and line.move_origin.__name__ == 'account.note':
                             cursor.execute(*move_table.update(
-                                columns=[move_table.date, move_table.post_date, move_table.period],
-                                values=[invoice.invoice_date, invoice.invoice_date, invoice.move.period.id],
-                                where=move_table.id == line.move.id)
-                            )
+                                columns=[
+                                    move_table.date, move_table.post_date,
+                                    move_table.period
+                                ],
+                                values=[
+                                    invoice.invoice_date, invoice.invoice_date,
+                                    invoice.move.period.id
+                                ],
+                                where=move_table.id == line.move.id))
                             cursor.execute(*note_table.update(
                                 columns=[note_table.date],
                                 values=[invoice.invoice_date],
-                                where=note_table.id == line.move_origin.id)
-                            )
+                                where=note_table.id == line.move_origin.id))
             else:
-                raise UserError("La factura debe estar en estado contabilizada o pagada.", rec_party)
+                raise UserError(
+                    "La factura debe estar en estado contabilizada o pagada.",
+                    rec_party)
         if exceptions:
             actualizacion.add_logs(logs)
-            raise UserError(f"Los documentos {exceptions} no pueden ser eliminados porque su periodo se encuentra cerrado")
+            raise UserError(
+                f"Los documentos {exceptions} no pueden ser eliminados porque su periodo se encuentra cerrado"
+            )
         return 'end'

@@ -14,9 +14,9 @@ MODULE2PREFIX = {}
 
 
 def read(fname):
-    return io.open(
-        os.path.join(os.path.dirname(__file__), fname),
-        'r', encoding='utf-8').read()
+    return io.open(os.path.join(os.path.dirname(__file__), fname),
+                   'r',
+                   encoding='utf-8').read()
 
 
 def get_require_version(name):
@@ -24,8 +24,8 @@ def get_require_version(name):
         require = '%s >= %s.%s.dev0, < %s.%s'
     else:
         require = '%s >= %s.%s, < %s.%s'
-    require %= (name, major_version, minor_version,
-        major_version, minor_version + 1)
+    require %= (name, major_version, minor_version, major_version,
+                minor_version + 1)
     return require
 
 
@@ -41,13 +41,12 @@ major_version = int(major_version)
 minor_version = int(minor_version)
 name = '%s_%s' % (PREFIX, MODULE)
 
-download_url = 'http://downloads.tryton.org/%s.%s/' % (
-    major_version, minor_version)
+download_url = 'http://downloads.tryton.org/%s.%s/' % (major_version,
+                                                       minor_version)
 if minor_version % 2:
     version = '%s.%s.dev0' % (major_version, minor_version)
-    download_url = (
-        'hg+http://hg.tryton.org/modules/%s#egg=%s-%s' % (
-            name[8:], name, version))
+    download_url = ('hg+http://hg.tryton.org/modules/%s#egg=%s-%s' %
+                    (name[8:], name, version))
 
 requires = ['python-sql >= 0.4']
 for dep in info.get('depends', []):
@@ -61,7 +60,8 @@ if minor_version % 2:
     # Add development index for testing with proteus
     dependency_links.append('https://trydevpi.tryton.org/')
 
-setup(name=name,
+setup(
+    name=name,
     version=version,
     description='Tryton module cdst conector',
     long_description=read('README.md'),
@@ -74,12 +74,13 @@ setup(name=name,
     packages=[
         'trytond.modules.%s' % MODULE,
         'trytond.modules.%s.tests' % MODULE,
-        ],
+    ],
     package_data={
-        'trytond.modules.%s' % MODULE: (info.get('xml', [])
-            + ['tryton.cfg', 'icons/*.svg', 'view/*.xml', 'locale/*.po', '*.fodt',
-                '*.fods']),
-        },
+        'trytond.modules.%s' % MODULE: (info.get('xml', []) + [
+            'tryton.cfg', 'icons/*.svg', 'view/*.xml', 'locale/*.po', '*.fodt',
+            '*.fods'
+        ]),
+    },
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Environment :: Plugins',
@@ -99,7 +100,7 @@ setup(name=name,
         'Programming Language :: Python :: Implementation :: PyPy',
         'Topic :: Office/Business',
         'Topic :: Office/Business :: Financial :: Accounting',
-        ],
+    ],
     platforms='any',
     license='GPL-3',
     python_requires='>=3.4',
@@ -118,4 +119,4 @@ setup(name=name,
     #convert_2to3_doctests=[
     #    'tests/scenario.rst',
     #    ],
-    )
+)

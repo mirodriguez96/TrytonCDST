@@ -3,7 +3,6 @@
 from trytond.pool import Pool, PoolMeta
 from trytond.model import fields
 
-
 PAYMENT_TYPE = [
     ('', ''),
     ('1', 'Contado'),
@@ -14,7 +13,9 @@ PAYMENT_TYPE = [
 class PaymentTerm(metaclass=PoolMeta):
     __name__ = 'account.invoice.payment_term'
 
-    payment_type = fields.Selection(PAYMENT_TYPE, 'Payment Type', required=True)
+    payment_type = fields.Selection(PAYMENT_TYPE,
+                                    'Payment Type',
+                                    required=True)
     id_tecno = fields.Char('Id Tabla Sqlserver', required=False)
 
     @staticmethod
@@ -51,7 +52,8 @@ class PaymentTerm(metaclass=PoolMeta):
                     existe[0].name = nombre
                     existe[0].payment_type = payment_type
                     existe[0].save()
-                    logs[id_tecno] = "SE AGREGARON CAMBIOS EN LOS PLAZOS DE PAGO"
+                    logs[
+                        id_tecno] = "SE AGREGARON CAMBIOS EN LOS PLAZOS DE PAGO"
             else:
                 #Se crea un nuevo plazo de pago
                 plazo_pago = PaymentTerm()

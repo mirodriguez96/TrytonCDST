@@ -11,7 +11,6 @@ except:
     print("Warning: Does not possible import pyodbc module!")
     print("Please install it...!")
 
-
 # Paso a paso recomendado para la importación
 # 1. Crear la funcion que importa los datos y crea la actualización
 # 2. Crear la funcion que valida los datos importados
@@ -21,7 +20,6 @@ except:
 #   3.1 _create_model()
 #   3.2 _create_lines()
 #   3.3 Model.save([all])
-
 
 # TYPES_FILE = [
 #     ('parties', 'Parties'),
@@ -36,35 +34,85 @@ except:
 #     ('access_biometric', 'Access biometric')
 # ]
 
+
 class Configuration(ModelSQL, ModelView):
     'Configuration'
     __name__ = 'conector.configuration'
 
-    server = fields.Char('Server', required=True, help="Example: ip,port", states={
-            'invisible': ~Not(Eval('visibible'))},depends=['visibible'],)
-    db = fields.Char('Database', required=True, help="Enter the name of the database without leaving spaces", states={
-            'invisible': ~Not(Eval('visibible'))},depends=['visibible'],)
-    user = fields.Char('User', required=True, help="Enter the user of the database without leaving spaces", states={
-            'invisible': ~Not(Eval('visibible'))},depends=['visibible'],)
-    password = fields.Char('Password', required=True, help="Enter the password of the database without leaving spaces", states={
-            'invisible': ~Not(Eval('visibible'))},depends=['visibible'],)
-    date = fields.Date('Date', required=True, help="Enter the import start date", states={
-            'invisible': ~Not(Eval('visibible'))},depends=['visibible'],)
-    end_date = fields.Date('End Date', help="Enter the import end date" , states={
-            'invisible': ~Not(Eval('visibible'))},depends=['visibible'],)
+    server = fields.Char(
+        'Server',
+        required=True,
+        help="Example: ip,port",
+        states={'invisible': ~Not(Eval('visibible'))},
+        depends=['visibible'],
+    )
+    db = fields.Char(
+        'Database',
+        required=True,
+        help="Enter the name of the database without leaving spaces",
+        states={'invisible': ~Not(Eval('visibible'))},
+        depends=['visibible'],
+    )
+    user = fields.Char(
+        'User',
+        required=True,
+        help="Enter the user of the database without leaving spaces",
+        states={'invisible': ~Not(Eval('visibible'))},
+        depends=['visibible'],
+    )
+    password = fields.Char(
+        'Password',
+        required=True,
+        help="Enter the password of the database without leaving spaces",
+        states={'invisible': ~Not(Eval('visibible'))},
+        depends=['visibible'],
+    )
+    date = fields.Date(
+        'Date',
+        required=True,
+        help="Enter the import start date",
+        states={'invisible': ~Not(Eval('visibible'))},
+        depends=['visibible'],
+    )
+    end_date = fields.Date(
+        'End Date',
+        help="Enter the import end date",
+        states={'invisible': ~Not(Eval('visibible'))},
+        depends=['visibible'],
+    )
     # file = fields.Binary('File', help="Enter the file to import with (;)")
     # type_file = fields.Selection(TYPES_FILE, 'Type file')
     #doc_types = fields.Char('Doc types', help="Example: 101;120;103")
-    order_type_production = fields.Char('Order types', help="Example: 101;202;303", states={
-            'invisible': ~Not(Eval('visibible'))},depends=['visibible'],)
-    access_enter_timestamp = fields.Char('Inicia a laborar', help="Example: Laborando", states={
-            'invisible': ~Not(Eval('visibible'))},depends=['visibible'],)
-    access_exit_timestamp = fields.Char('Finaliza de laborar', help="Example: Salir", states={
-            'invisible': ~Not(Eval('visibible'))},depends=['visibible'],)
-    access_start_rest = fields.Char('Inicia a descansar', help="Example: Descansando", states={
-            'invisible': ~Not(Eval('visibible'))},depends=['visibible'],)
-    access_end_rest = fields.Char('Finaliza de descansar', help="Example: Retornar", states={
-            'invisible': ~Not(Eval('visibible'))},depends=['visibible'],)
+    order_type_production = fields.Char(
+        'Order types',
+        help="Example: 101;202;303",
+        states={'invisible': ~Not(Eval('visibible'))},
+        depends=['visibible'],
+    )
+    access_enter_timestamp = fields.Char(
+        'Inicia a laborar',
+        help="Example: Laborando",
+        states={'invisible': ~Not(Eval('visibible'))},
+        depends=['visibible'],
+    )
+    access_exit_timestamp = fields.Char(
+        'Finaliza de laborar',
+        help="Example: Salir",
+        states={'invisible': ~Not(Eval('visibible'))},
+        depends=['visibible'],
+    )
+    access_start_rest = fields.Char(
+        'Inicia a descansar',
+        help="Example: Descansando",
+        states={'invisible': ~Not(Eval('visibible'))},
+        depends=['visibible'],
+    )
+    access_end_rest = fields.Char(
+        'Finaliza de descansar',
+        help="Example: Retornar",
+        states={'invisible': ~Not(Eval('visibible'))},
+        depends=['visibible'],
+    )
     enhabled = fields.Function(fields.Boolean('Enhabled'), 'get_enhabled')
     visibible = fields.Boolean('Visible')
 
@@ -72,14 +120,13 @@ class Configuration(ModelSQL, ModelView):
     def default_visibible():
         return True
 
-
     @classmethod
     def __setup__(cls):
         super(Configuration, cls).__setup__()
         cls._buttons.update({
-                'test_conexion': {},
-                'importfile': {},
-                })
+            'test_conexion': {},
+            'importfile': {},
+        })
 
     # Se retorna la configuracion a trabajar
     @classmethod
@@ -117,11 +164,16 @@ class Configuration(ModelSQL, ModelView):
         if last_record:
             record, = last_record
             #Las conexiones utilizadas en un bloque with se confirmarán al final del bloque si no se generan errores y se revertirán de lo contrario
-            with pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER='+record.server+';DATABASE='+record.db+';UID='+record.user+';PWD='+record.password) as cnxn:
+            with pyodbc.connect(
+                    'DRIVER={ODBC Driver 17 for SQL Server};SERVER=' +
+                    record.server + ';DATABASE=' + record.db + ';UID=' +
+                    record.user + ';PWD=' + record.password) as cnxn:
                 return cnxn
         else:
-            raise UserError('Error: ', 'Ingrese por favor todos los datos de configuracion de la base de datos')
-
+            raise UserError(
+                'Error: ',
+                'Ingrese por favor todos los datos de configuracion de la base de datos'
+            )
 
     #Función encargada de enviar la conexión configurada con los datos del primer registro
     @classmethod
@@ -157,12 +209,13 @@ class Configuration(ModelSQL, ModelView):
         finally:
             cnxn.autocommit = True
 
-
     #Se marca en la tabla dbo.Documentos como exportado a Tryton
     @classmethod
     def update_exportado(cls, id, e):
         lista = id.split('-')
-        query = "UPDATE dbo.Documentos SET exportado = '"+e+"' WHERE sw ="+lista[0]+" and tipo = "+lista[1]+" and Numero_documento = "+lista[2]
+        query = "UPDATE dbo.Documentos SET exportado = '" + e + "' WHERE sw =" + lista[
+            0] + " and tipo = " + lista[
+                1] + " and Numero_documento = " + lista[2]
         cls.set_data(query)
 
     @classmethod
@@ -175,7 +228,7 @@ class Configuration(ModelSQL, ModelView):
     @classmethod
     def get_tblproducto(cls, fecha):
         fecha = fecha.strftime('%Y-%m-%d %H:%M:%S')
-        query = "SET DATEFORMAT ymd SELECT * FROM dbo.TblProducto WHERE fecha_creacion >= CAST('"+fecha+"' AS datetime) OR Ultimo_Cambio_Registro >= CAST('"+fecha+"' AS datetime)"
+        query = "SET DATEFORMAT ymd SELECT * FROM dbo.TblProducto WHERE fecha_creacion >= CAST('" + fecha + "' AS datetime) OR Ultimo_Cambio_Registro >= CAST('" + fecha + "' AS datetime)"
         data = cls.get_data(query)
         return data
 
@@ -197,20 +250,20 @@ class Configuration(ModelSQL, ModelView):
     @classmethod
     def get_tblterceros(cls, fecha):
         fecha = fecha.strftime('%Y-%m-%d %H:%M:%S')
-        query = "SET DATEFORMAT ymd SELECT * FROM dbo.TblTerceros WHERE fecha_creacion >= CAST('"+fecha+"' AS datetime) OR Ultimo_Cambio_Registro >= CAST('"+fecha+"' AS datetime)"
+        query = "SET DATEFORMAT ymd SELECT * FROM dbo.TblTerceros WHERE fecha_creacion >= CAST('" + fecha + "' AS datetime) OR Ultimo_Cambio_Registro >= CAST('" + fecha + "' AS datetime)"
         data = cls.get_data(query)
         return data
 
     @classmethod
     def get_tercerosdir(cls, fecha):
         fecha = fecha.strftime('%Y-%m-%d %H:%M:%S')
-        query = "SET DATEFORMAT ymd SELECT * FROM dbo.Terceros_Dir WHERE Ultimo_Cambio_Registro >= CAST('"+fecha+"' AS datetime)"
+        query = "SET DATEFORMAT ymd SELECT * FROM dbo.Terceros_Dir WHERE Ultimo_Cambio_Registro >= CAST('" + fecha + "' AS datetime)"
         data = cls.get_data(query)
         return data
 
     @classmethod
     def get_tercerosdir_nit(cls, nit):
-        query = "SELECT * FROM dbo.Terceros_Dir WHERE nit = '"+nit+"'"
+        query = "SELECT * FROM dbo.Terceros_Dir WHERE nit = '" + nit + "'"
         data = cls.get_data(query)
         return data
 
@@ -238,9 +291,9 @@ class Configuration(ModelSQL, ModelView):
         fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
         # query = "SELECT * FROM dbo.Documentos WHERE tipo = null AND Numero_documento = null" #TEST
         if not sw:
-            query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE Fecha_Hora_Factura >= CAST('"+fecha+"' AS datetime) AND tipo = "+tipo+" AND exportado != 'T' AND exportado != 'E' AND exportado != 'X' "
+            query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE Fecha_Hora_Factura >= CAST('" + fecha + "' AS datetime) AND tipo = " + tipo + " AND exportado != 'T' AND exportado != 'E' AND exportado != 'X' "
         else:
-            query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE Fecha_Hora_Factura >= CAST('"+fecha+"' AS datetime) AND sw = "+sw+" AND tipo = "+tipo+" AND exportado != 'T' AND exportado != 'E' AND exportado != 'X' "
+            query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE Fecha_Hora_Factura >= CAST('" + fecha + "' AS datetime) AND sw = " + sw + " AND tipo = " + tipo + " AND exportado != 'T' AND exportado != 'E' AND exportado != 'X' "
         if config.end_date:
             end_date = config.end_date.strftime('%Y-%m-%d %H:%M:%S')
             query += f" AND Fecha_Hora_Factura < CAST('{end_date}' AS datetime) "
@@ -251,10 +304,12 @@ class Configuration(ModelSQL, ModelView):
     @classmethod
     def get_lineasd_tecno(cls, id):
         lista = id.split('-')
-        query = "SELECT * FROM dbo.Documentos_Lin WHERE sw = "+lista[0]+" AND tipo = "+lista[1]+" AND Numero_Documento = "+lista[2]+" order by seq"
+        query = "SELECT * FROM dbo.Documentos_Lin WHERE sw = " + lista[
+            0] + " AND tipo = " + lista[
+                1] + " AND Numero_Documento = " + lista[2] + " order by seq"
         data = cls.get_data(query)
         return data
-    
+
     @classmethod
     def get_documentos_lin(cls, ids):
         cond = "IN"
@@ -268,25 +323,25 @@ class Configuration(ModelSQL, ModelView):
 
     @classmethod
     def get_data_parametros(cls, id):
-        query = "SELECT * FROM dbo.TblParametro WHERE IdParametro = "+id
+        query = "SELECT * FROM dbo.TblParametro WHERE IdParametro = " + id
         data = cls.get_data(query)
         return data
 
     @classmethod
     def get_tbltipodoctos(cls, id):
-        query = "SELECT * FROM dbo.TblTipoDoctos WHERE idTipoDoctos = "+id
+        query = "SELECT * FROM dbo.TblTipoDoctos WHERE idTipoDoctos = " + id
         data = cls.get_data(query)
         return data
-    
+
     @classmethod
     def get_tbltipodoctos_encabezado(cls, ids):
-        query = "SELECT idTipoDoctos, Encabezado FROM dbo.TblTipoDoctos WHERE idTipoDoctos in "+ids
+        query = "SELECT idTipoDoctos, Encabezado FROM dbo.TblTipoDoctos WHERE idTipoDoctos in " + ids
         data = cls.get_data(query)
         return data
 
     @classmethod
     def get_tbltipoproducto(cls, id):
-        query = "SELECT * FROM dbo.TblTipoProducto WHERE IdTipoProducto = "+id
+        query = "SELECT * FROM dbo.TblTipoProducto WHERE IdTipoProducto = " + id
         data = cls.get_data(query)
         return data
 
@@ -294,7 +349,8 @@ class Configuration(ModelSQL, ModelView):
     @classmethod
     def get_dctos_cruce(cls, id):
         lista = id.split('-')
-        query = "SELECT * FROM dbo.Documentos_Cruce WHERE sw="+lista[0]+" AND tipo="+lista[1]+" AND numero="+lista[2]
+        query = "SELECT * FROM dbo.Documentos_Cruce WHERE sw=" + lista[
+            0] + " AND tipo=" + lista[1] + " AND numero=" + lista[2]
         data = cls.get_data(query)
         return data
 
@@ -302,17 +358,17 @@ class Configuration(ModelSQL, ModelView):
     @classmethod
     def get_tipos_pago(cls, id):
         lista = id.split('-')
-        query = "SELECT * FROM dbo.Documentos_Che WHERE sw="+lista[0]+" AND tipo="+lista[1]+" AND numero="+lista[2]
+        query = "SELECT * FROM dbo.Documentos_Che WHERE sw=" + lista[
+            0] + " AND tipo=" + lista[1] + " AND numero=" + lista[2]
         data = cls.get_data(query)
         return data
-
 
     @classmethod
     def get_data_table(cls, table):
-        query = "SELECT * FROM dbo."+table
+        query = "SELECT * FROM dbo." + table
         data = cls.get_data(query)
         return data
-    
+
     @classmethod
     def get_documentos_orden(cls):
         Config = Pool().get('conector.configuration')
@@ -369,7 +425,7 @@ class Configuration(ModelSQL, ModelView):
             query = "SELECT * FROM TblDatosBiometrico ORDER BY Nit_cedula, Fecha_Hora_Marcacion ASC"
         data = cls.get_data(query)
         return data
-    
+
     @classmethod
     def get_tblproducto_parent(cls):
         query = """

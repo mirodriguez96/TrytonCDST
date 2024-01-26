@@ -10,17 +10,22 @@ from .constants import (ENTITY_ACCOUNTS)
 
 _ZERO = Decimal(0)
 
+
 # REPORTE DE NOMINA MODIFICADO
 class PayrollExportStart(ModelView):
     'Export Payroll Start'
     __name__ = 'report.payroll.export.start'
     company = fields.Many2One('company.company', 'Company', required=True)
-    start_period = fields.Many2One('staff.payroll.period', 'Start Period',
+    start_period = fields.Many2One('staff.payroll.period',
+                                   'Start Period',
                                    required=True)
-    end_period = fields.Many2One('staff.payroll.period', 'End Period',
+    end_period = fields.Many2One('staff.payroll.period',
+                                 'End Period',
                                  required=True)
-    department = fields.Many2One('company.department', 'Department',
-                                 required=False, depends=['employee'])
+    department = fields.Many2One('company.department',
+                                 'Department',
+                                 required=False,
+                                 depends=['employee'])
 
     @staticmethod
     def default_company():
@@ -34,7 +39,7 @@ class PayrollExport(Wizard):
                       'conector.payroll_export_start_view_form', [
                           Button('Cancel', 'end', 'tryton-cancel'),
                           Button('Print', 'print_', 'tryton-ok', default=True),
-                          ])
+                      ])
     print_ = StateReport('report.payroll.export_report')
 
     def do_print_(self, action):
@@ -72,24 +77,23 @@ class PayrollExportReport(Report):
         dom_payroll = cls.get_domain_payroll()
         start_period, = Period.search([('id', '=', data['start_period'])])
         end_period, = Period.search([('id', '=', data['end_period'])])
-        dom_payroll.append([
-            ('period.start', '>=', start_period.start),
-            ('period.end', '<=', end_period.end),
-            ('move', '!=', None)
-        ])
+        dom_payroll.append([('period.start', '>=', start_period.start),
+                            ('period.end', '<=', end_period.end),
+                            ('move', '!=', None)])
         if data['department_id'] not in (None, ''):
-            dom_payroll.append([
-                ('employee.department', '=', data['department_id'])
-            ])
+            dom_payroll.append([('employee.department', '=',
+                                 data['department_id'])])
 
         payrolls = Payroll.search(dom_payroll, order=[('period.name', 'ASC')])
         records = {}
         for payroll in payrolls:
             employee = payroll.employee
             """ extract debit account and party mandatory_wages"""
-            accdb_party = {mw.wage_type.debit_account.id: mw.party
-                           for mw in employee.mandatory_wages
-                           if mw.wage_type.debit_account and mw.party}
+            accdb_party = {
+                mw.wage_type.debit_account.id: mw.party
+                for mw in employee.mandatory_wages
+                if mw.wage_type.debit_account and mw.party
+            }
             move = payroll.move
             accountdb_ids = accdb_party.keys()
             for line in move.lines:
@@ -97,14 +101,22 @@ class PayrollExportReport(Report):
                 if not line.party:
                     continue
                 line_ = {
-                    'date': line.move.date,
-                    'code': '---',
-                    'party': employee.party.id_number,
-                    'name': employee.party.name,
-                    'description': line.description,
-                    'department': employee.department.name if employee.department else '---',
-                    'amount': line.debit or line.credit,
-                    'type': 'D',
+                    'date':
+                    line.move.date,
+                    'code':
+                    '---',
+                    'party':
+                    employee.party.id_number,
+                    'name':
+                    employee.party.name,
+                    'description':
+                    line.description,
+                    'department':
+                    employee.department.name if employee.department else '---',
+                    'amount':
+                    line.debit or line.credit,
+                    'type':
+                    'D',
                 }
                 if line.debit > 0:
                     if line.account.id in accountdb_ids:
@@ -129,7 +141,7 @@ class PayrollExportReport(Report):
                     records[line.account.code] = {
                         'name': line.account.name,
                         'lines': []
-                        }
+                    }
                 records[line.account.code]['lines'].append(line_)
 
         report_context['records'] = records
@@ -137,6 +149,7 @@ class PayrollExportReport(Report):
         report_context['end_date'] = end_period.name
         report_context['company'] = company.party.name
         return report_context
+
 
 class CDSSaleIncomeDailyStart(ModelView):
     'CDSSale Income Daily Start'
@@ -163,14 +176,15 @@ class CDSSaleIncomeDailyStart(ModelView):
         Date = Pool().get('ir.date')
         return Date.today()
 
+
 class CDSSaleIncomeDaily(Wizard):
     'CDSSale Income Daily'
     __name__ = 'sale_pos.cdssale_income_daily'
     start = StateView('sale_pos.cdssale_income_daily.start',
-        'conector.cdssale_income_daily_start_view_form', [
-            Button('Cancel', 'end', 'tryton-cancel'),
-            Button('Print', 'print_', 'tryton-ok', default=True),
-            ])
+                      'conector.cdssale_income_daily_start_view_form', [
+                          Button('Cancel', 'end', 'tryton-cancel'),
+                          Button('Print', 'print_', 'tryton-ok', default=True),
+                      ])
     print_ = StateReport('sale_pos.cdssale_income_daily_report')
 
     def do_print_(self, action):
@@ -190,6 +204,7 @@ class CDSSaleIncomeDaily(Wizard):
     def transition_print_(self):
         return 'end'
 
+
 class CDSSaleIncomeDailyReport(Report):
     'CDSIncome Daily Report'
     __name__ = 'sale_pos.cdssale_income_daily_report'
@@ -200,7 +215,7 @@ class CDSSaleIncomeDailyReport(Report):
         Sale = pool.get('sale.sale')
         Line = pool.get('sale.line')
         Invoice = pool.get('account.invoice')
-        fixed_hour = time(6, 0)    
+        fixed_hour = time(6, 0)
 
         cursor = Transaction().connection.cursor()
         sale = Sale.__table__()
@@ -215,10 +230,12 @@ class CDSSaleIncomeDailyReport(Report):
             where_ &= sale.shop == data['shop']
 
         where_ &= sale.invoice_date == data['sale_date']
-        columns_ = [sale.id, Sum(line.unit_price*line.quantity).as_('amount')]
-        query = line.join(sale, condition=line.sale==sale.id).select(*columns_,
-                where=where_,
-                group_by=sale.id)
+        columns_ = [
+            sale.id,
+            Sum(line.unit_price * line.quantity).as_('amount')
+        ]
+        query = line.join(sale, condition=line.sale == sale.id).select(
+            *columns_, where=where_, group_by=sale.id)
 
         cursor.execute(*query)
         columns = list(cursor.description)
@@ -250,7 +267,7 @@ class CDSSaleIncomeDailyReport(Report):
         statement_cash = []
         statement_electronic = []
         advances_voucher = []
-        totality_payments= []
+        totality_payments = []
         pagos = []
         payments_voucher = []
         payments_cash = []
@@ -279,7 +296,8 @@ class CDSSaleIncomeDailyReport(Report):
                     'records': [to_add]
                 }
             else:
-                statements_[statement.sale_device.id]['total'].append(st_amount)
+                statements_[statement.sale_device.id]['total'].append(
+                    st_amount)
                 statements_[statement.sale_device.id]['records'].append(to_add)
             total_statements.append(st_amount)
 
@@ -289,15 +307,12 @@ class CDSSaleIncomeDailyReport(Report):
                 else:
                     statement_electronic.append(l.amount)
 
-
         dom_vouchers = [
             ('move', '!=', None),
             ('date', '=', data['date']),
         ]
         if data['user']:
-            dom_vouchers.append(
-                ('create_uid', '=', data['user']),
-            )
+            dom_vouchers.append(('create_uid', '=', data['user']), )
         vouchers = Voucher.search(dom_vouchers)
         for v in vouchers:
             cash = 0
@@ -312,13 +327,20 @@ class CDSSaleIncomeDailyReport(Report):
                         electronic = l.amount
                     advances_voucher.append(l.amount)
                     advances.append({
-                        'number': l.voucher.number,
-                        'reference': l.detail,
-                        'party': l.party.name if l.party else l.voucher.party.name,
-                        'total_amount': l.amount,
-                        'payment_mode': l.voucher.payment_mode.name,
-                        'cash': cash,
-                        'electronic': electronic,
+                        'number':
+                        l.voucher.number,
+                        'reference':
+                        l.detail,
+                        'party':
+                        l.party.name if l.party else l.voucher.party.name,
+                        'total_amount':
+                        l.amount,
+                        'payment_mode':
+                        l.voucher.payment_mode.name,
+                        'cash':
+                        cash,
+                        'electronic':
+                        electronic,
                     })
                     total_advances.append(l.amount)
                 if v.voucher_type == 'payment':
@@ -331,13 +353,20 @@ class CDSSaleIncomeDailyReport(Report):
                         electronic = amount_
                     payments_voucher.append(amount_)
                     pagos.append({
-                        'number': l.voucher.number,
-                        'reference': l.detail,
-                        'party': l.party.name if l.party else l.voucher.party.name,
-                        'total_amount': amount_,
-                        'payment_mode': l.voucher.payment_mode.name,
-                        'cash': cash,
-                        'electronic': electronic,
+                        'number':
+                        l.voucher.number,
+                        'reference':
+                        l.detail,
+                        'party':
+                        l.party.name if l.party else l.voucher.party.name,
+                        'total_amount':
+                        amount_,
+                        'payment_mode':
+                        l.voucher.payment_mode.name,
+                        'cash':
+                        cash,
+                        'electronic':
+                        electronic,
                     })
                     totality_payments.append(amount_)
 
@@ -350,9 +379,7 @@ class CDSSaleIncomeDailyReport(Report):
         shop_names = ''
         if data['shop']:
             shop_names = Shop(data['shop']).name
-            dom_invoices.append(
-                ('shop', '=', data['shop'])
-            )
+            dom_invoices.append(('shop', '=', data['shop']))
         else:
             shops = Shop.search([])
             for s in shops:
@@ -447,9 +474,13 @@ class CDSSaleIncomeDailyReport(Report):
         config = pool.get('sale.configuration')(1)
         products_exception = []
         amount_exception = {}
-        if hasattr(config, 'tip_product') and config.tip_product and config.exclude_tip_and_delivery:
+        if hasattr(
+                config, 'tip_product'
+        ) and config.tip_product and config.exclude_tip_and_delivery:
             products_exception.append(config.tip_product.id)
-            if hasattr(config, 'delivery_product') and config.delivery_product and config.exclude_tip_and_delivery:
+            if hasattr(
+                    config, 'delivery_product'
+            ) and config.delivery_product and config.exclude_tip_and_delivery:
                 products_exception.append(config.delivery_product.id)
 
         if products_exception:
@@ -478,7 +509,7 @@ class CDSSaleIncomeDailyReport(Report):
         total_amount = []
 
         devices_ = Device.search([])
-        
+
         devices = {}
         for d in devices_:
             devices[d.id] = {
@@ -492,24 +523,24 @@ class CDSSaleIncomeDailyReport(Report):
                 'credit': [],
                 'electronic': [],
                 'other': [],
-                'number':'1',
-                'party':'orcio',
+                'number': '1',
+                'party': 'orcio',
             }
-        
+
         devices['Venta Electronica'] = {
-                'name': 'Venta Electronica',
-                'code': 'Venta Electronica',
-                'count_invoices': 0,
-                'untaxed_amount': [],
-                'tax_amount': [],
-                'total_amount': [],
-                'cash': [],
-                'credit': [],
-                'electronic': [],
-                'other': [],
-                'number':'1',
-                'party':'orcio',
-            }
+            'name': 'Venta Electronica',
+            'code': 'Venta Electronica',
+            'count_invoices': 0,
+            'untaxed_amount': [],
+            'tax_amount': [],
+            'total_amount': [],
+            'cash': [],
+            'credit': [],
+            'electronic': [],
+            'other': [],
+            'number': '1',
+            'party': 'orcio',
+        }
 
         payment_modes = {
             'cash': [],
@@ -530,7 +561,7 @@ class CDSSaleIncomeDailyReport(Report):
             try:
                 value_except = Decimal(amount_exception[sale_id])
             except:
-                value_except= Decimal(0)
+                value_except = Decimal(0)
             if sale.sale_device:
                 device_id = sale.sale_device.id
             else:
@@ -592,11 +623,14 @@ class CDSSaleIncomeDailyReport(Report):
                     payment_modes['credit'].append(inv_balance)
             else:
                 if not sale.sale_device:
-                    devices['Venta Electronica']['credit'].append(total_amount_)
+                    devices['Venta Electronica']['credit'].append(
+                        total_amount_)
                 else:
-                    devices[sale.sale_device.id]['credit'].append(total_amount_)
+                    devices[sale.sale_device.id]['credit'].append(
+                        total_amount_)
                 if value_except > 0:
-                    payment_modes['credit'].append(invoice.amount_to_pay - value_except)
+                    payment_modes['credit'].append(invoice.amount_to_pay -
+                                                   value_except)
                 else:
                     payment_modes['credit'].append(invoice.amount_to_pay)
 
@@ -623,7 +657,8 @@ class CDSSaleIncomeDailyReport(Report):
                     if line.taxes and line.amount:
                         for t in line.taxes:
                             try:
-                                categories[category_id]['taxes'][t.id]['base'].append(line.amount)
+                                categories[category_id]['taxes'][
+                                    t.id]['base'].append(line.amount)
                             except:
                                 categories[category_id]['taxes'][t.id] = {
                                     'tax': [t],
@@ -634,7 +669,8 @@ class CDSSaleIncomeDailyReport(Report):
                     try:
                         disc = line.amount / (1 - line.discount)
                     except:
-                        disc = line.product.template.list_price * Decimal(line.quantity)
+                        disc = line.product.template.list_price * Decimal(
+                            line.quantity)
                     if category_id not in discounts.keys():
                         discounts[category_id] = {
                             'name': category.name,
@@ -651,9 +687,12 @@ class CDSSaleIncomeDailyReport(Report):
                 for t, m in categories[k]['taxes'].items():
                     tax_list = Tax.compute(m['tax'], sum(m['base']), 1)
                     categories[k]['taxes'][t].update({
-                        'name': tax_list[0]['tax'].name,
-                        'base': sum(m['base']),
-                        'amount': tax_list[0]['amount']
+                        'name':
+                        tax_list[0]['tax'].name,
+                        'base':
+                        sum(m['base']),
+                        'amount':
+                        tax_list[0]['amount']
                     })
             else:
                 categories[k]['taxes'][0] = {
@@ -674,7 +713,7 @@ class CDSSaleIncomeDailyReport(Report):
             if devices[i]['count_invoices'] == 0:
                 eliminar.append(i)
         for e in eliminar:
-             del devices[e]
+            del devices[e]
 
         report_context['company'] = company.party
         report_context['start_number'] = min_number
@@ -707,7 +746,8 @@ class CDSSaleIncomeDailyReport(Report):
         report_context['statement_electronic'] = statement_electronic_
         report_context['total_invoices_amount'] = sum(total_invoices_amount)
         report_context['total_invoices_cash'] = sum(total_invoices_cash)
-        report_context['total_invoices_electronic'] = sum(total_invoices_electronic)
+        report_context['total_invoices_electronic'] = sum(
+            total_invoices_electronic)
         report_context['total_invoices_credit'] = sum(total_invoices_credit)
         report_context['total_invoices_paid'] = sum(total_invoices_paid)
         report_context['total_advances'] = sum(total_advances)
@@ -715,10 +755,13 @@ class CDSSaleIncomeDailyReport(Report):
         report_context['advances_electronic'] = advances_electronic_
         report_context['advances_voucher'] = sum(advances_voucher)
         report_context['total_statements'] = sum(total_statements)
-        report_context['start_invoice'] = min(invoices_number) if invoices_number else ''
-        report_context['end_invoice'] = max(invoices_number) if invoices_number else ''
+        report_context['start_invoice'] = min(
+            invoices_number) if invoices_number else ''
+        report_context['end_invoice'] = max(
+            invoices_number) if invoices_number else ''
         report_context['total_cash'] = advances_cash_ + statement_cash_
-        report_context['total_electronic'] = advances_electronic_ + statement_electronic_
+        report_context[
+            'total_electronic'] = advances_electronic_ + statement_electronic_
         report_context['total_payments'] = sum(totality_payments)
         report_context['payments_voucher'] = sum(payments_voucher)
         report_context['payments_cash'] = payments_cash_
@@ -726,9 +769,10 @@ class CDSSaleIncomeDailyReport(Report):
         report_context['payments'] = pagos
         return report_context
 
+
 class LoanFormatReport(Report):
     __name__ = 'staff.loan.loan_format_report'
-    
+
     @classmethod
     def get_context(cls, records, header, data):
         report_context = super().get_context(records, header, data)

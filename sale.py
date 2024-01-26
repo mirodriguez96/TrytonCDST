@@ -65,12 +65,15 @@ class Sale(metaclass=PoolMeta):
         Tax = pool.get('account.tax')
         User = pool.get('res.user')
         Module = pool.get('ir.module')
-        
+
         # Se consulta si el módulo company_operation esta activado
-        company_operation = Module.search([('name', '=', 'company_operation'), ('state', '=', 'activated')])
+        company_operation = Module.search([('name', '=', 'company_operation'),
+                                           ('state', '=', 'activated')])
         if company_operation:
             CompanyOperation = pool.get('company.operation_center')
-            operation_center = CompanyOperation.search([], order=[('id', 'DESC')], limit=1)
+            operation_center = CompanyOperation.search([],
+                                                       order=[('id', 'DESC')],
+                                                       limit=1)
         # A continuación se crea una lista que va almacenar los tipos de ventas que existen en SqlServer (TecnoCarnes) como ventas POS
         venta_pos = []
         pdevoluciones_pos = Config.get_data_parametros('10')
@@ -95,19 +98,22 @@ class Sale(metaclass=PoolMeta):
                 sw = venta.sw
                 numero_doc = venta.Numero_documento
                 tipo_doc = venta.tipo
-                id_venta = str(sw)+'-'+tipo_doc+'-'+str(numero_doc)
+                id_venta = str(sw) + '-' + tipo_doc + '-' + str(numero_doc)
                 existe = Sale.search([('id_tecno', '=', id_venta)])
                 if existe:
                     if venta.anulado == 'S':
                         dat = str(venta.fecha_hora).split()[0].split('-')
-                        name = f"{dat[0]}-{dat[1]}"                 
+                        name = f"{dat[0]}-{dat[1]}"
                         validate_period = Period.search([('name', '=', name)])
                         if validate_period[0].state == 'close':
                             to_exception.append(id_venta)
-                            logs[id_venta] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
+                            logs[
+                                id_venta] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
                             Y NO ES POSIBLE SU ELIMINACION O MODIFICACION"
+
                             continue
-                        logs[id_venta] = "El documento fue eliminado de tryton porque fue anulado en TecnoCarnes"
+                        logs[
+                            id_venta] = "El documento fue eliminado de tryton porque fue anulado en TecnoCarnes"
                         cls.delete_imported_sales(existe)
                         not_import.append(id_venta)
                         continue
@@ -118,8 +124,10 @@ class Sale(metaclass=PoolMeta):
                     not_import.append(id_venta)
                     continue
                 if venta.sw == 2:
-                    dcto_base = str(venta.Tipo_Docto_Base)+'-'+str(venta.Numero_Docto_Base)
-                    original_invoice = Sale.search([('number', '=', dcto_base)])
+                    dcto_base = str(venta.Tipo_Docto_Base) + '-' + str(
+                        venta.Numero_Docto_Base)
+                    original_invoice = Sale.search([('number', '=', dcto_base)
+                                                    ])
                     if not original_invoice:
                         msg = f"EXCEPCION: El documento (devolucion) {id_venta} no encuentra el documento de referencia {dcto_base} para ser cruzado"
                         logs[id_venta] = msg
@@ -132,18 +140,22 @@ class Sale(metaclass=PoolMeta):
                     continue
                 analytic_account = None
                 dat = str(venta.fecha_hora).split()[0].split('-')
-                name = f"{dat[0]}-{dat[1]}"                 
+                name = f"{dat[0]}-{dat[1]}"
                 validate_period = Period.search([('name', '=', name)])
                 if validate_period[0].state == 'close':
                     to_exception.append(id_venta)
-                    logs[id_venta] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
+                    logs[
+                        id_venta] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
                     Y NO ES POSIBLE SU CREACION"
+
                     continue
                 if hasattr(SaleLine, 'analytic_accounts'):
                     tbltipodocto = Config.get_tbltipodoctos(tipo_doc)
                     if tbltipodocto and tbltipodocto[0].Encabezado != '0':
                         AnalyticAccount = pool.get('analytic_account.account')
-                        analytic_account = AnalyticAccount.search([('code', '=', str(tbltipodocto[0].Encabezado))])
+                        analytic_account = AnalyticAccount.search([
+                            ('code', '=', str(tbltipodocto[0].Encabezado))
+                        ])
                         if not analytic_account:
                             msg = f'EXCEPCION {id_venta} - No se encontro la asignacion de la cuenta analitica en TecnoCarnes {str(tbltipodocto[0].Encabezado)}'
                             logs[id_venta] = msg
@@ -152,74 +164,86 @@ class Sale(metaclass=PoolMeta):
                         analytic_account = analytic_account[0]
                 #Se trae la fecha de la venta y se adapta al formato correcto para Tryton
                 fecha = str(venta.fecha_hora).split()[0].split('-')
-                fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
-                nit_cedula = venta.nit_Cedula.replace('\n',"")
+                fecha_date = datetime.date(int(fecha[0]), int(fecha[1]),
+                                           int(fecha[2]))
+                nit_cedula = venta.nit_Cedula.replace('\n', "")
                 party = None
                 if nit_cedula in parties['active']:
                     party = parties['active'][nit_cedula]
                 if not party:
                     if nit_cedula not in parties['inactive']:
-                        logs[id_venta] = f"EXCEPCION: No se encontro el tercero {nit_cedula}"
+                        logs[
+                            id_venta] = f"EXCEPCION: No se encontro el tercero {nit_cedula}"
                         to_exception.append(id_venta)
                     continue
                 #Se indica a que bodega pertenece
                 id_tecno_bodega = venta.bodega
                 bodega = Location.search([('id_tecno', '=', id_tecno_bodega)])
                 if not bodega:
-                    logs[id_venta] = f"EXCEPCION: Bodega {id_tecno_bodega} no existe"
+                    logs[
+                        id_venta] = f"EXCEPCION: Bodega {id_tecno_bodega} no existe"
                     to_exception.append(id_venta)
                     continue
                 bodega = bodega[0]
                 shop = Shop.search([('warehouse', '=', bodega.id)])
                 if not shop:
-                    logs[id_venta] = f"EXCEPCION: Tienda (bodega) {id_tecno_bodega} no existe"
+                    logs[
+                        id_venta] = f"EXCEPCION: Tienda (bodega) {id_tecno_bodega} no existe"
                     to_exception.append(id_venta)
                     continue
                 shop = shop[0]
                 #Se le asigna el plazo de pago correspondiente
                 condicion = venta.condicion
-                plazo_pago = payment_term.search([('id_tecno', '=', condicion)])
+                plazo_pago = payment_term.search([('id_tecno', '=', condicion)
+                                                  ])
                 if not plazo_pago:
-                    logs[id_venta] = f"EXCEPCION: Plazo de pago {condicion} no existe"
+                    logs[
+                        id_venta] = f"EXCEPCION: Plazo de pago {condicion} no existe"
                     to_exception.append(id_venta)
                     continue
                 plazo_pago = plazo_pago[0]
                 #Ahora traemos las lineas (productos) para la venta
                 documentos_linea = Config.get_lineasd_tecno(id_venta)
                 if not documentos_linea:
-                    logs[id_venta] = "EXCEPCION: No se encontraron líneas para la venta"
+                    logs[
+                        id_venta] = "EXCEPCION: No se encontraron líneas para la venta"
                     to_exception.append(id_venta)
                     continue
                 #Busco la terminal y se la asigno
                 # sale_device = SaleDevice.search([('id_tecno', '=', venta.pc)])
-                id_tecno_device = venta.pc+'-'+str(venta.bodega)
-                sale_device = SaleDevice.search(['OR',
-                    ('id_tecno', '=', id_tecno_device),
-                    ['AND',
-                        ('id_tecno', '=', venta.pc),
+                id_tecno_device = venta.pc + '-' + str(venta.bodega)
+                sale_device = SaleDevice.search([
+                    'OR', ('id_tecno', '=', id_tecno_device),
+                    [
+                        'AND', ('id_tecno', '=', venta.pc),
                         ('shop.warehouse.id_tecno', '=', venta.bodega)
                     ]
                 ])
                 if not sale_device:
-                    logs[id_venta] = f"EXCEPCION: Terminal de venta {id_tecno_device} no existe"
+                    logs[
+                        id_venta] = f"EXCEPCION: Terminal de venta {id_tecno_device} no existe"
                     to_exception.append(id_venta)
                     continue
-                #si la busqueda de "SaleDevice" trae mas de una terminal 
+                #si la busqueda de "SaleDevice" trae mas de una terminal
                 elif len(sale_device) > 1:
-                   logs[id_venta] = "EXCEPCION: Hay mas de una terminal que concuerdan con el mismo equipo de venta y bodega"
-                   to_exception.append(id_venta)
-                   continue
+                    logs[
+                        id_venta] = "EXCEPCION: Hay mas de una terminal que concuerdan con el mismo equipo de venta y bodega"
+                    to_exception.append(id_venta)
+                    continue
                 sale_device = sale_device[0]
 
                 with Transaction().set_user(1):
                     User.shop = shop
                     context = User.get_preferences()
-                with Transaction().set_context(context, shop=shop.id, _skip_warnings=True):
+                with Transaction().set_context(context,
+                                               shop=shop.id,
+                                               _skip_warnings=True):
                     sale = Sale()
-                sale.number = tipo_doc+'-'+str(numero_doc)
-                sale.reference = tipo_doc+'-'+str(numero_doc)
+                sale.number = tipo_doc + '-' + str(numero_doc)
+                sale.reference = tipo_doc + '-' + str(numero_doc)
                 sale.id_tecno = id_venta
-                sale.description = (venta.notas).replace('\n', ' ').replace('\r', '').replace('\t', ' ')
+                sale.description = (venta.notas).replace('\n', ' ').replace(
+                    '\r', '').replace('\t', ' ')
                 sale.invoice_type = 'C'
                 sale.sale_date = fecha_date
                 sale.party = party.id
@@ -258,12 +282,16 @@ class Sale(metaclass=PoolMeta):
                 if venta.retencion_causada > 0:
                     if not retencion_iva and not retencion_ica:
                         retencion_rete = True
-                    elif (venta.retencion_iva + venta.retencion_ica) != venta.retencion_causada:
+                    elif (venta.retencion_iva +
+                          venta.retencion_ica) != venta.retencion_causada:
                         retencion_rete = True
                 #Ahora se procede a crear las líneas para la venta
                 #_lines = []
                 for lin in documentos_linea:
-                    producto = Product.search(['OR', ('id_tecno', '=', str(lin.IdProducto)), ('code', '=', str(lin.IdProducto))])
+                    producto = Product.search([
+                        'OR', ('id_tecno', '=', str(lin.IdProducto)),
+                        ('code', '=', str(lin.IdProducto))
+                    ])
                     if not producto:
                         msg = f"EXCEPCION: No se encontro el producto {str(lin.IdProducto)} - Revisar si tiene variante o esta inactivo"
                         logs[id_venta] = msg
@@ -271,29 +299,32 @@ class Sale(metaclass=PoolMeta):
                         break
                     #Verificamos si la busqueda de "Product" trae mas de un producto
                     if len(producto) > 1:
-                      logs[id_venta] = "EXCEPCION: Hay mas de un producto que tienen el mismo código o id_tecno."
-                      to_exception.append(id_venta)
-                      break
+                        logs[
+                            id_venta] = "EXCEPCION: Hay mas de un producto que tienen el mismo código o id_tecno."
+                        to_exception.append(id_venta)
+                        break
                     producto, = producto
                     #verificacion que el producto si este marcado para la venta.
                     if not producto.template.salable:
-                      msg = f"EXCEPCION: El producto {str(lin.IdProducto)} no esta marcado como vendible"
-                      logs[id_venta] = msg
-                      to_exception.append(id_venta)
-                      break
-                    cantidad_facturada = round(float(lin.Cantidad_Facturada), 3)
+                        msg = f"EXCEPCION: El producto {str(lin.IdProducto)} no esta marcado como vendible"
+                        logs[id_venta] = msg
+                        to_exception.append(id_venta)
+                        break
+                    cantidad_facturada = round(float(lin.Cantidad_Facturada),
+                                               3)
                     # Se convierte a entero la cantidad en caso de que la UOM sea de tipo UNIDAD
                     if producto.template.default_uom.id == 1:
                         cantidad_facturada = int(cantidad_facturada)
-                    if cantidad_facturada < 0: # negativo = devolucion (TecnoCarnes)
+                    if cantidad_facturada < 0:  # negativo = devolucion (TecnoCarnes)
                         cant = cantidad_facturada
                         for line in sale.lines:
                             line_quantity = line.quantity
                             if sw == 2:
                                 line_quantity = (line_quantity * -1)
                                 cant = (cantidad_facturada * -1)
-                            if line.product == producto and line_quantity > 0: # Mejorar
-                                total_quantity = round((line.quantity + cant), 3)
+                            if line.product == producto and line_quantity > 0:  # Mejorar
+                                total_quantity = round((line.quantity + cant),
+                                                       3)
                                 line.quantity = total_quantity
                                 line.save()
                                 break
@@ -306,7 +337,8 @@ class Sale(metaclass=PoolMeta):
                     # Se verifica si es una devolución
                     if sw == 2:
                         linea.quantity = cantidad_facturada * -1
-                        dcto_base = str(venta.Tipo_Docto_Base)+'-'+str(venta.Numero_Docto_Base)
+                        dcto_base = str(venta.Tipo_Docto_Base) + '-' + str(
+                            venta.Numero_Docto_Base)
                         #Se indica a que documento hace referencia la devolucion
                         sale.reference = dcto_base
                         sale.comment = f"DEVOLUCIÓN DE LA FACTURA {dcto_base}"
@@ -334,15 +366,15 @@ class Sale(metaclass=PoolMeta):
                                 impuestos_linea.append(impuestol)
                         elif impuestol.consumo and impuesto_consumo > 0:
                             # Se busca el impuesto al consumo con el mismo valor para aplicarlo
-                            tax = Tax.search([
-                                ('consumo', '=', True),
-                                ('type', '=', 'fixed'),
-                                ('amount', '=', impuesto_consumo),
-                                ['OR',
-                                 ('group.kind', '=', 'sale'),
-                                 ('group.kind', '=', 'both')
-                                ]
-                            ])
+                            tax = Tax.search([('consumo', '=', True),
+                                              ('type', '=', 'fixed'),
+                                              ('amount', '=',
+                                               impuesto_consumo),
+                                              [
+                                                  'OR',
+                                                  ('group.kind', '=', 'sale'),
+                                                  ('group.kind', '=', 'both')
+                                              ]])
                             if tax:
                                 if len(tax) > 1:
                                     msg = f"EXCEPCION: ({id_venta}) "\
@@ -367,7 +399,7 @@ class Sale(metaclass=PoolMeta):
                     linea.unit_price = lin.Valor_Unitario
                     #Verificamos si hay descuento para la linea de producto y se agrega su respectivo descuento
                     if lin.Porcentaje_Descuento_1 > 0:
-                        porcentaje = lin.Porcentaje_Descuento_1/100
+                        porcentaje = lin.Porcentaje_Descuento_1 / 100
                         linea.base_price = lin.Valor_Unitario
                         linea.discount_rate = Decimal(str(porcentaje))
                         linea.on_change_discount_rate()
@@ -395,7 +427,8 @@ class Sale(metaclass=PoolMeta):
                     Sale.quote([sale])
                     Sale.confirm([sale])
                     Sale.process([sale])
-                    cls.finish_shipment_process(sale,numero_doc,Config,tipo_doc)
+                    cls.finish_shipment_process(sale, numero_doc, Config,
+                                                tipo_doc)
                     cls._post_invoices(sale, venta, logs, to_exception)
                     if id_venta in to_exception:
                         continue
@@ -405,10 +438,12 @@ class Sale(metaclass=PoolMeta):
                             'device': sale_device,
                             'usuario': venta.usuario,
                         }
-                        cls.set_payment_pos(pagos, sale, args_statement, logs, to_exception)
+                        cls.set_payment_pos(pagos, sale, args_statement, logs,
+                                            to_exception)
                         Sale.update_state([sale])
                     elif sale.payment_term.id_tecno == '0':
-                        logs[id_venta] = "EXCEPCION: No se encontraron pagos asociados en tecnocarnes (documentos_che)"
+                        logs[
+                            id_venta] = "EXCEPCION: No se encontraron pagos asociados en tecnocarnes (documentos_che)"
                         to_exception.append(sale.id_tecno)
                         continue
                 to_created.append(id_venta)
@@ -425,7 +460,6 @@ class Sale(metaclass=PoolMeta):
             Config.update_exportado(idt, 'X')
         print('FINISH VENTAS')
 
-
     # Funcion encargada de finalizar el proceso de envío de la venta
     @classmethod
     def finish_shipment_process(cls, sale, numero_doc, Config, tipo_doc):
@@ -440,10 +474,9 @@ class Sale(metaclass=PoolMeta):
                 WHERE dl.Numero_Documento = {numero_doc} and dl.tipo = {tipo_doc};"
 
         result = Config.get_data(select)
-        
 
         for item in result:
-            
+
             dictprodut[item[0]] = {
                 'idresponsable': str(item[1]),
             }
@@ -456,12 +489,12 @@ class Sale(metaclass=PoolMeta):
                 idTecno = int(productmove.product.id_tecno)
                 if idTecno in dictprodut.keys():
                     id_ = dictprodut[idTecno]['idresponsable']
-                    producto = Product.search(['OR', ('id_tecno', '=', id_), ('code', '=', id_)])
+                    producto = Product.search(
+                        ['OR', ('id_tecno', '=', id_), ('code', '=', id_)])
                     if producto:
                         product, = producto
                         if productmove.product.default_uom.symbol == product.default_uom.symbol:
                             productmove.product = product
-
 
                     productmove.save()
             shipment.wait([shipment])
@@ -475,12 +508,12 @@ class Sale(metaclass=PoolMeta):
                 idTecno = int(productmove.product.id_tecno)
                 if idTecno in dictprodut.keys():
                     id_ = dictprodut[idTecno]['idresponsable']
-                    producto = Product.search(['OR', ('id_tecno', '=', id_), ('code', '=', id_)])
+                    producto = Product.search(
+                        ['OR', ('id_tecno', '=', id_), ('code', '=', id_)])
                     if producto:
                         product, = producto
                         if productmove.product.default_uom.symbol == product.default_uom.symbol:
                             productmove.product = product
-
 
                     productmove.save()
             shipment.save()
@@ -509,10 +542,12 @@ class Sale(metaclass=PoolMeta):
             #Se agrega en la descripcion el nombre del tipo de documento de la tabla en sqlserver
             tbltipodocto = Config.get_tbltipodoctos(tipo_numero[0])
             if tbltipodocto:
-                invoice.description = tbltipodocto[0].TipoDoctos.replace('\n', ' ').replace('\r', '')
+                invoice.description = tbltipodocto[0].TipoDoctos.replace(
+                    '\n', ' ').replace('\r', '')
             invoice.save()
             if venta.sw == 2:
-                dcto_base = str(venta.Tipo_Docto_Base)+'-'+str(venta.Numero_Docto_Base)
+                dcto_base = str(venta.Tipo_Docto_Base) + '-' + str(
+                    venta.Numero_Docto_Base)
                 invoice.reference = dcto_base
                 original_invoice = Invoice.search([('number', '=', dcto_base)])
                 if original_invoice:
@@ -540,15 +575,15 @@ class Sale(metaclass=PoolMeta):
                     account_invoice = Table('account_invoice')
                     cursor = Transaction().connection.cursor()
                     cursor.execute(*account_invoice.update(
-                    columns=[
-                        account_invoice.state,
-                    ],
-                    values=["validated"],
-                    where=account_invoice.id == invoice.id))
+                        columns=[
+                            account_invoice.state,
+                        ],
+                        values=["validated"],
+                        where=account_invoice.id == invoice.id))
                 msg = f"REVISAR FACTURA: {sale.id_tecno} - {str(e)}"
                 logs.append(msg)
                 to_exception.append(sale.id_tecno)
-                continue 
+                continue
             if invoice.original_invoice:
                 paymentline = PaymentLine()
                 paymentline.invoice = invoice.original_invoice
@@ -557,8 +592,7 @@ class Sale(metaclass=PoolMeta):
                 paymentline.line = invoice.lines_to_pay[0]
                 paymentline.save()
                 Invoice.reconcile_invoice(invoice)
-    
-    
+
     @classmethod
     def _validate_total(cls, total_tryton, venta):
         result = {
@@ -575,7 +609,6 @@ class Sale(metaclass=PoolMeta):
         result['diferencia'] = diferencia
         return result
 
-
     #Función encargada de buscar recibos de caja pagados en TecnoCarnes y pagarlos en Tryton
     @classmethod
     def set_payment_pos(cls, pagos, sale, args_statement, logs, to_exception):
@@ -590,13 +623,14 @@ class Sale(metaclass=PoolMeta):
                 to_exception.append(sale.id_tecno)
                 return
             fecha = str(pago.fecha).split()[0].split('-')
-            fecha_date = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
+            fecha_date = datetime.date(int(fecha[0]), int(fecha[1]),
+                                       int(fecha[2]))
             args_statement['date'] = fecha_date
             journal, = Journal.search([('id_tecno', '=', pago.forma_pago)])
             args_statement['journal'] = journal
             statement, = cls.search_or_create_statement(args_statement)
             if pago.sw == 2 and valor > 0:
-                valor = valor*-1
+                valor = valor * -1
             data_payment = {
                 'sales': {
                     sale: valor
@@ -604,12 +638,12 @@ class Sale(metaclass=PoolMeta):
                 'statement': statement.id,
                 'date': fecha_date,
             }
-            result_payment = cls.multipayment_invoices_statement(data_payment, logs, to_exception)
+            result_payment = cls.multipayment_invoices_statement(
+                data_payment, logs, to_exception)
             if result_payment != 'ok':
                 msg = f"REVISAR: ERROR AL PROCESAR EL PAGO DE LA VENTA POS {sale.number}"
                 logs[sale.id_tecno] = msg
 
-    
     #Metodo encargado de buscar el estado de cuenta de una terminal y en caso de no existir, se crea.
     @classmethod
     def search_or_create_statement(cls, args):
@@ -620,34 +654,33 @@ class Sale(metaclass=PoolMeta):
         date = args['date']
         journal = args['journal']
         usuario = args['usuario']
-        name_statement = '%s - %s - %s' % (device.rec_name, journal.rec_name.strip(), usuario)
-        statement = Statement.search([
-            ('name', '=', name_statement),
-            ('journal', '=', journal.id),
-            ('sale_device', '=', device.id),
-            ('date', '=', date),
-            ('state', '=', 'draft')
-        ])
+        name_statement = '%s - %s - %s' % (device.rec_name,
+                                           journal.rec_name.strip(), usuario)
+        statement = Statement.search([('name', '=', name_statement),
+                                      ('journal', '=', journal.id),
+                                      ('sale_device', '=', device.id),
+                                      ('date', '=', date),
+                                      ('state', '=', 'draft')])
         if not statement:
             statements_date = Statement.search([
-                    ('journal', '=', journal.id),
-                    ('date', '=', date),
-                    ('sale_device', '=', device.id),
-                ])
+                ('journal', '=', journal.id),
+                ('date', '=', date),
+                ('sale_device', '=', device.id),
+            ])
             turn = len(statements_date) + 1
             values = {
                 'name': name_statement,
                 'date': date,
                 'journal': journal.id,
                 'company': device.shop.company.id,
-                'start_balance': journal.default_start_balance or Decimal('0.0'),
+                'start_balance': journal.default_start_balance
+                or Decimal('0.0'),
                 'end_balance': Decimal('0.0'),
                 'turn': turn,
                 'sale_device': device.id,
             }
             statement = Statement.create([values])
         return statement
-
 
     # Metodo encargado de pagar multiples facturas con multiples formas de pago
     @classmethod
@@ -679,17 +712,21 @@ class Sale(metaclass=PoolMeta):
                 remainder = sale.residual_amount - total_pay
                 if abs(remainder) < Decimal(600.0) and remainder != 0:
                     total_pay = sale.residual_amount
-            if not sale.invoice or (sale.invoice.state != 'posted' and sale.invoice.state != 'paid'):
+            if not sale.invoice or (sale.invoice.state != 'posted'
+                                    and sale.invoice.state != 'paid'):
                 Sale.post_invoices(sale)
             if not sale.party.account_receivable:
                 Party = pool.get('party.party')
                 config = Configuration(1)
                 if config.default_account_receivable:
                     Party.write([sale.party], {
-                        'account_receivable': config.default_account_receivable.id
+                        'account_receivable':
+                        config.default_account_receivable.id
                     })
                 else:
-                    logs[sale.id_tecno] = "EXCEPCION: sale_pos.msg_party_without_account_receivable"
+                    logs[
+                        sale.
+                        id_tecno] = "EXCEPCION: sale_pos.msg_party_without_account_receivable"
                     to_exception.append(sale.id_tecno)
                     continue
             account_id = sale.party.account_receivable.id
@@ -700,7 +737,8 @@ class Sale(metaclass=PoolMeta):
                 'amount': total_pay,
                 'party': sale.party.id,
                 'account': account_id,
-                'description': sale.invoice_number or sale.invoice.number or '',
+                'description': sale.invoice_number or sale.invoice.number
+                or '',
             }
             line, = StatementLine.create([to_create])
             write_sale = {
@@ -731,16 +769,19 @@ class Sale(metaclass=PoolMeta):
             if sale.id_tecno:
                 ids_tecno.append(sale.id_tecno)
             else:
-                raise UserError("Error Conector", f"No se encontró el id_tecno para {sale}")
+                raise UserError("Error Conector",
+                                f"No se encontró el id_tecno para {sale}")
             # Se procede a seleccionar las facturas de la venta
             for invoice in sale.invoices:
                 if hasattr(invoice, 'electronic_state') and \
                     invoice.electronic_state == 'submitted':
-                        raise UserError('account_col.msg_with_electronic_invoice')
+                    raise UserError('account_col.msg_with_electronic_invoice')
                 if invoice.state == 'paid':
                     for line in invoice.move.lines:
-                        if line.reconciliation and line.reconciliation.id not in to_delete['reconciliation']:
-                            to_delete['reconciliation'].append(line.reconciliation.id)
+                        if line.reconciliation and line.reconciliation.id not in to_delete[
+                                'reconciliation']:
+                            to_delete['reconciliation'].append(
+                                line.reconciliation.id)
                 if invoice.move:
                     if invoice.move.id not in to_delete['move']:
                         to_delete['move'].append(invoice.move.id)
@@ -788,64 +829,58 @@ class Sale(metaclass=PoolMeta):
         print(to_delete)
         if to_delete['reconciliation']:
             cursor.execute(*reconciliation_table.delete(
-                where=reconciliation_table.id.in_(to_delete['reconciliation']))
-            )
+                where=reconciliation_table.id.in_(
+                    to_delete['reconciliation'])))
         if to_delete['move']:
-            cursor.execute(*move_table.update(
-                columns=[move_table.state],
-                values=['draft'],
-                where=move_table.id.in_(to_delete['move']))
-            )
+            cursor.execute(
+                *move_table.update(columns=[move_table.state],
+                                   values=['draft'],
+                                   where=move_table.id.in_(to_delete['move'])))
             cursor.execute(*move_table.delete(
-                where=move_table.id.in_(to_delete['move']))
-                )
+                where=move_table.id.in_(to_delete['move'])))
         if to_delete['invoice']:
             cursor.execute(*invoice_table.update(
                 columns=[invoice_table.state, invoice_table.number],
                 values=['validate', None],
-                where=invoice_table.id.in_(to_delete['invoice']))
-            )
+                where=invoice_table.id.in_(to_delete['invoice'])))
             cursor.execute(*invoice_table.delete(
-                where=invoice_table.id.in_(to_delete['invoice']))
-            )
+                where=invoice_table.id.in_(to_delete['invoice'])))
         if to_delete['stock_move']:
             cursor.execute(*stock_move_table.update(
                 columns=[stock_move_table.state],
                 values=['draft'],
-                where=stock_move_table.id.in_(to_delete['stock_move'])
-            ))
+                where=stock_move_table.id.in_(to_delete['stock_move'])))
             cursor.execute(*stock_move_table.delete(
-                where=stock_move_table.id.in_(to_delete['stock_move']))
-            )
+                where=stock_move_table.id.in_(to_delete['stock_move'])))
         if to_delete['shipment']:
             cursor.execute(*shipment_table.update(
                 columns=[shipment_table.state],
                 values=['draft'],
-                where=shipment_table.id.in_(to_delete['shipment'])
-            ))
+                where=shipment_table.id.in_(to_delete['shipment'])))
             cursor.execute(*shipment_table.delete(
-                where=shipment_table.id.in_(to_delete['shipment']))
-            )
+                where=shipment_table.id.in_(to_delete['shipment'])))
         if to_delete['shipment_return']:
             cursor.execute(*shipment_return_table.update(
                 columns=[shipment_return_table.state],
                 values=['draft'],
-                where=shipment_return_table.id.in_(to_delete['shipment_return'])
-            ))
+                where=shipment_return_table.id.in_(
+                    to_delete['shipment_return'])))
             cursor.execute(*shipment_return_table.delete(
-                where=shipment_return_table.id.in_(to_delete['shipment_return']))
-            )
+                where=shipment_return_table.id.in_(
+                    to_delete['shipment_return'])))
         if to_delete['statement_line']:
             cursor.execute(*statement_line.delete(
-                where=statement_line.id.in_(to_delete['statement_line']))
-                )
+                where=statement_line.id.in_(to_delete['statement_line'])))
         if to_delete['sale']:
-            cursor.execute(*sale_table.update(
-                columns=[sale_table.state, sale_table.shipment_state, sale_table.invoice_state],
-                values=['draft', 'none', 'none'],
-                where=sale_table.id.in_(to_delete['sale']))
-            )
-            cursor.execute(*sale_table.delete(where=sale_table.id.in_(to_delete['sale'])))
+            cursor.execute(
+                *sale_table.update(columns=[
+                    sale_table.state, sale_table.shipment_state,
+                    sale_table.invoice_state
+                ],
+                                   values=['draft', 'none', 'none'],
+                                   where=sale_table.id.in_(to_delete['sale'])))
+            cursor.execute(*sale_table.delete(
+                where=sale_table.id.in_(to_delete['sale'])))
 
     # Función encargada de eliminar y marcar para importar ventas de importadas de TecnoCarnes
     @classmethod
@@ -885,35 +920,37 @@ class Statement(metaclass=PoolMeta):
 
     @fields.depends('end_balance')
     def on_change_with_end_balance(self):
-        amount = (self.start_balance
-            + sum(l.amount for l in self.lines))
+        amount = (self.start_balance + sum(l.amount for l in self.lines))
         return amount
+
 
 # reporte costo de ventas
 class SaleShopDetailedCDSStart(ModelView):
     'Sale Shop Detailed Start'
     __name__ = 'sale_shop.sale_detailed_cds.start'
     start_date = fields.Date("From Date",
-        domain=[
-            If(Eval('end_date') & Eval('start_date'),
-                ('start_date', '<=', Eval('end_date')),
-                ()),
-            ],
-        depends=['end_date'], required=True)
+                             domain=[
+                                 If(
+                                     Eval('end_date') & Eval('start_date'),
+                                     ('start_date', '<=', Eval('end_date')),
+                                     ()),
+                             ],
+                             depends=['end_date'],
+                             required=True)
     end_date = fields.Date("To Date",
-        domain=[
-            If(Eval('start_date') & Eval('end_date'),
-                ('end_date', '>=', Eval('start_date')),
-                ()),
-                (('end_date', '<=', datetime.date.today()))
-            ],
-        depends=['start_date'], required=True)
+                           domain=[
+                               If(
+                                   Eval('start_date') & Eval('end_date'),
+                                   ('end_date', '>=', Eval('start_date')), ()),
+                               (('end_date', '<=', datetime.date.today()))
+                           ],
+                           depends=['start_date'],
+                           required=True)
     company = fields.Many2One('company.company', 'Company', required=True)
     # salesman = fields.Many2One('company.employee', 'Salesman')
     # party = fields.Many2One('party.party', 'Party')
     # product = fields.Many2One('product.product', 'Product')
     # shop = fields.Many2One('sale.shop', 'Shop')
-
 
     @staticmethod
     def default_company():
@@ -924,11 +961,11 @@ class SaleShopDetailedCDS(Wizard):
     'Sale Shop Detailed'
     __name__ = 'sale_shop.sale_detailed_cds'
     start = StateView('sale_shop.sale_detailed_cds.start',
-        'conector.sale_shop_detailed_start_cds_form', [
-            Button('Cancel', 'end', 'tryton-cancel'),
-            Button('Print', 'print_', 'tryton-ok', default=True),
-            ])
-    
+                      'conector.sale_shop_detailed_start_cds_form', [
+                          Button('Cancel', 'end', 'tryton-cancel'),
+                          Button('Print', 'print_', 'tryton-ok', default=True),
+                      ])
+
     print_ = StateReport('sale_shop.report_sale_detailed_cds')
 
     def do_print_(self, action):
@@ -958,7 +995,7 @@ class SaleShopDetailedCDS(Wizard):
 
     def transition_print_(self):
         return 'end'
-    
+
 
 class SaleShopDetailedCDSReport(Report):
     'Sale Shop Detailed Report'
@@ -994,7 +1031,7 @@ class SaleShopDetailedCDSReport(Report):
 
         lines = {}
 
-        # Columnas donde se grabaran la consulta que se realiza a las lineas de los movimientos 
+        # Columnas donde se grabaran la consulta que se realiza a las lineas de los movimientos
         columnsMove = {
             'id': moveLine.id,
             'move': moveLine.move,
@@ -1005,7 +1042,7 @@ class SaleShopDetailedCDSReport(Report):
             'party': party.name,
         }
 
-         # Columnas donde se grabaran la consulta que se realiza a las lineas de las facturas 
+        # Columnas donde se grabaran la consulta que se realiza a las lineas de las facturas
         columnsLine = {
             'move': invoice.move,
             'total_quantity': Sum(invoiceLine.quantity),
@@ -1023,16 +1060,22 @@ class SaleShopDetailedCDSReport(Report):
         where &= Between(moves.date, data['start_date'], data['end_date'])
 
         # Consulta que retorna los valores de las lineas de los movimientos
-        selectMove = account.join(moveLine, 'LEFT', condition = moveLine.account == account.id
-                                ).join(moves, 'LEFT', condition = moveLine.move == moves.id
-                                ).join(party, 'LEFT', condition = moveLine.party == party.id     
-                                ).select(*columnsMove.values(),where=where ,group_by = [moveLine.move,
-                                                                            moveLine.id,
-                                                                           moveLine.account,
-                                                                           moveLine.description, 
-                                                                           moveLine.reference,
-                                                                           moves.date,
-                                                                           party.name,])
+        selectMove = account.join(
+            moveLine, 'LEFT', condition=moveLine.account == account.id).join(
+                moves, 'LEFT', condition=moveLine.move == moves.id).join(
+                    party, 'LEFT',
+                    condition=moveLine.party == party.id).select(
+                        *columnsMove.values(),
+                        where=where,
+                        group_by=[
+                            moveLine.move,
+                            moveLine.id,
+                            moveLine.account,
+                            moveLine.description,
+                            moveLine.reference,
+                            moves.date,
+                            party.name,
+                        ])
         # Ejecucion de la consulta
         cursor.execute(*selectMove)
 
@@ -1044,9 +1087,10 @@ class SaleShopDetailedCDSReport(Report):
         if resultMove:
 
             for index, record in enumerate(resultMove):
-                fila_dict_move =  OrderedDict() # Le damos la extructura de diccionario
+                fila_dict_move = OrderedDict(
+                )  # Le damos la extructura de diccionario
                 fila_dict_move = dict(zip(columnsMove.keys(), record))
-            
+
                 move = fila_dict_move['move']
                 reference = fila_dict_move['reference']
                 description = fila_dict_move['description']
@@ -1054,18 +1098,14 @@ class SaleShopDetailedCDSReport(Report):
                 date = fila_dict_move['date']
                 party = fila_dict_move['party']
 
-
-
                 if move not in lines:
-                    lines[move] = {
-                        'lines':{}
-                    }
+                    lines[move] = {'lines': {}}
 
                 if description not in lines[move]['lines']:
-                        lines[move]['lines'][description] = {
-                        'party': party,    
+                    lines[move]['lines'][description] = {
+                        'party': party,
                         'unit_price': 0,
-                        'total_quantity':0,
+                        'total_quantity': 0,
                         'cost': 0,
                         'reference': reference,
                         'date': date,
@@ -1073,30 +1113,39 @@ class SaleShopDetailedCDSReport(Report):
                         'total_cost': 0,
                         'state': '',
                         'unit': ''
-                        }
+                    }
 
                 lines[move]['lines'][description]['cost'] += cost
 
         # FIltros para la consulta a las lineas de las facturas
-        where = Between(invoice.invoice_date, data['start_date'], data['end_date'])
+        where = Between(invoice.invoice_date, data['start_date'],
+                        data['end_date'])
         where &= invoice.state.in_(['paid', 'validated', 'posted'])
         where &= invoice.type.in_(['out'])
 
         # Consulta que retorna la informacion de las lineas de las facturas
-        selectLine = invoice.join(invoiceLine, 'LEFT', condition= invoiceLine.invoice == invoice.id 
-                                ).join(product, 'LEFT', condition= invoiceLine.product == product.id
-                                ).join(productTemplate, 'LEFT', condition= product.template == productTemplate.id
-                                ).join(shop, 'LEFT', condition = invoice.shop == shop.id
-                                ).join(product_uom, 'LEFT', condition = invoiceLine.unit == product_uom.id  
-                                ).select(*columnsLine.values(), where=where,group_by = [invoice.move,
-                                                                           invoice.description, 
-                                                                           invoice.reference,
-                                                                           invoiceLine.unit_price,
-                                                                           invoiceLine.description,
-                                                                           invoice.invoice_date,
-                                                                           shop.name,
-                                                                           product_uom.symbol,
-                                                                           invoice.state])
+        selectLine = invoice.join(
+            invoiceLine, 'LEFT',
+            condition=invoiceLine.invoice == invoice.id).join(
+                product, 'LEFT',
+                condition=invoiceLine.product == product.id).join(
+                    productTemplate,
+                    'LEFT',
+                    condition=product.template == productTemplate.id).join(
+                        shop, 'LEFT', condition=invoice.shop == shop.id).join(
+                            product_uom,
+                            'LEFT',
+                            condition=invoiceLine.unit ==
+                            product_uom.id).select(
+                                *columnsLine.values(),
+                                where=where,
+                                group_by=[
+                                    invoice.move, invoice.description,
+                                    invoice.reference, invoiceLine.unit_price,
+                                    invoiceLine.description,
+                                    invoice.invoice_date, shop.name,
+                                    product_uom.symbol, invoice.state
+                                ])
 
         cursor.execute(*selectLine)
 
@@ -1108,8 +1157,9 @@ class SaleShopDetailedCDSReport(Report):
         if resultLine:
 
             for record in resultLine:
-                
-                fila_dict_line =  OrderedDict() # Le damos la extructura de diccionario
+
+                fila_dict_line = OrderedDict(
+                )  # Le damos la extructura de diccionario
                 fila_dict_line = dict(zip(columnsLine.keys(), record))
 
                 move = fila_dict_line['move']
@@ -1125,19 +1175,22 @@ class SaleShopDetailedCDSReport(Report):
                     if description in lines[move]['lines']:
 
                         lines[move]['lines'][description]['shop'] = shop
-                        lines[move]['lines'][description]['unit_price'] = unit_price
-                        lines[move]['lines'][description]['total_quantity'] += Decimal(total_quantity)
+                        lines[move]['lines'][description][
+                            'unit_price'] = unit_price
+                        lines[move]['lines'][description][
+                            'total_quantity'] += Decimal(total_quantity)
                         lines[move]['lines'][description]['unit'] = unit
                         lines[move]['lines'][description]['state'] = state
-                
-            
+
             # For que recorreo las lineas creadas con las lineas de movimiento y factura y realiza la operacion
             # para dar el costo unitario, si este es 0 aplica un 0
-            for key,record in lines.items():
+            for key, record in lines.items():
                 for description, line in lines[key]['lines'].items():
-                    line['total_cost'] = round(line['cost'] / line['total_quantity'],2) if line['cost'] != 0 and line['total_quantity'] != 0 else line['cost']
+                    line['total_cost'] = round(
+                        line['cost'] / line['total_quantity'],
+                        2) if line['cost'] != 0 and line[
+                            'total_quantity'] != 0 else line['cost']
 
-        
         report_context['records'] = lines
         report_context['start_date'] = data['start_date']
         report_context['end_date'] = data['end_date']

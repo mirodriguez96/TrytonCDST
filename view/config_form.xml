@@ -1,25 +1,25 @@
 <?xml version="1.0"?>
 <form>
-    <label name="server"/>
-    <field name="server"/>
-    <label name="db"/>
-    <field name="db"/>
-    <label name="user"/>
-    <field name="user"/>
-    <label name="password"/>
-    <field name="password" widget="password"/>
-    <label name="date"/>
-    <field name="date"/>
-    <label name="end_date"/>
-    <field name="end_date"/>
-    <button string="Test" name="test_conexion" colspan="2"/>
-    <label name="enhabled"/>
-    <field name="enhabled"/>
-    <label name="visibible"/>
-    <field name="visibible"/>
-    
+  <label name="server"/>
+  <field name="server"/>
+  <label name="db"/>
+  <field name="db"/>
+  <label name="user"/>
+  <field name="user"/>
+  <label name="password"/>
+  <field name="password" widget="password"/>
+  <label name="date"/>
+  <field name="date"/>
+  <label name="end_date"/>
+  <field name="end_date"/>
+  <button string="Test" name="test_conexion" colspan="2"/>
+  <label name="enhabled"/>
+  <field name="enhabled"/>
+  <label name="visibible"/>
+  <field name="visibible"/>
 
-    <!-- <notebook colspan="6">
+
+  <!-- <notebook colspan="6">
       <page string="Import" id="file_import">
         <label name="type_file"/>
         <field name="type_file"/>

@@ -14,7 +14,7 @@ this repository contains the full copyright notices and license terms. -->
             <field name="name">Kardex Report</field>
             <field name="wiz_name">stock_co.warehouse_kardex_cds_stock</field>
         </record>
-        
+
         <record model="ir.action.report" id="report_kardex_in_warehouse">
             <field name="name">Kardex Report</field>
             <field name="model"></field>

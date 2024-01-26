@@ -6,12 +6,8 @@ from trytond.transaction import Transaction
 from trytond.exceptions import UserError, UserWarning
 from sql import Table
 
-_EXPORTADO = [
-    ('N', '(N) SIN IMPORTAR'),
-    ('E', '(E) EXCEPCION'),
-    ('X', '(X) NO IMPORTAR'),
-    ('T', '(T) IMPORTADO')
-]
+_EXPORTADO = [('N', '(N) SIN IMPORTAR'), ('E', '(E) EXCEPCION'),
+              ('X', '(X) NO IMPORTAR'), ('T', '(T) IMPORTADO')]
 
 ZERO = Decimal('0.0')
 
@@ -27,15 +23,18 @@ class DocumentsForImportParameters(ModelView):
     def default_exportado(cls):
         return 'N'
 
+
 class DocumentsForImport(Wizard):
     'Documents For Import'
     __name__ = 'conector.configuration.documents_for_import'
 
-    start = StateView('conector.configuration.documents_for_import_parameters',
-    'conector.documents_for_import_parameters_view_form', [
-        Button('Cancel', 'end', 'tryton-cancel'),
-        Button('Mark', 'documents_for_import', 'tryton-go-next',
-            default=True)])
+    start = StateView(
+        'conector.configuration.documents_for_import_parameters',
+        'conector.documents_for_import_parameters_view_form', [
+            Button('Cancel', 'end', 'tryton-cancel'),
+            Button(
+                'Mark', 'documents_for_import', 'tryton-go-next', default=True)
+        ])
     documents_for_import = StateTransition()
 
     def transition_documents_for_import(self):
@@ -45,10 +44,11 @@ class DocumentsForImport(Wizard):
         tipo = self.start.tipo
         numero = self.start.numero
         exportado = self.start.exportado
-        query = "UPDATE dbo.Documentos SET exportado = '"+exportado+"' WHERE tipo = "+tipo+" and Numero_documento = "+numero
+        query = "UPDATE dbo.Documentos SET exportado = '" + exportado + "' WHERE tipo = " + tipo + " and Numero_documento = " + numero
         #print(query)
         cnx.set_data(query)
         return 'end'
+
 
 class VoucherMoveUnreconcile(Wizard):
     'Voucher Move Unreconcile'
@@ -65,41 +65,48 @@ class VoucherMoveUnreconcile(Wizard):
             Voucher.unreconcilie_move_voucher(vouchers)
         return 'end'
 
+
 # Asistente encargado de marcar el voucher (documento) para re-importar y elimina los vouchers (comprobantes) creados
 class DeleteVoucherTecnoStart(ModelView):
     'Delete Voucher Tecno Start'
     __name__ = 'delete.voucher.wizard.start'
     user = fields.Many2One('res.user', 'User', readonly=True)
-    validate = fields.Boolean('Validate', readonly=True, on_change_with='on_change_with_validate')
+    validate = fields.Boolean('Validate',
+                              readonly=True,
+                              on_change_with='on_change_with_validate')
 
     @staticmethod
     def default_user():
         return Transaction().user
 
-    
     @fields.depends('user')
     def on_change_with_validate(self):
         pool = Pool()
         user_permission = pool.get('conector.permissions')
         permission = pool.get('res.user-ir.action.wizard')
-        action = user_permission.search([('user_permission', '=', Transaction().user)])
+        action = user_permission.search([('user_permission', '=',
+                                          Transaction().user)])
 
-        validated = permission.search([('user_permission', 'in', action),
-                                       ('wizard.wiz_name', '=', 'account.voucher.delete_voucher_tecno'),])
+        validated = permission.search([
+            ('user_permission', 'in', action),
+            ('wizard.wiz_name', '=', 'account.voucher.delete_voucher_tecno'),
+        ])
         if validated:
             return True
         return False
-        
+
+
 class DeleteVoucherTecno(Wizard):
     'Delete Voucher Tecno'
     __name__ = 'account.voucher.delete_voucher_tecno'
 
-    start = StateView('delete.voucher.wizard.start',
-        'conector.validated_identity_view_form', [
+    start = StateView(
+        'delete.voucher.wizard.start', 'conector.validated_identity_view_form',
+        [
             Button('Cancel', 'end', 'tryton-cancel'),
             Button('Confirm', 'do_submit', 'tryton-ok', default=True),
-            ])
-    
+        ])
+
     do_submit = StateTransition()
 
     def transition_do_submit(self):
@@ -115,42 +122,57 @@ class DeleteVoucherTecno(Wizard):
             #Se agrega un nombre unico a la advertencia
             warning_name = 'warning_delete_voucher_tecno'
             if Warning.check(warning_name):
-                raise UserWarning(warning_name, "Los comprobantes debieron ser desconciliado primero.")
+                raise UserWarning(
+                    warning_name,
+                    "Los comprobantes debieron ser desconciliado primero.")
             to_delete = []
             to_period_close = []
             for voucher in Voucher.browse(ids):
                 if voucher.move:
                     if voucher.move.period.state == 'close':
-                        logs[voucher.number] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
+                        logs[
+                            voucher.
+                            number] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
                         Y NO ES POSIBLE SU ELIMINACION O MODIFICACION"
+
                         to_period_close.append(voucher.number)
                         continue
                 if voucher.number and '-' in voucher.number and voucher.id_tecno:
                     to_delete.append(voucher)
                 else:
-                    raise UserError("Revisar el número del comprobante (tipo-numero): ")
-                
+                    raise UserError(
+                        "Revisar el número del comprobante (tipo-numero): ")
+
             if to_period_close:
-                raise UserError(f"Los documentos {to_period_close} no pueden ser eliminados porque su periodo se encuentra cerrado")
-            
+                raise UserError(
+                    f"Los documentos {to_period_close} no pueden ser eliminados porque su periodo se encuentra cerrado"
+                )
+
             log_delete = [i.number for i in to_delete]
 
             Voucher.delete_imported_vouchers(to_delete)
 
-            logs[self.start.user.name] = f"El usuario {self.start.user.name}, realizo la accion de eliminar y reimportar comprobantes de ingresos \
+            logs[
+                self.start.user.
+                name] = f"El usuario {self.start.user.name}, realizo la accion de eliminar y reimportar comprobantes de ingresos \
             eliminando los siguientes documentos {log_delete}"
+
             actualizacion.add_logs(logs)
             return 'end'
-        
+
         logs[self.start.user.name] = f"El usuario {self.start.user.name}, \
         intento ejecutar el asistente de eliminar y reimportar comprobantes de ingresos \
         para el cual, no cuenta con los permisos requeridos"
+
         actualizacion.add_logs(logs)
         if not Validated:
-            raise UserError(f"EL usuario {self.start.user.name}, no cuenta con los permisos para realizar esta accion")
-    
+            raise UserError(
+                f"EL usuario {self.start.user.name}, no cuenta con los permisos para realizar esta accion"
+            )
+
     def end(self):
         return 'reload'
+
 
 class ForceDraftVoucher(Wizard):
     'Force Draft Voucher'
@@ -161,7 +183,8 @@ class ForceDraftVoucher(Wizard):
     def transition_do_force(self):
         pool = Pool()
         Actualizacion = pool.get('conector.actualizacion')
-        actualizacion = Actualizacion.create_or_update('FORZAR BORRADOR COMPROBANTES')
+        actualizacion = Actualizacion.create_or_update(
+            'FORZAR BORRADOR COMPROBANTES')
         logs = {}
         exceptions = []
         Warning = pool.get('res.user.warning')
@@ -170,17 +193,22 @@ class ForceDraftVoucher(Wizard):
         #Se agrega un nombre unico a la advertencia
         warning_name = 'warning_force_draft_voucher'
         if Warning.check(warning_name):
-            raise UserWarning(warning_name, "Los comprobantes debieron ser desconciliado primero.")
+            raise UserWarning(
+                warning_name,
+                "Los comprobantes debieron ser desconciliado primero.")
         to_force = []
         for voucher in Voucher.browse(ids):
-            if  voucher.move.state == 'close':
+            if voucher.move.state == 'close':
                 exceptions.append(voucher.id)
-                logs[voucher.id] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
+                logs[
+                    voucher.
+                    id] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
                 Y NO ES POSIBLE FORZAR A BORRADOR"
+
                 continue
             to_force.append(voucher)
         Voucher.force_draft_voucher(to_force)
-        if exceptions:    
+        if exceptions:
             actualizacion.add_logs(logs)
         return 'end'
 
@@ -200,7 +228,9 @@ class DeleteImportRecords(Wizard):
         #Se agrega un nombre unico a la advertencia
         warning_name = 'warning_delete_import_records'
         if Warning.check(warning_name):
-            raise UserWarning(warning_name, "Los registros de la actualización serán eliminados.")
+            raise UserWarning(
+                warning_name,
+                "Los registros de la actualización serán eliminados.")
         # actualizacion_id = []
         # for actualizacion in Actualizacion.browse(ids):
         #     if actualizacion.id not in actualizacion_id:
@@ -213,8 +243,10 @@ class DeleteImportRecords(Wizard):
     def end(self):
         return 'reload'
 
+
 # Asistente encargado de asignarle a las lineas de los asientos, el tercero requerido
-class MoveFixParty(Wizard): # ACTUALIZAR PARA SOLUCIONAR ASIENTOS DE CUALLQUIER ORIGEN
+class MoveFixParty(
+        Wizard):  # ACTUALIZAR PARA SOLUCIONAR ASIENTOS DE CUALLQUIER ORIGEN
     'Move Fix Party'
     __name__ = 'account.move.fix_party_account'
     start_state = 'fix_move'
@@ -228,10 +260,15 @@ class MoveFixParty(Wizard): # ACTUALIZAR PARA SOLUCIONAR ASIENTOS DE CUALLQUIER 
         cursor = Transaction().connection.cursor()
         warning_name = 'warning_fix_party_account'
         if Warning.check(warning_name):
-            raise UserWarning(warning_name, "A continuación se asignara a las lineas de los asientos el tercero de la factura (ORIGEN=FACTURA), en las cuentas que lo requieran.")
+            raise UserWarning(
+                warning_name,
+                "A continuación se asignara a las lineas de los asientos el tercero de la factura (ORIGEN=FACTURA), en las cuentas que lo requieran."
+            )
         ids = Transaction().context['active_ids']
         if ids:
-            cursor.execute("SELECT id FROM account_move WHERE origin LIKE 'account.invoice,%'")
+            cursor.execute(
+                "SELECT id FROM account_move WHERE origin LIKE 'account.invoice,%'"
+            )
             result = cursor.fetchall()
             if not result:
                 return
@@ -242,8 +279,7 @@ class MoveFixParty(Wizard): # ACTUALIZAR PARA SOLUCIONAR ASIENTOS DE CUALLQUIER 
                         cursor.execute(*move_line_table.update(
                             columns=[move_line_table.party],
                             values=[move.origin.party.id],
-                            where=move_line_table.id == line.id)
-                        )
+                            where=move_line_table.id == line.id))
         return 'end'
 
 
@@ -261,12 +297,15 @@ class DeleteAccountType(Wizard):
         ids = Transaction().context['active_ids']
         warning_name = 'warning_delete_account_type'
         if Warning.check(warning_name):
-            raise UserWarning(warning_name, "Se van a quitar los tipos a las cuentas que lo tenga y que tengan hijos.")
+            raise UserWarning(
+                warning_name,
+                "Se van a quitar los tipos a las cuentas que lo tenga y que tengan hijos."
+            )
         if ids:
             accounts = Account.browse(ids)
             Account.delete_account_type(accounts)
         return 'end'
-    
+
     def end(self):
         return 'reload'
 
@@ -286,6 +325,7 @@ class CheckImportedDoc(Wizard):
             Actualizacion.revisa_secuencia_imp(actualizacion.name)
         return 'end'
 
+
 # Asistente encargado de desconciliar los asientos de los comprobantes creados por el multi-ingreso
 class UnreconcilieMulti(Wizard):
     'Unreconcilie Multi'
@@ -304,41 +344,48 @@ class UnreconcilieMulti(Wizard):
                 Voucher.unreconcilie_move_voucher(vouchers)
         return 'end'
 
+
 # Asistente encargado de marcar el multi-ingreso (documento) para re-importar y elimina los vouchers (comprobantes) creados
 class MarkImportMultiStart(ModelView):
     'Delete Multi Tecno Start'
     __name__ = 'delete.multi.wizard.start'
     user = fields.Many2One('res.user', 'User', readonly=True)
-    validate = fields.Boolean('Validate', readonly=True, on_change_with='on_change_with_validate')
+    validate = fields.Boolean('Validate',
+                              readonly=True,
+                              on_change_with='on_change_with_validate')
 
     @staticmethod
     def default_user():
         return Transaction().user
 
-    
     @fields.depends('user')
     def on_change_with_validate(self):
         pool = Pool()
         user_permission = pool.get('conector.permissions')
         permission = pool.get('res.user-ir.action.wizard')
-        action = user_permission.search([('user_permission', '=', Transaction().user)])
+        action = user_permission.search([('user_permission', '=',
+                                          Transaction().user)])
 
-        validated = permission.search([('user_permission', 'in', action),
-                                       ('wizard.wiz_name', '=', 'account.multirevenue.mark_rimport'),])
+        validated = permission.search([
+            ('user_permission', 'in', action),
+            ('wizard.wiz_name', '=', 'account.multirevenue.mark_rimport'),
+        ])
         if validated:
             return True
         return False
+
 
 class MarkImportMulti(Wizard):
     'Check Imported Documnets'
     __name__ = 'account.multirevenue.mark_rimport'
 
-    start = StateView('delete.multi.wizard.start',
+    start = StateView(
+        'delete.multi.wizard.start',
         'conector.validated_identity_multi_view_form', [
             Button('Cancel', 'end', 'tryton-cancel'),
             Button('Confirm', 'mark_import', 'tryton-ok', default=True),
-            ])
-    
+        ])
+
     mark_import = StateTransition()
 
     def transition_mark_import(self):
@@ -351,49 +398,63 @@ class MarkImportMulti(Wizard):
             MultiRevenue = pool.get('account.multirevenue')
             warning_name = 'warning_mark_rimport_multirevenue'
             if Warning.check(warning_name):
-                raise UserWarning(warning_name, "Primero se debe desconciliar los asientos de los multi-ingresos (Desconciliar Asientos Multi-ingreso)")
+                raise UserWarning(
+                    warning_name,
+                    "Primero se debe desconciliar los asientos de los multi-ingresos (Desconciliar Asientos Multi-ingreso)"
+                )
             ids = Transaction().context['active_ids']
             if ids:
                 multingresos = MultiRevenue.browse(ids)
                 log_delete = [i.id_tecno for i in multingresos]
                 MultiRevenue.mark_rimport(multingresos)
 
-            logs[self.start.user.name] = f"El usuario {self.start.user.name}, realizo la accion de eliminar y reimportar multi-ingresos \
+            logs[
+                self.start.user.
+                name] = f"El usuario {self.start.user.name}, realizo la accion de eliminar y reimportar multi-ingresos \
             eliminando los siguientes documentos {log_delete}"
 
             actualizacion.add_logs(logs)
             return 'end'
-        
 
         logs[self.start.user.name] = f"El usuario {self.start.user.name},\
         intento ejecutar el asistente de eliminar y reimportar de multi-ingresos\
         para el cual, no cuenta con los permisos requeridos"
+
         actualizacion.add_logs(logs)
-        raise UserError(f"EL usuario {self.start.user.name}, no cuenta con los permisos para realizar esta accion")
+        raise UserError(
+            f"EL usuario {self.start.user.name}, no cuenta con los permisos para realizar esta accion"
+        )
 
     def end(self):
         return 'reload'
+
 
 # Vista encargada de solicitar la información necesaria para el asistente de ajuste a las facturas
 class CreateAdjustmentNotesParameters(ModelView):
     'Create Exemplaries Parameters'
     __name__ = 'account.note.create_adjustment_note.parameters'
-    invoice_type = fields.Selection([('in', 'Proveedor'), ('out', 'Cliente')], 'Invoice type', required=True)
-    adjustment_account = fields.Many2One('account.account', 'Adjustment account', domain=[('type', '!=', None)], required=True)
+    invoice_type = fields.Selection([('in', 'Proveedor'), ('out', 'Cliente')],
+                                    'Invoice type',
+                                    required=True)
+    adjustment_account = fields.Many2One('account.account',
+                                         'Adjustment account',
+                                         domain=[('type', '!=', None)],
+                                         required=True)
     analytic_account = fields.Char('Analytic account')
-    date_start = fields.Date('Date initial',required=True)
-    date_finish = fields.Date('Date end',required=True)
-    date = fields.Date('Date for notes',required=True)
+    date_start = fields.Date('Date initial', required=True)
+    date_finish = fields.Date('Date end', required=True)
+    date = fields.Date('Date for notes', required=True)
+
 
 # Asistente encargado de crear las notas contables que realizaran el ajuste a las facturas con salod menor a 600 pesos
 class CreateAdjustmentNotes(Wizard):
     'Create Exemplaries'
     __name__ = 'account.note.create_adjustment_note'
     start = StateView('account.note.create_adjustment_note.parameters',
-            'conector.view_adjustment_note_form', [
-                Button('Cancel', 'end', 'tryton-cancel'),
-                Button('Add', 'add_note', 'tryton-ok', default=True),
-            ])
+                      'conector.view_adjustment_note_form', [
+                          Button('Cancel', 'end', 'tryton-cancel'),
+                          Button('Add', 'add_note', 'tryton-ok', default=True),
+                      ])
     add_note = StateTransition()
 
     def transition_add_note(self):
@@ -412,11 +473,14 @@ class CreateAdjustmentNotes(Wizard):
         if config.adjustment_amount and config.adjustment_amount > 0:
             data['amount'] = config.adjustment_amount
         else:
-            raise UserError("msg_adjustment_amount", "has to be greater than zero")
+            raise UserError("msg_adjustment_amount",
+                            "has to be greater than zero")
         if hasattr(Line, 'analytic_account'):
             AnalyticAccount = pool.get('analytic_account.account')
             if self.start.analytic_account:
-                analytic_account, = AnalyticAccount.search([('code', '=', self.start.analytic_account)])
+                analytic_account, = AnalyticAccount.search([
+                    ('code', '=', self.start.analytic_account)
+                ])
                 data['analytic_account'] = analytic_account
             else:
                 raise UserError("msg_analytic_account_missing")
@@ -433,11 +497,12 @@ class AddCenterOperationLineP(ModelView):
 class AddCenterOperationLine(Wizard):
     'Add Operation Center'
     __name__ = 'account.note.add_operation_center'
-    start = StateView('account.note.add_operation_center.parameters',
-            'conector.view_add_operation_center_form', [
-                Button('Cancel', 'end', 'tryton-cancel'),
-                Button('Add', 'operation_center', 'tryton-ok', default=True),
-            ])
+    start = StateView(
+        'account.note.add_operation_center.parameters',
+        'conector.view_add_operation_center_form', [
+            Button('Cancel', 'end', 'tryton-cancel'),
+            Button('Add', 'operation_center', 'tryton-ok', default=True),
+        ])
     operation_center = StateTransition()
 
     def transition_operation_center(self):
@@ -445,7 +510,8 @@ class AddCenterOperationLine(Wizard):
         Note = pool.get('account.note')
         Line = pool.get('account.note.line')
         OperationCenter = pool.get('company.operation_center')
-        operation_center = OperationCenter.search([('code', '=', self.start.code)])
+        operation_center = OperationCenter.search([('code', '=',
+                                                    self.start.code)])
         if not operation_center:
             raise UserError("msg_operation_center_not_found")
         operation_center, = operation_center
@@ -470,7 +536,10 @@ class ReimportExcepcionDocument(Wizard):
         Warning = pool.get('res.user.warning')
         warning_name = 'warning_fix_bugs_conector'
         if Warning.check(warning_name):
-            raise UserWarning(warning_name, "Se van a marcar los documentos con excepción para ser importados de nuevo")
+            raise UserWarning(
+                warning_name,
+                "Se van a marcar los documentos con excepción para ser importados de nuevo"
+            )
 
         Actualizacion = pool.get('conector.actualizacion')
         Config = pool.get('conector.configuration')
@@ -488,9 +557,10 @@ class ReimportExcepcionDocument(Wizard):
             elif actualizacion.name == 'PRODUCCION':
                 cond += "AND sw = 12 "
         if cond:
-            query = "UPDATE dbo.Documentos SET exportado = 'N' WHERE exportado = 'E' "+cond
+            query = "UPDATE dbo.Documentos SET exportado = 'N' WHERE exportado = 'E' " + cond
             Config.set_data(query)
         return 'end'
+
 
 class ConfirmLinesBankstatement(Wizard):
     __name__ = 'account.bank_statement.confirm_bank_statement_lines'
@@ -527,7 +597,8 @@ class GroupMultirevenueLines(Wizard):
                 lines = BankStatementLine.search([
                     ('statement', '=', statement.id),
                     ('statement.state', '=', 'draft'),
-                    ('description', 'like', 'MULTI-INGRESO%')])
+                    ('description', 'like', 'MULTI-INGRESO%')
+                ])
                 to_group = {}
                 lines_group = {}
                 to_save = []
@@ -552,6 +623,7 @@ class GroupMultirevenueLines(Wizard):
                 BankStatementLine.delete(to_delete)
         return 'end'
 
+
 class GroupDatafonoLines(Wizard):
     __name__ = 'account.bank_statement.group_datafono_lines'
     start_state = 'run'
@@ -566,15 +638,20 @@ class GroupDatafonoLines(Wizard):
             for statement in BankStatement.browse(ids):
                 lines = BankStatementLine.search([
                     ('statement', '=', statement.id),
-                    ('statement.state', '=', 'draft'),])
-                    # ('description', 'like', 'VENTA-POS%')
+                    ('statement.state', '=', 'draft'),
+                ])
+                # ('description', 'like', 'VENTA-POS%')
                 to_group = {}
                 lines_group = {}
                 to_save = []
                 to_delete = []
                 for line in lines:
-                    if line.bank_move_lines[0].move_origin and str(line.bank_move_lines[0].move_origin).split(',')[0] in ['account.statement']:
-                        reference = str(line.bank_move_lines[0].move_origin.journal.name)+'-'+str(line.bank_move_lines[0].move_origin.date)
+                    if line.bank_move_lines[0].move_origin and str(
+                            line.bank_move_lines[0].move_origin).split(
+                                ',')[0] in ['account.statement']:
+                        reference = str(
+                            line.bank_move_lines[0].move_origin.journal.name
+                        ) + '-' + str(line.bank_move_lines[0].move_origin.date)
                         # key = (reference, payment_mode)
                         if reference not in to_group.keys():
                             to_group[reference] = list(line.bank_move_lines)
