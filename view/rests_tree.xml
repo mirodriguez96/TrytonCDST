@@ -4,6 +4,6 @@
     <field name="start" widget="time"/>
     <field name="end" widget="date"/>
     <field name="end" widget="time"/>
-    <field name="amount"/> 
-    <field name="pay"/> 
+    <field name="amount"/>
+    <field name="pay"/>
 </tree>

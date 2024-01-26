@@ -3,10 +3,8 @@
 this repository contains the full copyright notices and license terms. -->
 <data>
 
-    <xpath
-        expr="/tree/field[@name='residual_value']"
-        position="after">
-            <field name="accumulated_depreciation" symbol="currency"/>
+    <xpath expr="/tree/field[@name='residual_value']" position="after">
+        <field name="accumulated_depreciation" symbol="currency"/>
     </xpath>
 
 </data>

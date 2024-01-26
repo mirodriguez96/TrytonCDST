@@ -3,10 +3,9 @@
 this repository contains the full copyright notices and license terms. -->
 <data>
 
-    <xpath
-        expr="/form/field[@name='number']" position="after">
-            <label name="account_bank_party"/>
-            <field name="account_bank_party"/>
+    <xpath expr="/form/field[@name='number']" position="after">
+        <label name="account_bank_party"/>
+        <field name="account_bank_party"/>
     </xpath>
-    
+
 </data>

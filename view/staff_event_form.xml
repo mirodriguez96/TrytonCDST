@@ -14,20 +14,20 @@ this repository contains the full copyright notices and license terms. -->
         <button name="create_liquidation" string="Create liquidation" icon="tryton-refresh"/>
     </xpath>
     <xpath expr="/form/group[@id='checks']/field[@name='is_vacations']" position="after">
-      <label name="access_register" />
-      <field name="access_register" xexpand="0" width="25"/>
+        <label name="access_register" />
+        <field name="access_register" xexpand="0" width="25"/>
     </xpath>
     <xpath expr="/form/group[@id='checks']" position="after">
         <group col='6' colspan="4" id="time_work_event">
             <group col='3' id="enter_time">
-            <label name="enter_timestamp"/>
-            <field name="enter_timestamp" widget="date"/>
-            <field name="enter_timestamp" widget="time"/>
+                <label name="enter_timestamp"/>
+                <field name="enter_timestamp" widget="date"/>
+                <field name="enter_timestamp" widget="time"/>
             </group>
             <group col='3' id="exit_time">
-            <label name="exit_timestamp"/>
-            <field name="exit_timestamp" widget="date"/>
-            <field name="exit_timestamp" widget="time"/>
+                <label name="exit_timestamp"/>
+                <field name="exit_timestamp" widget="date"/>
+                <field name="exit_timestamp" widget="time"/>
             </group>
         </group>
     </xpath>
