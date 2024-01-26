@@ -52,8 +52,8 @@ class Cron(metaclass=PoolMeta):
                 if cron.source == "bdc":
                     dollar_price = Decimal(cls.get_price_dollar_bdc())
                     dollar_rate = Decimal(1) / dollar_price
-                    dollar_rate = dollar_rate.quantize(Decimal('0.000000000001'),
-                                                       rounding=ROUND_HALF_UP)
+                    dollar_rate = dollar_rate.quantize(
+                        Decimal('0.000000000001'), rounding=ROUND_HALF_UP)
 
                     currency_id = cron.currency
                     currency_symbol = cron.currency.symbol

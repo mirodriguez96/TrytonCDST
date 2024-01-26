@@ -1,17 +1,37 @@
-
 from decimal import Decimal
 #import json
 import datetime
 import os
 
 EXTRAS = {
-    'HED': {'code': 1, 'percentaje': '25.00'},
-    'HEN': {'code': 2, 'percentaje': '75.00'},
-    'HRN': {'code': 3, 'percentaje': '35.00'},
-    'HEDDF': {'code': 4, 'percentaje': '100.00'},
-    'HRDDF': {'code': 5, 'percentaje': '75.00'},
-    'HENDF': {'code': 6, 'percentaje': '150.00'},
-    'HRNDF': {'code': 7, 'percentaje': '110.00'},
+    'HED': {
+        'code': 1,
+        'percentaje': '25.00'
+    },
+    'HEN': {
+        'code': 2,
+        'percentaje': '75.00'
+    },
+    'HRN': {
+        'code': 3,
+        'percentaje': '35.00'
+    },
+    'HEDDF': {
+        'code': 4,
+        'percentaje': '100.00'
+    },
+    'HRDDF': {
+        'code': 5,
+        'percentaje': '75.00'
+    },
+    'HENDF': {
+        'code': 6,
+        'percentaje': '150.00'
+    },
+    'HRNDF': {
+        'code': 7,
+        'percentaje': '110.00'
+    },
 }
 KIND = {
     'steady': "1",
@@ -30,29 +50,39 @@ TIPO_INCAPACIDAD = {
 path = os.path.dirname(__file__)
 WAGE_TYPE = {
     'Basico': ['Basico'],
-    'Transporte': ['AuxilioTransporte', 'ViaticoManuAlojS', 'ViaticoManuAlojNS'],
+    'Transporte':
+    ['AuxilioTransporte', 'ViaticoManuAlojS', 'ViaticoManuAlojNS'],
     'HEDs': ['HED', 'HEN', 'HRN', 'HEDDF', 'HRDDF', 'HENDF', 'HRNDF'],
     'Vacaciones': ['VacacionesComunes', 'VacacionesCompensadas'],
     'Primas': ['PrimasS', 'PrimasNS'],
     'Cesantias': ['Cesantias', 'IntCesantias'],
-    'Incapacidades': ['IncapacidadComun', 'IncapacidadProfesional', 'IncapacidadLaboral'],
+    'Incapacidades':
+    ['IncapacidadComun', 'IncapacidadProfesional', 'IncapacidadLaboral'],
     'Licencias': ['LicenciaMP', 'LicenciaR', 'LicenciaNR'],
     'Bonificaciones': ['BonificacionS', 'BonificacionNS'],
     'Auxilios': ['AuxilioS', 'AuxilioNS'],
     'HuelgasLegales': ['HuelgaLegal'],
     'OtrosConceptos': ['OtroConceptoS', 'OtroConceptoNS'],
     'Compensaciones': ['CompensacionO', 'CompensacionE'],
-    'BonoEPCTVs': ['PagoS', 'PagoNS', 'PagoAlimentacionS', 'PagoAlimentacionN'],
+    'BonoEPCTVs':
+    ['PagoS', 'PagoNS', 'PagoAlimentacionS', 'PagoAlimentacionN'],
     'OtrosTag': ['Comision', 'PagoTercero', 'Anticipo'],
-    'OtrosI': ['Dotacion', 'ApoyoSost', 'Teletrabajo', 'BonifRetiro', 'Indemnizacion', 'Reintegro'],
+    'OtrosI': [
+        'Dotacion', 'ApoyoSost', 'Teletrabajo', 'BonifRetiro', 'Indemnizacion',
+        'Reintegro'
+    ],
     'Salud': ['Salud'],
     'FondoPension': ['FondoPension'],
     'FondoSP': ['FondoSP', 'FondoSPSUB'],
     'Sindicatos': ['Sindicato'],
     'Sanciones': ['SancionPublic', 'SancionPriv'],
     'Libranzas': ['Libranza'],
-    'OtrosD': ['PensionVoluntaria', 'RetencionFuente', 'AFC', 'Cooperativa', 'EmbargoFiscal', 'PlanComplementario', 'Educacion', 'Reintegro', 'Deuda']
-    }
+    'OtrosD': [
+        'PensionVoluntaria', 'RetencionFuente', 'AFC', 'Cooperativa',
+        'EmbargoFiscal', 'PlanComplementario', 'Educacion', 'Reintegro',
+        'Deuda'
+    ]
+}
 
 FISCAL_REGIMEN = {
     '48': 'RESPONSABLE DE IMPUESTO SOBRE LAS VENTAS – IVA',
@@ -74,10 +104,13 @@ MESSAGES = {
     'company_address': 'Falta la direccion de la empresa',
     'company_country_code': 'Falta el pais de la empresa',
     'company_department_code': 'Falta el departamento de la empresa',
-    'company_type_id': 'Falta el tipo de documento que identifica a la compañía',
-    'work_place_department': 'Falta definir el departamento lugar de trabajo del empleado',
+    'company_type_id':
+    'Falta el tipo de documento que identifica a la compañía',
+    'work_place_department':
+    'Falta definir el departamento lugar de trabajo del empleado',
     'work_place_city': 'Falta definir el ciudad lugar de trabajo del empleado',
-    'work_place_address': 'Falta definir el direccion lugar de trabajo del empleado',
+    'work_place_address':
+    'Falta definir el direccion lugar de trabajo del empleado',
     'type_contract': 'Debe definir el tipo de contrato',
     'salary': 'El contrato no tiene definido un salario',
     'payment_term': 'Falta el medio de pago',
@@ -119,7 +152,7 @@ class ElectronicPayroll(object):
         self.company_department_code = payroll.company.party.department_code
         self.company_city_code = payroll.company.party.city_code
         self.company_address = payroll.company.party.street.replace('\n', '')
-    #     # Employee information------------------------------------------------------------------------------------------
+        #     # Employee information------------------------------------------------------------------------------------------
         # self.department_code = payroll.employee.party.department_code
         # self.party_city_code = payroll.employee.party.city_code
         self.party_name = payroll.employee.party.name
@@ -168,7 +201,7 @@ class ElectronicPayroll(object):
             if k in bank_inf and not self.payroll.bank_payment:
                 continue
             elif not field_value:
-                if k == 'company_check_digit': # FIX
+                if k == 'company_check_digit':  # FIX
                     continue
                 self.status = MESSAGES[k]
                 break
@@ -190,31 +223,32 @@ class ElectronicPayroll(object):
                 settlement_end_date = p.end
             elif settlement_end_date <= p.end:
                 settlement_end_date = p.end
-        
+
         if self.payroll.contract.finished_date and self.payroll.end >= self.payroll.contract.finished_date:
             settlement_end_date = self.payroll.contract.finished_date
             end_date = settlement_end_date
 
         payroll_period = {
-            "Nvper_fing":str(start_date), #FechaIngreso
-            "Nvper_fpin":str(settlement_start_date), #FechaLiquidacionInicio
-            "Nvper_fpfi":str(settlement_end_date), #FechaLiquidacionFin
-            "Nvper_tlab":str(self.payroll.get_time_worked()), #TiempoLaborado
+            "Nvper_fing": str(start_date),  #FechaIngreso
+            "Nvper_fpin": str(settlement_start_date),  #FechaLiquidacionInicio
+            "Nvper_fpfi": str(settlement_end_date),  #FechaLiquidacionFin
+            "Nvper_tlab": str(self.payroll.get_time_worked()),  #TiempoLaborado
             #"FechaGen":self.issue_date,
-            }
+        }
         if end_date:
-            payroll_period['Nvper_fret'] = str(end_date) #FechaRetiro
+            payroll_period['Nvper_fret'] = str(end_date)  #FechaRetiro
         return payroll_period
 
     def _get_sequence(self):
         seq = self.number.split(self.prefix, maxsplit=1)
         sequence = {
-            "Nvsuc_codi": self.sucode, #Codigo sucursal (noova)
-            "Nvnom_pref":self.prefix, #Prefijo
-            "Nvnom_cons":seq[1], #Consecutivo
-            "Nvnom_nume":self.number, #Numero (pref+num)
-            "Nvope_tipo": "NM" #Tipo de operación nómina (siempre debe ir "NM")
-            }
+            "Nvsuc_codi": self.sucode,  #Codigo sucursal (noova)
+            "Nvnom_pref": self.prefix,  #Prefijo
+            "Nvnom_cons": seq[1],  #Consecutivo
+            "Nvnom_nume": self.number,  #Numero (pref+num)
+            "Nvope_tipo":
+            "NM"  #Tipo de operación nómina (siempre debe ir "NM")
+        }
         #if self.code_employee:
         #    sequence['CodigoTrabajador'] = self.code_employee
         return sequence
@@ -222,48 +256,55 @@ class ElectronicPayroll(object):
     #SIN USO
     def _get_place_generation(self):
         place_generation = {
-            "Pais":self.company_country_code,
-            "DepartamentoEstado":self.company_department_code,
-            "MunicipioCiudad":str(self.company_department_code + self.company_city_code),
-            "Idioma":"es"
-            }
+            "Pais":
+            self.company_country_code,
+            "DepartamentoEstado":
+            self.company_department_code,
+            "MunicipioCiudad":
+            str(self.company_department_code + self.company_city_code),
+            "Idioma":
+            "es"
+        }
         return place_generation
 
     #SIN USO
     def _get_provider(self):
         provider = {
-            "RazonSocial":self.company_full_name, #RazonSocial
-            "NIT":str(self.company_id), #NIT
-            "DV":str(self.company_check_digit), #DV
-            "SoftwareID":self.software_id,
-            "SoftwareSC":self.payroll.get_security_code(self.config)
-            }
+            "RazonSocial": self.company_full_name,  #RazonSocial
+            "NIT": str(self.company_id),  #NIT
+            "DV": str(self.company_check_digit),  #DV
+            "SoftwareID": self.software_id,
+            "SoftwareSC": self.payroll.get_security_code(self.config)
+        }
         if self.company_first_name:
-            provider['PrimerApellido'] = self.company_first_name #PrimerApellido
-            provider['SegundoApellido'] = self.company_second_familyname #SegundoApellido
-            provider['PrimerNombre'] = self.company_first_name #PrimerNombre
-            provider['OtrosNombres'] = self.company_second_name #OtrosNombres
+            provider[
+                'PrimerApellido'] = self.company_first_name  #PrimerApellido
+            provider[
+                'SegundoApellido'] = self.company_second_familyname  #SegundoApellido
+            provider['PrimerNombre'] = self.company_first_name  #PrimerNombre
+            provider['OtrosNombres'] = self.company_second_name  #OtrosNombres
         return provider
 
     def _get_qrcode(self):
-        qrcode = { 
-            "CodigoQR": self.payroll.get_link_dian(cune=True, config=self.config)
-            }
+        qrcode = {
+            "CodigoQR": self.payroll.get_link_dian(cune=True,
+                                                   config=self.config)
+        }
         return qrcode
 
     def _get_general_information(self):
         information = {
             #"Version":"V1.0: Documento Soporte de Pago de Nómina Electrónica",
             #"Ambiente":str(self.environment),
-            "Nvinf_tnom":self.payroll_type, #Tipo de nomina
+            "Nvinf_tnom": self.payroll_type,  #Tipo de nomina
             #"CUNE":self.payroll.get_cune(),
             #"EncripCUNE":"CUNE-SHA384",
             #"FechaGen":self.issue_date,
             #"HoraGen":self.issue_time,
-            "Nvinf_pnom":self.period_payroll, #PeriodoNomina
-            "Nvinf_tmon":self.currency, #TipoMoneda
+            "Nvinf_pnom": self.period_payroll,  #PeriodoNomina
+            "Nvinf_tmon": self.currency,  #TipoMoneda
             #"TRM":"0"
-            }
+        }
         return information
 
     def _get_notes(self):
@@ -272,14 +313,21 @@ class ElectronicPayroll(object):
 
     def _get_information_company(self):
         information = {
-            "Nvemp_nomb":self.company_full_name, #RazonSocial
-            "Nvemp_nnit":str(self.company_id),
-            "Nvemp_endv":str(self.company_check_digit),
-            "Nvemp_pais":str(self.company_country_code),
-            "Nvemp_depa":str(self.company_department_code),
-            "Nvemp_ciud":str(self.company_department_code + self.company_city_code),
-            "Nvemp_dire":str(self.company_address),
-            }
+            "Nvemp_nomb":
+            self.company_full_name,  #RazonSocial
+            "Nvemp_nnit":
+            str(self.company_id),
+            "Nvemp_endv":
+            str(self.company_check_digit),
+            "Nvemp_pais":
+            str(self.company_country_code),
+            "Nvemp_depa":
+            str(self.company_department_code),
+            "Nvemp_ciud":
+            str(self.company_department_code + self.company_city_code),
+            "Nvemp_dire":
+            str(self.company_address),
+        }
         if self.company_first_name:
             information['Nvemp_pape'] = self.company_first_name
             information['Nvemp_sape'] = self.company_second_familyname
@@ -289,22 +337,23 @@ class ElectronicPayroll(object):
 
     def _get_information_employee(self):
         information = {
-            "Nvtra_tipo":str(self.type_employee), #TipoTrabajador
-            "Nvtra_stip":str(self.subtype_employee),
-            "Nvtra_arpe":self.alto_riesgo_pension,
-            "Nvtra_dtip":str(self.party_type_id),
-            "Nvtra_ndoc":str(self.party_id),
-            "Nvtra_pape":self.employee_first_family_name,
-            "Nvtra_sape":self.employee_second_family_name,
-            "Nvtra_pnom":self.employee_first_name,
-            "Nvtra_ltpa":str(self.work_place_country),
-            "Nvtra_ltde":str(self.work_place_department),
-            "Nvtra_ltci":str(self.work_place_department + self.work_place_city),
-            "Nvtra_ltdi":str(self.work_place_address),
-            "Nvtra_sint":self.integral_salary,
-            "Nvtra_tcon":str(self.type_contract),
-            "Nvtra_suel":str(self.salary),
-            }
+            "Nvtra_tipo": str(self.type_employee),  #TipoTrabajador
+            "Nvtra_stip": str(self.subtype_employee),
+            "Nvtra_arpe": self.alto_riesgo_pension,
+            "Nvtra_dtip": str(self.party_type_id),
+            "Nvtra_ndoc": str(self.party_id),
+            "Nvtra_pape": self.employee_first_family_name,
+            "Nvtra_sape": self.employee_second_family_name,
+            "Nvtra_pnom": self.employee_first_name,
+            "Nvtra_ltpa": str(self.work_place_country),
+            "Nvtra_ltde": str(self.work_place_department),
+            "Nvtra_ltci":
+            str(self.work_place_department + self.work_place_city),
+            "Nvtra_ltdi": str(self.work_place_address),
+            "Nvtra_sint": self.integral_salary,
+            "Nvtra_tcon": str(self.type_contract),
+            "Nvtra_suel": str(self.salary),
+        }
         if self.employee_second_name:
             information['Nvtra_onom'] = self.employee_second_name
         if self.code_employee:
@@ -313,13 +362,13 @@ class ElectronicPayroll(object):
 
     def _get_payment_terms(self):
         information = {
-            "Nvpag_form":self.payment_term, #Forma
-            "Nvpag_meto":self.payment_method #Metodo
-            }
+            "Nvpag_form": self.payment_term,  #Forma
+            "Nvpag_meto": self.payment_method  #Metodo
+        }
         if self.payroll.bank_payment:
-            information['Nvpag_banc'] = self.bank #Banco
-            information['Nvpag_tcue'] = self.bank_account_type #TipoCuenta
-            information['Nvpag_ncue'] = self.bank_account #NumeroCuenta
+            information['Nvpag_banc'] = self.bank  #Banco
+            information['Nvpag_tcue'] = self.bank_account_type  #TipoCuenta
+            information['Nvpag_ncue'] = self.bank_account  #NumeroCuenta
         return information
 
     def _get_pay_date(self):
@@ -334,13 +383,13 @@ class ElectronicPayroll(object):
             if pay_date <= pay.date_effective:
                 pay_date = pay.date_effective
         return str(pay_date)
-    
+
     def _get_predecessor(self):
         issue_date = self.payroll.original_payroll.get_datetime_local()
         predecessor = {
-            "Nvpre_nume": self.payroll.original_payroll.number, #NumeroPred
-            "Nvpre_cune": self.payroll.original_payroll.cune, #CUNEPred
-            "Nvpre_fgen": issue_date[0] #FechaGenPred
+            "Nvpre_nume": self.payroll.original_payroll.number,  #NumeroPred
+            "Nvpre_cune": self.payroll.original_payroll.cune,  #CUNEPred
+            "Nvpre_fgen": issue_date[0]  #FechaGenPred
         }
         return predecessor
 
@@ -374,8 +423,8 @@ class ElectronicPayroll(object):
                     factor = 8.0
                 worked_days = line.quantity / Decimal(factor)
                 basico = {
-                    'Nvbas_dtra': rvalue(worked_days, 0), #DiasTrabajados
-                    'Nvbas_stra': rvalue(line.amount, 1) #SueldoTrabajado
+                    'Nvbas_dtra': rvalue(worked_days, 0),  #DiasTrabajados
+                    'Nvbas_stra': rvalue(line.amount, 1)  #SueldoTrabajado
                 }
                 subelements['Basico'] = basico
 
@@ -383,20 +432,23 @@ class ElectronicPayroll(object):
                 if 'Transporte' not in subelements.keys():
                     subelements['Transporte'] = {}
                 if concept == 'AuxilioTransporte':
-                    subelements['Transporte']['Nvtrn_auxt'] = rvalue(line.amount, 1)
+                    subelements['Transporte']['Nvtrn_auxt'] = rvalue(
+                        line.amount, 1)
                 elif concept == 'ViaticoManuAlojS':
-                    subelements['Transporte']['Nvtrn_vias'] = rvalue(line.amount, 1)
+                    subelements['Transporte']['Nvtrn_vias'] = rvalue(
+                        line.amount, 1)
                 elif concept == 'ViaticoManuAlojNS':
-                    subelements['Transporte']['Nvtrn_vins'] = rvalue(line.amount, 1)
+                    subelements['Transporte']['Nvtrn_vins'] = rvalue(
+                        line.amount, 1)
 
             elif concept in WAGE_TYPE['HEDs']:
                 if 'LHorasExtras' not in subelements.keys():
                     subelements['LHorasExtras'] = []
                 hr = {
-                'Nvcom_cant': rvalue(line.quantity, 2),
-                'Nvcom_pago': rvalue(line.amount, 2),
-                'Nvhor_tipo': concept,
-                'Nvhor_porc': str(EXTRAS[concept]['percentaje'])
+                    'Nvcom_cant': rvalue(line.quantity, 2),
+                    'Nvcom_pago': rvalue(line.amount, 2),
+                    'Nvhor_tipo': concept,
+                    'Nvhor_porc': str(EXTRAS[concept]['percentaje'])
                 }
                 subelements['LHorasExtras'].append(hr)
 
@@ -405,14 +457,14 @@ class ElectronicPayroll(object):
                     subelements['LVacaciones'] = []
                 if concept == 'VacacionesComunes':
                     for l in line.lines_payroll:
-                        e ={
+                        e = {
                             "Nvcom_cant": rvalue(l.quantity, 2),
                             "Nvcom_pago": rvalue(l.amount, 2),
                             "Nvvac_tipo": "1"
                         }
                         subelements['LVacaciones'].append(e)
                     if not line.lines_payroll:
-                        e ={
+                        e = {
                             "Nvcom_cant": rvalue(line.quantity, 2),
                             "Nvcom_pago": rvalue(line.amount, 2),
                             "Nvvac_tipo": "1"
@@ -420,8 +472,8 @@ class ElectronicPayroll(object):
                         subelements['LVacaciones'].append(e)
                 else:
                     e = {
-                        "Nvcom_cant":rvalue(line.quantity, 2),
-                        "Nvcom_pago":rvalue(line.amount, 2),
+                        "Nvcom_cant": rvalue(line.quantity, 2),
+                        "Nvcom_pago": rvalue(line.amount, 2),
                         "Nvvac_tipo": "2"
                     }
                     subelements['LVacaciones'].append(e)
@@ -430,19 +482,24 @@ class ElectronicPayroll(object):
                 if 'Primas' not in subelements.keys():
                     subelements['Primas'] = {}
                 if concept == 'PrimasS':
-                    subelements['Primas']['Nvpri_cant'] = rvalue(line.quantity, 2)
-                    subelements['Primas']['Nvpri_pago'] = rvalue(line.amount, 2)
+                    subelements['Primas']['Nvpri_cant'] = rvalue(
+                        line.quantity, 2)
+                    subelements['Primas']['Nvpri_pago'] = rvalue(
+                        line.amount, 2)
                 else:
-                    subelements['Primas']['Nvpri_pagn'] = rvalue(line.amount, 2)
-            
+                    subelements['Primas']['Nvpri_pagn'] = rvalue(
+                        line.amount, 2)
+
             elif concept in WAGE_TYPE['Cesantias']:
                 if 'Cesantias' not in subelements.keys():
                     subelements['Cesantias'] = {}
                 if concept == 'Cesantias':
-                    subelements['Cesantias']['Nvces_pago'] = rvalue(line.amount, 2)
+                    subelements['Cesantias']['Nvces_pago'] = rvalue(
+                        line.amount, 2)
                 else:
                     subelements['Cesantias']['Nvces_porc'] = '12.00'
-                    subelements['Cesantias']['Nvces_pagi'] = rvalue(line.amount, 2)
+                    subelements['Cesantias']['Nvces_pagi'] = rvalue(
+                        line.amount, 2)
 
             elif concept in WAGE_TYPE['Incapacidades']:
                 if 'LIncapacidades' not in subelements.keys():
@@ -489,31 +546,25 @@ class ElectronicPayroll(object):
                 if 'LAuxilios' not in subelements.keys():
                     subelements['LAuxilios'] = []
                 if concept == 'AuxilioS':
-                    e = {
-                        'Nvaux_auxs': rvalue(line.amount, 2)
-                    }
+                    e = {'Nvaux_auxs': rvalue(line.amount, 2)}
                 else:
-                    e = {
-                        'Nvaux_auns': rvalue(line.amount, 2)
-                    }
+                    e = {'Nvaux_auns': rvalue(line.amount, 2)}
                 subelements['LAuxilios'].append(e)
 
             elif concept in WAGE_TYPE['HuelgasLegales']:
                 if 'LHuelgasLegales' not in subelements.keys():
                     subelements['LHuelgasLegales'] = []
                 e = {
-                    "NVCOM_FINI":"9999-12-31",
-                    "NVCOM_FFIN":"9999-12-31",
-                    "NVCOM_CANT":"0"
+                    "NVCOM_FINI": "9999-12-31",
+                    "NVCOM_FFIN": "9999-12-31",
+                    "NVCOM_CANT": "0"
                 }
                 subelements['LHuelgasLegales'].append(e)
 
             elif concept in WAGE_TYPE['OtrosConceptos']:
                 if 'LOtrosConceptos' not in subelements.keys():
                     subelements['LOtrosConceptos'] = []
-                e = {
-                    'Nvotr_desc': line.description
-                }
+                e = {'Nvotr_desc': line.description}
                 if concept == 'OtroConceptoS':
                     e['Nvotr_pags'] = rvalue(line.amount, 2)
                 else:
@@ -524,34 +575,22 @@ class ElectronicPayroll(object):
                 if 'LCompensaciones' not in subelements.keys():
                     subelements['LCompensaciones'] = []
                 if concept == 'CompensacionO':
-                    e = {
-                        'Nvcom_como': rvalue(line.amount, 2)
-                    }
+                    e = {'Nvcom_como': rvalue(line.amount, 2)}
                 else:
-                    e = {
-                        'Nvcom_come': rvalue(line.amount, 2)
-                    }
+                    e = {'Nvcom_come': rvalue(line.amount, 2)}
                 subelements['LCompensaciones'].append(e)
-            
+
             elif concept in WAGE_TYPE['BonoEPCTVs']:
                 if 'LBonoEPCTVs' not in subelements.keys():
                     subelements['LBonoEPCTVs'] = []
                 if concept == 'PagoS':
-                    e = {
-                        'Nvbon_pags': rvalue(line.amount, 2)
-                    }
+                    e = {'Nvbon_pags': rvalue(line.amount, 2)}
                 elif concept == 'PagoNS':
-                    e = {
-                        'Nvbon_pans': rvalue(line.amount, 2)
-                    }
+                    e = {'Nvbon_pans': rvalue(line.amount, 2)}
                 elif concept == 'PagoAlimentacionS':
-                    e = {
-                        'Nvbon_alis': rvalue(line.amount, 2)
-                    }
+                    e = {'Nvbon_alis': rvalue(line.amount, 2)}
                 else:
-                    e = {
-                        'Nvbon_alns': rvalue(line.amount, 2)
-                    }
+                    e = {'Nvbon_alns': rvalue(line.amount, 2)}
                 subelements['LBonoEPCTVs'].append(e)
 
             elif concept in WAGE_TYPE['OtrosTag']:
@@ -568,7 +607,7 @@ class ElectronicPayroll(object):
                     if 'LAnticipos' not in subelements.keys():
                         subelements['LAnticipos'] = []
                     subelements['LAnticipos'].append(valor)
-                    
+
             elif concept in WAGE_TYPE['OtrosI']:
                 valor = rvalue(line.amount, 2)
                 if concept == 'Dotacion':
@@ -590,15 +629,9 @@ class ElectronicPayroll(object):
     def _get_deductions(self, line_deductions):
         subelements = {}
 
-        subelements['Salud'] = {
-                "Nvsal_porc": "0",
-                "Nvsal_dedu": "0"
-            }
+        subelements['Salud'] = {"Nvsal_porc": "0", "Nvsal_dedu": "0"}
 
-        subelements['FondoPension'] = {
-            "Nvfon_porc": "0",
-            "Nvfon_dedu": "0"
-        }
+        subelements['FondoPension'] = {"Nvfon_porc": "0", "Nvfon_dedu": "0"}
 
         for line in line_deductions:
             concept = line.wage_type.type_concept_electronic
@@ -613,7 +646,8 @@ class ElectronicPayroll(object):
                 p = line.wage_type.unit_price_formula.split('*')
                 p = Decimal(p[1].strip()) * 100
                 subelements['FondoPension']["Nvfon_porc"] = str(p)
-                subelements['FondoPension']["Nvfon_dedu"] = rvalue(line.amount, 2)
+                subelements['FondoPension']["Nvfon_dedu"] = rvalue(
+                    line.amount, 2)
 
             elif concept in WAGE_TYPE['FondoSP']:
                 if 'FondoSP' not in subelements.keys():
@@ -634,8 +668,8 @@ class ElectronicPayroll(object):
                 p = line.wage_type.unit_price_formula.split('*')
                 p = Decimal(p[1].strip()) * 100
                 e = {
-                    "Nvsin_porc":str(p),
-                    "Nvsin_dedu":rvalue(line.amount, 2)
+                    "Nvsin_porc": str(p),
+                    "Nvsin_dedu": rvalue(line.amount, 2)
                 }
                 subelements['LSindicatos'].append(e)
 
@@ -703,11 +737,12 @@ class ElectronicPayroll(object):
         ComprobanteTotal = rvalue(self.payroll.net_payment, 2)
         return DevengadosTotal, DeduccionesTotal, ComprobanteTotal
 
+
 #----------------------------------------------- MAKE ELECTRONIC payroll------------------------------------------------------
 
     def make(self, type):
         nom = {}
-        if type == '102': #Nomina individua
+        if type == '102':  #Nomina individua
             nom.update(self._get_sequence())
             gross, deductions, net_payment = self._get_total()
             nom["Nvnom_devt"] = gross
@@ -724,7 +759,7 @@ class ElectronicPayroll(object):
             nom["Devengados"] = acrueds
             nom["Deducciones"] = deductions
 
-        elif type == '103': #Nomina individual de ajuste
+        elif type == '103':  #Nomina individual de ajuste
             nom.update(self._get_sequence())
             type_note = self._get_type_note()
             if type_note == '1':
@@ -755,4 +790,3 @@ class ElectronicPayroll(object):
         #data = json.dumps(nom, indent=4)
         #print(nom)
         return nom
-

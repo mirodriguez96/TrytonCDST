@@ -21,7 +21,7 @@ class Conexion:
                 f"UID={self.user};PWD={self.password}"
         with pyodbc.connect(driver) as cnxn:
             return cnxn
-    
+
     # Se prueba la conexión y retorna booleano
     def test_conexion(self):
         try:
@@ -31,7 +31,7 @@ class Conexion:
             print(error)
             return False
 
-    # 
+    #
     def get_data(self, query):
         data = []
         cnxn = self.conexion()
@@ -41,7 +41,7 @@ class Conexion:
         cnxn.close()
         return data
 
-    # 
+    #
     def set_data(self, query):
         cnxn = self.conexion()
         with cnxn.cursor() as cursor:

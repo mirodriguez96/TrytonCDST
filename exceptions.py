@@ -5,7 +5,6 @@ from trytond.exceptions import UserError
 from trytond.model.exceptions import ValidationError
 
 
-
 class ImportDataEmployeeError(ValidationError):
     pass
 
@@ -13,8 +12,10 @@ class ImportDataEmployeeError(ValidationError):
 class LiquidationEmployeeError(UserError):
     pass
 
+
 class LiquidationDeleteError(UserError):
     pass
+
 
 class RecordDuplicateError(UserError):
     pass
@@ -35,13 +36,14 @@ class WageTypeConceptError(UserError):
 class GeneratePayrollError(UserError):
     pass
 
-    
+
 class GeneratePayrollMoveError(UserError):
     pass
 
 
 class MissingTemplateEmailPayroll(ValidationError):
     pass
+
 
 class DuplicateUserPermission(ValidationError):
     pass

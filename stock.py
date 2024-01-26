@@ -247,16 +247,11 @@ class ShipmentInternal(metaclass=PoolMeta):
     @classmethod
     def __setup__(cls):
         super(ShipmentInternal, cls).__setup__()
-        cls.from_location.domain = [
-            ('type', 'in', ['storage', 'lost_found']),
-            ('active', '=', True)
-        ]
+        cls.from_location.domain = [('type', 'in', ['storage', 'lost_found']),
+                                    ('active', '=', True)]
 
-        cls.to_location.domain = [
-            ('type', 'in', ['storage', 'lost_found']),
-            ('active', '=', True)
-        ]
-
+        cls.to_location.domain = [('type', 'in', ['storage', 'lost_found']),
+                                  ('active', '=', True)]
 
     @classmethod
     def import_tecnocarnes(cls):

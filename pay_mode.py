@@ -17,15 +17,17 @@ PAYMENT_CODES = [
 
 __all__ = [
     'VoucherPayMode',
-    ]
+]
+
 
 class VoucherPayMode(ModelSQL, ModelView):
     'Voucher Pay Mode'
     __name__ = 'account.voucher.paymode'
     id_tecno = fields.Char('Id Tabla Sqlserver', required=False)
     #Campo habilitado y necesario por módulos de psk al desactivar (electronic_invoice_co)
-    payment_means_code = fields.Selection(PAYMENT_CODES, 'Payment Means Code', required=True)
-
+    payment_means_code = fields.Selection(PAYMENT_CODES,
+                                          'Payment Means Code',
+                                          required=True)
 
     #Funcion encargada de crear o actualizar las formas de pago de TecnoCarnes
     @classmethod
@@ -77,7 +79,6 @@ class VoucherPayMode(ModelSQL, ModelView):
         actualizacion.add_logs(logs)
         print('FINISH FORMAS DE PAGO')
 
-
     #Se busca la cuenta del modo de pago y se asigna en caso de existir
     @classmethod
     def add_account(cls, paymode, cuenta):
@@ -85,7 +86,6 @@ class VoucherPayMode(ModelSQL, ModelView):
         account = Account.search([('code', '=', str(cuenta))])
         if account:
             paymode.account = account[0]
-
 
     #Función encargada de consultar la secuencia de un voucher dado
     @classmethod
