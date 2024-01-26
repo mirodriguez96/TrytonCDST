@@ -1177,10 +1177,13 @@ class IncomeStatementReport(Report):
 
 
 class TrialBalanceDetailedCds(metaclass=PoolMeta):
+    'Balanced Trial Report'
     __name__ = 'account_col.trial_balance_detailed'
 
     @classmethod
     def get_context(cls, records, header, data):
+        """Function that get context and print report"""
+
         report_context = super().get_context(records, header, data)
         pool = Pool()
         account = pool.get('account.account')
@@ -1249,7 +1252,8 @@ class TrialBalanceDetailedCds(metaclass=PoolMeta):
             order_by=line.account,
         )
 
-        select1.where = (join1.right.period.in_(in_periods))
+        select1.where = join1.right.period.in_(in_periods)
+
         if data['party']:
             select1.where = select1.where & (line.party == data['party'])
 
@@ -1276,7 +1280,7 @@ class TrialBalanceDetailedCds(metaclass=PoolMeta):
                 group_by=(line.account, entity),
                 order_by=line.account,
             )
-            select2.where = (join1.right.period.in_(start_periods_ids))
+            select2.where = join1.right.period.in_(start_periods_ids)
 
             if data['party']:
                 select2.where = select2.where & (line.party == data['party'])
