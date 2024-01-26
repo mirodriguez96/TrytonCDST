@@ -43,12 +43,7 @@
             <field name="act_window" ref="act_permissions"/>
         </record>
 
-        <menuitem 
-        parent="menu_importa"
-        sequence="3"
-        action="act_permissions"
-        id="menu_act_permissions"
-        icon="tryton-settings"/>
+        <menuitem parent="menu_importa" sequence="3" action="act_permissions" id="menu_act_permissions" icon="tryton-settings"/>
 
     </data>
 </tryton>

@@ -21,7 +21,8 @@ this repository contains the full copyright notices and license terms. -->
         <!-- Views Definitions -->
         <record model="ir.ui.view" id="staff_event_view_form">
             <field name="model">staff.event</field>
-            <field name="inherit" ref="staff_event.staff_event_view_form"/> <!--HEREDA DE LA VISTA-->
+            <field name="inherit" ref="staff_event.staff_event_view_form"/>
+            <!--HEREDA DE LA VISTA-->
             <field name="name">staff_event_form</field>
         </record>
 
@@ -45,7 +46,7 @@ this repository contains the full copyright notices and license terms. -->
             <field name="inherit" ref="staff_payroll_co.liquidation_view_form"/>
             <field name="name">liquidation_form</field>
         </record>
-        
+
         <!--interfaz para la generación del reporte-->
         <record model="ir.action.report" id="report_payroll_payment_bancolombia">
             <field name="name">Payroll Payment Report Bancolombia</field>
@@ -64,8 +65,7 @@ this repository contains the full copyright notices and license terms. -->
             <field name="name">Payroll Payment Bancolombia</field>
             <field name="wiz_name">staff.payroll.payment_bancolombia</field>
         </record>
-        <menuitem parent="staff.menu_reporting" id="menu_payroll_payment"
-            action="wizard_print_payroll_payment_bancolombia"/>
+        <menuitem parent="staff.menu_reporting" id="menu_payroll_payment" action="wizard_print_payroll_payment_bancolombia"/>
 
         <!--interfaz para la generación del reporte Liquidacion-->
         <record model="ir.action.report" id="report_liquidation_payment_bancolombia">
@@ -85,8 +85,7 @@ this repository contains the full copyright notices and license terms. -->
             <field name="name">Liquidation Payment</field>
             <field name="wiz_name">staff.payroll.liquidation_payment</field>
         </record>
-        <menuitem parent="staff.menu_reporting" id="menu_liquidation_payment"
-            action="wizard_print_liquidation_payment_bancolombia"/>
+        <menuitem parent="staff.menu_reporting" id="menu_liquidation_payment" action="wizard_print_liquidation_payment_bancolombia"/>
 
         <!--interfaz para el envio del comprobante de nomina-->
         <record model="ir.ui.view" id="payroll_payslip_send_view_form">
@@ -98,8 +97,7 @@ this repository contains the full copyright notices and license terms. -->
             <field name="name">Payslip Send</field>
             <field name="wiz_name">staff.payroll.payslip_send</field>
         </record>
-        <menuitem parent="staff.menu_assitants" id="menu_payslip_send"
-            action="wizard_payroll_payslip_send"/>
+        <menuitem parent="staff.menu_assitants" id="menu_payslip_send" action="wizard_payroll_payslip_send"/>
 
 
         <!--interfaz para el envio del certificados de ingresos y retenciones-->
@@ -112,9 +110,8 @@ this repository contains the full copyright notices and license terms. -->
             <field name="name">Certificate Send</field>
             <field name="wiz_name">staff.payroll.certificates_send</field>
         </record>
-        <menuitem parent="staff.menu_assitants" id="menu_certificates_send"
-            action="wizard_payroll_certificates_send"/>
-        
+        <menuitem parent="staff.menu_assitants" id="menu_certificates_send" action="wizard_payroll_certificates_send"/>
+
         <!--interfaz para el envio del comprobante de liquidacion-->
         <record model="ir.ui.view" id="payroll_settlement_send_view_form">
             <field name="model">staff.payroll_settlement_send.start</field>
@@ -125,30 +122,29 @@ this repository contains the full copyright notices and license terms. -->
             <field name="name">Settlement Send</field>
             <field name="wiz_name">staff.payroll.settlement_send</field>
         </record>
-        <menuitem parent="staff.menu_assitants" id="menu_settlement_send"
-            action="wizard_payroll_settlement_send"/>
+        <menuitem parent="staff.menu_assitants" id="menu_settlement_send" action="wizard_payroll_settlement_send"/>
 
         <!-- # Rests # -->
         <record model="ir.ui.view" id="access_view_form">
-          <field name="model">staff.access</field>
-          <field name="inherit" ref="staff_access.access_view_form"/>
-          <field name="name">access_form</field>
+            <field name="model">staff.access</field>
+            <field name="inherit" ref="staff_access.access_view_form"/>
+            <field name="name">access_form</field>
         </record>
 
         <!-- ############### -->
         <!-- # Model:Rests # -->
         <!-- ############### -->
         <record model="ir.ui.view" id="rests_view_form">
-          <field name="model">staff.access.rests</field>
-          <field name="type">form</field>
-          <field name="name">rests_form</field>
-        </record> 
-        
+            <field name="model">staff.access.rests</field>
+            <field name="type">form</field>
+            <field name="name">rests_form</field>
+        </record>
+
         <record model="ir.ui.view" id="rests_view_tree">
-          <field name="model">staff.access.rests</field>
-          <field name="type">tree</field>
-          <field name="name">rests_tree</field>
-        </record> 
+            <field name="model">staff.access.rests</field>
+            <field name="type">tree</field>
+            <field name="name">rests_tree</field>
+        </record>
 
         <!-- ############################ -->
         <!-- # Import Biometric Records # -->
@@ -190,7 +186,7 @@ this repository contains the full copyright notices and license terms. -->
             <field name="type">form</field>
             <field name="name">staff_access_report_form</field>
         </record>
-        
+
         <!-- Reportes ACCESOS -->
         <record model="ir.action.report" id="staff_access_report">
             <field name="name">Staff access format</field>
@@ -199,8 +195,8 @@ this repository contains the full copyright notices and license terms. -->
             <field name="report">conector/staff_access_report.fods</field>
             <field name="template_extension">ods</field>
             <field name="translatable">False</field>
-        </record> 
-        
+        </record>
+
 
         <!-- ####################################################### -->
         <!-- # interfaz para la generación del reporte payroll IBC #-->
@@ -228,9 +224,8 @@ this repository contains the full copyright notices and license terms. -->
             <field name="translatable">False</field>
         </record>
 
-        <menuitem parent="staff.menu_reporting" id="menu_payroll_ibc_report"
-            action="wizard_payroll_ibc"/>
+        <menuitem parent="staff.menu_reporting" id="menu_payroll_ibc_report" action="wizard_payroll_ibc"/>
 
-            
+
     </data>
 </tryton>
