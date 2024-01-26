@@ -116,9 +116,9 @@ class Production(metaclass=PoolMeta):
                     continue
                 fecha = str(
                     transformacion.Fecha_Hora_Factura).split()[0].split('-')
+                name = f"{fecha[0]}-{fecha[1]}"
                 fecha = datetime.date(int(fecha[0]), int(fecha[1]),
                                       int(fecha[2]))
-                name = f"{fecha[0]}-{fecha[1]}"
                 validate_period = Period.search([('name', '=', name)])
                 if validate_period[0].state == 'close':
                     to_exception.append(id_tecno)
