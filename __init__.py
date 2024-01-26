@@ -116,6 +116,9 @@ def register():
                   tax.TaxesConsolidationStart,
                   permissions.Permissions,
                   permissions.LinePermissions,
+                  invoice.UpdateInvoiceTecnoStart,
+                  wiz.DeleteVoucherTecnoStart,
+                  wiz.MarkImportMultiStart,
                   module='conector',
                   type_='model')
 
