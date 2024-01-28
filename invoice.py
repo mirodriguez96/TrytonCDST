@@ -1,16 +1,18 @@
+"""INVOICE MODULE"""
+
 import datetime
+from datetime import date
 from decimal import Decimal
 from trytond.i18n import gettext
 from trytond.pool import PoolMeta, Pool
 from trytond.model import fields, ModelView
 from trytond.pyson import Eval, Or, And
-from trytond.wizard import Wizard, StateTransition
+from trytond.wizard import Wizard, StateTransition, StateView, Button
 from trytond.transaction import Transaction
 from trytond.exceptions import UserError, UserWarning
 from sql import Table
 import sentry_sdk
 from sentry_sdk.integrations.trytond import TrytondWSGIIntegration
-from trytond.wizard import Wizard, StateTransition, StateView, Button
 
 # Configura Sentry con tu DSN
 sentry_sdk.init(
@@ -208,26 +210,45 @@ class Invoice(metaclass=PoolMeta):
                 continue
             # Proceso de validacion del periodo, si este se encuentra cerrado,
             # no permitira ninguna operacion con el documento
-            validate_period = Period.search([
-                ('start_date', '>=', doc.fecha_hora),
-                ('end_date', '<=', doc.fecha_hora),
-            ])
 
-            if validate_period.state == 'close':
+            if doc.fecha_hora and isinstance(doc.fecha_hora,
+                                             datetime.datetime):
+                fecha_hora = doc.fecha_hora.date()
+
+                if isinstance(fecha_hora, datetime.date):
+                    
+                    validate_period = Period.search([
+                        ('start_date', '>=', fecha_hora),
+                        ('end_date', '<=', fecha_hora),
+                    ])
+
+                    if validate_period.state == 'close':
+                        to_exception.append(id_tecno)
+                        logs[
+                            id_tecno] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
+                        Y NO ES POSIBLE SU CREACION"
+
+                        continue
+                    if id_tecno not in tecno:
+                        tecno[id_tecno] = doc
+                    if not _type:
+                        _type = _SW[str(doc.sw)]['type']
+                    if not _type_note:
+                        _type_note = _SW[str(doc.sw)]['type_note']
+                    if str(doc.tipo) not in tipos_doctos:
+                        tipos_doctos.append(str(doc.tipo))
+                else:
+                    to_exception.append(id_tecno)
+                    logs[
+                        id_tecno] = "EXCEPCION: EL PERIODO NO CONTIENE FECHA CORRECTA"
+                    continue
+
+            else:
                 to_exception.append(id_tecno)
                 logs[
-                    id_tecno] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
-                Y NO ES POSIBLE SU CREACION"
-
+                    id_tecno] = "EXCEPCION: EL PERIODO NO CONTIENE FECHA CORRECTA"
                 continue
-            if id_tecno not in tecno:
-                tecno[id_tecno] = doc
-            if not _type:
-                _type = _SW[str(doc.sw)]['type']
-            if not _type_note:
-                _type_note = _SW[str(doc.sw)]['type_note']
-            if str(doc.tipo) not in tipos_doctos:
-                tipos_doctos.append(str(doc.tipo))
+
         if not tecno:
             return data
         # Se trae todos los terceros necesarios para los documentos
