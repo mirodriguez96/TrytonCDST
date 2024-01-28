@@ -1177,34 +1177,31 @@ class IncomeStatementReport(Report):
 
 
 class TrialBalanceDetailedCds(metaclass=PoolMeta):
-    'Detail Balanced Report (metaclass report)'
+    'Balanced Trial Report'
     __name__ = 'account_col.trial_balance_detailed'
 
     @classmethod
     def get_context(cls, records, header, data):
-        """Function that take context of wizard"""
-        # pylint: disable=no-member
+        """Function that get context and print report"""
+
         report_context = super().get_context(records, header, data)
         pool = Pool()
         account = pool.get('account.account')
         account_move = pool.get('account.move')
-        account_line = pool.get('account.move.line')
+        account_move_line = pool.get('account.move.line')
         period = pool.get('account.period')
         company = pool.get('company.company')
         party = pool.get('party.party')
-        fiscal_year = pool.get('account.fiscalyear')
+        fiscal_years = pool.get('account.fiscalyear')
         cursor = Transaction().connection.cursor()
 
         move = account_move.__table__()
-        line = account_line.__table__()
+        line = account_move_line.__table__()
         start_period_name = None
         end_period_name = None
 
+        # ----- Set Periods -----
         start_periods = []
-        result_start = []
-        result_in = []
-        accs_ids = []
-        parties_ids = []
 
         if data['start_period']:
             start_period = period(data['start_period'])
@@ -1213,7 +1210,7 @@ class TrialBalanceDetailedCds(metaclass=PoolMeta):
             ])
             start_period_name = start_period.name
         else:
-            fiscalyear = fiscal_year(data['fiscalyear'])
+            fiscalyear = fiscal_years(data['fiscalyear'])
             start_periods = period.search([
                 ('end_date', '<=', fiscalyear.start_date),
             ])
@@ -1237,42 +1234,42 @@ class TrialBalanceDetailedCds(metaclass=PoolMeta):
 
         # Select Query for In
         in_periods = [p.id for p in end_periods]
-        if in_periods:
-            join1 = line.join(move)
-            join1.condition = join1.right.id == line.move
+        join1 = line.join(move)
+        join1.condition = join1.right.id == line.move
 
-            entity = line.party
-            default_entity = 0
-            if not data['party'] and data['by_reference']:
-                entity = line.reference
-                default_entity = '0'
+        entity = line.party
+        default_entity = 0
+        if not data['party'] and data['by_reference']:
+            entity = line.reference
+            default_entity = '0'
 
-            select1 = join1.select(
-                line.account,
-                Coalesce(entity, default_entity),
-                Sum(line.debit),
-                Sum(line.credit),
-                group_by=(line.account, entity),
-                order_by=line.account,
-            )
+        select1 = join1.select(
+            line.account,
+            Coalesce(entity, default_entity),
+            Sum(line.debit),
+            Sum(line.credit),
+            group_by=(line.account, entity),
+            order_by=line.account,
+        )
 
-            select1.where = join1.right.period.in_(in_periods)
-            if data['party']:
-                select1.where = select1.where & (line.party == data['party'])
+        select1.where = join1.right.period.in_(in_periods)
 
-            if data['accounts']:
-                select1.where = select1.where & (line.account.in_(
-                    data['accounts']))
-            if data['posted']:
-                select1.where = select1.where & (move.state == 'posted')
+        if data['party']:
+            select1.where = select1.where & (line.party == data['party'])
 
-            cursor.execute(*select1)
-            result_in = cursor.fetchall()
+        if data['accounts']:
+            select1.where = select1.where & (line.account.in_(
+                data['accounts']))
+        if data['posted']:
+            select1.where = select1.where & (move.state == 'posted')
+        cursor.execute(*select1)
+        result_in = cursor.fetchall()
 
         # Select Query for Start
         start_periods_ids = [p.id for p in start_periods]
-        if start_periods_ids:
+        result_start = []
 
+        if start_periods_ids:
             join1 = line.join(move)
             join1.condition = join1.right.id == line.move
 
@@ -1296,13 +1293,15 @@ class TrialBalanceDetailedCds(metaclass=PoolMeta):
             result_start = cursor.fetchall()
 
         all_result = result_in + result_start
-
-        for result in all_result:
-            accs_ids.append(result[0])
-            parties_ids.append(result[1])
+        accs_ids = []
+        parties_ids = []
+        for r in all_result:
+            accs_ids.append(r[0])
+            parties_ids.append(r[1])
 
         accounts = OrderedDict()
 
+        # Prepare accounts
         if accs_ids:
             acc_records = account.search_read([
                 ('id', 'in', list(set(accs_ids))),
@@ -1321,20 +1320,27 @@ class TrialBalanceDetailedCds(metaclass=PoolMeta):
                     }
                 ]
 
-            parties_obj = party.search_read([
-                ('id', 'in', parties_ids),
-                ('active', 'in', [False, True]),
-            ],
-                                            fields_names=['id_number', 'name'])
+            if not data['by_reference']:
+                parties_obj = party.search_read(
+                    [
+                        ('id', 'in', parties_ids),
+                        ('active', 'in', [False, True]),
+                    ],
+                    fields_names=['id_number', 'name'])
 
-            parties = {p['id']: p for p in parties_obj}
+                parties = {p['id']: p for p in parties_obj}
+            else:
+                parties = {p: p for p in parties_ids}
 
-            cls._get_process_result(accounts,
-                                    parties,
+            cls._get_process_result(parties,
+                                    data,
+                                    accounts,
                                     kind='in',
                                     values=result_in)
-            cls._get_process_result(accounts,
-                                    parties,
+
+            cls._get_process_result(parties,
+                                    data,
+                                    accounts,
                                     kind='start',
                                     values=result_start)
 
@@ -1343,29 +1349,33 @@ class TrialBalanceDetailedCds(metaclass=PoolMeta):
         else:
             records = accounts
         report_context['accounts'] = records
-        report_context['fiscalyear'] = fiscal_year(data['fiscalyear'])
+        report_context['fiscalyear'] = fiscal_years(data['fiscalyear'])
         report_context['start_period'] = start_period_name
         report_context['end_period'] = end_period_name
         report_context['company'] = company(data['company'])
         return report_context
 
     @classmethod
-    def _get_process_result(cls, accounts, parties, kind, values):
-        """Function that get debits, credits, start balance and end balance"""
-
+    def _get_process_result(cls, parties, data, accounts, kind, values):
         for val in values:
             party_id = 0
-            id_number = ''
-            party_name = ''
+            id_number = '---'
+            party_name = '---'
+            if not data['by_reference']:
+                if val[1]:
+                    party_id = val[1]
+                    id_number = parties[party_id]['id_number']
+                    party_name = parties[party_id]['name']
+            else:
+                party_id = val[1]
+                id_number = val[1]
+                party_name = val[1]
+
+            acc_id = val[0]
+
             debit = 0
             credit = 0
             start_balance = 0
-
-            if val[1]:
-                acc_id = val[0]
-                party_id = val[1]
-                id_number = parties[party_id]['id_number']
-                party_name = parties[party_id]['name']
 
             if kind == 'in':
                 debit = val[2]
@@ -1374,7 +1384,6 @@ class TrialBalanceDetailedCds(metaclass=PoolMeta):
             else:  # kind == start
                 start_balance = val[2]
                 amount = val[2]
-
             if debit == credit == start_balance == 0:
                 continue
 
