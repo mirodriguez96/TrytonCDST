@@ -119,6 +119,7 @@ def register():
                   invoice.UpdateInvoiceTecnoStart,
                   wiz.DeleteVoucherTecnoStart,
                   wiz.MarkImportMultiStart,
+                  statement.StatementLine,
                   module='conector',
                   type_='model')
 
