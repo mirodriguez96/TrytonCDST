@@ -185,3 +185,17 @@ class CreateBankLineParameters(ModelView):
     file = fields.Binary('File',
                          required=True,
                          help='File type CSV, separated by commas(;)')
+
+
+
+class StatementLine(metaclass=PoolMeta):
+    __name__ = 'account.statement.line'
+
+    move_lines_source = fields.Function(fields.Many2One('account.move', 'Move'),'get_move_value')
+
+    @fields.depends('move')
+    def get_move_value(self, name=None):
+        res = None
+        if self.move:
+            res = self.move.id
+        return res
