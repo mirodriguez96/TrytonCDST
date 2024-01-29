@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<!-- This file is part of Tryton.  The COPYRIGHT file at the top level of
+this repository contains the full copyright notices and license terms. -->
+<tryton>
+    <data>        
+    
+        <!--Forzar borrado Reclamaciones-->
+        <record model="ir.action.wizard" id="act_dunning_force_draft">
+            <field name="name">Dunning Force Draft</field>
+            <field name="wiz_name">account.dunning.force_draft</field>
+        </record>
+        <record model="ir.action.keyword" id="action_dunning_force_draft_keyword">
+            <field name="keyword">form_action</field>
+            <field name="model">account.dunning,-1</field>
+            <field name="action" ref="act_dunning_force_draft"/>
+        </record>
+
+    </data>
+</tryton>

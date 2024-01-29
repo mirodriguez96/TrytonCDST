@@ -28,6 +28,7 @@ from . import loan
 from . import liquidation
 from . import permissions
 from . import currency
+from . import account_dunning
 
 
 def register():
@@ -166,6 +167,7 @@ def register():
                   wiz.GroupDatafonoLines,
                   tax.TaxesConsolidation,
                   stock.WarehouseKardexStockCds,
+                  account_dunning.DunningForceDraft,
                   module='conector',
                   type_='wizard')
 
