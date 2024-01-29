@@ -605,6 +605,11 @@ class MoveCDT(metaclass=PoolMeta):
             if account_move:
                 account_moves.append(account_move)
         AccountMove.save(account_moves)
+        for line in account_move.lines:
+            if line.account.code.startswith(('6')):
+                line.operation_center = account_move.origin.shipment.operation_center
+                line.operation_center.save()
+
         AccountMove.post(account_moves)
 
 
