@@ -1685,7 +1685,13 @@ class Payroll(metaclass=PoolMeta):
     # Se hereda y modifica la función preliquidation para añadir las cuentas analiticas en las liquidaciones que la tenga
     def set_preliquidation(self, extras, discounts=None):
         super(Payroll, self).set_preliquidation(extras, discounts)
+        ttt = 0
+        discount = 0
+        validate = 0
+        extras = {}
+        workin_days_salary = 15
         PayrollLine = Pool().get('staff.payroll.line')
+        Event = Pool().get('staff.event')
         if not hasattr(PayrollLine, 'analytic_accounts'):
             return
         AnalyticAccount = Pool().get('analytic_account.account')
@@ -1703,7 +1709,105 @@ class Payroll(metaclass=PoolMeta):
                         wage = line.wage_type.rec_name
                         raise UserError(
                             'staff_event.msg_error_on_analytic_account', wage)
+
+        lines_payroll = list(self.lines)
+        validate_event = []
+        if self.assistance:
+            for assistance in self.assistance:
+                if ttt == 0:
+                    ttt = assistance.ttt
+                else:
+                    ttt += Decimal(assistance.ttt)
+
+            for line in lines_payroll:
+                event = Event.search([
+                    ('category.wage_type.type_concept_electronic', '=',
+                     'LicenciaNR'),
+                    ('start_date', '>=', self.start_extras),
+                    ('end_date', '<=', self.end_extras),
+                    ('employee.id', '=', self.employee.id),
+                ])
+                if event not in validate_event:
+                    validate_event.append(event)
+                else:
+                    event = ()
+                print(event, self.start_extras, self.end_extras)
+                if event:
+                    days = [i.quantity for i in event]
+                    workin_days_salary -= int(sum(days))
+                    # round(Decimal(Decimal(line.quantity) * Decimal(7.83)), 2)
+                if line.wage_type.type_concept == 'extras' and line.wage_type.type_concept_electronic in [
+                        'HED', 'HEN'
+                ]:
+                    extras[line.wage_type.type_concept_electronic] = {
+                        'line': line,
+                        'quantity': line.quantity
+                    }
+                    exclude = lines_payroll.index(line)
+                    lines_payroll.pop(exclude)
+
+            workin_days = round(Decimal(workin_days_salary * Decimal(7.83)), 2)
+
+            validate = ttt - workin_days
+
+            if extras != {}:
+                if validate > Decimal(0):
+                    print('hola')
+                    discuont = abs(validate)
+                    if 'HEN' in extras.keys(
+                    ) and extras['HEN']['line'].quantity > discuont:
+                        extras['HEN']['line'].quantity = discuont
+                        extras['HED']['line'].quantity = 0
+                    else:
+                        if 'HEN' in extras.keys():
+                            extras['HED']['line'].quantity = discount - extras[
+                                'HEN']['line'].quantity
+                        else:
+                            extras['HED']['line'].quantity = discuont
+
+                    for key, value in extras.items():
+                        if value['quantity'] > 0:
+                            lines_payroll.append(value['line'])
+
+        self.lines = ()
+        self.lines = tuple(lines_payroll)
         self.save()
+
+    def _create_payroll_lines(self, wages, extras, discounts=None):
+        PayrollLine = Pool().get('staff.payroll.line')
+        # Wage = Pool().get('staff.wage.type')
+        values = []
+        # events = 0
+        salary_args = {}
+        salary_in_date = self.contract.get_salary_in_date(self.end)
+        get_line = self.get_line
+        get_line_quantity = self.get_line_quantity
+        get_line_quantity_special = self.get_line_quantity_special
+        get_salary_full = self.get_salary_full
+        values_append = values.append
+
+        for wage, party, fix_amount in wages:
+            if not fix_amount:
+                salary_args = get_salary_full(wage)
+                if wage.salary_constitute:
+                    salary_args['salary'] = salary_in_date
+
+                # Este metodo instancia podria pasarse a un metodo de clase
+                unit_value = wage.compute_unit_price(salary_args)
+            else:
+                unit_value = fix_amount
+
+            discount = None
+            if discounts and discounts.get(wage.id):
+                discount = discounts.get(wage.id)
+            qty = get_line_quantity_special(wage)
+            if qty == 0:
+                qty = get_line_quantity(wage, self.start, self.end, extras,
+                                        discount)
+            line_ = get_line(wage, qty, unit_value, party)
+
+            values_append(line_)
+        PayrollLine.create(values)
 
     def process_loans_to_pay(self, LoanLine, PayrollLine, MoveLine):
         #super(Payroll, self).process_loans_to_pay(self, LoanLine, PayrollLine, MoveLine)
