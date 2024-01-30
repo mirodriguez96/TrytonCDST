@@ -1415,3 +1415,17 @@ class TrialBalanceDetailedCds(metaclass=PoolMeta):
             accounts[acc_id][2]['credits'].append(credit)
             accounts[acc_id][2]['start_balance'].append(start_balance)
             accounts[acc_id][2]['end_balance'].append(amount)
+
+
+class PartyWithholdingStart(metaclass=PoolMeta):
+    'Party Withholding Start View'
+    __name__ = 'account.party_withholding.start'
+
+    addresses = fields.Selection('selection_city', 'City report')
+
+    @classmethod
+    def selection_city(cls):
+        """This function return addresses of company"""
+        tax = Pool().get('account.tax')
+        sel = tax.classification.selection
+        return sel

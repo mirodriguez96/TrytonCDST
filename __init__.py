@@ -37,6 +37,7 @@ def register():
                   account.MoveLine,
                   account.BalanceStockStart,
                   account.AnalyticAccountEntry,
+                  account.PartyWithholdingStart,
                   company.Company,
                   conector.Actualizacion,
                   party.CheckVIESResult,
