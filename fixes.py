@@ -223,6 +223,9 @@ def desconciliar_borrar_asientos(ids_=None, id_tecno=None):
             cursor.execute(*Move.update(columns=[Move.state],
                                         values=['draft'],
                                         where=Move.id.in_(to_delete)))
+            if move.lines:
+                move.lines[0].delete(move.lines)
+
             cursor.execute(*Move.delete(where=Move.id.in_(to_delete)))
 
         actualizacion.add_logs(logs)
