@@ -22,11 +22,20 @@ this repository contains the full copyright notices and license terms. -->
             <field name="name">bank_statement_form</field>
         </record>
 
+
+        <record model="ir.ui.view" id="statement_line_view_tree_editable">
+            <field name="model">account.statement.line</field>
+            <field name="inherit" ref="account_statement.statement_line_view_tree_editable"/>
+            <field name="name">statement_line_tree</field>
+        </record>
+
         <record model="ir.ui.view" id="bank_statement_line_tree_view">
             <field name="model">account.bank_statement.line</field>
             <field name="inherit" ref="account_bank_statement.bank_statement_line_tree_view"/>
             <field name="name">bank_statement_line_tree</field>
         </record>
+
+        
         <record model="ir.ui.view" id="bank_statement_line_form_view">
             <field name="model">account.bank_statement.line</field>
             <field name="inherit" ref="account_bank_statement.bank_statement_line_form_view"/>
