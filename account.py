@@ -1421,11 +1421,273 @@ class PartyWithholdingStart(metaclass=PoolMeta):
     'Party Withholding Start View'
     __name__ = 'account.party_withholding.start'
 
-    addresses = fields.Selection('selection_city', 'City report')
+    addresses = fields.Selection('selection_city',
+                                 'City Report',
+                                 states={
+                                     'invisible': Eval('classification')
+                                     != 'ica',
+                                     'required':
+                                     Eval('classification') == 'ica',
+                                 })
+    classification = fields.Selection('selection_certificate_type',
+                                      'Certificate Report')
 
     @classmethod
     def selection_city(cls):
         """This function return addresses of company"""
-        tax = Pool().get('account.tax')
-        sel = tax.classification.selection
-        return sel
+        # pylint: disable=no-member
+        pool = Pool()
+        id_company = cls.default_company()
+        companies = pool.get("company.company")
+        parties = pool.get("party.party")
+        party_addresses = pool.get("party.address")
+
+        company = companies.search(["id", "=", id_company])
+        party = parties.search(["id", "=", company[0].party])
+        party_addresses = party_addresses.search(["party", "=", party[0].id])
+
+        options = cls.list_addresses(party_addresses)
+        return options
+
+    @classmethod
+    def list_addresses(cls, party_addresses):
+        """This function return list of address"""
+        options = [("", "")]
+
+        for party_address in party_addresses:
+            if party_address.name:
+                options.append(
+                    (party_address.name, party_address.name.title()))
+
+        return options
+
+
+class PrintPartyWithholding(metaclass=PoolMeta):
+    'Print Withholding Wizzard'
+    __name__ = 'account.print_party_withholding'
+    start = StateView('account.party_withholding.start',
+                      'account_col.print_party_withholding_start_view_form', [
+                          Button('Cancel', 'end', 'tryton-cancel'),
+                          Button('Ok', 'print_', 'tryton-ok', default=True),
+                      ])
+    print_ = StateReport('account_col.party_withholding')
+
+    def do_print_(self, action):
+        if self.start.start_period:
+            start_period = self.start.start_period.id
+        else:
+            start_period = None
+        if self.start.end_period:
+            end_period = self.start.end_period.id
+        else:
+            end_period = None
+
+        party_id = None
+        if self.start.party:
+            party_id = self.start.party.id
+        data = {
+            'company': self.start.company.id,
+            'fiscalyear': self.start.fiscalyear.id,
+            'party': party_id,
+            'classification': self.start.classification,
+            'start_period': start_period,
+            'end_period': end_period,
+            'detailed': self.start.detailed,
+            'addresses': self.start.addresses,
+        }
+        return action, data
+
+
+class PartyWithholding(metaclass=PoolMeta):
+    'Withholding Report'
+    __name__ = 'account_col.party_withholding'
+
+    @classmethod
+    def get_context(cls, records, header, data):
+        report_context = super().get_context(records, header, data)
+        cursor = Transaction().connection.cursor()
+        pool = Pool()
+        # InvoiceTax = pool.get('account.invoice.tax')
+        Tax = pool.get('account.tax')
+        MoveLine = pool.get('account.move.line')
+        Move = pool.get('account.move')
+        Account = pool.get('account.account')
+        Company = pool.get('company.company')
+        Period = pool.get('account.period')
+        Fiscalyear = pool.get('account.fiscalyear')
+        Party = pool.get('party.party')
+        party_addresses = pool.get("party.address")
+        company = Company(data['company'])
+
+        address = {
+            "city": company.party.city_name,
+            "address": company.party.street
+        }
+
+        city = data["addresses"]
+
+        if city:
+            address_city = party_addresses.search(["name", "=", city])
+            address = {"city": city, "address": address_city[0].street}
+
+        move = Move.__table__()
+        line = MoveLine.__table__()
+        tax = Tax.__table__()
+        account = Account.__table__()
+
+        where = tax.classification != Null
+        if data['party']:
+            where &= line.party == data['party']
+        else:
+            where &= line.party != null
+
+        dom_periods = [
+            ('fiscalyear', '=', data['fiscalyear']),
+        ]
+        if data['start_period']:
+            start_period = Period(data['start_period'])
+            dom_periods.append(('start_date', '>=', start_period.start_date))
+
+        if data['end_period']:
+            end_period = Period(data['end_period'])
+            dom_periods.append(('start_date', '<=', end_period.start_date))
+
+        periods = Period.search(dom_periods, order=[('start_date', 'ASC')])
+        period_ids = [p.id for p in periods]
+
+        where &= move.period.in_(period_ids)
+        if data['classification']:
+            where &= tax.classification == data['classification']
+
+        if data['detailed']:
+            columns = [
+                line.party, tax.classification,
+                tax.id.as_('tax_id'), tax.rate,
+                account.name.as_('account'), tax.description, move.date,
+                line.id.as_('line_id'),
+                (line.debit - line.credit).as_('amount'), line.move
+            ]
+
+            query = tax.join(
+                line,
+                condition=(
+                    (tax.credit_note_account == line.account)
+                    or (tax.invoice_account == line.account))).join(
+                        move, condition=line.move == move.id).join(
+                            account,
+                            condition=line.account == account.id).select(
+                                *columns,
+                                where=where,
+                                order_by=[
+                                    line.party, tax.classification,
+                                    line.create_date.asc
+                                ])
+
+            records, move_ids = cls.query_to_dict_detailed(query)
+            moves = Move.search_read([('id', 'in', move_ids)],
+                                     fields_names=['origin.rec_name'])
+            moves_ = {}
+            for v in moves:
+                try:
+                    moves_[v['id']] = v['origin.']['rec_name']
+                except:
+                    moves_[v['id']] = None
+            report_context['moves'] = moves_
+        else:
+            columns = [
+                line.party,
+                tax.classification,
+                tax.id.as_('tax_id'),
+                tax.rate,
+                account.name.as_('account'),
+                tax.description,
+                Sum(line.debit - line.credit).as_('amount'),
+            ]
+            query = tax.join(
+                line,
+                condition=(
+                    (tax.credit_note_account == line.account)
+                    or (tax.invoice_account == line.account))).join(
+                        move, condition=line.move == move.id).join(
+                            account,
+                            condition=line.account == account.id).select(
+                                *columns,
+                                where=where,
+                                group_by=[
+                                    line.party, tax.classification, tax.id,
+                                    tax.rate, account.name, tax.description
+                                ],
+                                order_by=[line.party, tax.classification])
+            records = cls.query_to_dict(query)
+
+        report_context['records'] = records.values()
+        report_context['detailed'] = data['detailed']
+        report_context['fiscalyear'] = Fiscalyear(data['fiscalyear'])
+        report_context['start_date'] = periods[0].start_date
+        report_context['end_date'] = periods[-1].end_date
+        report_context['today'] = date.today()
+        report_context['company'] = company
+        report_context['address'] = address
+
+        return report_context
+
+    @classmethod
+    def query_to_dict_detailed(cls, query):
+        cursor = Transaction().connection.cursor()
+        Party = Pool().get('party.party')
+        cursor.execute(*query)
+        columns = list(cursor.description)
+        result = cursor.fetchall()
+        res_dict = {}
+        moves_ids = set()
+
+        for row in result:
+            row_dict = {}
+            key_id = str(row[0]) + row[1]
+            for i, col in enumerate(columns):
+                row_dict[col.name] = row[i]
+            row_dict['base'] = row[8] / row[3] * (-1)
+            try:
+                res_dict[key_id]['taxes_with'].append(row_dict)
+                res_dict[key_id]['total_amount'] += row_dict['amount']
+                res_dict[key_id]['total_untaxed'] += row_dict['base']
+                moves_ids.add(row_dict['move'])
+            except:
+                res_dict[key_id] = {
+                    'party': Party(row[0]),
+                    'tax_type': row_dict['classification'],
+                    'taxes_with': [row_dict],
+                    'total_amount': row_dict['amount'],
+                    'total_untaxed': row_dict['base']
+                }
+                moves_ids.add(row_dict['move'])
+        return res_dict, moves_ids
+
+    @classmethod
+    def query_to_dict(cls, query):
+        cursor = Transaction().connection.cursor()
+        Party = Pool().get('party.party')
+        cursor.execute(*query)
+        columns = list(cursor.description)
+        result = cursor.fetchall()
+        res_dict = {}
+
+        for row in result:
+            row_dict = {}
+            key_id = str(row[0]) + row[1] + str(row[3])
+            for i, col in enumerate(columns):
+                row_dict[col.name] = row[i]
+            row_dict['base'] = row[6] / row[3] * (-1)
+            try:
+                res_dict[key_id]['amount'] += row_dict['amount']
+                res_dict[key_id]['base'] += row_dict['base']
+            except:
+                res_dict[key_id] = {
+                    'party': Party(row[0]),
+                    'tax_type': row_dict['classification'],
+                    'account': row_dict['account'],
+                    'description': row_dict['description'],
+                    'amount': row_dict['amount'],
+                    'base': row_dict['base']
+                }
+        return res_dict
