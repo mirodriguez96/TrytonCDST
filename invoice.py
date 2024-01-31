@@ -938,13 +938,15 @@ class UpdateInvoiceTecno(Wizard):
             to_delete_note = []
             for invoice in Invoice.browse(ids):
                 id_tecno = invoice.id_tecno or invoice.reference
-                if invoice.move.period.state == 'close':
-                    exceptions.append(id_tecno)
-                    logs[
-                        id_tecno] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
-                    Y NO ES POSIBLE SU ELIMINACION O MODIFICACION"
 
-                    continue
+                if invoice.move:
+                    if invoice.move.period.state == 'close':
+                        exceptions.append(id_tecno)
+                        logs[
+                            id_tecno] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
+                        Y NO ES POSIBLE SU ELIMINACION O MODIFICACION"
+                        continue
+                 
                 reclamacion = Reclamacion.search([('line.move.origin', '=',
                                                    invoice)])
                 rec_name = invoice.rec_name
