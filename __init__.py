@@ -121,6 +121,7 @@ def register():
                   wiz.DeleteVoucherTecnoStart,
                   wiz.MarkImportMultiStart,
                   statement.StatementLine,
+                  wiz.FixBugsConectorView,
                   module='conector',
                   type_='model')
 
@@ -169,6 +170,7 @@ def register():
                   tax.TaxesConsolidation,
                   stock.WarehouseKardexStockCds,
                   account_dunning.DunningForceDraft,
+                  wiz.FixBugsConector,
                   module='conector',
                   type_='wizard')
 

@@ -11,6 +11,83 @@ _EXPORTADO = [('N', '(N) SIN IMPORTAR'), ('E', '(E) EXCEPCION'),
 
 ZERO = Decimal('0.0')
 
+_EXEC = [
+    ('move', 'Desconciliar y Borrar Asientos'),
+    ('invoice', 'Eliminar Tecnocarnes Facturas'),
+    # ('note', 'Borrar Notas De Adjuste'),
+]  
+
+class FixBugsConectorView(ModelView):
+    'Fix Execution Document'
+    __name__ = 'conector.configuration.documents_for_import_parameters_view'
+    ids = fields.Text('Ids', help='Ingrese los ids de los documentos que desea para realizar la accion',required=True)
+    fix_exec = fields.Selection(_EXEC, 'Accion', required=True)
+    user = fields.Many2One('res.user', 'User', readonly=True)
+    validate = fields.Boolean('Validate', readonly=True, on_change_with='on_change_with_validate')
+
+    @staticmethod
+    def default_user():
+        return Transaction().user
+    
+
+    @fields.depends('user')
+    def on_change_with_validate(self):
+        pool = Pool()
+        user_permission = pool.get('conector.permissions')
+        permission = pool.get('res.user-ir.action.wizard')
+        action = user_permission.search([('user_permission', '=', Transaction().user)])
+
+        validated = permission.search([('user_permission', 'in', action),
+                                       ('wizard.wiz_name', '=', 'conector.configuration.fix_bugs_conector'),])
+        if validated:
+            return True
+        return False
+
+
+class FixBugsConector(Wizard):
+    'Fix Bugs Conector'
+    __name__ = 'conector.configuration.fix_bugs_conector'
+
+    start = StateView('conector.configuration.documents_for_import_parameters_view',
+        'conector.fix_exec_accion_view_form', [
+            Button('Cancel', 'end', 'tryton-cancel'),
+            Button('Execute', 'do_submit', 'tryton-ok', default=True),
+            ])
+    
+    do_submit = StateTransition()
+
+    def transition_do_submit(self):
+        pool = Pool()
+        Actualizacion = pool.get('conector.actualizacion')
+        actualizacion = Actualizacion.create_or_update('ACCIONES')
+        logs = {}
+        if self.start.validate:
+            Warning = pool.get('res.user.warning')
+            warning_name = 'warning_fix_bugs_conector'
+            if Warning.check(warning_name):
+                raise UserWarning(warning_name, "No continue si desconoce el funcionamiento interno del asistente.")
+            
+
+            if self.start.fix_exec == 'move':
+                fixes.desconciliar_borrar_asientos(ids_ = self.start.ids)
+                return 'end'
+            if self.start.fix_exec == 'invoice':
+                fixes.eliminar_tecnocarnes_facturas(ids_ = self.start.ids)
+                return 'end'
+            # if self.start.fix_exec == 'note':
+            #     fixes.borrar_notas_de_adjuste(self.start.ids)
+            #     return 'end'
+            
+        else:
+            logs[self.start.user.name] = f"El usuario {self.start.user.name}, \
+            intento ejecutar el asistente para la accion de {self.start.fix_exec} \
+            para el cual, no cuenta con los permisos requeridos"
+            actualizacion.add_logs(logs)
+            raise UserError(f"EL usuario {self.start.user.name}, no cuenta con los permisos para realizar esta accion")
+
+        return 'end'
+
+
 
 class DocumentsForImportParameters(ModelView):
     'Documents For Import Parameters'
