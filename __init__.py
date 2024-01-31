@@ -173,6 +173,7 @@ def register():
                   stock.WarehouseKardexStockCds,
                   account_dunning.DunningForceDraft,
                   wiz.FixBugsConector,
+                  statement.StatementMoveValidate,
                   module='conector',
                   type_='wizard')
 

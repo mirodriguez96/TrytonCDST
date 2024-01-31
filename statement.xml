@@ -63,5 +63,18 @@ this repository contains the full copyright notices and license terms. -->
             <field name="name">create_bank_line_parameters_form</field>
         </record>
 
+        <!-- ########################## -->
+        <!-- # Validate Moves Asistend # -->
+        <!-- ########################## -->
+        <record model="ir.action.wizard" id="act_validate_move_line">
+            <field name="name">Validate Move in Line</field>
+            <field name="wiz_name">account.statement.move_validate</field>
+        </record>
+        <record model="ir.action.keyword" id="act_validate_move_line_keyword">
+            <field name="keyword">form_action</field>
+            <field name="model">account.statement,-1</field>
+            <field name="action" ref="act_validate_move_line"/>
+        </record>
+        
     </data>
 </tryton>
