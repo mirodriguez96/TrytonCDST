@@ -47,3 +47,6 @@ class MissingTemplateEmailPayroll(ValidationError):
 
 class DuplicateUserPermission(ValidationError):
     pass
+
+class NotMoveStatementeLine(ValidationError):
+    pass
