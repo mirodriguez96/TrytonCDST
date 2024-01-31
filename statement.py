@@ -8,6 +8,7 @@ from trytond.transaction import Transaction
 from trytond.exceptions import UserError
 from decimal import Decimal
 import datetime
+from .exceptions import (NotMoveStatementeLine)
 
 CONFIRMED_STATES = {
     'readonly': False  #Not(Equal(Eval('statement_line'), None))
