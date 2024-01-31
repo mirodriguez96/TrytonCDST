@@ -822,6 +822,7 @@ class WarehouseCdsKardexReport(Report):
                 wh_name += (warehouse.name + ' | ')
         else:
             wh_name = warehouses[0].name
+
         report_context['products'] = products.values()
         report_context['warehouse'] = wh_name
         report_context['company'] = company(data['company'])
@@ -831,10 +832,12 @@ class WarehouseCdsKardexReport(Report):
     def set_value(cls, product, key, products):
         """Function that update list of data by report"""
         pool = Pool()
-        id_product = int(product["id"])
         product_template = pool.get('product.template')
-        product_oum = product_template.search(["id", "=", id_product])
         uom_product = ""
+
+        id_product = int(product["id"])
+        code_product = int(product["code"])
+        product_oum = product_template.search(["code", "=", code_product])
 
         if product_oum:
             uom_product = product_oum[0].default_uom.name
