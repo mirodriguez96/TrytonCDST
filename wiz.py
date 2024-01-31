@@ -5,6 +5,7 @@ from trytond.pool import Pool
 from trytond.transaction import Transaction
 from trytond.exceptions import UserError, UserWarning
 from sql import Table
+from . import fixes
 
 _EXPORTADO = [('N', '(N) SIN IMPORTAR'), ('E', '(E) EXCEPCION'),
               ('X', '(X) NO IMPORTAR'), ('T', '(T) IMPORTADO')]
