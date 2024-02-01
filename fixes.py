@@ -267,7 +267,7 @@ def desconciliate_moves(move_ids):
                 for lines in move.lines:
                     if lines.reconciliation:
                         reconciliations.delete([lines.reconciliation])
-                    time.sleep(0.2)
+                    time.sleep(0.3)
 
 
 def delete_move_lines(move_ids):
