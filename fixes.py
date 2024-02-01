@@ -2,6 +2,7 @@ from trytond.pool import Pool
 from trytond.transaction import Transaction
 from sql import Table
 from trytond.exceptions import UserError
+import time
 
 _SW = {
     '27': {
@@ -175,58 +176,126 @@ def eliminar_tecnocarnes_facturas(ids_=None, id_tecno=None):
         print("ELIMINAR FACTURAS")
 
 
-def desconciliar_borrar_asientos(ids_=None, id_tecno=None):
+def desconciliar_borrar_asientos(ids_=None):
+    """Function to draft and delete account moves"""
     pool = Pool()
-    Actualizacion = pool.get('conector.actualizacion')
-    actualizacion = Actualizacion.create_or_update('ELIMINAR MOVIMIENTOS')
+    users = pool.get('res.user')
+
     logs = {}
     exceptions = []
-    if ids_ is None and id_tecno == None:
+
+    if ids_ is None:
         raise UserError(f"No se ha ingresado ningun valor en el campos de ids")
-    if id_tecno == None:
-        number = ids_.split(',')
-        ids_ = [int(value) for value in number]
-    else:
-        ids_ = list(id_tecno)
+
+    number = ids_.split(',')
+    ids_ = [int(value) for value in number]
 
     if ids_:
-        Move = Table('account_move')
         account_move = pool.get('account.move')
-        cursor = Transaction().connection.cursor()
         moves = account_move.search([('id', 'in', ids_)])
-        Reconciliation = pool.get('account.move.reconciliation')
         to_delete = []
 
-        # moves = account_move.browse(ids_)
         for move in moves:
-            for line in move.lines:
-                print(line.credit, line.id, line.debit)
-            if move.period.state == 'close':
-                exceptions.append(move.id)
-                logs[
-                    move.
-                    id] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
-                Y NO ES POSIBLE SU ELIMINACION O MODIFICACION"
 
-                continue
-            to_delete.append(move.id)
-            reconciliations = [
-                l.reconciliation for l in move.lines if l.reconciliation
-            ]
-            if reconciliations:
-                Reconciliation.delete(reconciliations)
+            if move:
+                if move.period.state == 'close':
+                    exceptions.append(move.id)
+                    logs[
+                        move.
+                        id] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
+                    Y NO ES POSIBLE SU ELIMINACION O MODIFICACION"
 
-            # account_move.draft(to_delete)
-            # account_move.delete(to_delete)
+                    continue
 
-        if to_delete:
-            cursor.execute(*Move.update(columns=[Move.state],
-                                        values=['draft'],
-                                        where=Move.id.in_(to_delete)))
-            if move.lines:
-                move.lines[0].delete(move.lines)
+                to_delete.append(move.id)
 
-            cursor.execute(*Move.delete(where=Move.id.in_(to_delete)))
+    with Transaction().set_user(1):
+        context = users.get_preferences()
 
-        actualizacion.add_logs(logs)
-        print("ELIMINAR MOVIMIENTOS")
+    try:
+        with Transaction().set_context(context):
+            draft_move(ids_)
+        Transaction().commit()
+        print("paso1")
+
+        with Transaction().set_context(context):
+            desconciliate_moves(ids_)
+        Transaction().commit()
+        print("paso2")
+
+        with Transaction().set_context(context):
+            delete_move_lines(ids_)
+        Transaction().commit()
+        print("paso 3")
+
+        for ids in ids_:
+            with Transaction().set_context(context):
+                delete_move(ids)
+            Transaction().commit()
+
+        print("SCRIPT FINALIZADO")
+
+    except Exception as e:
+        print("SCRIPT SIN FINALIZAR")
+        print(f"Error: {e}")
+
+
+def draft_move(move_ids):
+    """Function that change state to draft"""
+    pool = Pool()
+    account_moves = pool.get('account.move')
+
+    for move_id in move_ids:
+        account_move = account_moves.search([('id', '=', move_id)])
+        if account_move:
+            if account_move[0].state != "draft":
+                account_moves.draft(move_ids)
+                time.sleep(1)
+
+
+def desconciliate_moves(move_ids):
+    """Function to dele conciliations"""
+    pool = Pool()
+    account_moves = pool.get('account.move')
+    reconciliations = pool.get('account.move.reconciliation')
+
+    for move_id in move_ids:
+        account_move = account_moves.search([('id', '=', move_id)])
+
+        if account_move:
+            for move in account_move:
+                for lines in move.lines:
+                    if lines.reconciliation:
+                        reconciliations.delete([lines.reconciliation])
+                    time.sleep(0.2)
+
+
+def delete_move_lines(move_ids):
+    """Function to delete account_move_lines"""
+    pool = Pool()
+    account_move_lines = pool.get('account.move.line')
+    to_delete = []
+    for move_id in move_ids:
+        to_delete = []
+        account_move_line = account_move_lines.search([('move', '=', move_id)])
+
+        if account_move_line:
+            for move_line in account_move_line:
+                to_delete.append(move_line)
+
+        account_move_lines.delete(to_delete)
+        time.sleep(1)
+
+
+def delete_move(move_id):
+    """Function to delete account_move"""
+    pool = Pool()
+    account_moves = pool.get('account.move')
+    try:
+        account_move = account_moves.search([('id', '=', move_id)])
+        print(move_id)
+        if account_move:
+            account_moves.delete(account_move)
+            time.sleep(1)
+    except Exception as error:
+        print(f"error: {error}")
