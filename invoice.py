@@ -80,24 +80,28 @@ class Invoice(metaclass=PoolMeta):
     # se sobreescribe el metodo del modulo account_col
     @classmethod
     @ModelView.button
-    def validate_invoice(cls, invoices):
+    def validate_invoice(cls, invoices, sw=None):
         for inv in invoices:
             if inv.type == 'out':
-                cls.validate_tax(inv)
+                cls.validate_tax(inv, sw=sw)
         super(Invoice, cls).validate_invoice(invoices)
 
     # se sobreescribe el metodo del modulo account_col
     @classmethod
-    def validate_tax(cls, invoice):
+    def validate_tax(cls, invoice, sw=None):
         pool = Pool()
         Config = pool.get('account.configuration')
         Line = pool.get('account.invoice.line')
         InvoiceTax = Pool().get('account.invoice.tax')
         config = Config(1)
-        taxes_validate = [
-            t for t in invoice.taxes
-            if t.base and t.tax.base and t.tax.base > abs(t.base)
-        ]
+
+        if not sw:
+            taxes_validate = [
+                t for t in invoice.taxes
+                if t.base and t.tax.base and t.tax.base > abs(t.base)]
+        else:
+            taxes_validate = []
+        
         if taxes_validate and config.remove_tax:
             lines_to_change = [l for l in invoice.lines if l.type == 'line']
             Line.write(
