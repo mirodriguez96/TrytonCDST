@@ -556,7 +556,7 @@ class Sale(metaclass=PoolMeta):
                     msg = f"REVISAR: NO SE ENCONTRO LA FACTURA {dcto_base} PARA CRUZAR CON LA DEVOLUCION {invoice.number}"
                     logs[sale.id_tecno] = msg
                     to_exception.append(sale.id_tecno)
-            Invoice.validate_invoice([invoice])
+            Invoice.validate_invoice([invoice],sw=venta.sw)
             result = cls._validate_total(invoice.total_amount, venta)
             if not result['value']:
                 msg = f"REVISAR: ({sale.id_tecno}) "\
