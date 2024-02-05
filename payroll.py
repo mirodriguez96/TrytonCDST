@@ -299,6 +299,22 @@ class Liquidation(metaclass=PoolMeta):
     __name__ = "staff.liquidation"
     sended_mail = fields.Boolean('Sended Email')
 
+    @classmethod
+    def __setup__(cls):
+        super(Liquidation, cls).__setup__()
+        cls.state.selection.append(('wait', 'Wait'))
+        cls._buttons.update({
+            'wait': {
+                'invisible': Eval('state') != 'wait',
+            },
+        })
+    
+
+    @classmethod
+    @ModelView.button
+    def wait(cls, records):
+        breakpoint()
+
     # Funcion encargada de contar los días festivos
     def count_holidays(self, start_date, end_date, event):
         sundays = 0
@@ -1595,6 +1611,7 @@ class StaffEvent(metaclass=PoolMeta):
         liquidation.employee = event.employee
         liquidation.contract = event.contract
         liquidation.kind = 'holidays'
+        liquidation.state = 'wait'
         start_period = Period.search([
             ('start', '>=', event.contract.start_date),
             ('end', '<=', event.contract.start_date)
