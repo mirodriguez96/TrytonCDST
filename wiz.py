@@ -13,7 +13,9 @@ _EXPORTADO = [('N', '(N) SIN IMPORTAR'), ('E', '(E) EXCEPCION'),
 ZERO = Decimal('0.0')
 
 _EXEC = [
-    ('move', 'Desconciliar y Borrar Asientos'),
+    ('draft', 'Forzar borrador Asientos.'),
+    ('unconciliate', 'Desconciliar Asientos.'),
+    ('moves', 'Eliminar cuentas.'),
     ('invoice', 'Eliminar Tecnocarnes Facturas'),
     # ('note', 'Borrar Notas De Adjuste'),
 ]
@@ -58,7 +60,6 @@ class FixBugsConectorView(ModelView):
 class FixBugsConector(Wizard):
     'Fix Bugs Conector'
     __name__ = 'conector.configuration.fix_bugs_conector'
-
     start = StateView(
         'conector.configuration.documents_for_import_parameters_view',
         'conector.fix_exec_accion_view_form', [
@@ -70,9 +71,10 @@ class FixBugsConector(Wizard):
 
     def transition_do_submit(self):
         pool = Pool()
-        Actualizacion = pool.get('conector.actualizacion')
-        actualizacion = Actualizacion.create_or_update('ACCIONES')
-        logs = {}
+        response = True
+        unconciliate_moves = True
+        draft_moves = True
+        delete_moves = True
 
         if self.start.validate:
             Warning = pool.get('res.user.warning')
@@ -83,27 +85,82 @@ class FixBugsConector(Wizard):
                     "No continue si desconoce el funcionamiento interno del asistente."
                 )
 
-            if self.start.fix_exec == 'move':
-                fixes.desconciliar_borrar_asientos(ids_=self.start.ids)
-                return 'end'
-            if self.start.fix_exec == 'invoice':
-                fixes.eliminar_tecnocarnes_facturas(ids_=self.start.ids)
-                return 'end'
-            # if self.start.fix_exec == 'note':
-            #     fixes.borrar_notas_de_adjuste(self.start.ids)
-            #     return 'end'
+            id_moves = (self.start.ids).split(',')
 
+            if id_moves is None:
+                raise UserError(
+                    "No se ha ingresado ningun valor en el campos de ids")
+
+            ids_ = [int(value) for value in id_moves]
+
+            for id_move in ids_:
+                if self.start.fix_exec == 'draft':
+                    response = fixes.draft_unconciliate_delete_account_move(
+                        [id_move], action="draft")
+                    if response is False:
+                        draft_moves = False
+
+                if self.start.fix_exec == 'unconciliate':
+                    response = fixes.draft_unconciliate_delete_account_move(
+                        [id_move], action="unconciliate")
+                    if response is False:
+                        unconciliate_moves = False
+
+                if self.start.fix_exec == 'moves':
+                    response = fixes.draft_unconciliate_delete_account_move(
+                        [id_move], action="moves")
+                    if response is False:
+                        delete_moves = False
+
+                if self.start.fix_exec == 'invoice':
+                    fixes.eliminar_tecnocarnes_facturas(ids_=self.start.ids)
+
+            if self.start.fix_exec == 'draft':
+                if not draft_moves:
+                    message = "Ejecute de nuevo el asistente Forzar Borrador"
+                    self.print_function_log(message)
+                else:
+                    message = "Asistente Forzar borrador se ejecuto con exito"
+                    self.print_function_log(message)
+
+            if self.start.fix_exec == 'unconciliate':
+                if not unconciliate_moves:
+                    message = "Hay algunas conciliaciones sin finalizar, "\
+                        "ejecute de nuevo el asistente"
+                    self.print_function_log(message)
+                else:
+                    message = "Asistente Desconciliar se ejecuto con exito"
+                    self.print_function_log(message)
+
+            if self.start.fix_exec == 'moves':
+                if not delete_moves:
+                    message = "Algunos cuentas no fueron eliminadas"\
+                        "Verifique que estan en borrador y desconciliadas"
+                    self.print_function_log(message)
+
+                else:
+                    message = "Asistente Eliminar cuenta se ejecuto con exito"
+                    self.print_function_log(message)
+
+            return "end"
         else:
-            logs[self.start.user.name] = f"El usuario {self.start.user.name}, \
+            message = f"El usuario {self.start.user.name}, \
             intento ejecutar el asistente para la accion de {self.start.fix_exec} \
             para el cual, no cuenta con los permisos requeridos"
 
-            actualizacion.add_logs(logs)
+            self.print_function_log(message)
+
             raise UserError(
                 f"EL usuario {self.start.user.name}, no cuenta con los permisos para realizar esta accion"
             )
 
-        return 'end'
+    def print_function_log(self, message):
+        pool = Pool()
+        logs = {}
+        Actualizacion = pool.get('conector.actualizacion')
+        actualizacion = Actualizacion.create_or_update('ACCIONES')
+        logs[self.start.user.name] = message
+        actualizacion.add_logs(logs)
 
 
 class DocumentsForImportParameters(ModelView):
@@ -139,7 +196,6 @@ class DocumentsForImport(Wizard):
         numero = self.start.numero
         exportado = self.start.exportado
         query = "UPDATE dbo.Documentos SET exportado = '" + exportado + "' WHERE tipo = " + tipo + " and Numero_documento = " + numero
-        #print(query)
         cnx.set_data(query)
         return 'end'
 
