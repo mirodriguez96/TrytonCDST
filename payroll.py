@@ -28,6 +28,12 @@ from trytond.config import config
 from trytond.i18n import gettext
 from .exceptions import (RecordDuplicateError)
 from dateutil import tz
+import calendar
+
+
+def ultimo_dia_del_mes(year, month):
+    return calendar.monthrange(year, month)[1]
+
 
 from_zone = tz.gettz('UTC')
 to_zone = tz.gettz('America/Bogota')
@@ -305,6 +311,23 @@ class Liquidation(metaclass=PoolMeta):
     __name__ = "staff.liquidation"
     sended_mail = fields.Boolean('Sended Email')
 
+    @classmethod
+    def __setup__(cls):
+        super(Liquidation, cls).__setup__()
+        cls.state.selection.append(('wait', 'Wait'))
+        cls._buttons.update({
+            'wait': {
+                'invisible': Eval('state') != 'wait',
+            },
+        })
+
+    @classmethod
+    @ModelView.button
+    def wait(cls, records):
+        for i in records:
+            i.state = 'draft'
+            i.save()
+
     # Funcion encargada de contar los días festivos
     def count_holidays(self, start_date, end_date, event):
         sundays = 0
@@ -325,7 +348,7 @@ class Liquidation(metaclass=PoolMeta):
                                   count=True)
         return sundays + holidays
 
-    def _validate_holidays_lines(self, event):
+    def _validate_holidays_lines(self, event, start_date, end_date, days):
         line = None
         for l in self.lines:
             if l.wage.type_concept == 'holidays':
@@ -337,8 +360,8 @@ class Liquidation(metaclass=PoolMeta):
         else:
             amount_day = (self.contract.salary / 30)
         # amount = amount_day * event.days_of_vacations
-        holidays = self.count_holidays(event.start_date, event.end_date, event)
-        workdays = event.days - holidays
+        holidays = self.count_holidays(start_date, end_date, event)
+        workdays = days - holidays
         amount_workdays = round(amount_day * workdays, 2)
         amount_holidays = round(amount_day * holidays, 2)
         # line, = self.lines
@@ -353,7 +376,7 @@ class Liquidation(metaclass=PoolMeta):
         if value != amount_workdays:
             Adjustment = Pool().get('staff.liquidation.line_adjustment')
             adjustment = amount_workdays - value
-            if adjustment > 0:
+            if adjustment < 0:
                 adjustment_account = line.wage.credit_account
             else:
                 adjustment_account = line.wage.debit_account
@@ -601,8 +624,6 @@ class Liquidation(metaclass=PoolMeta):
                 elif self.kind != l.wage_type.type_concept:
                     continue
 
-
-
                 if l.wage_type.id not in wages_target.keys(
                 ) and l.wage_type in mandatory_wages:
                     mlines = self.get_moves_lines_pending(
@@ -628,21 +649,23 @@ class Liquidation(metaclass=PoolMeta):
             values = []
             lines_to_reconcile = []
             for line in lines:
-                values.append(abs(line.debit - line.credit))
-                lines_to_reconcile.append(line.id)
+                _line = LiquidationMove.search([('move_line', '=', line.id)])
+                if not _line:
+                    values.append(abs(line.debit - line.credit))
+                    lines_to_reconcile.append(line.id)
             value = self.get_line_(wage_type,
                                    sum(values),
                                    self.time_contracting,
                                    account_id,
                                    party=self.party_to_pay)
-            lines = LiquidationMove.search([('move_line', 'in',
-                                             lines_to_reconcile)])
-            if lines:
-                liquidation = lines[0].line.liquidation
-                raise RecordDuplicateError(
-                    gettext('staff_payroll_co.msg_duplicate_liquidation',
-                            liquidation=liquidation.id,
-                            state=liquidation.state))
+            
+
+            # if lines:
+            #     liquidation = lines[0].line.liquidation
+            #     raise RecordDuplicateError(
+            #         gettext('staff_payroll_co.msg_duplicate_liquidation',
+            #                 liquidation=liquidation.id,
+            #                 state=liquidation.state))
             value.update({
                 'move_lines': [('add', lines_to_reconcile)],
             })
@@ -1620,86 +1643,133 @@ class StaffEvent(metaclass=PoolMeta):
     @ModelView.button
     def create_liquidation(cls, records):
         pool = Pool()
-        Warning = pool.get('res.user.warning')
-        Configuration = pool.get('staff.configuration')(1)
-        Liquidation = pool.get('staff.liquidation')
         Period = pool.get('staff.payroll.period')
+        Warning = pool.get('res.user.warning')
         for event in records:
             warning_name = 'mywarning,%s' % event
             if Warning.check(warning_name):
                 raise UserWarning(warning_name,
                                   f"Se creara una liquidacion de vacaciones")
-            liquidation = Liquidation()
-            liquidation.employee = event.employee
-            liquidation.contract = event.contract
-            liquidation.kind = 'holidays'
-            start_period = Period.search([
-                ('start', '>=', event.contract.start_date),
-                ('end', '<=', event.contract.start_date)
-            ])
-            if not start_period:
-                start_period = Period.search([],
-                                             order=[('end', 'ASC')],
-                                             limit=1)
-            liquidation.start_period = start_period[0]
-            end_period, = Period.search([('start', '<=', event.start_date),
-                                         ('end', '>=', event.start_date)])
-            liquidation.end_period = end_period
-            liquidation.liquidation_date = event.event_date
-            liquidation.description = event.description
-            liquidation.account = Configuration.liquidation_account
-            liquidation.save()
-            # Se procesa la liquidación
-            Liquidation.compute_liquidation([liquidation])
+            _date_start = str(event.start_date).split('-')
+            _date_end = str(event.end_date).split('-')
 
-            wages = [
-                wage_type for wage_type in event.employee.mandatory_wages
-                if wage_type.wage_type.type_concept in CONCEPT or wage_type.
-                wage_type.type_concept_electronic in CONCEPT_ELECTRONIC
-            ]
-            if wages:
-                if event.edit_amount:
-                    amount_day = event.amount
-                else:
-                    amount_day = (liquidation.contract.salary / 30)
-                workdays = event.days
-                amount_workdays = round(amount_day * workdays * Decimal(0.04),
-                                        2)
+            start_date = f'{_date_start[0]}-{_date_start[1]}'
+            end_date = f'{_date_end[0]}-{_date_end[1]}'
 
-                for concept in wages:
-                    amount = amount_workdays * -1
-                    if concept.fix_amount:
-                        amount = concept.fix_amount * -1
-                    value = {
-                        'sequence':
-                        concept.wage_type.sequence,
-                        'wage':
-                        concept.wage_type.id,
-                        'description':
-                        concept.wage_type.name,
-                        'amount':
-                        amount,
+            if start_date == end_date:
+                end_period = Period.search([('start', '<=', event.start_date),
+                                            ('end', '>=', event.start_date)])
+
+                cls.staff_liquidation_event(event=event,
+                                            end_period=end_period,
+                                            liquidation_date=event.start_date,
+                                            days=event.days,
+                                            end_date=event.end_date)
+
+            else:
+
+                get_day = ultimo_dia_del_mes(year=int(_date_start[0]),
+                                             month=int(_date_start[1]))
+                print(get_day)
+
+                end_period = Period.search([
+                    ('start', '<=', f'{start_date}-{get_day}'),
+                    ('end', '>=', f'{start_date}-{get_day}')
+                ])
+
+                days = abs(int(_date_start[2]) - get_day) + 1
+
+                cls.staff_liquidation_event(event=event,
+                                            end_period=end_period,
+                                            liquidation_date=event.start_date,
+                                            days=days,
+                                            end_date=end_period[0].end)
+
+                days = event.days - days
+
+                end_period = Period.search([('start', '<=', event.end_date),
+                                            ('end', '>=', event.end_date)])
+
+                cls.staff_liquidation_event(
+                    event=event,
+                    end_period=end_period,
+                    liquidation_date=end_period[0].start,
+                    days=days,
+                    end_date=event.end_date)
+
+    def staff_liquidation_event(event, end_period, liquidation_date, days,
+                                end_date):
+        pool = Pool()
+        Configuration = pool.get('staff.configuration')(1)
+        Liquidation = pool.get('staff.liquidation')
+        Period = pool.get('staff.payroll.period')
+        liquidation = Liquidation()
+        liquidation.employee = event.employee
+        liquidation.contract = event.contract
+        liquidation.kind = 'holidays'
+        liquidation.state = 'wait'
+        start_period = Period.search([
+            ('start', '>=', event.contract.start_date),
+            ('end', '<=', event.contract.start_date)
+        ])
+        if not start_period:
+            start_period = Period.search([], order=[('end', 'ASC')], limit=1)
+        liquidation.start_period = start_period[0]
+        liquidation.end_period = end_period[0]
+        liquidation.liquidation_date = liquidation_date
+        liquidation.description = event.description
+        liquidation.account = Configuration.liquidation_account
+        liquidation.save()
+        # Se procesa la liquidación
+        Liquidation.compute_liquidation([liquidation])
+        wages = [
+            wage_type for wage_type in event.employee.mandatory_wages
+            if wage_type.wage_type.type_concept in CONCEPT or
+            (wage_type.wage_type.type_concept_electronic in CONCEPT_ELECTRONIC
+             and wage_type.wage_type.pay_liqudation)
+        ]
+        if wages:
+            if event.edit_amount:
+                amount_day = event.amount
+            else:
+                amount_day = (liquidation.contract.salary / 30)
+            workdays = days
+            amount_workdays = round(amount_day * workdays * Decimal(0.04), 2)
+            for concept in wages:
+                amount = amount_workdays * -1
+                if concept.fix_amount:
+                    amount = concept.fix_amount * -1
+                value = {
+                    'sequence':
+                    concept.wage_type.sequence,
+                    'wage':
+                    concept.wage_type.id,
+                    'description':
+                    concept.wage_type.name,
+                    'amount':
+                    amount,
+                    'account':
+                    concept.wage_type.credit_account,
+                    'days':
+                    days,
+                    'party_to_pay':
+                    concept.party,
+                    'adjustments': [('create', [{
                         'account':
-                        concept.wage_type.credit_account,
-                        'days':
-                        event.days,
-                        'party_to_pay':
-                        concept.party,
-                        'adjustments': [('create', [{
-                            'account':
-                            concept.wage_type.credit_account.id,
-                            'amount':
-                            amount_workdays * -1,
-                            'description':
-                            concept.wage_type.credit_account.name,
-                        }])]
-                    }
-                    liquidation.write([liquidation],
-                                      {'lines': [('create', [value])]})
-
-            liquidation._validate_holidays_lines(event)
-            event.staff_liquidation = liquidation
-            event.save()
+                        concept.wage_type.credit_account.id,
+                        'amount':
+                        amount_workdays * -1,
+                        'description':
+                        concept.wage_type.credit_account.name,
+                    }])]
+                }
+                liquidation.write([liquidation],
+                                  {'lines': [('create', [value])]})
+        print(liquidation_date, end_date)
+        liquidation._validate_holidays_lines(event, liquidation_date, end_date,
+                                             days)
+        event.staff_liquidation = liquidation
+        event.save()
 
     @classmethod
     def process_event(cls, events):
