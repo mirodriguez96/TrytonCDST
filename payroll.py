@@ -28,6 +28,12 @@ from trytond.config import config
 from trytond.i18n import gettext
 from .exceptions import (RecordDuplicateError)
 from dateutil import tz
+import calendar
+
+
+def ultimo_dia_del_mes(year, month):
+    return calendar.monthrange(year, month)[1]
+
 
 from_zone = tz.gettz('UTC')
 to_zone = tz.gettz('America/Bogota')
@@ -370,7 +376,7 @@ class Liquidation(metaclass=PoolMeta):
         if value != amount_workdays:
             Adjustment = Pool().get('staff.liquidation.line_adjustment')
             adjustment = amount_workdays - value
-            if adjustment > 0:
+            if adjustment < 0:
                 adjustment_account = line.wage.credit_account
             else:
                 adjustment_account = line.wage.debit_account
@@ -643,15 +649,16 @@ class Liquidation(metaclass=PoolMeta):
             values = []
             lines_to_reconcile = []
             for line in lines:
-                values.append(abs(line.debit - line.credit))
-                lines_to_reconcile.append(line.id)
+                _line = LiquidationMove.search([('move_line', '=', line.id)])
+                if not _line:
+                    values.append(abs(line.debit - line.credit))
+                    lines_to_reconcile.append(line.id)
             value = self.get_line_(wage_type,
                                    sum(values),
                                    self.time_contracting,
                                    account_id,
                                    party=self.party_to_pay)
-            lines = LiquidationMove.search([('move_line', 'in',
-                                             lines_to_reconcile)])
+            
 
             # if lines:
             #     liquidation = lines[0].line.liquidation
@@ -1661,11 +1668,16 @@ class StaffEvent(metaclass=PoolMeta):
 
             else:
 
-                end_period = Period.search([('start', '<=',
-                                             f'{start_date}-30'),
-                                            ('end', '>=', f'{start_date}-30')])
+                get_day = ultimo_dia_del_mes(year=int(_date_start[0]),
+                                             month=int(_date_start[1]))
+                print(get_day)
 
-                days = abs(int(_date_start[2]) - 30)
+                end_period = Period.search([
+                    ('start', '<=', f'{start_date}-{get_day}'),
+                    ('end', '>=', f'{start_date}-{get_day}')
+                ])
+
+                days = abs(int(_date_start[2]) - get_day) + 1
 
                 cls.staff_liquidation_event(event=event,
                                             end_period=end_period,
@@ -1678,13 +1690,15 @@ class StaffEvent(metaclass=PoolMeta):
                 end_period = Period.search([('start', '<=', event.end_date),
                                             ('end', '>=', event.end_date)])
 
-                cls.staff_liquidation_event(event=event,
-                                            end_period=end_period,
-                                            liquidation_date=event.end_date,
-                                            days=days,
-                                            end_date=event.end_date)
+                cls.staff_liquidation_event(
+                    event=event,
+                    end_period=end_period,
+                    liquidation_date=end_period[0].start,
+                    days=days,
+                    end_date=event.end_date)
 
-    def staff_liquidation_event(event, end_period, liquidation_date, days, end_date):
+    def staff_liquidation_event(event, end_period, liquidation_date, days,
+                                end_date):
         pool = Pool()
         Configuration = pool.get('staff.configuration')(1)
         Liquidation = pool.get('staff.liquidation')
@@ -1752,8 +1766,8 @@ class StaffEvent(metaclass=PoolMeta):
                 liquidation.write([liquidation],
                                   {'lines': [('create', [value])]})
         print(liquidation_date, end_date)
-        liquidation._validate_holidays_lines(event, liquidation_date,
-                                             end_date, days)
+        liquidation._validate_holidays_lines(event, liquidation_date, end_date,
+                                             days)
         event.staff_liquidation = liquidation
         event.save()
 
