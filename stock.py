@@ -502,14 +502,24 @@ class MoveCDT(metaclass=PoolMeta):
                 'description': self.product.name,
             }
 
-            if self.shipment.analytic_account:
-                line_analytic = {
-                    'account': self.shipment.analytic_account,
-                    'debit': Decimal(0),
-                    'credit': amount,
-                    'description': self.product.name,
-                }
-                line['analytic_lines'] = [('create', [line_analytic])]
+            if self.shipment:
+                if self.shipment.analytic_account:
+                    line_analytic = {
+                        'account': self.shipment.analytic_account,
+                        'debit': Decimal(0),
+                        'credit': amount,
+                    }
+                    line['analytic_lines'] = [('create', [line_analytic])]
+
+            if self.origin:
+                if self.origin.__name__ == 'stock.inventory.line':
+                    line_analytic = {
+                        'account': self.origin.inventory.analitic_account,
+                        'debit': Decimal(0),
+                        'credit': amount,
+                    }
+                    line['analytic_lines'] = [('create', [line_analytic])]
+
             move_line.append(line)
 
         else:
@@ -521,18 +531,30 @@ class MoveCDT(metaclass=PoolMeta):
                 'description': self.product.name,
             }
 
-            if self.shipment.analytic_account:
-                line_analytic = {
-                    'account': self.shipment.analytic_account,
-                    'debit': amount,
-                    'credit': Decimal(0),
-                    'description': self.product.name,
-                }
-                line['analytic_lines'] = [('create', [line_analytic])]
+            if self.shipment:
+                if self.shipment.analytic_account:
+                    line_analytic = {
+                        'account': self.shipment.analytic_account,
+                        'debit': amount,
+                        'credit': Decimal(0),
+                    }
+                    line['analytic_lines'] = [('create', [line_analytic])]
+
+            if self.origin:
+                if self.origin.__name__ == 'stock.inventory.line':
+                    line_analytic = {
+                        'account': self.origin.inventory.analitic_account,
+                        'debit': amount,
+                        'credit': Decimal(0),
+                    }
+                    line['analytic_lines'] = [('create', [line_analytic])]
+
             move_line.append(line)
 
-        if self.shipment.operation_center:
-            line.update({'operation_center': self.shipment.operation_center})
+        if self.shipment:
+            if self.shipment.operation_center:
+                line.update(
+                    {'operation_center': self.shipment.operation_center})
 
         return move_line
 
@@ -642,8 +664,17 @@ class MoveCDT(metaclass=PoolMeta):
             account_move = move._get_account_stock_move()
             if account_move:
                 account_moves.append(account_move)
-        moves = AccountMove.create(account_moves)
-        AccountMove.post(moves)
+        _moves = AccountMove.create(account_moves)
+        AccountMove.post(_moves)
+
+
+class Inventory(metaclass=PoolMeta):
+    'Stock Inventory'
+    __name__ = 'stock.inventory'
+
+    analitic_account = fields.Many2One('analytic_account.account',
+                                       'Analytic Account',
+                                       required=False)
 
 
 class WarehouseKardexStockStartCds(ModelView):
