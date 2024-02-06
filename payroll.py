@@ -314,12 +314,13 @@ class Liquidation(metaclass=PoolMeta):
                 'invisible': Eval('state') != 'wait',
             },
         })
-    
 
     @classmethod
     @ModelView.button
     def wait(cls, records):
-        breakpoint()
+        for i in records:
+            i.state = 'draft'
+            i.save()
 
     # Funcion encargada de contar los días festivos
     def count_holidays(self, start_date, end_date, event):
@@ -341,7 +342,7 @@ class Liquidation(metaclass=PoolMeta):
                                   count=True)
         return sundays + holidays
 
-    def _validate_holidays_lines(self, event):
+    def _validate_holidays_lines(self, event, start_date, end_date, days):
         line = None
         for l in self.lines:
             if l.wage.type_concept == 'holidays':
@@ -353,8 +354,8 @@ class Liquidation(metaclass=PoolMeta):
         else:
             amount_day = (self.contract.salary / 30)
         # amount = amount_day * event.days_of_vacations
-        holidays = self.count_holidays(event.start_date, event.end_date, event)
-        workdays = event.days - holidays
+        holidays = self.count_holidays(start_date, end_date, event)
+        workdays = days - holidays
         amount_workdays = round(amount_day * workdays, 2)
         amount_holidays = round(amount_day * holidays, 2)
         # line, = self.lines
@@ -617,8 +618,6 @@ class Liquidation(metaclass=PoolMeta):
                 elif self.kind != l.wage_type.type_concept:
                     continue
 
-
-
                 if l.wage_type.id not in wages_target.keys(
                 ) and l.wage_type in mandatory_wages:
                     mlines = self.get_moves_lines_pending(
@@ -653,12 +652,13 @@ class Liquidation(metaclass=PoolMeta):
                                    party=self.party_to_pay)
             lines = LiquidationMove.search([('move_line', 'in',
                                              lines_to_reconcile)])
-            if lines:
-                liquidation = lines[0].line.liquidation
-                raise RecordDuplicateError(
-                    gettext('staff_payroll_co.msg_duplicate_liquidation',
-                            liquidation=liquidation.id,
-                            state=liquidation.state))
+
+            # if lines:
+            #     liquidation = lines[0].line.liquidation
+            #     raise RecordDuplicateError(
+            #         gettext('staff_payroll_co.msg_duplicate_liquidation',
+            #                 liquidation=liquidation.id,
+            #                 state=liquidation.state))
             value.update({
                 'move_lines': [('add', lines_to_reconcile)],
             })
@@ -1655,8 +1655,9 @@ class StaffEvent(metaclass=PoolMeta):
 
                 cls.staff_liquidation_event(event=event,
                                             end_period=end_period,
-                                            liquidation_date=event.event_date,
-                                            days=event.days)
+                                            liquidation_date=event.start_date,
+                                            days=event.days,
+                                            end_date=event.end_date)
 
             else:
 
@@ -1669,7 +1670,8 @@ class StaffEvent(metaclass=PoolMeta):
                 cls.staff_liquidation_event(event=event,
                                             end_period=end_period,
                                             liquidation_date=event.start_date,
-                                            days=days)
+                                            days=days,
+                                            end_date=end_period[0].end)
 
                 days = event.days - days
 
@@ -1679,9 +1681,10 @@ class StaffEvent(metaclass=PoolMeta):
                 cls.staff_liquidation_event(event=event,
                                             end_period=end_period,
                                             liquidation_date=event.end_date,
-                                            days=days)
+                                            days=days,
+                                            end_date=event.end_date)
 
-    def staff_liquidation_event(event, end_period, liquidation_date, days):
+    def staff_liquidation_event(event, end_period, liquidation_date, days, end_date):
         pool = Pool()
         Configuration = pool.get('staff.configuration')(1)
         Liquidation = pool.get('staff.liquidation')
@@ -1748,7 +1751,9 @@ class StaffEvent(metaclass=PoolMeta):
                 }
                 liquidation.write([liquidation],
                                   {'lines': [('create', [value])]})
-        liquidation._validate_holidays_lines(event)
+        print(liquidation_date, end_date)
+        liquidation._validate_holidays_lines(event, liquidation_date,
+                                             end_date, days)
         event.staff_liquidation = liquidation
         event.save()
 
