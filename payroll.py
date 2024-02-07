@@ -446,9 +446,11 @@ class Liquidation(metaclass=PoolMeta):
                         ml.account.type.statement not in ('balance')):
                     continue
                 to_reconcile = [ml]
-                to_reconcile.extend(grouped[ml.account.id]['lines'])
+                if grouped[ml.account.id]:
+                    to_reconcile.extend(grouped[ml.account.id]['lines'])
                 if len(to_reconcile) > 1:
                     MoveLine.reconcile(set(to_reconcile))
+                
             Move.post([move])
 
     def get_moves_lines(self):
@@ -470,6 +472,7 @@ class Liquidation(metaclass=PoolMeta):
             and self.kind == 'holidays'
         ]
         for line in self.lines:
+            breakpoint()
             if line.move_lines:
                 for moveline in line.move_lines:
                     to_reconcile.append(moveline)
@@ -658,7 +661,6 @@ class Liquidation(metaclass=PoolMeta):
                                    self.time_contracting,
                                    account_id,
                                    party=self.party_to_pay)
-            
 
             # if lines:
             #     liquidation = lines[0].line.liquidation
@@ -981,11 +983,9 @@ class LiquidationPaymentReportBcl(Report):
             clause.append(('employee.department', '=', data['department']))
         if data['kind']:
             clause.append(('kind', '=', data['kind']))
-        print(clause)
         liquidations = Liquidation.search(clause)
         new_objects = []
         values = {}
-        print(liquidations)
         for liquidation in liquidations:
             values = values.copy()
             values['employee'] = liquidation.employee.party.name
@@ -1554,8 +1554,6 @@ class StaffEvent(metaclass=PoolMeta):
                                  },
                                  depends=['absenteeism', 'state'])
 
-    staff_liquidation = fields.Many2One('staff.liquidation', 'liquidation')
-
     access_register = fields.Boolean('Access register',
                                      states={
                                          'invisible':
@@ -1703,6 +1701,8 @@ class StaffEvent(metaclass=PoolMeta):
         Configuration = pool.get('staff.configuration')(1)
         Liquidation = pool.get('staff.liquidation')
         Period = pool.get('staff.payroll.period')
+        Staff_event_liquidation = pool.get('staff.event-staff.liquidation')
+        
         liquidation = Liquidation()
         liquidation.employee = event.employee
         liquidation.contract = event.contract
@@ -1765,11 +1765,13 @@ class StaffEvent(metaclass=PoolMeta):
                 }
                 liquidation.write([liquidation],
                                   {'lines': [('create', [value])]})
-        print(liquidation_date, end_date)
         liquidation._validate_holidays_lines(event, liquidation_date, end_date,
                                              days)
-        event.staff_liquidation = liquidation
-        event.save()
+        
+        staff_event_liquidation = Staff_event_liquidation()
+        staff_event_liquidation.staff_liquidation = liquidation
+        staff_event_liquidation.event = event
+        staff_event_liquidation.save()
 
     @classmethod
     def process_event(cls, events):
@@ -1822,6 +1824,23 @@ class StaffEvent(metaclass=PoolMeta):
                                {'events_vacations': [('remove', [event])]})
             if is_access:
                 Access.delete(is_access)
+
+
+class LineLiquidationEvent(ModelSQL):
+    "Staff Event - Staff Liquidation"
+    __name__ = "staff.event-staff.liquidation"
+    _table = 'staff_event_staff_liquidation_rel'
+    staff_liquidation = fields.Many2One('staff.liquidation',
+                                        'Liquidation',
+                                        ondelete='RESTRICT',
+                                        select=True,
+                                        required=True)
+
+    event = fields.Many2One('staff.event',
+                         'Event',
+                         ondelete='CASCADE',
+                         select=True,
+                         required=True)
 
 
 class Payroll(metaclass=PoolMeta):
@@ -3099,20 +3118,12 @@ class PayrollPaycheckReportExten(metaclass=PoolMeta):
         PayrollLine = pool.get('staff.payroll.line')
 
         fields_lines = [
-            'amount',
-            'quantity',
-            'party.name',
-            'wage_type.type_concept',
-            'wage_type.unit_price_formula',
-            'wage_type.expense_formula',
-            'payroll',
-            'start_date',
-            'end_date',
-            'payroll.employee',
-            'payroll.contract',
-            'wage_type.salary_constitute',
-            'party.code',
+            'amount', 'quantity', 'party.name', 'wage_type.type_concept',
+            'wage_type.unit_price_formula', 'wage_type.expense_formula',
+            'payroll', 'start_date', 'end_date', 'payroll.employee',
+            'payroll.contract', 'wage_type.salary_constitute', 'party.code',
             'wage_type.type_concept_electronic',
+            'wage_type.excluded_payroll_electronic'
         ]
 
         dom_line = [('payroll', 'in', payroll_ids),
@@ -3139,7 +3150,7 @@ class PayrollPaycheckReportExten(metaclass=PoolMeta):
         total_append = total.append
         for line in payroll_lines:
             key = str(line['payroll.']['employee']) + '_' + \
-                      str(line['payroll.']['contract'])
+                str(line['payroll.']['contract'])
             total_append(
                 cls.values_without_move(line, wage_type_default, res, key))
 
@@ -3149,10 +3160,40 @@ class PayrollPaycheckReportExten(metaclass=PoolMeta):
         return report_context
 
     def values_without_move(line, wage_type_default, res, key):
-        PayrollLine = Pool().get('staff.payroll.line')
+        PayrollLine = Pool().get('staff.event-staff.liquidation')
+        staff_lines = {}
+        validate = True
         total = 0
         concept = line['wage_type.']['type_concept']
         concept_electronic = line['wage_type.']['type_concept_electronic']
+        other_health_retirement = line['wage_type.'][
+            'excluded_payroll_electronic']
+
+        # other_key = str(line['payroll.']['employee']) +'_' + str(line['payroll.']['contract'])
+        if concept in concept != 'salary' and other_health_retirement and validate:
+            staff_line, = PayrollLine.search([('staff_liquidation', '=', line['id'])])
+            wages = [
+                (wage_type.wage_type.credit_account, wage_type) for wage_type
+                in staff_line.staff_liquidation.employee.mandatory_wages
+                if wage_type.wage_type.type_concept in CONCEPT
+            ]
+
+            for line_move in staff_line.staff_liquidation.move.lines:
+                for account_, wage in wages:
+                    if line_move.account == account_:
+                        staff_lines[wage.wage_type.type_concept] = {
+                            'amount': line_move.credit
+                        }
+
+            if key in res.keys():
+                if 'health' in staff_lines.keys():
+                    res[key]['health_amount'] += staff_lines['health'][
+                        'amount']
+                if 'retirement' in staff_lines.keys():
+                    res[key]['retirement_amount'] += staff_lines['retirement'][
+                        'amount']
+                validate = False
+
         if concept in wage_type_default and concept != 'salary':
             unit_formula = line['wage_type.']['unit_price_formula']
 
@@ -3205,6 +3246,7 @@ class PayrollPaycheckReportExten(metaclass=PoolMeta):
 
             # dict_employee[concept]['start_date'] = line['start_date']
             # dict_employee[concept]['end_date'] = line['start_date']
+
         return total
 
 

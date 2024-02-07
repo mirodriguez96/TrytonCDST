@@ -123,6 +123,7 @@ def register():
                   wiz.MarkImportMultiStart,
                   statement.StatementLine,
                   wiz.FixBugsConectorView,
+                  payroll.LineLiquidationEvent,
                   module='conector',
                   type_='model')
 
