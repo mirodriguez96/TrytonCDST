@@ -9,7 +9,7 @@ class LiquidationReport(metaclass=PoolMeta):
     def get_context(cls, records, header, data):
         report_context = super().get_context(records, header, data)
         pool = Pool()
-        Event = pool.get('staff.event')
+        Event = pool.get('staff.event-staff.liquidation')
         total_days_holidays = 0
         total_salaries = 0
         end_date = ''
@@ -24,8 +24,8 @@ class LiquidationReport(metaclass=PoolMeta):
                         event = Event.search([('staff_liquidation', '=',
                                                liq_line.liquidation.id)])
                         if event:
-                            start_date = event[0].start_date
-                            end_date = event[0].end_date
+                            start_date = event[0].event.start_date
+                            end_date = event[0].event.end_date
                         total_days_holidays += liq_line.days
                     if liq_line.wage.type_concept == 'salary' and liq_line.wage.type_concept_electronic == 'Basico':
                         total_salaries += liq_line.days

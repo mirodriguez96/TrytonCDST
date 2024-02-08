@@ -7,5 +7,7 @@ this repository contains the full copyright notices and license terms. -->
         <field name="non_working_days"/>
         <label name="excluded_payroll_electronic"/>
         <field name="excluded_payroll_electronic"/>
+        <label name="pay_liqudation"/>
+        <field name="pay_liqudation"/>
     </xpath>
 </data>

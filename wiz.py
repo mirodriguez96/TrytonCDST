@@ -162,7 +162,6 @@ class FixBugsConector(Wizard):
         logs[self.start.user.name] = message
         actualizacion.add_logs(logs)
 
-
 class DocumentsForImportParameters(ModelView):
     'Documents For Import Parameters'
     __name__ = 'conector.configuration.documents_for_import_parameters'
@@ -818,3 +817,131 @@ class GroupDatafonoLines(Wizard):
                 BankStatementLine.save(to_save)
                 BankStatementLine.delete(to_delete)
         return 'end'
+
+
+class DeleteLiquidationStart(ModelView):
+    'Delete Multi Tecno Start'
+    __name__ = 'delete.liquidation.wizard.start'
+    user = fields.Many2One('res.user', 'User', readonly=True)
+    validate = fields.Boolean('Validate',
+                              readonly=True,
+                              on_change_with='on_change_with_validate')
+
+    @staticmethod
+    def default_user():
+        return Transaction().user
+
+    @fields.depends('user')
+    def on_change_with_validate(self):
+        pool = Pool()
+        user_permission = pool.get('conector.permissions')
+        permission = pool.get('res.user-ir.action.wizard')
+        action = user_permission.search([('user_permission', '=',
+                                          Transaction().user)])
+
+        validated = permission.search([
+            ('user_permission', 'in', action),
+            ('wizard.wiz_name', '=', 'staff.liquidation.delete_start'),
+        ])
+        if validated:
+            return True
+        return False
+
+
+class DeleteLiquidation(Wizard):
+    __name__ = 'staff.liquidation.delete_start'
+
+    start = StateView('delete.liquidation.wizard.start',
+                      'conector.validated_identity_liquidation_view_form', [
+                          Button('Cancel', 'end', 'tryton-cancel'),
+                          Button('Confirm', 'run', 'tryton-ok', default=True),
+                      ])
+
+    run = StateTransition()
+
+    def transition_run(self):
+        pool = Pool()
+        Staff_liquidation = pool.get('staff.liquidation')
+        ids = Transaction().context['active_ids']
+        to_delete = []
+        if ids:
+            for liquidation in Staff_liquidation.search([('id', 'in', ids)]):
+                self.delete_lines(lines=liquidation.lines)
+                if liquidation.state == 'wait':
+                    liquidation.state = 'draft'
+                    liquidation.save()
+
+                to_delete.append(liquidation)
+
+        Staff_liquidation.delete(to_delete)
+
+        return 'end'
+
+    def delete_lines(self, lines):
+        for line in lines:
+            line.move_lines = None
+            line.adjustments = None
+            line.save()
+
+    def end(self):
+        return 'reload'
+
+
+class DeleteEventLiquidationStart(ModelView):
+    'Delete Event Liquidation Start'
+    __name__ = 'delete.event.liquidation.wizard.start'
+    user = fields.Many2One('res.user', 'User', readonly=True)
+    validate = fields.Boolean('Validate',
+                              readonly=True,
+                              on_change_with='on_change_with_validate')
+
+    @staticmethod
+    def default_user():
+        return Transaction().user
+
+    @fields.depends('user')
+    def on_change_with_validate(self):
+        pool = Pool()
+        user_permission = pool.get('conector.permissions')
+        permission = pool.get('res.user-ir.action.wizard')
+        action = user_permission.search([('user_permission', '=',
+                                          Transaction().user)])
+
+        validated = permission.search([
+            ('user_permission', 'in', action),
+            ('wizard.wiz_name', '=', 'staff.event.liquidation.delete_start'),
+        ])
+        if validated:
+            return True
+        return False
+
+
+class DeleteEventLiquidation(Wizard):
+    __name__ = 'staff.event.liquidation.delete_start'
+
+    start = StateView(
+        'delete.event.liquidation.wizard.start',
+        'conector.validated_identity_event_liquidation_view_form', [
+            Button('Cancel', 'end', 'tryton-cancel'),
+            Button('Confirm', 'run', 'tryton-ok', default=True),
+        ])
+
+    run = StateTransition()
+
+    def transition_run(self):
+        pool = Pool()
+        Staff_event_liquidation = pool.get('staff.event-staff.liquidation')
+        ids = Transaction().context['active_ids']
+        to_delete = []
+        if ids:
+            staff_event_liquidation = Staff_event_liquidation.search([
+                ('staff_liquidation', 'in', ids)
+            ])
+            for event in staff_event_liquidation:
+                to_delete.append(event)
+        Staff_event_liquidation.delete(to_delete)
+
+        return 'end'
+
+    def end(self):
+        return 'reload'
