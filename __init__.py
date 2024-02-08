@@ -123,6 +123,7 @@ def register():
                   wiz.MarkImportMultiStart,
                   statement.StatementLine,
                   wiz.FixBugsConectorView,
+                  stock.Inventory,
                   module='conector',
                   type_='model')
 

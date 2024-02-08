@@ -476,7 +476,7 @@ class MoveCDT(metaclass=PoolMeta):
         assert type_.startswith('in_') or type_.startswith('out_'), \
             'wrong type'
 
-        move_line = AccountMoveLine()
+        move_line = []
         if ((type_.endswith('supplier')
              or type_ in {'in_production', 'in_warehouse'})
                 and self.product.cost_price_method != 'fixed'):
@@ -494,35 +494,92 @@ class MoveCDT(metaclass=PoolMeta):
             account = self.product.account_cogs_used
 
         if type_.startswith('in_'):
-            move_line.debit = Decimal('0.0')
-            move_line.credit = amount
-            move_line.account = account
-            move_line.party = self.company.party.id
+            line = {
+                'account': account,
+                'party': self.company.party.id,
+                'debit': Decimal('0.0'),
+                'credit': amount,
+                'description': self.product.name,
+            }
+
+            if self.shipment:
+                if self.shipment.analytic_account:
+                    line_analytic = {
+                        'account': self.shipment.analytic_account,
+                        'debit': Decimal(0),
+                        'credit': amount,
+                    }
+                    line['analytic_lines'] = [('create', [line_analytic])]
+
+            if self.origin:
+                if self.origin.__name__ == 'stock.inventory.line':
+                    line_analytic = {
+                        'account': self.origin.inventory.analitic_account,
+                        'debit': Decimal(0),
+                        'credit': amount,
+                    }
+                    line['analytic_lines'] = [('create', [line_analytic])]
+
+            move_line.append(line)
+
         else:
-            move_line.debit = amount
-            move_line.credit = Decimal('0.0')
-            move_line.account = account
-            move_line.party = self.company.party.id
-        return [move_line]
+            line = {
+                'account': account,
+                'party': self.company.party.id,
+                'debit': amount,
+                'credit': Decimal('0.0'),
+                'description': self.product.name,
+            }
+
+            if self.shipment:
+                if self.shipment.analytic_account:
+                    line_analytic = {
+                        'account': self.shipment.analytic_account,
+                        'debit': amount,
+                        'credit': Decimal(0),
+                    }
+                    line['analytic_lines'] = [('create', [line_analytic])]
+
+            if self.origin:
+                if self.origin.__name__ == 'stock.inventory.line':
+                    line_analytic = {
+                        'account': self.origin.inventory.analitic_account,
+                        'debit': amount,
+                        'credit': Decimal(0),
+                    }
+                    line['analytic_lines'] = [('create', [line_analytic])]
+
+            move_line.append(line)
+
+        if self.shipment:
+            if self.shipment.operation_center:
+                line.update(
+                    {'operation_center': self.shipment.operation_center})
+
+        return move_line
 
     def _get_account_stock_move_line(self, amount):
         '''
         Return counterpart move line value for stock move
         '''
-        pool = Pool()
-        AccountMoveLine = pool.get('account.move.line')
-        move_line = AccountMoveLine(account=self.product.account_stock_used, )
         if not amount:
             return
         if amount >= Decimal('0.0'):
-            move_line.debit = Decimal('0.0')
-            move_line.credit = amount
-            move_line.party = self.company.party.id
+            line = {
+                'account': self.product.account_stock_used,
+                'party': self.company.party.id,
+                'debit': Decimal('0.0'),
+                'credit': abs(amount)
+            }
         else:
-            move_line.debit = -amount
-            move_line.credit = Decimal('0.0')
-            move_line.party = self.company.party.id
-        return move_line
+            line = {
+                'account': self.product.account_stock_used,
+                'party': self.company.party.id,
+                'debit': abs(amount),
+                'credit': Decimal('0.0')
+            }
+
+        return line
 
     def _get_account_stock_move_type(self):
         '''
@@ -573,7 +630,7 @@ class MoveCDT(metaclass=PoolMeta):
 
         amount = Decimal('0.0')
         for line in account_move_lines:
-            amount += line.debit - line.credit
+            amount += line['debit'] - line['credit']
 
         if not amount:
             return
@@ -584,13 +641,16 @@ class MoveCDT(metaclass=PoolMeta):
         account_configuration = AccountConfiguration(1)
         journal = account_configuration.get_multivalue('stock_journal',
                                                        company=self.company.id)
-        return AccountMove(
-            journal=journal,
-            period=period_id,
-            date=date,
-            origin=self,
-            lines=account_move_lines,
-        )
+
+        account_move = {
+            'journal': journal,
+            'date': date,
+            'origin': self,
+            'period': period_id,
+            'lines': [('create', account_move_lines)]
+        }
+
+        return account_move
 
     @classmethod
     @ModelView.button
@@ -604,14 +664,17 @@ class MoveCDT(metaclass=PoolMeta):
             account_move = move._get_account_stock_move()
             if account_move:
                 account_moves.append(account_move)
-        AccountMove.save(account_moves)
-        if account_move:
-            for line in account_move.lines:
-                if line.account.code.startswith(('6')):
-                    line.operation_center = account_move.origin.shipment.operation_center
-                    line.operation_center.save()
+        _moves = AccountMove.create(account_moves)
+        AccountMove.post(_moves)
 
-        AccountMove.post(account_moves)
+
+class Inventory(metaclass=PoolMeta):
+    'Stock Inventory'
+    __name__ = 'stock.inventory'
+
+    analitic_account = fields.Many2One('analytic_account.account',
+                                       'Analytic Account',
+                                       required=False)
 
 
 class WarehouseKardexStockStartCds(ModelView):

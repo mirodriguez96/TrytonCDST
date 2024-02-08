@@ -25,7 +25,8 @@ from email.utils import formataddr, getaddresses
 from trytond.modules.company import CompanyReport
 from trytond.sendmail import sendmail
 from trytond.config import config
-
+from trytond.i18n import gettext
+from .exceptions import (RecordDuplicateError)
 from dateutil import tz
 
 from_zone = tz.gettz('UTC')
@@ -151,6 +152,11 @@ WEEK_DAYS = {
     6: 'saturday',
     7: 'sunday',
 }
+
+CONTRACT = [
+    'bonus_service', 'health', 'retirement', 'unemployment', 'interest',
+    'holidays', 'convencional_bonus'
+]
 
 CONCEPT = ['health', 'retirement']
 
@@ -571,7 +577,80 @@ class Liquidation(metaclass=PoolMeta):
         return res
 
     def set_liquidation_lines(self):
-        super(Liquidation, self).set_liquidation_lines()
+        pool = Pool()
+        Payroll = pool.get('staff.payroll')
+        LiquidationMove = pool.get('staff.liquidation.line-move.line')
+        date_start, date_end = self._get_dates_liquidation()
+        payrolls = Payroll.search([('employee', '=', self.employee.id),
+                                   ('start', '>=', date_start),
+                                   ('end', '<=', date_end),
+                                   ('contract', '=', self.contract.id),
+                                   ('state', '=', 'posted')])
+        wages = {}
+        wages_target = {}
+        for payroll in payrolls:
+            mandatory_wages = [
+                i.wage_type for i in payroll.employee.mandatory_wages
+            ]
+            for l in payroll.lines:
+                if not l.wage_type.contract_finish:
+                    continue
+                if self.kind == 'contract':
+                    if l.wage_type.type_concept not in CONTRACT:
+                        continue
+                elif self.kind != l.wage_type.type_concept:
+                    continue
+
+
+
+                if l.wage_type.id not in wages_target.keys(
+                ) and l.wage_type in mandatory_wages:
+                    mlines = self.get_moves_lines_pending(
+                        payroll.employee, l.wage_type, date_end)
+                    if not mlines:
+                        continue
+                    wages_target[l.wage_type.id] = [
+                        l.wage_type.credit_account.id,
+                        mlines,
+                        l.wage_type,
+                    ]
+
+                    # wages.append(l.wage_type.id)
+                    # This looks for lines provisioned before start period
+                    # old_lines_provisioned = MoveLine.search([
+                    #     ('party', '=', self.employee.party.id),
+                    #     ('move.date', '<', date_start),
+                    #     ('reconciliation', '=', None),
+                    #     ('account', '=', account_id),
+                    # ])
+                    # lines.extend(old_lines_provisioned)
+        for (account_id, lines, wage_type) in wages_target.values():
+            values = []
+            lines_to_reconcile = []
+            for line in lines:
+                values.append(abs(line.debit - line.credit))
+                lines_to_reconcile.append(line.id)
+            value = self.get_line_(wage_type,
+                                   sum(values),
+                                   self.time_contracting,
+                                   account_id,
+                                   party=self.party_to_pay)
+            lines = LiquidationMove.search([('move_line', 'in',
+                                             lines_to_reconcile)])
+            if lines:
+                liquidation = lines[0].line.liquidation
+                raise RecordDuplicateError(
+                    gettext('staff_payroll_co.msg_duplicate_liquidation',
+                            liquidation=liquidation.id,
+                            state=liquidation.state))
+            value.update({
+                'move_lines': [('add', lines_to_reconcile)],
+            })
+            wages[wage_type.id] = value
+
+        self.write([self], {'lines': [('create', wages.values())]})
+        if self.kind == 'contract':
+            self.process_loans_to_pay()
         if self.kind == 'holidays':
             self.process_loans_to_pay_holidays()
 
