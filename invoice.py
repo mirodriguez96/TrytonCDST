@@ -220,19 +220,20 @@ class Invoice(metaclass=PoolMeta):
                 fecha_hora = doc.fecha_hora.date()
 
                 if isinstance(fecha_hora, datetime.date):
-                    
+
                     validate_period = Period.search([
                         ('start_date', '>=', fecha_hora),
                         ('end_date', '<=', fecha_hora),
                     ])
+                    if validate_period:
+                        if validate_period[0].state == 'close':
+                            to_exception.append(id_tecno)
+                            logs[
+                                id_tecno] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
+                            Y NO ES POSIBLE SU CREACION"
 
-                    if validate_period.state == 'close':
-                        to_exception.append(id_tecno)
-                        logs[
-                            id_tecno] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
-                        Y NO ES POSIBLE SU CREACION"
+                            continue
 
-                        continue
                     if id_tecno not in tecno:
                         tecno[id_tecno] = doc
                     if not _type:
@@ -949,8 +950,9 @@ class UpdateInvoiceTecno(Wizard):
                         logs[
                             id_tecno] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
                         Y NO ES POSIBLE SU ELIMINACION O MODIFICACION"
+
                         continue
-                 
+
                 reclamacion = Reclamacion.search([('line.move.origin', '=',
                                                    invoice)])
                 rec_name = invoice.rec_name
