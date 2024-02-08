@@ -1557,11 +1557,11 @@ class StaffEvent(metaclass=PoolMeta):
     access_register = fields.Boolean('Access register',
                                      states={
                                          'invisible':
-                                         Not(Bool(Eval('amount'))),
+                                         Not(Bool(Eval('absenteeism'))),
                                          'readonly':
                                          Bool(Eval('state') != 'draft'),
                                      },
-                                     depends=['amount', 'state'])
+                                     depends=['absenteeism', 'state'])
 
     enter_timestamp = fields.DateTime(
         'Enter',
