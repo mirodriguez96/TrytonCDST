@@ -125,6 +125,7 @@ def register():
                   wiz.FixBugsConectorView,
                   payroll.LineLiquidationEvent,
                   wiz.DeleteLiquidationStart,
+                  wiz.DeleteEventLiquidationStart,
                   module='conector',
                   type_='model')
 
@@ -177,6 +178,7 @@ def register():
                   wiz.FixBugsConector,
                   statement.StatementMoveValidate,
                   wiz.DeleteLiquidation,
+                  wiz.DeleteEventLiquidation,
                   module='conector',
                   type_='wizard')
 
