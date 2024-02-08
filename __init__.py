@@ -124,6 +124,7 @@ def register():
                   statement.StatementLine,
                   wiz.FixBugsConectorView,
                   payroll.LineLiquidationEvent,
+                  wiz.DeleteLiquidationStart,
                   module='conector',
                   type_='model')
 
@@ -175,6 +176,7 @@ def register():
                   account_dunning.DunningForceDraft,
                   wiz.FixBugsConector,
                   statement.StatementMoveValidate,
+                  wiz.DeleteLiquidation,
                   module='conector',
                   type_='wizard')
 

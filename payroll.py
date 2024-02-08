@@ -422,6 +422,7 @@ class Liquidation(metaclass=PoolMeta):
 
     def create_move(self):
         pool = Pool()
+        Note = pool.get('account.move.reconcile.write_off')
         Move = pool.get('account.move')
         MoveLine = pool.get('account.move.line')
         Period = pool.get('account.period')
@@ -449,8 +450,8 @@ class Liquidation(metaclass=PoolMeta):
                 if grouped[ml.account.id]:
                     to_reconcile.extend(grouped[ml.account.id]['lines'])
                 if len(to_reconcile) > 1:
-                    MoveLine.reconcile(set(to_reconcile))
-                
+                    note = Note.search([])
+                    MoveLine.reconcile(set(to_reconcile), writeoff=note[0])
             Move.post([move])
 
     def get_moves_lines(self):
@@ -472,7 +473,6 @@ class Liquidation(metaclass=PoolMeta):
             and self.kind == 'holidays'
         ]
         for line in self.lines:
-            breakpoint()
             if line.move_lines:
                 for moveline in line.move_lines:
                     to_reconcile.append(moveline)
@@ -1702,7 +1702,7 @@ class StaffEvent(metaclass=PoolMeta):
         Liquidation = pool.get('staff.liquidation')
         Period = pool.get('staff.payroll.period')
         Staff_event_liquidation = pool.get('staff.event-staff.liquidation')
-        
+
         liquidation = Liquidation()
         liquidation.employee = event.employee
         liquidation.contract = event.contract
@@ -1739,35 +1739,35 @@ class StaffEvent(metaclass=PoolMeta):
                 amount = amount_workdays * -1
                 if concept.fix_amount:
                     amount = concept.fix_amount * -1
+                if concept.wage_type.type_concept_electronic in CONCEPT_ELECTRONIC:
+                    amount_workdays = 0
                 value = {
-                    'sequence':
-                    concept.wage_type.sequence,
-                    'wage':
-                    concept.wage_type.id,
-                    'description':
-                    concept.wage_type.name,
-                    'amount':
-                    amount,
-                    'account':
-                    concept.wage_type.credit_account,
-                    'days':
-                    days,
-                    'party_to_pay':
-                    concept.party,
-                    'adjustments': [('create', [{
-                        'account':
-                        concept.wage_type.credit_account.id,
-                        'amount':
-                        amount_workdays * -1,
-                        'description':
-                        concept.wage_type.credit_account.name,
-                    }])]
+                    'sequence': concept.wage_type.sequence,
+                    'wage': concept.wage_type.id,
+                    'description': concept.wage_type.name,
+                    'amount': amount,
+                    'account': concept.wage_type.credit_account,
+                    'days': days,
+                    'party_to_pay': concept.party
                 }
+
+                if amount_workdays:
+                    value.update({
+                        'adjustments': [('create', [{
+                            'account':
+                            concept.wage_type.credit_account.id,
+                            'amount':
+                            amount_workdays * -1,
+                            'description':
+                            concept.wage_type.credit_account.name,
+                        }])]
+                    })
+
                 liquidation.write([liquidation],
                                   {'lines': [('create', [value])]})
         liquidation._validate_holidays_lines(event, liquidation_date, end_date,
                                              days)
-        
+
         staff_event_liquidation = Staff_event_liquidation()
         staff_event_liquidation.staff_liquidation = liquidation
         staff_event_liquidation.event = event
@@ -1837,10 +1837,10 @@ class LineLiquidationEvent(ModelSQL):
                                         required=True)
 
     event = fields.Many2One('staff.event',
-                         'Event',
-                         ondelete='CASCADE',
-                         select=True,
-                         required=True)
+                            'Event',
+                            ondelete='CASCADE',
+                            select=True,
+                            required=True)
 
 
 class Payroll(metaclass=PoolMeta):
@@ -3171,12 +3171,12 @@ class PayrollPaycheckReportExten(metaclass=PoolMeta):
 
         # other_key = str(line['payroll.']['employee']) +'_' + str(line['payroll.']['contract'])
         if concept in concept != 'salary' and other_health_retirement and validate:
-            staff_line, = PayrollLine.search([('staff_liquidation', '=', line['id'])])
-            wages = [
-                (wage_type.wage_type.credit_account, wage_type) for wage_type
-                in staff_line.staff_liquidation.employee.mandatory_wages
-                if wage_type.wage_type.type_concept in CONCEPT
-            ]
+            staff_line, = PayrollLine.search([('staff_liquidation', '=',
+                                               line['id'])])
+            wages = [(wage_type.wage_type.credit_account, wage_type)
+                     for wage_type in
+                     staff_line.staff_liquidation.employee.mandatory_wages
+                     if wage_type.wage_type.type_concept in CONCEPT]
 
             for line_move in staff_line.staff_liquidation.move.lines:
                 for account_, wage in wages:

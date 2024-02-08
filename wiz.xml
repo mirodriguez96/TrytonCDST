@@ -59,6 +59,22 @@
         </record>
 
 
+        <!--Asistente para eliminar las liquidaciones-->
+        <record model="ir.action.wizard" id="act_delete_staff_liquidation">
+            <field name="name">Delete Liquidations</field>
+            <field name="wiz_name">staff.liquidation.delete_start</field>
+        </record>
+        <record model="ir.action.keyword" id="act_delete_staff_liquidation_keyword">
+            <field name="keyword">form_action</field>
+            <field name="model">staff.liquidation,-1</field>
+            <field name="action" ref="act_delete_staff_liquidation"/>
+        </record>
+
+        <record model="ir.ui.view" id="validated_identity_liquidation_view_form">
+            <field name="model">delete.liquidation.wizard.start</field>
+            <field name="type">form</field>
+            <field name="name">validated_identity_liquidation_form</field>
+        </record>
 
         <!--Asistente para eliminar los voucher importados de TecnoCarnes-->
         <!-- ############################# -->
