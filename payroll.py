@@ -1716,7 +1716,6 @@ class StaffEvent(metaclass=PoolMeta):
 
             if event.category and event.access_register and event.enter_timestamp and event.exit_timestamp:
                 for i in range(0, event.days):
-                    print(event.category, event.employee, i)
                     is_access = Access.search([
                         ('enter_timestamp', '<=',
                          event.enter_timestamp + timedelta(days=i)),
@@ -1724,7 +1723,6 @@ class StaffEvent(metaclass=PoolMeta):
                          event.exit_timestamp + timedelta(days=i)),
                         ('employee', '=', event.employee)
                     ])
-                    print(is_access)
                     if not is_access:
                         to_save = Access()
                         to_save.employee = event.employee
@@ -1734,7 +1732,15 @@ class StaffEvent(metaclass=PoolMeta):
                         to_save.exit_timestamp = event.exit_timestamp + timedelta(
                             days=i)
                         to_save.line_event = event
+                        to_save.reco = 0
+                        to_save.recf = 0
+                        to_save.dom = 0
+                        to_save.hedo = 0
+                        to_save.heno = 0
+                        to_save.henf = 0
+                        to_save.hedf = 0
                         to_save.save()
+
 
     @classmethod
     def force_draft(cls, events):
