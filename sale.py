@@ -50,6 +50,7 @@ class Sale(metaclass=PoolMeta):
         data = Config.get_documentos_tecno(swt)
         #Se crea o actualiza la fecha de importación
         actualizacion = Actualizacion.create_or_update('VENTAS')
+        actualizacion_che = Actualizacion.create_or_update('SIN DOCUMENTO CHE')
         if not data:
             return
         Sale = pool.get('sale.sale')
@@ -88,6 +89,7 @@ class Sale(metaclass=PoolMeta):
         if venta_electronica:
             venta_electronica = (venta_electronica[0].Valor).strip().split(',')
         logs = {}
+        logs_che =  {}
         to_created = []
         to_exception = []
         not_import = []
@@ -442,15 +444,16 @@ class Sale(metaclass=PoolMeta):
                                             to_exception)
                         Sale.update_state([sale])
                     elif sale.payment_term.id_tecno == '0':
-                        logs[
+                        logs_che[
                             id_venta] = "EXCEPCION: No se encontraron pagos asociados en tecnocarnes (documentos_che)"
-                        to_exception.append(sale.id_tecno)
+                        cls.delete_imported_sales([sale],cod='E')
                         continue
                 to_created.append(id_venta)
             except Exception as e:
                 logs[id_venta] = f"EXCEPCION: {str(e)}"
                 to_exception.append(id_venta)
         actualizacion.add_logs(logs)
+        actualizacion_che.add_logs(logs_che)
         for idt in to_created:
             if idt not in to_exception:
                 Config.update_exportado(idt, 'T')
@@ -884,12 +887,12 @@ class Sale(metaclass=PoolMeta):
 
     # Función encargada de eliminar y marcar para importar ventas de importadas de TecnoCarnes
     @classmethod
-    def delete_imported_sales(cls, sales):
+    def delete_imported_sales(cls, sales, cod='N'):
         Cnxn = Pool().get('conector.configuration')
         ids_tecno, to_delete = cls._get_delete_sales(sales)
         cls._delete_sales(to_delete)
         for idt in ids_tecno:
-            Cnxn.update_exportado(idt, 'N')
+            Cnxn.update_exportado(idt, cod)
 
 
 class SaleLine(metaclass=PoolMeta):
