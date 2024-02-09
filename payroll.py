@@ -1809,6 +1809,10 @@ class StaffEvent(metaclass=PoolMeta):
                             to_save.reco = 0
                             to_save.recf = 0
                             to_save.dom = 0
+                            to_save.hedo = 0
+                            to_save.heno = 0
+                            to_save.henf = 0
+                            to_save.hedf = 0
                             to_save.save()
 
 
