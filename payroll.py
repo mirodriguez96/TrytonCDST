@@ -1653,16 +1653,14 @@ class StaffEvent(metaclass=PoolMeta):
                         to_save.exit_timestamp = event.exit_timestamp + timedelta(
                             days=i)
                         to_save.line_event = event
+                        to_save.reco = 0
+                        to_save.recf = 0
+                        to_save.dom = 0
+                        to_save.hedo = 0
+                        to_save.heno = 0
+                        to_save.henf = 0
+                        to_save.hedf = 0
                         to_save.save()
-                        if to_save.enter_timestamp.weekday() == 6:
-                            to_save.reco = 0
-                            to_save.recf = 0
-                            to_save.dom = 0
-                            to_save.hedo = 0
-                            to_save.heno = 0
-                            to_save.henf = 0
-                            to_save.hedf = 0
-                            to_save.save()
 
 
     @classmethod
