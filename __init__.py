@@ -28,6 +28,7 @@ from . import loan
 from . import liquidation
 from . import permissions
 from . import currency
+from . import account_dunning
 
 
 def register():
@@ -37,6 +38,7 @@ def register():
                   account.MoveLine,
                   account.BalanceStockStart,
                   account.AnalyticAccountEntry,
+                  account.PartyWithholdingStart,
                   company.Company,
                   conector.Actualizacion,
                   party.CheckVIESResult,
@@ -119,6 +121,9 @@ def register():
                   invoice.UpdateInvoiceTecnoStart,
                   wiz.DeleteVoucherTecnoStart,
                   wiz.MarkImportMultiStart,
+                  statement.StatementLine,
+                  wiz.FixBugsConectorView,
+                  stock.Inventory,
                   module='conector',
                   type_='model')
 
@@ -157,6 +162,7 @@ def register():
                   payroll.StaffAccessWizard,
                   account.IncomeStatementWizard,
                   account.ActiveForceDraft,
+                  account.PrintPartyWithholding,
                   production.ProductionDetailed,
                   production.ProductionForceDraft,
                   payroll.PayrollIBCWizard,
@@ -166,6 +172,9 @@ def register():
                   wiz.GroupDatafonoLines,
                   tax.TaxesConsolidation,
                   stock.WarehouseKardexStockCds,
+                  account_dunning.DunningForceDraft,
+                  wiz.FixBugsConector,
+                  statement.StatementMoveValidate,
                   module='conector',
                   type_='wizard')
 
@@ -184,6 +193,7 @@ def register():
                   payroll.StaffAccessReport,
                   account.IncomeStatementReport,
                   account.TrialBalanceDetailedCds,
+                  account.PartyWithholding,
                   production.ProductionDetailedReport,
                   payroll.PayrollIBCReport,
                   sale.SaleShopDetailedCDSReport,

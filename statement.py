@@ -8,6 +8,7 @@ from trytond.transaction import Transaction
 from trytond.exceptions import UserError
 from decimal import Decimal
 import datetime
+from .exceptions import (NotMoveStatementeLine)
 
 CONFIRMED_STATES = {
     'readonly': False  #Not(Equal(Eval('statement_line'), None))
@@ -185,3 +186,49 @@ class CreateBankLineParameters(ModelView):
     file = fields.Binary('File',
                          required=True,
                          help='File type CSV, separated by commas(;)')
+
+
+
+class StatementLine(metaclass=PoolMeta):
+    __name__ = 'account.statement.line'
+
+    move_lines_source = fields.Function(fields.Many2One('account.move', 'Move'),'get_move_value')
+
+    @fields.depends('move')
+    def get_move_value(self, name=None):
+        res = None
+        if self.move:
+            res = self.move.id
+        return res
+    
+
+# Asistente de validar los asiento contable de los estados de cuenta
+class StatementMoveValidate(Wizard):
+    'Wizard for StatementMoveValidate'
+    __name__ = 'account.statement.move_validate'
+
+    start_state = 'run'
+    run = StateTransition()
+
+    def transition_run(self):
+        pool = Pool()
+        account_statement = pool.get('account.statement')
+        account_statement_line = pool.get('account.statement.line')
+        ids = Transaction().context['active_ids']
+
+        if ids:
+            for statement in account_statement.browse(ids):
+                lines = account_statement_line.search([
+                    ('statement', '=', statement.id),
+                ])
+
+                not_moves = [i.sale.number for i in lines if not i.move]
+
+                print(not_moves)
+            raise NotMoveStatementeLine(
+                'Sin asiento contable',
+                f'Del estado de cuenta numero: {statement.name} \t\t \
+                fecha: {statement.date} \t\t \
+                tiene las venta: {not_moves}'
+            )
+        return 'end'

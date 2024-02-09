@@ -2,6 +2,25 @@
 <tryton>
 
     <data>
+
+        <!--Asistente para reparar errores encontrados o generados en Tryton-->
+        <record model="ir.action.wizard" id="act_fix_bugs_conector">
+            <field name="name">Fix bugs conector</field>
+            <field name="wiz_name">conector.configuration.fix_bugs_conector</field>
+        </record>
+
+        <record model="ir.action.keyword" id="act_fix_bugs_conector_keyword">
+            <field name="keyword">form_action</field>
+            <field name="model">conector.configuration,-1</field>
+            <field name="action" ref="act_fix_bugs_conector"/>
+        </record>
+        
+        <record model="ir.ui.view" id="fix_exec_accion_view_form">
+            <field name="model">conector.configuration.documents_for_import_parameters_view</field>
+            <field name="type">form</field>
+            <field name="name">fix_exec_accion</field>
+        </record>
+
         <!-- ################## -->
         <!-- # Mark Documents # -->
         <!-- ################## -->

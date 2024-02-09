@@ -191,16 +191,16 @@ def desconciliar_borrar_asientos(ids_=None, id_tecno=None):
 
     if ids_:
         Move = Table('account_move')
+        move_line = Table('account_move_line')
         account_move = pool.get('account.move')
         cursor = Transaction().connection.cursor()
         moves = account_move.search([('id', 'in', ids_)])
         Reconciliation = pool.get('account.move.reconciliation')
         to_delete = []
+        line_to_delete = []
 
         # moves = account_move.browse(ids_)
         for move in moves:
-            for line in move.lines:
-                print(line.credit, line.id, line.debit)
             if move.period.state == 'close':
                 exceptions.append(move.id)
                 logs[
@@ -216,6 +216,12 @@ def desconciliar_borrar_asientos(ids_=None, id_tecno=None):
             if reconciliations:
                 Reconciliation.delete(reconciliations)
 
+            if move.lines:
+                for line in move.lines:
+                    line.credit = 0
+                    line.debit = 0
+                    line.save()
+
             # account_move.draft(to_delete)
             # account_move.delete(to_delete)
 
@@ -223,6 +229,13 @@ def desconciliar_borrar_asientos(ids_=None, id_tecno=None):
             cursor.execute(*Move.update(columns=[Move.state],
                                         values=['draft'],
                                         where=Move.id.in_(to_delete)))
+            # if line_to_delete:
+            #     cursor.execute(*move_line.update(columns=[move_line.credit, move_line.debit],
+            #                             values=[0,0],
+            #                             where=move_line.id.in_(line_to_delete)))
+            
+            # cursor.execute(*move_line.delete(where=move_line.id.in_(line_to_delete)))
+
             cursor.execute(*Move.delete(where=Move.id.in_(to_delete)))
 
         actualizacion.add_logs(logs)

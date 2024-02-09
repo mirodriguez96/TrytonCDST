@@ -80,24 +80,28 @@ class Invoice(metaclass=PoolMeta):
     # se sobreescribe el metodo del modulo account_col
     @classmethod
     @ModelView.button
-    def validate_invoice(cls, invoices):
+    def validate_invoice(cls, invoices, sw=None):
         for inv in invoices:
             if inv.type == 'out':
-                cls.validate_tax(inv)
+                cls.validate_tax(inv, sw=sw)
         super(Invoice, cls).validate_invoice(invoices)
 
     # se sobreescribe el metodo del modulo account_col
     @classmethod
-    def validate_tax(cls, invoice):
+    def validate_tax(cls, invoice, sw=None):
         pool = Pool()
         Config = pool.get('account.configuration')
         Line = pool.get('account.invoice.line')
         InvoiceTax = Pool().get('account.invoice.tax')
         config = Config(1)
-        taxes_validate = [
-            t for t in invoice.taxes
-            if t.base and t.tax.base and t.tax.base > abs(t.base)
-        ]
+
+        if not sw:
+            taxes_validate = [
+                t for t in invoice.taxes
+                if t.base and t.tax.base and t.tax.base > abs(t.base)]
+        else:
+            taxes_validate = []
+        
         if taxes_validate and config.remove_tax:
             lines_to_change = [l for l in invoice.lines if l.type == 'line']
             Line.write(
@@ -216,19 +220,20 @@ class Invoice(metaclass=PoolMeta):
                 fecha_hora = doc.fecha_hora.date()
 
                 if isinstance(fecha_hora, datetime.date):
-                    
+
                     validate_period = Period.search([
                         ('start_date', '>=', fecha_hora),
                         ('end_date', '<=', fecha_hora),
                     ])
+                    if validate_period:
+                        if validate_period[0].state == 'close':
+                            to_exception.append(id_tecno)
+                            logs[
+                                id_tecno] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
+                            Y NO ES POSIBLE SU CREACION"
 
-                    if validate_period.state == 'close':
-                        to_exception.append(id_tecno)
-                        logs[
-                            id_tecno] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
-                        Y NO ES POSIBLE SU CREACION"
+                            continue
 
-                        continue
                     if id_tecno not in tecno:
                         tecno[id_tecno] = doc
                     if not _type:
@@ -938,13 +943,16 @@ class UpdateInvoiceTecno(Wizard):
             to_delete_note = []
             for invoice in Invoice.browse(ids):
                 id_tecno = invoice.id_tecno or invoice.reference
-                if invoice.move.period.state == 'close':
-                    exceptions.append(id_tecno)
-                    logs[
-                        id_tecno] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
-                    Y NO ES POSIBLE SU ELIMINACION O MODIFICACION"
 
-                    continue
+                if invoice.move:
+                    if invoice.move.period.state == 'close':
+                        exceptions.append(id_tecno)
+                        logs[
+                            id_tecno] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
+                        Y NO ES POSIBLE SU ELIMINACION O MODIFICACION"
+
+                        continue
+
                 reclamacion = Reclamacion.search([('line.move.origin', '=',
                                                    invoice)])
                 rec_name = invoice.rec_name
