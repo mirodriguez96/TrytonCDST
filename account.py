@@ -4,6 +4,8 @@ from timeit import default_timer as timer
 from datetime import date
 import operator
 from itertools import groupby
+import time
+
 try:
     from itertools import izip
 except ImportError:
@@ -29,7 +31,6 @@ from trytond.pool import Pool, PoolMeta
 
 TYPES_PRODUCT = [('no_consumable', 'No consumable'),
                  ('consumable', 'Consumable')]
-
 _ZERO = Decimal('0.0')
 
 
@@ -83,7 +84,7 @@ class Account(metaclass=PoolMeta):
             Account.write(parents, {'type': None})
 
 
-class Move(metaclass=PoolMeta):
+class Move(ModelSQL, metaclass=PoolMeta):
     __name__ = 'account.move'
 
     @classmethod
@@ -92,13 +93,75 @@ class Move(metaclass=PoolMeta):
             'stock.move', 'product.product', 'product.template', 'production'
         ]
 
+    @classmethod
+    def delete_lines(cls, moves):
+        MoveLine = Pool().get('account.move.line')
+        MoveLine.delete_lines(
+            [lines for move in moves for lines in move.lines])
 
-class MoveLine(metaclass=PoolMeta):
+        try:
+            cursor = Transaction().connection.cursor()
+            sql_table = cls.__table__()
+            ids = [lines.id for lines in moves]
+            cursor.execute(*sql_table.delete(
+                where=sql_table.id.in_(ids or [None])))
+        except Exception as error:
+            print(error)
+            return False
+
+
+class MoveLine(ModelSQL, metaclass=PoolMeta):
+    """doc"""
     __name__ = 'account.move.line'
 
     @classmethod
     def _get_origin(cls):
         return super()._get_origin() + ['stock.move']
+
+    @classmethod
+    def delete_lines(cls, lines):
+        cursor = Transaction().connection.cursor()
+        try:
+            sql_table = cls.__table__()
+            ids = [line.id for line in lines]
+            cursor.execute(*sql_table.delete(
+                where=sql_table.id.in_(ids or [None])))
+        except Exception as error:
+            print(error)
+            return False
+
+
+class Reconciliation(metaclass=PoolMeta):
+    'Account Move Reconciliation Lines'
+    __name__ = 'account.move.reconciliation'
+
+    @classmethod
+    def delete(cls, reconciliations, conector=False):
+        pool = Pool()
+        Warning = pool.get('res.user.warning')
+        if conector:
+            try:
+                super().delete(reconciliations)
+                return True
+            except Exception as error:
+                print(error)
+                return False
+
+        for reconciliation in reconciliations:
+            if reconciliation.delegate_to:
+                key = '%s.delete.delegated' % reconciliation
+                if Warning.check(key):
+                    raise UserError(
+                        key,
+                        gettext('account.msg_reconciliation_delete_delegated',
+                                reconciliation=reconciliation.rec_name,
+                                line=reconciliation.delegate_to.rec_name,
+                                move=reconciliation.delegate_to.move.rec_name))
+        try:
+            super().delete(reconciliations)
+        except Exception as error:
+            print(error)
+            return False
 
 
 class BalanceStockStart(ModelView):
