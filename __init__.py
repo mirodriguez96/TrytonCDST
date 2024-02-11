@@ -40,6 +40,7 @@ def register():
                   account.AnalyticAccountEntry,
                   account.PartyWithholdingStart,
                   account.Reconciliation,
+                  account.AuxiliaryPartyStart,
                   company.Company,
                   conector.Actualizacion,
                   party.CheckVIESResult,
@@ -184,7 +185,8 @@ def register():
                   module='conector',
                   type_='wizard')
 
-    Pool.register(report.PayrollExportReport,
+    Pool.register(account.AuxiliaryParty,
+                  report.PayrollExportReport,
                   report.CDSSaleIncomeDailyReport,
                   payroll.PayrollPaymentReportBcl,
                   payroll.LiquidationPaymentReportBcl,
