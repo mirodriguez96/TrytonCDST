@@ -1807,7 +1807,7 @@ class PartyWithholding(metaclass=PoolMeta):
 
 
 class AuxiliaryPartyStart(metaclass=PoolMeta):
-    'Auxiliary Party Start'
+    """Party Movements Report View"""
     __name__ = 'account_col.print_auxiliary_party.start'
 
     @classmethod
@@ -1825,22 +1825,6 @@ class AuxiliaryPartyStart(metaclass=PoolMeta):
     def on_change_only_reference(cls):
         if cls.only_reference:
             cls.grouped_by_location = False
-
-    #     cls._error_messages.update({
-    #         'end_period_greater_than_start_period':
-    #         'End Period must be greater than Start Period.'
-    #     })
-
-    # @staticmethod
-    # def default_end_period():
-    #     return datetime.now().strftime('%Y-%m-%d')
-
-    # @classmethod
-    # def validate(cls, records):
-    #     super(AuxiliaryPartyStart, cls).validate(records)
-    #     for record in records:
-    #         if record.end_period <= record.start_period:
-    #             cls.raise_user_error('end_period_greater_than_start_period')
 
 
 class AuxiliaryParty(metaclass=PoolMeta):
@@ -1870,6 +1854,7 @@ class AuxiliaryParty(metaclass=PoolMeta):
         start_period = None
         end_period = None
         location = None
+
         # Define start period to Account Moves
         start_period = Period(data['start_period'])
         dom_move.append(('period.start_date', '>=', start_period.start_date))
@@ -1905,7 +1890,6 @@ class AuxiliaryParty(metaclass=PoolMeta):
 
         lines = MoveLine.search(dom_lines, order=[('move.date', 'ASC')])
 
-        print(f"imprimiento data{data}")
         if lines:
             for line in lines:
                 if not line.party:
