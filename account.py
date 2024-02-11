@@ -1,7 +1,7 @@
 from collections import defaultdict
 from decimal import Decimal
 from timeit import default_timer as timer
-from datetime import date
+from datetime import date, datetime
 import operator
 from itertools import groupby
 try:
@@ -1703,6 +1703,32 @@ class AuxiliaryPartyStart(metaclass=PoolMeta):
         cls.start_period.required = True
         cls.end_period.required = True
 
+    @fields.depends('grouped_by_location', 'only_reference')
+    def on_change_grouped_by_location(cls):
+        if cls.grouped_by_location:
+            cls.only_reference = False
+
+    @fields.depends('grouped_by_location', 'only_reference')
+    def on_change_only_reference(cls):
+        if cls.only_reference:
+            cls.grouped_by_location = False
+
+    #     cls._error_messages.update({
+    #         'end_period_greater_than_start_period':
+    #         'End Period must be greater than Start Period.'
+    #     })
+
+    # @staticmethod
+    # def default_end_period():
+    #     return datetime.now().strftime('%Y-%m-%d')
+
+    # @classmethod
+    # def validate(cls, records):
+    #     super(AuxiliaryPartyStart, cls).validate(records)
+    #     for record in records:
+    #         if record.end_period <= record.start_period:
+    #             cls.raise_user_error('end_period_greater_than_start_period')
+
 
 class AuxiliaryParty(metaclass=PoolMeta):
     """Party movements report"""
@@ -1766,6 +1792,7 @@ class AuxiliaryParty(metaclass=PoolMeta):
 
         lines = MoveLine.search(dom_lines, order=[('move.date', 'ASC')])
 
+        print(f"imprimiento data{data}")
         if lines:
             for line in lines:
                 if not line.party:
@@ -1902,18 +1929,20 @@ class AuxiliaryParty(metaclass=PoolMeta):
         cursor.execute(*select2)
         result_start = cursor.fetchall()
 
-        if data['grouped_by_location'] or data['grouped_by_oc']:
-            cls._get_process_result(res,
-                                    accounts_id,
-                                    values=result_start,
-                                    by_location=location)
-        else:
-            cls._get_process_result(res, accounts_id, values=result_start)
+        if not data['only_reference']:
+            if data['grouped_by_location'] or data['grouped_by_oc']:
+                cls._get_process_result(res,
+                                        accounts_id,
+                                        values=result_start,
+                                        by_location=location)
+            else:
+                cls._get_process_result(res, accounts_id, values=result_start)
 
         report_context['_records'] = res
         report_context['_accounts'] = accounts_id
         report_context['grouped_by_account'] = data['grouped_by_account']
         report_context['grouped_by_location'] = grouped_by_loc
+        report_context['grouped_by_reference'] = data['only_reference']
         report_context[
             'start_period'] = start_period.name if start_period else '*'
         report_context['end_period'] = end_period.name if end_period else '*'
