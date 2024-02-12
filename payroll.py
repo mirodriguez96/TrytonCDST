@@ -443,15 +443,21 @@ class Liquidation(metaclass=PoolMeta):
             }])
             self.write([self], {'move': move.id})
             for ml in move.lines:
-                if ml.account.id not in grouped.keys() or (
-                        ml.account.type.statement not in ('balance')):
+                print((ml.account.id, ml.description,
+                        ml.amount))
+                if (ml.account.id, ml.description,
+                        ml.amount) not in grouped.keys() or (
+                            ml.account.type.statement not in ('balance')):
                     continue
                 to_reconcile = [ml]
-                if grouped[ml.account.id]:
-                    to_reconcile.extend(grouped[ml.account.id]['lines'])
+                if grouped[(ml.account.id, ml.description, ml.amount)]:
+                    to_reconcile.extend(grouped[(ml.account.id, ml.description,
+                                                 ml.amount)]['lines'])
+                breakpoint()
                 if len(to_reconcile) > 1:
                     note = Note.search([])
                     MoveLine.reconcile(set(to_reconcile), writeoff=note[0])
+                
             Move.post([move])
 
     def get_moves_lines(self):
@@ -476,8 +482,9 @@ class Liquidation(metaclass=PoolMeta):
             if line.move_lines:
                 for moveline in line.move_lines:
                     to_reconcile.append(moveline)
-                    account_id = moveline.account.id
                     amount_line = moveline.debit - moveline.credit * -1
+                    account_id = (moveline.account.id, line.description,
+                                  amount_line)
                     if account_id not in grouped.keys():
                         grouped[account_id] = {
                             'amount': [],
@@ -488,7 +495,7 @@ class Liquidation(metaclass=PoolMeta):
                     grouped[account_id]['lines'].append(moveline)
                     amount.append(amount_line)
             elif line.wage.definition == 'discount':
-                account_id = line.account.id
+                account_id = (line.account.id, line.description, line.amount)
                 if account_id not in grouped.keys():
                     grouped[account_id] = {
                         'amount': [],
@@ -498,7 +505,7 @@ class Liquidation(metaclass=PoolMeta):
                 grouped[account_id]['amount'].append(line.amount)
                 amount.append(line.amount)
             for adjust in line.adjustments:
-                key = adjust.account.id
+                key = (adjust.account.id, adjust.description)
                 if key not in grouped.keys():
                     grouped[key] = {
                         'amount': [],
@@ -508,10 +515,11 @@ class Liquidation(metaclass=PoolMeta):
                     if hasattr(adjust,
                                'analytic_account') and adjust.analytic_account:
                         grouped[key]['analytic'] = adjust.analytic_account
-                grouped[adjust.account.id]['amount'].append(adjust.amount)
+                grouped[key]['amount'].append(adjust.amount)
                 amount.append(adjust.amount)
 
         for account_id, values in grouped.items():
+            account_id = account_id[0]
             party_payment = None
             for wage_health in wages_health:
                 if wage_health.wage_type.credit_account.name == values[
@@ -1557,11 +1565,11 @@ class StaffEvent(metaclass=PoolMeta):
     access_register = fields.Boolean('Access register',
                                      states={
                                          'invisible':
-                                         Not(Bool(Eval('amount'))),
+                                         Not(Bool(Eval('absenteeism'))),
                                          'readonly':
                                          Bool(Eval('state') != 'draft'),
                                      },
-                                     depends=['amount', 'state'])
+                                     depends=['absenteeism', 'state'])
 
     enter_timestamp = fields.DateTime(
         'Enter',
@@ -1788,7 +1796,6 @@ class StaffEvent(metaclass=PoolMeta):
 
             if event.category and event.access_register and event.enter_timestamp and event.exit_timestamp:
                 for i in range(0, event.days):
-                    print(event.category, event.employee, i)
                     is_access = Access.search([
                         ('enter_timestamp', '<=',
                          event.enter_timestamp + timedelta(days=i)),
@@ -1796,7 +1803,6 @@ class StaffEvent(metaclass=PoolMeta):
                          event.exit_timestamp + timedelta(days=i)),
                         ('employee', '=', event.employee)
                     ])
-                    print(is_access)
                     if not is_access:
                         to_save = Access()
                         to_save.employee = event.employee
@@ -1807,6 +1813,13 @@ class StaffEvent(metaclass=PoolMeta):
                             days=i)
                         to_save.line_event = event
                         to_save.save()
+                        to_save.hedo = 0
+                        to_save.heno = 0
+                        to_save.henf = 0
+                        to_save.hedf = 0
+                        to_save.reco = 0
+                        to_save.recf = 0
+                        to_save.dom = 0
 
     @classmethod
     def force_draft(cls, events):
