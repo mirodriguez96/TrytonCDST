@@ -42,7 +42,7 @@ class Permissions(ModelSQL, ModelView):
         Permission = pool.get('conector.permissions')
         if self.user_permission:
             permission = Permission.search([
-                ('user', '=', self.user_permission),
+                ('user_permission', '=', self.user_permission),
             ])
             if len(permission) > 1:
                 for valid in permission:
