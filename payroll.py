@@ -443,18 +443,16 @@ class Liquidation(metaclass=PoolMeta):
             }])
             self.write([self], {'move': move.id})
             for ml in move.lines:
-                print((ml.account.id, ml.description,
-                        ml.amount))
                 if (ml.account.id, ml.description,
-                        ml.amount) not in grouped.keys() or (
+                        'payment') not in grouped.keys() or (
                             ml.account.type.statement not in ('balance')):
                     continue
                 to_reconcile = [ml]
-                if grouped[(ml.account.id, ml.description, ml.amount)]:
+                if grouped[(ml.account.id, ml.description, 'payment')]:
                     to_reconcile.extend(grouped[(ml.account.id, ml.description,
-                                                 ml.amount)]['lines'])
-                breakpoint()
-                if len(to_reconcile) > 1:
+                                                 'payment')]['lines'])
+
+                if len(to_reconcile) > 1 and ml.amount > 0:
                     note = Note.search([])
                     MoveLine.reconcile(set(to_reconcile), writeoff=note[0])
                 
@@ -484,7 +482,7 @@ class Liquidation(metaclass=PoolMeta):
                     to_reconcile.append(moveline)
                     amount_line = moveline.debit - moveline.credit * -1
                     account_id = (moveline.account.id, line.description,
-                                  amount_line)
+                                  line.wage.definition)
                     if account_id not in grouped.keys():
                         grouped[account_id] = {
                             'amount': [],
@@ -520,6 +518,7 @@ class Liquidation(metaclass=PoolMeta):
 
         for account_id, values in grouped.items():
             account_id = account_id[0]
+            print(account_id)
             party_payment = None
             for wage_health in wages_health:
                 if wage_health.wage_type.credit_account.name == values[
@@ -1611,6 +1610,19 @@ class StaffEvent(metaclass=PoolMeta):
                     analytic_code = mw.analytic_account.code
                     break
         self.analytic_account = analytic_code
+
+    @fields.depends('category', 'is_vacations', 'absenteeism')
+    def on_change_category(self):
+        if self.category:
+            self.absenteeism = self.category.absenteeism
+            if self.category.wage_type:
+                if self.category.wage_type.type_concept == 'holidays':
+                    self.is_vacations = True
+            else:
+                self.is_vacations = False
+        else:
+            self.absenteeism = False
+            self.is_vacations = False
 
     @fields.depends('contract', 'days_of_vacations')
     def on_change_with_amount(self):
