@@ -443,8 +443,6 @@ class Liquidation(metaclass=PoolMeta):
             }])
             self.write([self], {'move': move.id})
             for ml in move.lines:
-                print((ml.account.id, ml.description,
-                        ml.amount))
                 if (ml.account.id, ml.description,
                         ml.amount) not in grouped.keys() or (
                             ml.account.type.statement not in ('balance')):
@@ -453,7 +451,6 @@ class Liquidation(metaclass=PoolMeta):
                 if grouped[(ml.account.id, ml.description, ml.amount)]:
                     to_reconcile.extend(grouped[(ml.account.id, ml.description,
                                                  ml.amount)]['lines'])
-                breakpoint()
                 if len(to_reconcile) > 1:
                     note = Note.search([])
                     MoveLine.reconcile(set(to_reconcile), writeoff=note[0])
@@ -3173,10 +3170,12 @@ class PayrollPaycheckReportExten(metaclass=PoolMeta):
         return report_context
 
     def values_without_move(line, wage_type_default, res, key):
-        PayrollLine = Pool().get('staff.event-staff.liquidation')
+        PayrollLine = Pool().get('staff.payroll.line')
+        Staff_event_liquidation = Pool().get('staff.event-staff.liquidation')
         staff_lines = {}
         validate = True
         total = 0
+        staff_lines_event = []
         concept = line['wage_type.']['type_concept']
         concept_electronic = line['wage_type.']['type_concept_electronic']
         other_health_retirement = line['wage_type.'][
