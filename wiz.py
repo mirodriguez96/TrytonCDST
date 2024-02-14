@@ -806,17 +806,25 @@ class DeleteLiquidation(Wizard):
     def transition_run(self):
         pool = Pool()
         Staff_liquidation = pool.get('staff.liquidation')
+        Staff_liquidation_lines = pool.get('staff.liquidation.line')
         ids = Transaction().context['active_ids']
         to_delete = []
+        to_lines_delete = []
         if ids:
             for liquidation in Staff_liquidation.search([('id', 'in', ids)]):
+                if liquidation.state == 'posted':
+                    raise UserError(
+                        "AVISO",
+                        f"La liquidacion con id {liquidation.id}, del empleado {liquidation.employee}, Se encuenta en estado {liquidation.state}"
+                    )
                 self.delete_lines(lines=liquidation.lines)
                 if liquidation.state == 'wait':
                     liquidation.state = 'draft'
                     liquidation.save()
-
+                to_lines_delete += [i for i in liquidation.lines]
                 to_delete.append(liquidation)
 
+        Staff_liquidation_lines.delete(to_lines_delete)
         Staff_liquidation.delete(to_delete)
 
         return 'end'
