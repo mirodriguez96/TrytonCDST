@@ -176,6 +176,7 @@ def register():
                   account_dunning.DunningForceDraft,
                   wiz.FixBugsConector,
                   statement.StatementMoveValidate,
+                  invoice.CreditInvoice,
                   module='conector',
                   type_='wizard')
 
