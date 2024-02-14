@@ -444,11 +444,11 @@ class Liquidation(metaclass=PoolMeta):
             self.write([self], {'move': move.id})
             for ml in move.lines:
                 if (ml.account.id, ml.description,
-                        ml.amount) not in grouped.keys() or (
+                        'payment') not in grouped.keys() or (
                             ml.account.type.statement not in ('balance')):
                     continue
                 to_reconcile = [ml]
-                if grouped[(ml.account.id, ml.description, ml.amount)]:
+                if grouped[(ml.account.id, ml.description, 'payment')]:
                     to_reconcile.extend(grouped[(ml.account.id, ml.description,
                                                  ml.amount)]['lines'])
                 if len(to_reconcile) > 1:
@@ -481,7 +481,7 @@ class Liquidation(metaclass=PoolMeta):
                     to_reconcile.append(moveline)
                     amount_line = moveline.debit - moveline.credit * -1
                     account_id = (moveline.account.id, line.description,
-                                  amount_line)
+                                  line.wage.definition)
                     if account_id not in grouped.keys():
                         grouped[account_id] = {
                             'amount': [],
@@ -517,6 +517,7 @@ class Liquidation(metaclass=PoolMeta):
 
         for account_id, values in grouped.items():
             account_id = account_id[0]
+            print(account_id)
             party_payment = None
             for wage_health in wages_health:
                 if wage_health.wage_type.credit_account.name == values[
@@ -1608,6 +1609,19 @@ class StaffEvent(metaclass=PoolMeta):
                     analytic_code = mw.analytic_account.code
                     break
         self.analytic_account = analytic_code
+
+    @fields.depends('category', 'is_vacations', 'absenteeism')
+    def on_change_category(self):
+        if self.category:
+            self.absenteeism = self.category.absenteeism
+            if self.category.wage_type:
+                if self.category.wage_type.type_concept == 'holidays':
+                    self.is_vacations = True
+            else:
+                self.is_vacations = False
+        else:
+            self.absenteeism = False
+            self.is_vacations = False
 
     @fields.depends('contract', 'days_of_vacations')
     def on_change_with_amount(self):
@@ -3182,20 +3196,29 @@ class PayrollPaycheckReportExten(metaclass=PoolMeta):
             'excluded_payroll_electronic']
 
         # other_key = str(line['payroll.']['employee']) +'_' + str(line['payroll.']['contract'])
-        if concept in concept != 'salary' and other_health_retirement and validate:
-            staff_line, = PayrollLine.search([('staff_liquidation', '=',
-                                               line['id'])])
+
+        if concept == 'holidays' and other_health_retirement and validate:
+            staff_line, = PayrollLine.search([('id', '=', line['id'])])
             wages = [(wage_type.wage_type.credit_account, wage_type)
                      for wage_type in
-                     staff_line.staff_liquidation.employee.mandatory_wages
+                     staff_line.payroll.contract.employee.mandatory_wages
                      if wage_type.wage_type.type_concept in CONCEPT]
+            if staff_line.origin:
+                event = Staff_event_liquidation.search([
+                    ('event', '=', staff_line.origin.id),
+                    ('staff_liquidation.end_period', '=',
+                     staff_line.payroll.period.id)
+                ])
 
-            for line_move in staff_line.staff_liquidation.move.lines:
-                for account_, wage in wages:
-                    if line_move.account == account_:
-                        staff_lines[wage.wage_type.type_concept] = {
-                            'amount': line_move.credit
-                        }
+                for item in event:
+                    staff_lines_event += [i for i in item.staff_liquidation.move.lines]
+
+                for line_move in staff_lines_event:
+                    for account_, wage in wages:
+                        if line_move.account == account_:
+                            staff_lines[wage.wage_type.type_concept] = {
+                                'amount': line_move.credit
+                            }
 
             if key in res.keys():
                 if 'health' in staff_lines.keys():
