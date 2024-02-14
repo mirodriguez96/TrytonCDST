@@ -3185,30 +3185,41 @@ class PayrollPaycheckReportExten(metaclass=PoolMeta):
         return report_context
 
     def values_without_move(line, wage_type_default, res, key):
-        PayrollLine = Pool().get('staff.event-staff.liquidation')
+        PayrollLine = Pool().get('staff.payroll.line')
+        Staff_event_liquidation = Pool().get('staff.event-staff.liquidation')
         staff_lines = {}
         validate = True
         total = 0
+        staff_lines_event = []
         concept = line['wage_type.']['type_concept']
         concept_electronic = line['wage_type.']['type_concept_electronic']
         other_health_retirement = line['wage_type.'][
             'excluded_payroll_electronic']
 
         # other_key = str(line['payroll.']['employee']) +'_' + str(line['payroll.']['contract'])
-        if concept in concept != 'salary' and other_health_retirement and validate:
-            staff_line, = PayrollLine.search([('staff_liquidation', '=',
-                                               line['id'])])
+
+        if concept == 'holidays' and other_health_retirement and validate:
+            staff_line, = PayrollLine.search([('id', '=', line['id'])])
             wages = [(wage_type.wage_type.credit_account, wage_type)
                      for wage_type in
-                     staff_line.staff_liquidation.employee.mandatory_wages
+                     staff_line.payroll.contract.employee.mandatory_wages
                      if wage_type.wage_type.type_concept in CONCEPT]
+            if staff_line.origin:
+                event = Staff_event_liquidation.search([
+                    ('event', '=', staff_line.origin.id),
+                    ('staff_liquidation.end_period', '=',
+                     staff_line.payroll.period.id)
+                ])
 
-            for line_move in staff_line.staff_liquidation.move.lines:
-                for account_, wage in wages:
-                    if line_move.account == account_:
-                        staff_lines[wage.wage_type.type_concept] = {
-                            'amount': line_move.credit
-                        }
+                for item in event:
+                    staff_lines_event += [i for i in item.staff_liquidation.move.lines]
+
+                for line_move in staff_lines_event:
+                    for account_, wage in wages:
+                        if line_move.account == account_:
+                            staff_lines[wage.wage_type.type_concept] = {
+                                'amount': line_move.credit
+                            }
 
             if key in res.keys():
                 if 'health' in staff_lines.keys():
