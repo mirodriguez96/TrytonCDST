@@ -16,7 +16,7 @@ _EXEC = [
     ('draft', 'Forzar borrador Asientos.'),
     ('unconciliate', 'Desconciliar Asientos.'),
     ('moves', 'Eliminar cuentas.'),
-    ('invoice', 'Eliminar Tecnocarnes Facturas'),
+    # ('invoice', 'Eliminar Tecnocarnes Facturas'),
     # ('note', 'Borrar Notas De Adjuste'),
 ]
 
