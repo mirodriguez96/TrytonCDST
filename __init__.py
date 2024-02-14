@@ -182,6 +182,7 @@ def register():
                   statement.StatementMoveValidate,
                   wiz.DeleteLiquidation,
                   wiz.DeleteEventLiquidation,
+                  invoice.CreditInvoice,
                   module='conector',
                   type_='wizard')
 

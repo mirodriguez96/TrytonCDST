@@ -759,18 +759,18 @@ class WarehouseCdsKardexReport(Report):
         report_context = super().get_context(records, header, data)
 
         pool = Pool()
-        inventories = pool.get('stock.inventory')
-        company = pool.get('company.company')
-        product = pool.get('product.product')
-        location = pool.get('stock.location')
-        stock_move = pool.get('stock.move')
+        StockInventory = pool.get('stock.inventory')
+        Company = pool.get('company.company')
+        Product = pool.get('product.product')
+        StockLocation = pool.get('stock.location')
+        StockMove = pool.get('stock.move')
 
         wh_name = ""
         products = {}
         init_date = data['from_date']
         end_date = data['to_date']
 
-        warehouses = location.browse(data['locations'])
+        warehouses = StockLocation.browse(data['locations'])
         id_locations = data['locations']
         tup_locations = tuple(id_locations)
         detail_by_product = data['detail_by_product']
@@ -781,7 +781,7 @@ class WarehouseCdsKardexReport(Report):
             ('date', '<=', end_date),
             ('location', 'in', tup_locations),
         ]
-        inventory = inventories.search(dom_inventory)
+        inventory = StockInventory.search(dom_inventory)
 
         dom_products = [
             ('active', '=', True),
@@ -815,7 +815,7 @@ class WarehouseCdsKardexReport(Report):
 
         if not detail_by_product:
             with Transaction().set_context(stock_context_start):
-                products_start = product.search_read(dom_products,
+                products_start = Product.search_read(dom_products,
                                                      fields_names=fields_names)
             if products_start:
                 for product in products_start:
@@ -829,11 +829,11 @@ class WarehouseCdsKardexReport(Report):
                                  ('OR', ('to_location', 'in', tup_locations),
                                   ('from_location', 'in', tup_locations))]
 
-                    moves = stock_move.search(dom_moves)
+                    moves = StockMove.search(dom_moves)
                     if moves:
                         cls.set_moves(product, moves, products, tup_locations)
             with Transaction().set_context(stock_context_end):
-                products_end = product.search_read(dom_products,
+                products_end = Product.search_read(dom_products,
                                                    fields_names=fields_names)
             if products_end:
                 for product in products_end:
@@ -851,11 +851,11 @@ class WarehouseCdsKardexReport(Report):
                     ('id', '=', prod),
                 ]
                 with Transaction().set_context(stock_context_start):
-                    products_start = product.search_read(
+                    products_start = Product.search_read(
                         dom_products, fields_names=fields_names)
 
                 with Transaction().set_context(stock_context_end):
-                    products_end = product.search_read(
+                    products_end = Product.search_read(
                         dom_products, fields_names=fields_names)
 
                 if products_start:
@@ -869,7 +869,7 @@ class WarehouseCdsKardexReport(Report):
                                      ('OR', ('to_location', 'in',
                                              tup_locations),
                                       ('from_location', 'in', tup_locations))]
-                        moves = stock_move.search(dom_moves)
+                        moves = StockMove.search(dom_moves)
                         if moves:
                             cls.set_moves(product, moves, products,
                                           tup_locations)
@@ -889,7 +889,7 @@ class WarehouseCdsKardexReport(Report):
 
         report_context['products'] = products.values()
         report_context['warehouse'] = wh_name
-        report_context['company'] = company(data['company'])
+        report_context['company'] = Company(data['company'])
         return report_context
 
     @classmethod
