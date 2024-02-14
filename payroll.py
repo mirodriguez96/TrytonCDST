@@ -1906,6 +1906,8 @@ class Payroll(metaclass=PoolMeta):
         validate_event = []
         if self.assistance:
             for assistance in self.assistance:
+                if assistance.enter_timestamp.day == 31:
+                    continue
                 if ttt == 0:
                     ttt = assistance.ttt
                 else:
