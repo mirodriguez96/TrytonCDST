@@ -1953,6 +1953,8 @@ class Payroll(metaclass=PoolMeta):
 
     def _create_payroll_lines(self, wages, extras, discounts=None):
         PayrollLine = Pool().get('staff.payroll.line')
+        MoveLine = Pool().get('account.move.line')
+        LoanLine = Pool().get('staff.loan.line')
         # Wage = Pool().get('staff.wage.type')
         values = []
         # events = 0
@@ -1964,6 +1966,8 @@ class Payroll(metaclass=PoolMeta):
         get_salary_full = self.get_salary_full
         values_append = values.append
 
+        self.process_loans_to_pay(LoanLine, PayrollLine, MoveLine)
+        
         for wage, party, fix_amount in wages:
             if not fix_amount:
                 salary_args = get_salary_full(wage)
