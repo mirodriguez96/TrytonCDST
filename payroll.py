@@ -1504,6 +1504,19 @@ class StaffEvent(metaclass=PoolMeta):
                     break
         self.analytic_account = analytic_code
 
+    @fields.depends('category', 'is_vacations', 'absenteeism')
+    def on_change_category(self):
+        if self.category:
+            self.absenteeism = self.category.absenteeism
+            if self.category.wage_type:
+                if self.category.wage_type.type_concept == 'holidays':
+                    self.is_vacations = True
+            else:
+                self.is_vacations = False
+        else:
+            self.absenteeism = False
+            self.is_vacations = False
+
     @fields.depends('contract', 'days_of_vacations')
     def on_change_with_amount(self):
         if self.contract and self.days_of_vacations:
@@ -1720,6 +1733,8 @@ class Payroll(metaclass=PoolMeta):
         validate_event = []
         if self.assistance:
             for assistance in self.assistance:
+                if assistance.enter_timestamp.day == 31:
+                    continue
                 if ttt == 0:
                     ttt = assistance.ttt
                 else:
