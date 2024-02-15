@@ -1688,7 +1688,6 @@ class StaffEvent(metaclass=PoolMeta):
 
                 get_day = ultimo_dia_del_mes(year=int(_date_start[0]),
                                              month=int(_date_start[1]))
-                print(get_day)
 
                 end_period = Period.search([
                     ('start', '<=', f'{start_date}-{get_day}'),
@@ -1750,7 +1749,8 @@ class StaffEvent(metaclass=PoolMeta):
             wage_type for wage_type in event.employee.mandatory_wages
             if wage_type.wage_type.type_concept in CONCEPT or
             (wage_type.wage_type.type_concept_electronic in CONCEPT_ELECTRONIC
-             and wage_type.wage_type.pay_liqudation)
+             and wage_type.wage_type.pay_liqudation
+             and wage_type.wage_type.department == event.employee.department)
         ]
         if wages:
             if event.edit_amount:
