@@ -424,6 +424,7 @@ class Liquidation(metaclass=PoolMeta):
             self.write([self], {'lines': [('create', [value])]})
 
     def create_move(self):
+        reconcile = True
         pool = Pool()
         Note = pool.get('account.move.reconcile.write_off')
         Move = pool.get('account.move')
@@ -451,10 +452,13 @@ class Liquidation(metaclass=PoolMeta):
                             ml.account.type.statement not in ('balance')):
                     continue
                 to_reconcile = [ml]
+                
                 if grouped[(ml.account.id, ml.description, 'payment')]:
                     to_reconcile.extend(grouped[(ml.account.id, ml.description,
                                                  'payment')]['lines'])
-                if len(to_reconcile) > 1:
+                print(to_reconcile)
+                if len(to_reconcile) > 1 and reconcile:
+                    reconcile = False
                     note = Note.search([])
                     MoveLine.reconcile(set(to_reconcile), writeoff=note[0])
 
