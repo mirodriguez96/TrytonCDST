@@ -450,7 +450,7 @@ class Liquidation(metaclass=PoolMeta):
                 to_reconcile = [ml]
                 if grouped[(ml.account.id, ml.description, 'payment')]:
                     to_reconcile.extend(grouped[(ml.account.id, ml.description,
-                                                 ml.amount)]['lines'])
+                                                 'payment')]['lines'])
                 if len(to_reconcile) > 1:
                     note = Note.search([])
                     MoveLine.reconcile(set(to_reconcile), writeoff=note[0])
