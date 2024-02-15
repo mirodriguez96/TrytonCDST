@@ -1694,7 +1694,10 @@ class StaffEvent(metaclass=PoolMeta):
                     ('end', '>=', f'{start_date}-{get_day}')
                 ])
 
-                days = abs(int(_date_start[2]) - get_day) + 1
+                if get_day == 31:
+                    days = abs(int(_date_start[2]) - get_day)
+                else:
+                    days = abs(int(_date_start[2]) - get_day) + 1
 
                 cls.staff_liquidation_event(event=event,
                                             end_period=end_period,
@@ -3217,7 +3220,9 @@ class PayrollPaycheckReportExten(metaclass=PoolMeta):
                 ])
 
                 for item in event:
-                    staff_lines_event += [i for i in item.staff_liquidation.move.lines]
+                    staff_lines_event += [
+                        i for i in item.staff_liquidation.move.lines
+                    ]
 
                 for line_move in staff_lines_event:
                     for account_, wage in wages:
