@@ -305,6 +305,7 @@ class WageType(metaclass=PoolMeta):
                                         (Eval('type_concept_electronic')
                                          not in ['Deuda', 'Libranza'])
                                     })
+    department = fields.Many2One('company.department', 'Department')
 
 
 class Liquidation(metaclass=PoolMeta):
@@ -443,17 +444,14 @@ class Liquidation(metaclass=PoolMeta):
             }])
             self.write([self], {'move': move.id})
             for ml in move.lines:
-                print((ml.account.id, ml.description,
-                        ml.amount))
                 if (ml.account.id, ml.description,
-                        ml.amount) not in grouped.keys() or (
+                        'payment') not in grouped.keys() or (
                             ml.account.type.statement not in ('balance')):
                     continue
                 to_reconcile = [ml]
-                if grouped[(ml.account.id, ml.description, ml.amount)]:
+                if grouped[(ml.account.id, ml.description, 'payment')]:
                     to_reconcile.extend(grouped[(ml.account.id, ml.description,
-                                                 ml.amount)]['lines'])
-                breakpoint()
+                                                 'payment')]['lines'])
                 if len(to_reconcile) > 1:
                     note = Note.search([])
                     MoveLine.reconcile(set(to_reconcile), writeoff=note[0])
@@ -484,7 +482,7 @@ class Liquidation(metaclass=PoolMeta):
                     to_reconcile.append(moveline)
                     amount_line = moveline.debit - moveline.credit * -1
                     account_id = (moveline.account.id, line.description,
-                                  amount_line)
+                                  line.wage.definition)
                     if account_id not in grouped.keys():
                         grouped[account_id] = {
                             'amount': [],
@@ -520,6 +518,7 @@ class Liquidation(metaclass=PoolMeta):
 
         for account_id, values in grouped.items():
             account_id = account_id[0]
+            print(account_id)
             party_payment = None
             for wage_health in wages_health:
                 if wage_health.wage_type.credit_account.name == values[
@@ -1612,6 +1611,19 @@ class StaffEvent(metaclass=PoolMeta):
                     break
         self.analytic_account = analytic_code
 
+    @fields.depends('category', 'is_vacations', 'absenteeism')
+    def on_change_category(self):
+        if self.category:
+            self.absenteeism = self.category.absenteeism
+            if self.category.wage_type:
+                if self.category.wage_type.type_concept == 'holidays':
+                    self.is_vacations = True
+            else:
+                self.is_vacations = False
+        else:
+            self.absenteeism = False
+            self.is_vacations = False
+
     @fields.depends('contract', 'days_of_vacations')
     def on_change_with_amount(self):
         if self.contract and self.days_of_vacations:
@@ -1676,22 +1688,25 @@ class StaffEvent(metaclass=PoolMeta):
 
                 get_day = ultimo_dia_del_mes(year=int(_date_start[0]),
                                              month=int(_date_start[1]))
-                print(get_day)
 
                 end_period = Period.search([
                     ('start', '<=', f'{start_date}-{get_day}'),
                     ('end', '>=', f'{start_date}-{get_day}')
                 ])
 
-                days = abs(int(_date_start[2]) - get_day) + 1
+                if get_day == 31:
+                    days = abs(int(_date_start[2]) - get_day)
+                    end_date_period = end_period[0].end - timedelta(days=1)
+                else:
+                    days = abs(int(_date_start[2]) - get_day) + 1
 
                 cls.staff_liquidation_event(event=event,
                                             end_period=end_period,
                                             liquidation_date=event.start_date,
                                             days=days,
-                                            end_date=end_period[0].end)
+                                            end_date=end_date_period)
 
-                days = event.days - days
+                days = (event.days - days - 1 )
 
                 end_period = Period.search([('start', '<=', event.end_date),
                                             ('end', '>=', event.end_date)])
@@ -1734,7 +1749,8 @@ class StaffEvent(metaclass=PoolMeta):
             wage_type for wage_type in event.employee.mandatory_wages
             if wage_type.wage_type.type_concept in CONCEPT or
             (wage_type.wage_type.type_concept_electronic in CONCEPT_ELECTRONIC
-             and wage_type.wage_type.pay_liqudation)
+             and wage_type.wage_type.pay_liqudation
+             and wage_type.wage_type.department == event.employee.department)
         ]
         if wages:
             if event.edit_amount:
@@ -1895,6 +1911,12 @@ class Payroll(metaclass=PoolMeta):
         validate_event = []
         if self.assistance:
             for assistance in self.assistance:
+                if assistance.enter_timestamp.day == 31:
+                    if Decimal(assistance.ttt) >= Decimal(7.83):
+                        ttt -= Decimal(7.83)
+                    else:
+                        ttt -= Decimal(assistance.ttt)
+                    continue
                 if ttt == 0:
                     ttt = assistance.ttt
                 else:
@@ -1956,6 +1978,8 @@ class Payroll(metaclass=PoolMeta):
 
     def _create_payroll_lines(self, wages, extras, discounts=None):
         PayrollLine = Pool().get('staff.payroll.line')
+        MoveLine = Pool().get('account.move.line')
+        LoanLine = Pool().get('staff.loan.line')
         # Wage = Pool().get('staff.wage.type')
         values = []
         # events = 0
@@ -1967,6 +1991,8 @@ class Payroll(metaclass=PoolMeta):
         get_salary_full = self.get_salary_full
         values_append = values.append
 
+        self.process_loans_to_pay(LoanLine, PayrollLine, MoveLine)
+        
         for wage, party, fix_amount in wages:
             if not fix_amount:
                 salary_args = get_salary_full(wage)
@@ -3173,30 +3199,43 @@ class PayrollPaycheckReportExten(metaclass=PoolMeta):
         return report_context
 
     def values_without_move(line, wage_type_default, res, key):
-        PayrollLine = Pool().get('staff.event-staff.liquidation')
+        PayrollLine = Pool().get('staff.payroll.line')
+        Staff_event_liquidation = Pool().get('staff.event-staff.liquidation')
         staff_lines = {}
         validate = True
         total = 0
+        staff_lines_event = []
         concept = line['wage_type.']['type_concept']
         concept_electronic = line['wage_type.']['type_concept_electronic']
         other_health_retirement = line['wage_type.'][
             'excluded_payroll_electronic']
 
         # other_key = str(line['payroll.']['employee']) +'_' + str(line['payroll.']['contract'])
-        if concept in concept != 'salary' and other_health_retirement and validate:
-            staff_line, = PayrollLine.search([('staff_liquidation', '=',
-                                               line['id'])])
+
+        if concept == 'holidays' and other_health_retirement and validate:
+            staff_line, = PayrollLine.search([('id', '=', line['id'])])
             wages = [(wage_type.wage_type.credit_account, wage_type)
                      for wage_type in
-                     staff_line.staff_liquidation.employee.mandatory_wages
+                     staff_line.payroll.contract.employee.mandatory_wages
                      if wage_type.wage_type.type_concept in CONCEPT]
+            if staff_line.origin:
+                event = Staff_event_liquidation.search([
+                    ('event', '=', staff_line.origin.id),
+                    ('staff_liquidation.end_period', '=',
+                     staff_line.payroll.period.id)
+                ])
 
-            for line_move in staff_line.staff_liquidation.move.lines:
-                for account_, wage in wages:
-                    if line_move.account == account_:
-                        staff_lines[wage.wage_type.type_concept] = {
-                            'amount': line_move.credit
-                        }
+                for item in event:
+                    staff_lines_event += [
+                        i for i in item.staff_liquidation.move.lines
+                    ]
+
+                for line_move in staff_lines_event:
+                    for account_, wage in wages:
+                        if line_move.account == account_:
+                            staff_lines[wage.wage_type.type_concept] = {
+                                'amount': line_move.credit
+                            }
 
             if key in res.keys():
                 if 'health' in staff_lines.keys():
