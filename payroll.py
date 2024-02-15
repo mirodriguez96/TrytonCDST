@@ -450,9 +450,8 @@ class Liquidation(metaclass=PoolMeta):
                 to_reconcile = [ml]
                 if grouped[(ml.account.id, ml.description, 'payment')]:
                     to_reconcile.extend(grouped[(ml.account.id, ml.description,
-                                                 'payment')]['lines'])
-
-                if len(to_reconcile) > 1 and ml.amount > 0:
+                                                 ml.amount)]['lines'])
+                if len(to_reconcile) > 1:
                     note = Note.search([])
                     MoveLine.reconcile(set(to_reconcile), writeoff=note[0])
                 
@@ -1695,7 +1694,10 @@ class StaffEvent(metaclass=PoolMeta):
                     ('end', '>=', f'{start_date}-{get_day}')
                 ])
 
-                days = abs(int(_date_start[2]) - get_day) + 1
+                if get_day == 31:
+                    days = abs(int(_date_start[2]) - get_day)
+                else:
+                    days = abs(int(_date_start[2]) - get_day) + 1
 
                 cls.staff_liquidation_event(event=event,
                                             end_period=end_period,
@@ -1824,14 +1826,14 @@ class StaffEvent(metaclass=PoolMeta):
                         to_save.exit_timestamp = event.exit_timestamp + timedelta(
                             days=i)
                         to_save.line_event = event
-                        to_save.save()
+                        to_save.reco = 0
+                        to_save.recf = 0
+                        to_save.dom = 0
                         to_save.hedo = 0
                         to_save.heno = 0
                         to_save.henf = 0
                         to_save.hedf = 0
-                        to_save.reco = 0
-                        to_save.recf = 0
-                        to_save.dom = 0
+                        to_save.save()
 
     @classmethod
     def force_draft(cls, events):
@@ -1968,6 +1970,8 @@ class Payroll(metaclass=PoolMeta):
 
     def _create_payroll_lines(self, wages, extras, discounts=None):
         PayrollLine = Pool().get('staff.payroll.line')
+        MoveLine = Pool().get('account.move.line')
+        LoanLine = Pool().get('staff.loan.line')
         # Wage = Pool().get('staff.wage.type')
         values = []
         # events = 0
@@ -1979,6 +1983,8 @@ class Payroll(metaclass=PoolMeta):
         get_salary_full = self.get_salary_full
         values_append = values.append
 
+        self.process_loans_to_pay(LoanLine, PayrollLine, MoveLine)
+        
         for wage, party, fix_amount in wages:
             if not fix_amount:
                 salary_args = get_salary_full(wage)
@@ -3212,7 +3218,9 @@ class PayrollPaycheckReportExten(metaclass=PoolMeta):
                 ])
 
                 for item in event:
-                    staff_lines_event += [i for i in item.staff_liquidation.move.lines]
+                    staff_lines_event += [
+                        i for i in item.staff_liquidation.move.lines
+                    ]
 
                 for line_move in staff_lines_event:
                     for account_, wage in wages:
