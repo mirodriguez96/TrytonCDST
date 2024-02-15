@@ -305,6 +305,7 @@ class WageType(metaclass=PoolMeta):
                                         (Eval('type_concept_electronic')
                                          not in ['Deuda', 'Libranza'])
                                     })
+    department = fields.Many2One('company.department', 'Department')
 
 
 class Liquidation(metaclass=PoolMeta):
@@ -1696,6 +1697,7 @@ class StaffEvent(metaclass=PoolMeta):
 
                 if get_day == 31:
                     days = abs(int(_date_start[2]) - get_day)
+                    end_date_period = end_period[0].end - timedelta(days=1)
                 else:
                     days = abs(int(_date_start[2]) - get_day) + 1
 
@@ -1703,9 +1705,9 @@ class StaffEvent(metaclass=PoolMeta):
                                             end_period=end_period,
                                             liquidation_date=event.start_date,
                                             days=days,
-                                            end_date=end_period[0].end)
+                                            end_date=end_date_period)
 
-                days = event.days - days
+                days = (event.days - days - 1 )
 
                 end_period = Period.search([('start', '<=', event.end_date),
                                             ('end', '>=', event.end_date)])
@@ -1909,6 +1911,12 @@ class Payroll(metaclass=PoolMeta):
         validate_event = []
         if self.assistance:
             for assistance in self.assistance:
+                if assistance.enter_timestamp.day == 31:
+                    if Decimal(assistance.ttt) >= Decimal(7.83):
+                        ttt -= Decimal(7.83)
+                    else:
+                        ttt -= Decimal(assistance.ttt)
+                    continue
                 if ttt == 0:
                     ttt = assistance.ttt
                 else:
