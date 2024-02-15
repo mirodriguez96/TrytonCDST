@@ -1741,6 +1741,7 @@ class AuxiliaryParty(metaclass=PoolMeta):
         start_period = None
         end_period = None
         location = None
+        account_ids = []
 
         # Define start period to Account Moves
         start_period = Period(data['start_period'])
@@ -1833,7 +1834,7 @@ class AuxiliaryParty(metaclass=PoolMeta):
                             'balance': []
                         }
                         res[id_loc][id_]['accounts'].append(account_id)
-
+                        account_ids.append(account_id)
                     accounts_id[id_loc][id_][account_id]['lines'].append(line)
                     accounts_id[id_loc][id_][account_id]['sum_debit'].append(
                         line.debit)
@@ -1865,7 +1866,7 @@ class AuxiliaryParty(metaclass=PoolMeta):
                             'balance': []
                         }
                         res[id_]['accounts'].append(account_id)
-
+                        account_ids.append(account_id)
                     accounts_id[id_][account_id]['lines'].append(line)
                     accounts_id[id_][account_id]['sum_debit'].append(
                         line.debit)
@@ -1888,7 +1889,7 @@ class AuxiliaryParty(metaclass=PoolMeta):
             default_entity = '0'
 
         # Select data from start period
-        start_periods_ids = [p.id for p in start_periods]
+        start_periods_ids = [period.id for period in start_periods]
 
         join1 = account_move_line.join(account_move)
         join1.condition = join1.right.id == account_move_line.move
@@ -1904,12 +1905,11 @@ class AuxiliaryParty(metaclass=PoolMeta):
             select2.where = select2.where & (account_move_line.party
                                              == data['party'])
         if data['accounts']:
-            select2.where = select2.where & (account_move_line.account.in_(
-                data['accounts']))
+            select2.where = select2.where & (
+                account_move_line.account.in_(account_ids))
 
         if data['posted']:
             select2.where = select2.where & (account_move.state == 'posted')
-
         cursor.execute(*select2)
         result_start = cursor.fetchall()
 
@@ -1941,6 +1941,7 @@ class AuxiliaryParty(metaclass=PoolMeta):
                             values,
                             by_location=None):
         balances = {}
+        already_accounts = []
 
         for val in values:
             id_account = val[0]
@@ -1948,24 +1949,61 @@ class AuxiliaryParty(metaclass=PoolMeta):
             start_balance = Decimal(val[2])
 
             if by_location:
-                sum_debit = sum(
-                    lines_account[by_location][key][id_account]['sum_debit'])
-                sum_credit = sum(
-                    lines_account[by_location][key][id_account]['sum_credit'])
-
-                end_balance = start_balance + sum_debit - sum_credit
-                balances[id_account] = {
-                    "start_balance": start_balance,
-                    "end_balance": end_balance
-                }
-                records[by_location][key]['balances'].append(balances)
+                if id_account in records[by_location][key]["accounts"]:
+                    already_accounts.append(id_account)
+                    sum_debit = sum(lines_account[by_location][key][id_account]
+                                    ['sum_debit'])
+                    sum_credit = sum(lines_account[by_location][key]
+                                     [id_account]['sum_credit'])
+                    end_balance = start_balance + sum_debit - sum_credit
+                    balances[id_account] = {
+                        "start_balance": start_balance,
+                        "end_balance": end_balance
+                    }
+                    records[by_location][key]['balances'].append(balances)
             else:
-                sum_debit = sum(lines_account[key][id_account]['sum_debit'])
-                sum_credit = sum(lines_account[key][id_account]['sum_credit'])
+                if id_account in records[key]["accounts"]:
+                    already_accounts.append(id_account)
+                    sum_debit = sum(
+                        lines_account[key][id_account]['sum_debit'])
+                    sum_credit = sum(
+                        lines_account[key][id_account]['sum_credit'])
+                    end_balance = start_balance + sum_debit - sum_credit
+                    balances[id_account] = {
+                        "start_balance": start_balance,
+                        "end_balance": end_balance
+                    }
+                    records[key]['balances'].append(balances)
 
-                end_balance = start_balance + sum_debit - sum_credit
-                balances[id_account] = {
-                    "start_balance": start_balance,
-                    "end_balance": end_balance
-                }
-                records[key]['balances'].append(balances)
+        if by_location:
+            print(f"Cuentas ya almacenadas{already_accounts}")
+            for key_, values_ in records.items():
+                print(values_)
+                accounts = values_[key].get("accounts", [])
+                for account_id in accounts:
+                    if account_id not in already_accounts:
+                        sum_debit = sum(lines_account[by_location][key]
+                                        [account_id]['sum_debit'])
+                        sum_credit = sum(lines_account[by_location][key]
+                                         [account_id]['sum_credit'])
+                        end_balance = sum_debit - sum_credit
+                        balances[account_id] = {
+                            "start_balance": 0,
+                            "end_balance": end_balance
+                        }
+                        records[by_location][key]['balances'].append(balances)
+        else:
+            for key_, values_ in records.items():
+                accounts = values_.get("accounts", [])
+                for account_id in accounts:
+                    if account_id not in already_accounts:
+                        sum_debit = sum(
+                            lines_account[key_][account_id]['sum_debit'])
+                        sum_credit = sum(
+                            lines_account[key_][account_id]['sum_credit'])
+                        end_balance = sum_debit - sum_credit
+                        balances[account_id] = {
+                            "start_balance": 0,
+                            "end_balance": end_balance
+                        }
+                        records[key_]['balances'].append(balances)
