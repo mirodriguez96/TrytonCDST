@@ -1910,6 +1910,10 @@ class Payroll(metaclass=PoolMeta):
         if self.assistance:
             for assistance in self.assistance:
                 if assistance.enter_timestamp.day == 31:
+                    if Decimal(assistance.ttt) >= Decimal(7.83):
+                        ttt -= Decimal(7.83)
+                    else:
+                        ttt -= Decimal(assistance.ttt)
                     continue
                 if ttt == 0:
                     ttt = assistance.ttt
