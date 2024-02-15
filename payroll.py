@@ -391,8 +391,10 @@ class Liquidation(metaclass=PoolMeta):
         line.save()
         if amount_holidays > 0:
             WageType = Pool().get('staff.wage_type')
-            wage_type = WageType.search([('non_working_days', '=', True)],
-                                        limit=1)
+            wage_type = WageType.search(
+                [('non_working_days', '=', True),
+                 ('department', '=', self.employee.department)],
+                limit=1)
             if not wage_type:
                 raise UserError('Wage Type',
                                 'missing wage_type (non_working_days)')
@@ -455,7 +457,7 @@ class Liquidation(metaclass=PoolMeta):
                 if len(to_reconcile) > 1:
                     note = Note.search([])
                     MoveLine.reconcile(set(to_reconcile), writeoff=note[0])
-                
+
             Move.post([move])
 
     def get_moves_lines(self):
@@ -1706,7 +1708,7 @@ class StaffEvent(metaclass=PoolMeta):
                                             days=days,
                                             end_date=end_date_period)
 
-                days = (event.days - days - 1 )
+                days = (event.days - days - 1)
 
                 end_period = Period.search([('start', '<=', event.end_date),
                                             ('end', '>=', event.end_date)])
@@ -1749,8 +1751,7 @@ class StaffEvent(metaclass=PoolMeta):
             wage_type for wage_type in event.employee.mandatory_wages
             if wage_type.wage_type.type_concept in CONCEPT or
             (wage_type.wage_type.type_concept_electronic in CONCEPT_ELECTRONIC
-             and wage_type.wage_type.pay_liqudation
-             and wage_type.wage_type.department == event.employee.department)
+             and wage_type.wage_type.pay_liqudation)
         ]
         if wages:
             if event.edit_amount:
