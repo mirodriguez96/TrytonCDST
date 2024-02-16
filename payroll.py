@@ -45,7 +45,7 @@ CONCEPT_ACCESS = {
     'HEDDF': 'recf',
     'HENDF': 'henf',
     'HRDDF': 'reco',
-    'HRNDF': 'recf',
+    'HRNDF': 'dom',
 }
 
 TYPE_CONCEPT_ELECTRONIC = [
@@ -1914,13 +1914,19 @@ class Payroll(metaclass=PoolMeta):
 
         lines_payroll = list(self.lines)
         validate_event = []
+        extras_31 = {}
         if self.assistance:
             for assistance in self.assistance:
                 if assistance.enter_timestamp.day == 31:
-                    if Decimal(assistance.ttt) >= Decimal(7.83):
-                        ttt -= round(Decimal(7.83),2)
-                    else:
-                        ttt -= Decimal(assistance.ttt)
+                    extras_31 = {
+                        'HED': assistance.hedo,
+                        'HEN': assistance.heno,
+                        'HRDDF': assistance.reco,
+                        'HEDDF': assistance.recf,
+                        'HRNDF': assistance.dom,
+                        'HRN': assistance.hedf,
+                        'HENDF': assistance.henf
+                    }
                     continue
                 if ttt == 0:
                     ttt = assistance.ttt
@@ -1960,7 +1966,6 @@ class Payroll(metaclass=PoolMeta):
 
             if extras != {}:
                 if validate > Decimal(0):
-                    print('hola')
                     discuont = abs(validate)
                     if 'HEN' in extras.keys(
                     ) and extras['HEN']['line'].quantity > discuont:
@@ -1976,6 +1981,12 @@ class Payroll(metaclass=PoolMeta):
                     for key, value in extras.items():
                         if value['quantity'] > 0:
                             lines_payroll.append(value['line'])
+
+        for line in lines_payroll:
+            if line.wage_type.type_concept_electronic in extras_31.keys():
+                line.quantity += extras_31[
+                    line.wage_type.type_concept_electronic]
+                line.save()
 
         self.lines = ()
         self.lines = tuple(lines_payroll)
