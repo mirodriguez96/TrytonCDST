@@ -640,8 +640,6 @@ class Liquidation(metaclass=PoolMeta):
                 elif self.kind != l.wage_type.type_concept:
                     continue
 
-
-
                 if l.wage_type.id not in wages_target.keys(
                 ) and l.wage_type in mandatory_wages:
                     mlines = self.get_moves_lines_pending(

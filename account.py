@@ -117,6 +117,56 @@ class MoveLine(ModelSQL, metaclass=PoolMeta):
     @classmethod
     def _get_origin(cls):
         return super()._get_origin() + ['stock.move']
+    
+    @classmethod
+    def reconcile(
+            cls, *lines_list, date=None, writeoff=None, description=None,
+            delegate_to=None):
+        """
+        Reconcile each list of lines together.
+        The writeoff keys are: date, method and description.
+        """
+        pool = Pool()
+        Reconciliation = pool.get('account.move.reconciliation')
+        delegate_to = delegate_to.id if delegate_to else None
+        reconciliations = []
+        for lines in lines_list:
+            for line in lines:
+                if line.reconciliation:
+                    raise AccessError(
+                        gettext('account.msg_line_already_reconciled',
+                            line=line.rec_name))
+
+            lines = list(lines)
+            reconcile_account = None
+            reconcile_party = None
+            amount = Decimal('0.0')
+            for line in lines:
+                amount += line.debit - line.credit
+                if not reconcile_account:
+                    reconcile_account = line.account
+                if not reconcile_party:
+                    reconcile_party = line.party
+            if amount:
+                move = cls._get_writeoff_move(
+                    reconcile_account, reconcile_party, amount,
+                    date, writeoff, description)
+                move.save()
+                lines += cls.search([
+                        ('move', '=', move.id),
+                        ('account', '=', reconcile_account.id),
+                        ('debit', '=', amount < Decimal('0.0') and - amount
+                            or Decimal('0.0')),
+                        ('credit', '=', amount > Decimal('0.0') and amount
+                            or Decimal('0.0')),
+                        ], limit=1)
+            reconciliations.append({
+                    'company': reconcile_account.company,
+                    'lines': [('add', [x.id for x in lines])],
+                    'date': max(l.date for l in lines),
+                    'delegate_to': delegate_to,
+                    })
+        return Reconciliation.create(reconciliations)
 
     @classmethod
     def delete_lines(cls, lines):

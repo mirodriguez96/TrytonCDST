@@ -2,10 +2,16 @@
 <!-- This file is part of Tryton.  The COPYRIGHT file at the top level of
 this repository contains the full copyright notices and license terms. -->
 <data>
+    <xpath expr="/form/field[@name='credit_account']" position="after">
+        <label name="department"/>
+        <field name="department"/>
+    </xpath>
     <xpath expr="/form/field[@name='receipt']" position="after">
         <label name="non_working_days"/>
         <field name="non_working_days"/>
         <label name="excluded_payroll_electronic"/>
         <field name="excluded_payroll_electronic"/>
+        <label name="pay_liqudation"/>
+        <field name="pay_liqudation"/>
     </xpath>
 </data>
