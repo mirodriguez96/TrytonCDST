@@ -1194,13 +1194,14 @@ class ImportedDocumentWizard(Wizard):
             linea = linea.split(';')
             if len(linea) != 4:
                 raise UserError('Error plantilla',
-                                ' location | date | product | quantity ')
+                                ' location | date | product | quantity | Analytic account')
 
             if first:
                 location, = Location.search([('name', '=', linea[0].strip())])
                 inventory.location = location
                 date = cls.convert_str_date(linea[1])
                 inventory.date = date
+                inventory.analitic_account = linea[4]
                 first = False
 
             line = Line()
