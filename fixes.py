@@ -57,15 +57,13 @@ def eliminar_tecnocarnes_facturas(ids_=None, id_tecno=None):
                 exceptions.append(invoice.reference)
                 logs[
                     invoice.
-                    reference] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
-                Y NO ES POSIBLE SU ELIMINACION O MODIFICACION"
+                    reference] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE "\
+                    "ENCUENTRA CERRADO Y NO ES POSIBLE SU ELIMINACION"\
+                    " O MODIFICACION"
 
                 continue
             reclamacion, = Reclamacion.search([('line.move.origin', '=',
                                                 invoice)])
-            rec_name = invoice.rec_name
-            party_name = invoice.party.name
-            rec_party = rec_name + ' de ' + party_name
             if invoice.number and '-' in invoice.number:
                 if invoice.id_tecno:
                     sw = invoice.id_tecno.split('-')[0]
@@ -124,8 +122,9 @@ def draft_unconciliate_delete_account_move(ids_=None, action=None):
                     exceptions.append(move.id)
                     logs[
                         move.
-                        id] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
-                    Y NO ES POSIBLE SU ELIMINACION O MODIFICACION"
+                        id] = "EXCEPCION: EL PERIODO DEL DOCUMENTO "\
+                        "SE ENCUENTRA CERRADO Y NO ES POSIBLE SU "\
+                        "ELIMINACION O MODIFICACION"
 
                     continue
 
