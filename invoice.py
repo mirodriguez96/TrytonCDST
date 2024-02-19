@@ -7,7 +7,7 @@ from trytond.i18n import gettext
 from trytond.pool import PoolMeta, Pool
 from trytond.model import fields, ModelView
 from trytond.pyson import Eval, Or, And
-from trytond.wizard import Wizard, StateTransition, StateView, Button
+from trytond.wizard import Wizard, StateTransition, StateView, Button, StateAction
 from trytond.transaction import Transaction
 from trytond.exceptions import UserError, UserWarning
 from sql import Table
@@ -98,10 +98,11 @@ class Invoice(metaclass=PoolMeta):
         if not sw:
             taxes_validate = [
                 t for t in invoice.taxes
-                if t.base and t.tax.base and t.tax.base > abs(t.base)]
+                if t.base and t.tax.base and t.tax.base > abs(t.base)
+            ]
         else:
             taxes_validate = []
-        
+
         if taxes_validate and config.remove_tax:
             lines_to_change = [l for l in invoice.lines if l.type == 'line']
             Line.write(
@@ -1104,3 +1105,30 @@ class UpdateNoteDate(Wizard):
                 f"Los documentos {exceptions} no pueden ser eliminados porque su periodo se encuentra cerrado"
             )
         return 'end'
+
+
+class CreditInvoice(metaclass=PoolMeta):
+    'Credit Invoice Note Wizard'
+    __name__ = 'account.invoice.credit'
+
+    def default_start(self, fields):
+        default = {
+            'with_refund': True,
+            'with_refund_allowed': True,
+        }
+        for invoice in self.records:
+            print("verificando estado")
+            if invoice.state == 'paid':
+                raise UserError(
+                    'AVISO', 'La factura se encuentra pagada y'
+                    ' no se puede agregar una nota credito')
+
+            if invoice.state != 'posted' or invoice.type == 'in':
+                default['with_refund'] = False
+                default['with_refund_allowed'] = False
+                break
+
+            if invoice.payment_lines:
+                default['with_refund'] = False
+
+        return default
