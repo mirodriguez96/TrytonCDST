@@ -117,11 +117,14 @@ class MoveLine(ModelSQL, metaclass=PoolMeta):
     @classmethod
     def _get_origin(cls):
         return super()._get_origin() + ['stock.move']
-    
+
     @classmethod
-    def reconcile(
-            cls, *lines_list, date=None, writeoff=None, description=None,
-            delegate_to=None):
+    def reconcile(cls,
+                  *lines_list,
+                  date=None,
+                  writeoff=None,
+                  description=None,
+                  delegate_to=None):
         """
         Reconcile each list of lines together.
         The writeoff keys are: date, method and description.
@@ -135,7 +138,7 @@ class MoveLine(ModelSQL, metaclass=PoolMeta):
                 if line.reconciliation:
                     raise AccessError(
                         gettext('account.msg_line_already_reconciled',
-                            line=line.rec_name))
+                                line=line.rec_name))
 
             lines = list(lines)
             reconcile_account = None
@@ -148,24 +151,25 @@ class MoveLine(ModelSQL, metaclass=PoolMeta):
                 if not reconcile_party:
                     reconcile_party = line.party
             if amount:
-                move = cls._get_writeoff_move(
-                    reconcile_account, reconcile_party, amount,
-                    date, writeoff, description)
+                move = cls._get_writeoff_move(reconcile_account,
+                                              reconcile_party, amount, date,
+                                              writeoff, description)
                 move.save()
                 lines += cls.search([
-                        ('move', '=', move.id),
-                        ('account', '=', reconcile_account.id),
-                        ('debit', '=', amount < Decimal('0.0') and - amount
-                            or Decimal('0.0')),
-                        ('credit', '=', amount > Decimal('0.0') and amount
-                            or Decimal('0.0')),
-                        ], limit=1)
+                    ('move', '=', move.id),
+                    ('account', '=', reconcile_account.id),
+                    ('debit', '=', amount < Decimal('0.0') and -amount
+                     or Decimal('0.0')),
+                    ('credit', '=', amount > Decimal('0.0') and amount
+                     or Decimal('0.0')),
+                ],
+                                    limit=1)
             reconciliations.append({
-                    'company': reconcile_account.company,
-                    'lines': [('add', [x.id for x in lines])],
-                    'date': max(l.date for l in lines),
-                    'delegate_to': delegate_to,
-                    })
+                'company': reconcile_account.company,
+                'lines': [('add', [x.id for x in lines])],
+                'date': max(l.date for l in lines),
+                'delegate_to': delegate_to,
+            })
         return Reconciliation.create(reconciliations)
 
     @classmethod
@@ -1546,6 +1550,11 @@ class PartyWithholdingStart(metaclass=PoolMeta):
                                       'Certificate Report')
 
     @classmethod
+    def __setup__(cls):
+        super(PartyWithholdingStart, cls).__setup__()
+        cls.party.required = True
+
+    @classmethod
     def selection_city(cls):
         """This function return addresses of company"""
         # pylint: disable=no-member
@@ -1618,9 +1627,7 @@ class PartyWithholding(metaclass=PoolMeta):
     @classmethod
     def get_context(cls, records, header, data):
         report_context = super().get_context(records, header, data)
-        cursor = Transaction().connection.cursor()
         pool = Pool()
-        # InvoiceTax = pool.get('account.invoice.tax')
         Tax = pool.get('account.tax')
         MoveLine = pool.get('account.move.line')
         Move = pool.get('account.move')
@@ -1628,7 +1635,6 @@ class PartyWithholding(metaclass=PoolMeta):
         Company = pool.get('company.company')
         Period = pool.get('account.period')
         Fiscalyear = pool.get('account.fiscalyear')
-        Party = pool.get('party.party')
         party_addresses = pool.get("party.address")
         company = Company(data['company'])
 
@@ -1638,21 +1644,22 @@ class PartyWithholding(metaclass=PoolMeta):
         }
 
         city = data["addresses"]
-
         if city:
-            address_city = party_addresses.search(["name", "=", city])
-            address = {"city": city, "address": address_city[0].street}
+            address_city = party_addresses.search([("name", "=", city),
+                                                   ("party", "=",
+                                                    company.party.id)])
+            if address_city:
+                address = {"city": city, "address": address_city[0].street}
 
         move = Move.__table__()
         line = MoveLine.__table__()
         tax = Tax.__table__()
         account = Account.__table__()
 
+        # Build conditions
         where = tax.classification != Null
-        if data['party']:
-            where &= line.party == data['party']
-        else:
-            where &= line.party != null
+        party = data['party']
+        where &= line.party == party
 
         dom_periods = [
             ('fiscalyear', '=', data['fiscalyear']),
@@ -1741,7 +1748,6 @@ class PartyWithholding(metaclass=PoolMeta):
         report_context['today'] = date.today()
         report_context['company'] = company
         report_context['address'] = address
-
         return report_context
 
     @classmethod
