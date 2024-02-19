@@ -6,4 +6,9 @@ this repository contains the full copyright notices and license terms. -->
         <label name="sended_mail"/>
         <field name="sended_mail"/>
     </xpath>
+
+    <xpath expr="/form/group[@id='state_buttons']/field[@name='state']" position="after">
+        <button name="wait" string="Wait"
+            icon="tryton-ok"/>
+    </xpath>
 </data>

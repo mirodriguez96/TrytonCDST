@@ -40,6 +40,7 @@ def register():
                   account.AnalyticAccountEntry,
                   account.PartyWithholdingStart,
                   account.Reconciliation,
+                  account.AuxiliaryPartyStart,
                   company.Company,
                   conector.Actualizacion,
                   party.CheckVIESResult,
@@ -125,6 +126,9 @@ def register():
                   statement.StatementLine,
                   wiz.FixBugsConectorView,
                   stock.Inventory,
+                  payroll.LineLiquidationEvent,
+                  wiz.DeleteLiquidationStart,
+                  wiz.DeleteEventLiquidationStart,
                   module='conector',
                   type_='model')
 
@@ -176,10 +180,14 @@ def register():
                   account_dunning.DunningForceDraft,
                   wiz.FixBugsConector,
                   statement.StatementMoveValidate,
+                  wiz.DeleteLiquidation,
+                  wiz.DeleteEventLiquidation,
+                  invoice.CreditInvoice,
                   module='conector',
                   type_='wizard')
 
-    Pool.register(report.PayrollExportReport,
+    Pool.register(account.AuxiliaryParty,
+                  report.PayrollExportReport,
                   report.CDSSaleIncomeDailyReport,
                   payroll.PayrollPaymentReportBcl,
                   payroll.LiquidationPaymentReportBcl,

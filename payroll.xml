@@ -47,6 +47,13 @@ this repository contains the full copyright notices and license terms. -->
             <field name="name">liquidation_form</field>
         </record>
 
+        <record model="ir.action.act_window.domain" id="act_liquidation_form_domain_wait">
+            <field name="name">Wait</field>
+            <field name="sequence" eval="10"/>
+            <field name="domain" eval="[('state', '=', 'wait')]" pyson="1"/>
+            <field name="act_window" ref="staff_payroll_co.act_liquidation_form"/>
+        </record>
+
         <!--interfaz para la generación del reporte-->
         <record model="ir.action.report" id="report_payroll_payment_bancolombia">
             <field name="name">Payroll Payment Report Bancolombia</field>
