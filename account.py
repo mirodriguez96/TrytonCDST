@@ -1,7 +1,7 @@
 from collections import defaultdict
 from decimal import Decimal
 from timeit import default_timer as timer
-from datetime import date
+from datetime import date, datetime
 import operator
 from itertools import groupby
 import time
@@ -1804,3 +1804,319 @@ class PartyWithholding(metaclass=PoolMeta):
                     'base': row_dict['base']
                 }
         return res_dict
+
+
+class AuxiliaryPartyStart(metaclass=PoolMeta):
+    """Party Movements Report View"""
+    __name__ = 'account_col.print_auxiliary_party.start'
+
+    @classmethod
+    def __setup__(cls):
+        super(AuxiliaryPartyStart, cls).__setup__()
+        cls.start_period.required = True
+        cls.end_period.required = True
+
+    @fields.depends('grouped_by_location', 'only_reference')
+    def on_change_grouped_by_location(cls):
+        if cls.grouped_by_location:
+            cls.only_reference = False
+
+    @fields.depends('grouped_by_location', 'only_reference')
+    def on_change_only_reference(cls):
+        if cls.only_reference:
+            cls.grouped_by_location = False
+
+
+class AuxiliaryParty(metaclass=PoolMeta):
+    """Party movements report"""
+    __name__ = 'account_col.auxiliary_party'
+
+    @classmethod
+    def get_context(cls, records, header, data):
+        report_context = super().get_context(records, header, data)
+        pool = Pool()
+        Period = pool.get('account.period')
+        Company = pool.get('company.company')
+        Move = pool.get('account.move')
+        MoveLine = pool.get('account.move.line')
+
+        res = {}
+        accounts_id = {}
+        dom_move = []
+        result_start = []
+
+        cursor = Transaction().connection.cursor()
+        account_move = Move.__table__()
+        account_move_line = MoveLine.__table__()
+        company = Company.search(["id", "=", data["company"]])
+
+        grouped_by_loc = False
+        start_period = None
+        end_period = None
+        location = None
+        account_ids = []
+
+        # Define start period to Account Moves
+        start_period = Period(data['start_period'])
+        dom_move.append(('period.start_date', '>=', start_period.start_date))
+
+        # Define end period to Account Moves
+        end_period = Period(data['end_period'])
+        dom_move.append(('period.start_date', '<=', end_period.start_date))
+
+        if data.get('posted'):
+            dom_move.append(('state', '=', 'posted'))
+
+        # Get move accounts
+        moves = Move.search_read(
+            dom_move,
+            order=[('date', 'ASC'), ('id', 'ASC')],
+            fields_names=['id'],
+        )
+        moves_ids = [move['id'] for move in moves]
+        dom_lines = [('move', 'in', moves_ids)]
+
+        # Build conditions to Account Move Lines
+        if data.get('reference'):
+            reference_dom = ('reference', 'ilike', data.get('reference'))
+            dom_lines.append(reference_dom)
+
+        if data.get('accounts'):
+            accounts_dom = ('account', 'in', data['accounts'])
+            dom_lines.append(accounts_dom)
+
+        if data.get('party'):
+            parties_dom = ('party', '=', data['party'])
+            dom_lines.append(parties_dom)
+
+        lines = MoveLine.search(dom_lines, order=[('move.date', 'ASC')])
+
+        if lines:
+            for line in lines:
+                if not line.party:
+                    continue
+
+                if data['only_reference']:
+                    id_ = line.reference
+                    name = line.reference
+                    id_number = ''
+                else:
+                    id_ = line.party.id
+                    name = line.party.rec_name
+                    id_number = line.party.id_number
+
+                account_id = line.account.id
+                if data['grouped_by_location'] or data['grouped_by_oc']:
+                    grouped_by_loc = True
+                    if data['grouped_by_location']:
+                        city_name = ' '
+                        if line.party.city_name:
+                            city_name = line.party.city_name
+                        id_loc = city_name
+                    elif data['grouped_by_oc']:
+                        id_loc = 'CO.'
+                        if line.operation_center:
+                            id_loc = 'CO. [' + line.operation_center.code + '] ' + line.operation_center.name
+
+                    location = id_loc
+
+                    if id_loc not in res.keys():
+                        res[id_loc] = {}
+                        accounts_id[id_loc] = {
+                            'name': id_loc,
+                            'sum_debit': [],
+                            'sum_credit': [],
+                            'balance': []
+                        }
+
+                    if id_ not in res[id_loc].keys():
+                        res[id_loc][id_] = {
+                            'name': name,
+                            'id_number': id_number,
+                            'accounts': [],
+                            'balances': []
+                        }
+                        accounts_id[id_loc][id_] = {}
+
+                    if account_id not in accounts_id[id_loc][id_].keys():
+                        accounts_id[id_loc][id_][account_id] = {
+                            'account': line.account,
+                            'lines': [],
+                            'sum_debit': [],
+                            'sum_credit': [],
+                            'balance': []
+                        }
+                        res[id_loc][id_]['accounts'].append(account_id)
+                        account_ids.append(account_id)
+                    accounts_id[id_loc][id_][account_id]['lines'].append(line)
+                    accounts_id[id_loc][id_][account_id]['sum_debit'].append(
+                        line.debit)
+                    accounts_id[id_loc][id_][account_id]['sum_credit'].append(
+                        line.credit)
+                    accounts_id[id_loc][id_][account_id]['balance'].append(
+                        line.debit - line.credit)
+                    accounts_id[id_loc]['sum_debit'].append(line.debit)
+                    accounts_id[id_loc]['sum_credit'].append(line.credit)
+                    accounts_id[id_loc]['balance'].append(line.debit -
+                                                          line.credit)
+                else:
+                    if id_ not in res.keys():
+                        res[id_] = {
+                            'name': name,
+                            'id_number': id_number,
+                            'accounts': [],
+                            'balances': []
+                        }
+                        accounts_id[id_] = {}
+
+                    # if id_ not in accounts_id.keys():
+                    if account_id not in accounts_id[id_].keys():
+                        accounts_id[id_][account_id] = {
+                            'account': line.account,
+                            'lines': [],
+                            'sum_debit': [],
+                            'sum_credit': [],
+                            'balance': []
+                        }
+                        res[id_]['accounts'].append(account_id)
+                        account_ids.append(account_id)
+                    accounts_id[id_][account_id]['lines'].append(line)
+                    accounts_id[id_][account_id]['sum_debit'].append(
+                        line.debit)
+                    accounts_id[id_][account_id]['sum_credit'].append(
+                        line.credit)
+                    accounts_id[id_][account_id]['balance'].append(line.debit -
+                                                                   line.credit)
+
+        # Define start period to balances
+        start_period = Period(data['start_period'])
+        start_periods = Period.search([
+            ('end_date', '<', start_period.start_date),
+        ])
+
+        # build conditions
+        entity = account_move_line.party
+        default_entity = 0
+        if not data['party'] and data['by_reference']:
+            entity = account_move_line.reference
+            default_entity = '0'
+
+        # Select data from start period
+        start_periods_ids = [period.id for period in start_periods]
+
+        join1 = account_move_line.join(account_move)
+        join1.condition = join1.right.id == account_move_line.move
+        select2 = join1.select(
+            account_move_line.account,
+            Coalesce(entity, default_entity),
+            Sum(account_move_line.debit) - Sum(account_move_line.credit),
+            group_by=(account_move_line.account, entity),
+            order_by=account_move_line.account,
+        )
+        select2.where = join1.right.period.in_(start_periods_ids)
+        if data['party']:
+            select2.where = select2.where & (account_move_line.party
+                                             == data['party'])
+        if data['accounts']:
+            select2.where = select2.where & (
+                account_move_line.account.in_(account_ids))
+
+        if data['posted']:
+            select2.where = select2.where & (account_move.state == 'posted')
+        cursor.execute(*select2)
+        result_start = cursor.fetchall()
+
+        if not data['only_reference']:
+            if data['grouped_by_location'] or data['grouped_by_oc']:
+                cls._get_process_result(res,
+                                        accounts_id,
+                                        values=result_start,
+                                        by_location=location)
+            else:
+                cls._get_process_result(res, accounts_id, values=result_start)
+
+        report_context['_records'] = res
+        report_context['_accounts'] = accounts_id
+        report_context['grouped_by_account'] = data['grouped_by_account']
+        report_context['grouped_by_location'] = grouped_by_loc
+        report_context['grouped_by_reference'] = data['only_reference']
+        report_context[
+            'start_period'] = start_period.name if start_period else '*'
+        report_context['end_period'] = end_period.name if end_period else '*'
+        report_context['company'] = Company
+        report_context['company_name'] = company[0].party.name
+        return report_context
+
+    @classmethod
+    def _get_process_result(cls,
+                            records,
+                            lines_account,
+                            values,
+                            by_location=None):
+        balances = {}
+        already_accounts = []
+
+        for val in values:
+            id_account = val[0]
+            key = val[1]
+            start_balance = Decimal(val[2])
+
+            if by_location:
+                if id_account in records[by_location][key]["accounts"]:
+                    already_accounts.append(id_account)
+                    sum_debit = sum(lines_account[by_location][key][id_account]
+                                    ['sum_debit'])
+                    sum_credit = sum(lines_account[by_location][key]
+                                     [id_account]['sum_credit'])
+                    end_balance = start_balance + sum_debit - sum_credit
+                    balances[id_account] = {
+                        "start_balance": start_balance,
+                        "end_balance": end_balance
+                    }
+                    records[by_location][key]['balances'].append(balances)
+            else:
+                if id_account in records[key]["accounts"]:
+                    already_accounts.append(id_account)
+                    sum_debit = sum(
+                        lines_account[key][id_account]['sum_debit'])
+                    sum_credit = sum(
+                        lines_account[key][id_account]['sum_credit'])
+                    end_balance = start_balance + sum_debit - sum_credit
+                    balances[id_account] = {
+                        "start_balance": start_balance,
+                        "end_balance": end_balance
+                    }
+                    records[key]['balances'].append(balances)
+
+        if by_location:
+            print(f"Cuentas ya almacenadas{already_accounts}")
+            for key_, values_ in records.items():
+                print(values_)
+                accounts = values_[key].get("accounts", [])
+                for account_id in accounts:
+                    if account_id not in already_accounts:
+                        sum_debit = sum(lines_account[by_location][key]
+                                        [account_id]['sum_debit'])
+                        sum_credit = sum(lines_account[by_location][key]
+                                         [account_id]['sum_credit'])
+                        end_balance = sum_debit - sum_credit
+                        balances[account_id] = {
+                            "start_balance": 0,
+                            "end_balance": end_balance
+                        }
+                        records[by_location][key]['balances'].append(balances)
+        else:
+            for key_, values_ in records.items():
+                accounts = values_.get("accounts", [])
+                for account_id in accounts:
+                    if account_id not in already_accounts:
+                        sum_debit = sum(
+                            lines_account[key_][account_id]['sum_debit'])
+                        sum_credit = sum(
+                            lines_account[key_][account_id]['sum_credit'])
+                        end_balance = sum_debit - sum_credit
+                        balances[account_id] = {
+                            "start_balance": 0,
+                            "end_balance": end_balance
+                        }
+                        records[key_]['balances'].append(balances)
