@@ -1182,6 +1182,8 @@ class ImportedDocumentWizard(Wizard):
         Location = pool.get('stock.location')
         Product = pool.get('product.product')
         ProductTemplate = pool.get('product.template')
+        Analytic_Account = pool.get('analytic_account.account')
+
         inventory = Inventory()
         to_lines = []
         first = True
@@ -1192,16 +1194,19 @@ class ImportedDocumentWizard(Wizard):
                 continue
 
             linea = linea.split(';')
-            if len(linea) != 4:
-                raise UserError('Error plantilla',
-                                ' location | date | product | quantity | Analytic account')
+            if len(linea) != 5:
+                raise UserError(
+                    'Error plantilla',
+                    ' location | date | product | quantity | Analytic account')
 
             if first:
                 location, = Location.search([('name', '=', linea[0].strip())])
                 inventory.location = location
                 date = cls.convert_str_date(linea[1])
                 inventory.date = date
-                inventory.analitic_account = linea[4]
+                inventory.analitic_account, = Analytic_Account.search([
+                    ('code', '=', linea[4])
+                ])
                 first = False
 
             line = Line()
