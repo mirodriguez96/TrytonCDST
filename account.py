@@ -1821,6 +1821,7 @@ class AuxiliaryPartyStart(metaclass=PoolMeta):
         super(AuxiliaryPartyStart, cls).__setup__()
         cls.start_period.required = True
         cls.end_period.required = True
+        cls.party.required = True
 
     @fields.depends('grouped_by_location', 'only_reference')
     def on_change_grouped_by_location(cls):
@@ -2003,9 +2004,6 @@ class AuxiliaryParty(metaclass=PoolMeta):
         # build conditions
         entity = account_move_line.party
         default_entity = 0
-        if not data['party'] and data['by_reference']:
-            entity = account_move_line.reference
-            default_entity = '0'
 
         # Select data from start period
         start_periods_ids = [period.id for period in start_periods]
@@ -2039,7 +2037,9 @@ class AuxiliaryParty(metaclass=PoolMeta):
                                         values=result_start,
                                         by_location=location)
             else:
-                cls._get_process_result(res, accounts_id, values=result_start)
+                cls._get_process_result(res,
+                                        accounts_id,
+                                        values=result_start)
 
         report_context['_records'] = res
         report_context['_accounts'] = accounts_id
@@ -2095,7 +2095,6 @@ class AuxiliaryParty(metaclass=PoolMeta):
                     records[key]['balances'].append(balances)
 
         if by_location:
-            print(f"Cuentas ya almacenadas{already_accounts}")
             for key_, values_ in records.items():
                 print(values_)
                 accounts = values_[key].get("accounts", [])
