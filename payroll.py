@@ -1705,14 +1705,18 @@ class StaffEvent(metaclass=PoolMeta):
                     end_date_period = end_period[0].end - timedelta(days=1)
                 else:
                     days = abs(int(_date_start[2]) - get_day) + 1
+                    end_date_period = end_period[0].end
 
                 cls.staff_liquidation_event(event=event,
                                             end_period=end_period,
                                             liquidation_date=event.start_date,
                                             days=days,
                                             end_date=end_date_period)
-
-                days = (event.days - days - 1)
+                
+                if get_day not in [30,31]:
+                    days = (event.days - days)
+                else:
+                    days = (event.days - days - 1)
 
                 end_period = Period.search([('start', '<=', event.end_date),
                                             ('end', '>=', event.end_date)])
