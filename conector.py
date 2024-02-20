@@ -1,16 +1,12 @@
-#CONECTOR DE PRODUCCION
-import math
 from trytond.model import ModelSQL, ModelView, fields
 from trytond.transaction import Transaction
 from trytond.pool import Pool
-from trytond.exceptions import UserError
-# from conexion import Conexion
 from trytond.wizard import Wizard, StateTransition, StateView, Button
-# from sql import Table
+from trytond.exceptions import UserError, UserWarning
+
 from decimal import Decimal
 import datetime
 from sql import Table
-from trytond.exceptions import UserError, UserWarning
 
 TYPES_FILE = [
     ('parties', 'Parties'),
@@ -21,7 +17,6 @@ TYPES_FILE = [
     ('product_costs', 'Product costs'),
     ('inventory', "Inventory"),
     ('bank_account', 'Bank Account'),
-    # ('loans', 'Loans'),
 ]
 
 STATE_LOG = [
@@ -47,46 +42,44 @@ class Actualizacion(ModelSQL, ModelView):
     logs = fields.Text("Logs", readonly=True)
     log = fields.One2Many('conector.log', 'actualizacion', 'Log')
 
-    #Crea o actualiza un registro de la tabla actualización en caso de ser necesario
     @classmethod
     def create_or_update(cls, name):
+        """Function to create or update data table"""
         Actualizacion = Pool().get('conector.actualizacion')
         actualizacion = Actualizacion.search([('name', '=', name)])
+
         if actualizacion:
-            #Se busca un registro con la actualización
             actualizacion, = actualizacion
         else:
-            #Se crea un registro con la actualización
             actualizacion = Actualizacion()
             actualizacion.name = name
             actualizacion.save()
         return actualizacion
 
-    # se obtiene la fecha de la ultima actualizacion (modificacion) de un registro del modelo conector.actualizacion
-    # pero la fecha del registro debe ser diferente a la del dia de hoy
     @classmethod
     def get_fecha_actualizacion(cls, actualizacion):
-        fecha = datetime.date(1, 1, 1)
+        """Function to get the last update diff to today"""
+        date = datetime.date(1, 1, 1)
         if actualizacion.write_date:
-            fecha = (actualizacion.write_date - datetime.timedelta(hours=6))
+            date = (actualizacion.write_date - datetime.timedelta(hours=6))
         elif actualizacion.create_date:
             Date = Pool().get('ir.date')
             create_date = actualizacion.create_date.date()
             if create_date != Date.today():
-                fecha = (actualizacion.create_date -
-                         datetime.timedelta(hours=6))
-        return fecha
+                date = (actualizacion.create_date -
+                        datetime.timedelta(hours=6))
+        return date
 
-    # Se recibe un dicionario con los mensajes arrojados en la importacion
     def add_logs(self, logs):
-        now = datetime.datetime.now()  # - datetime.timedelta(hours=5)
-        if not logs:
-            self.write([self], {'write_date': now})
-            return
+        """Function to create log dictionay with message in imports"""
         to_create = []
+        date_today = datetime.datetime.now()  # - datetime.timedelta(hours=5)
+        if not logs:
+            self.write([self], {'write_date': date_today})
+            return
         for id_tecno, message in logs.items():
             create = {
-                'event_time': now,
+                'event_time': date_today,
                 'id_tecno': id_tecno,
                 'message': message,
                 'state': 'pending'
@@ -94,17 +87,16 @@ class Actualizacion(ModelSQL, ModelView):
             to_create.append(create)
         self.write([self], {'log': [('create', to_create)]})
 
-    # Se consulta en la base de datos de SQLSERVER por la cantidad de documentos
-    # que se van a importar
     def getter_quantity(self, name):
+        """Function to return data count to import"""
         Config = Pool().get('conector.configuration')
-        conexion, = Config.search([], order=[('id', 'DESC')], limit=1)
-        fecha = conexion.date
-        fecha = fecha.strftime('%Y-%m-%d %H:%M:%S')
+        connection, = Config.search([], order=[('id', 'DESC')], limit=1)
+        connection_date = connection.date
+        connection_date = connection_date.strftime('%Y-%m-%d %H:%M:%S')
         consult = "SET DATEFORMAT ymd SELECT COUNT(*) FROM dbo.Documentos "\
-            f"WHERE fecha_hora >= CAST('{fecha}' AS datetime)"
-        if conexion.end_date:
-            end_date = conexion.end_date.strftime('%Y-%m-%d %H:%M:%S')
+            f"WHERE fecha_hora >= CAST('{connection_date}' AS datetime)"
+        if connection.end_date:
+            end_date = connection.end_date.strftime('%Y-%m-%d %H:%M:%S')
             consult += f" AND fecha_hora < CAST('{end_date}' AS datetime) "
         if self.name == 'VENTAS':
             consult += " AND (sw = 1 or sw = 2)"
@@ -116,29 +108,24 @@ class Actualizacion(ModelSQL, ModelView):
             consult += " AND sw = 6"
         elif self.name == 'PRODUCCION':
             consult += " AND ("
-            parametro = Config.get_data_parametros('177')
-            valor_parametro = parametro[0].Valor.split(',')
-            for tipo in valor_parametro:
+            parameter = Config.get_data_parametros('177')
+            parameter_value = parameter[0].Valor.split(',')
+            for tipo in parameter_value:
                 consult += f"tipo = {tipo}"
-                if (valor_parametro.index(tipo) + 1) < len(valor_parametro):
+                if (parameter_value.index(tipo) + 1) < len(parameter_value):
                     consult += " OR "
             consult += ")"
-        # elif self.name == "TERCEROS":
-
-        #     consult = "select tt.nit_cedula  \
-        #                 from TblTerceros tt"
         else:
             return None
-        result = conexion.get_data(consult)
+        result = connection.get_data(consult)
         result = int(result[0][0])
         return result
 
-    # Se consulta la cantidad de documentos (registros) que hay almacenados en Tryton
-    # que han sido importados por el modulo conector
     def getter_imported(self, name):
+        """Function to return data count to saved in Tryton
+        that was imported by conector"""
         Config = Pool().get('conector.configuration')
         config, = Config.search([], order=[('id', 'DESC')], limit=1)
-        # fecha = config.date
         query = "SELECT COUNT(*) FROM "
         quantity = None
         cursor = Transaction().connection.cursor()
@@ -149,8 +136,9 @@ class Actualizacion(ModelSQL, ModelView):
                 query += f" AND sale_date < '{config.end_date}' "
             cursor.execute(query)
         elif self.name == 'COMPRAS':
-            query += f"purchase_purchase WHERE purchase_date >= '{config.date}' "\
-                    "AND (id_tecno LIKE '3-%' OR id_tecno LIKE '4-%') "
+            query += "purchase_purchase "\
+                f"WHERE purchase_date >= '{config.date}' "\
+                "AND (id_tecno LIKE '3-%' OR id_tecno LIKE '4-%') "
             if config.end_date:
                 query += f" AND purchase_date < '{config.end_date}' "
             cursor.execute(query)
@@ -188,15 +176,16 @@ class Actualizacion(ModelSQL, ModelView):
             quantity = int(result[0])
         return quantity
 
-    # Se consulta en la base de datos de SQLSERVER los documentos marcados como excepcion
     def getter_exceptions(self, name):
+        """Function to return SQLSERVER data that had exception"""
         Config = Pool().get('conector.configuration')
-        conexion, = Config.search([], order=[('id', 'DESC')], limit=1)
-        fecha = conexion.date.strftime('%Y-%m-%d %H:%M:%S')
+        connection, = Config.search([], order=[('id', 'DESC')], limit=1)
+        connection_date = connection.date.strftime('%Y-%m-%d %H:%M:%S')
         consult = "SET DATEFORMAT ymd SELECT COUNT(*) FROM dbo.Documentos "\
-            f"WHERE fecha_hora >= CAST('{fecha}' AS datetime) AND exportado = 'E'"
-        if conexion.end_date:
-            end_date = conexion.end_date.strftime('%Y-%m-%d %H:%M:%S')
+            f"WHERE fecha_hora >= CAST('{connection_date}' AS datetime) "\
+            "AND exportado = 'E'"
+        if connection.end_date:
+            end_date = connection.end_date.strftime('%Y-%m-%d %H:%M:%S')
             consult += f" AND fecha_hora < CAST('{end_date}' AS datetime) "
         if self.name == 'VENTAS':
             consult += " AND (sw = 1 or sw = 2)"
@@ -217,19 +206,21 @@ class Actualizacion(ModelSQL, ModelView):
             consult += ")"
         else:
             return None
-        result = conexion.get_data(consult)
+        result = connection.get_data(consult)
         result = int(result[0][0])
         return result
 
-    # Se consulta en la base de datos de SQLSERVER los documentos marcados como no a importar por el modulo conector
     def getter_cancelled(self, name):
+        """Function to return SQLSERVER data that was
+        mark to no imported"""
         Config = Pool().get('conector.configuration')
-        conexion, = Config.search([], order=[('id', 'DESC')], limit=1)
-        fecha = conexion.date.strftime('%Y-%m-%d %H:%M:%S')
+        connection, = Config.search([], order=[('id', 'DESC')], limit=1)
+        connection_date = connection.date.strftime('%Y-%m-%d %H:%M:%S')
         consult = "SET DATEFORMAT ymd SELECT COUNT(*) FROM dbo.Documentos "\
-            f"WHERE fecha_hora >= CAST('{fecha}' AS datetime) AND exportado = 'X'"
-        if conexion.end_date:
-            end_date = conexion.end_date.strftime('%Y-%m-%d %H:%M:%S')
+            f"WHERE fecha_hora >= CAST('{connection_date}' AS datetime) "\
+            "AND exportado = 'X'"
+        if connection.end_date:
+            end_date = connection.end_date.strftime('%Y-%m-%d %H:%M:%S')
             consult += f" AND fecha_hora < CAST('{end_date}' AS datetime) "
         if self.name == 'VENTAS':
             consult += " AND (sw = 1 or sw = 2)"
@@ -250,21 +241,21 @@ class Actualizacion(ModelSQL, ModelView):
             consult += ")"
         else:
             return None
-        result = conexion.get_data(consult)
+        result = connection.get_data(consult)
         result = int(result[0][0])
         return result
 
-    # Se consulta en la base de datos de SQLSERVER los documentos que faltan por ser importados
     def getter_not_imported(self, name):
+        """Function to return SQLSERVER data to have to be import"""
         Config = Pool().get('conector.configuration')
-        conexion, = Config.search([], order=[('id', 'DESC')], limit=1)
-        fecha = conexion.date
-        fecha = fecha.strftime('%Y-%m-%d %H:%M:%S')
+        connection, = Config.search([], order=[('id', 'DESC')], limit=1)
+        connection_date = connection.date
+        connection_date = connection_date.strftime('%Y-%m-%d %H:%M:%S')
         consult = "SET DATEFORMAT ymd SELECT COUNT(*) FROM dbo.Documentos "\
-            f"WHERE fecha_hora >= CAST('{fecha}' AS datetime) "\
+            f"WHERE fecha_hora >= CAST('{connection_date}' AS datetime) "\
             "AND exportado != 'T' AND exportado != 'E' AND exportado != 'X'"
-        if conexion.end_date:
-            end_date = conexion.end_date.strftime('%Y-%m-%d %H:%M:%S')
+        if connection.end_date:
+            end_date = connection.end_date.strftime('%Y-%m-%d %H:%M:%S')
             consult += f" AND fecha_hora < CAST('{end_date}' AS datetime) "
         if self.name == 'VENTAS':
             consult += " AND (sw = 1 or sw = 2)"
@@ -285,189 +276,191 @@ class Actualizacion(ModelSQL, ModelView):
             consult += ")"
         else:
             return None
-        result = conexion.get_data(consult)
+        result = connection.get_data(consult)
         result = int(result[0][0])
         return result
 
-    # Se revisa los documentos existentes en Tryton vs SqlServer (TecnoCarnes) para marcarlos como pendientes por importar.
-    # Se solicita el nombre de la tabla en tryton (table), la lista de sw según el documento y el nombre de la actualizacion
     @classmethod
     def revisa_secuencia_imp(cls, name):
+        """Function to check exist documents in Tryton and TecnoCarnes
+        and to mark to be imported"""
         pool = Pool()
         Config = pool.get('conector.configuration')
         Actualizacion = pool.get('conector.actualizacion')
         cursor = Transaction().connection.cursor()
-        # Se procede primero a buscar los documentos importados en Tryton
-        result = None
+        results = None
         result_tryton = []
-        cond = None
+        condition = None
+        logs = {}
         if name == 'VENTAS':
-            consultv = "SELECT id_tecno FROM sale_sale WHERE id_tecno is not null"
+            consultv = "SELECT id_tecno FROM sale_sale "\
+                "WHERE id_tecno is not null"
             cursor.execute(consultv)
-            result = cursor.fetchall()
-            cond = "(sw=1 OR sw=2)"
+            results = cursor.fetchall()
+            condition = "(sw=1 OR sw=2)"
         if name == 'COMPRAS':
-            consultv = "SELECT id_tecno FROM purchase_purchase WHERE id_tecno is not null"
+            consultv = "SELECT id_tecno FROM purchase_purchase "\
+                "WHERE id_tecno is not null"
             cursor.execute(consultv)
-            result = cursor.fetchall()
-            cond = "(sw=3 OR sw=4)"
+            results = cursor.fetchall()
+            condition = "(sw=3 OR sw=4)"
         if name == 'COMPROBANTES DE INGRESO':
-            consult1 = "SELECT id_tecno FROM account_voucher WHERE id_tecno LIKE '5-%'"
+            consult1 = "SELECT id_tecno FROM account_voucher "\
+                "WHERE id_tecno LIKE '5-%'"
             cursor.execute(consult1)
-            result = cursor.fetchall()
-            result_tryton = [r[0] for r in result]
-            consult2 = "SELECT id_tecno FROM account_multirevenue WHERE id_tecno is not null"
+            results = cursor.fetchall()
+            result_tryton = [result[0] for result in results]
+            consult2 = "SELECT id_tecno FROM account_multirevenue "\
+                "WHERE id_tecno is not null"
             cursor.execute(consult2)
-            result = cursor.fetchall()
-            cond = "sw=5"
+            results = cursor.fetchall()
+            condition = "sw=5"
         if name == 'COMPROBANTES DE EGRESO':
-            consultv = "SELECT id_tecno FROM account_voucher WHERE id_tecno  LIKE '6-%'"
+            consultv = "SELECT id_tecno FROM account_voucher "\
+                "WHERE id_tecno  LIKE '6-%'"
             cursor.execute(consultv)
-            result = cursor.fetchall()
-            cond = "sw=6"
+            results = cursor.fetchall()
+            condition = "sw=6"
         if name == 'PRODUCCION':
-            consultv = "SELECT id_tecno FROM production WHERE id_tecno is not null"
+            consultv = "SELECT id_tecno FROM production "\
+                "WHERE id_tecno is not null"
             cursor.execute(consultv)
-            result = cursor.fetchall()
-            cond = "("
+            results = cursor.fetchall()
+            condition = "("
             parametro = Config.get_data_parametros('177')
             valor_parametro = parametro[0].Valor.split(',')
             for tipo in valor_parametro:
-                cond += "tipo=" + tipo.strip()
+                condition += "tipo=" + tipo.strip()
                 if valor_parametro.index(tipo) != (len(valor_parametro) - 1):
-                    cond += " OR "
-            cond += ")"
+                    condition += " OR "
+            condition += ")"
         if name == 'NOTAS DE CREDITO':
-            consultv = "SELECT id_tecno FROM account_invoice WHERE id_tecno  LIKE '32-%'"
+            consultv = "SELECT id_tecno FROM account_invoice "\
+                "WHERE id_tecno  LIKE '32-%'"
             cursor.execute(consultv)
-            result = cursor.fetchall()
-            cond = "sw=32"
+            results = cursor.fetchall()
+            condition = "sw=32"
         if name == 'NOTAS DE DEBITO':
-            consultv = "SELECT id_tecno FROM account_voucher WHERE id_tecno  LIKE '31-%'"
+            consultv = "SELECT id_tecno FROM account_voucher "\
+                "WHERE id_tecno  LIKE '31-%'"
             cursor.execute(consultv)
-            result = cursor.fetchall()
-            cond = "sw=31"
-        # Se almacena el resultado de la busqueda en una lista
-        if not result_tryton and result:
-            result_tryton = [r[0] for r in result]
-        elif result_tryton and result:
-            for r in result:
-                result_tryton.append(r[0])
-        # Si no entró a ningún documento no hace nada
-        if not cond:
+            results = cursor.fetchall()
+            condition = "sw=31"
+        # save the results in a list
+        if not result_tryton and results:
+            result_tryton = [result[0] for result in results]
+        elif result_tryton and results:
+            for result in results:
+                result_tryton.append(result[0])
+        # If not data document condition, exit
+        if not condition:
             return
         config, = Config.search([], order=[('id', 'DESC')], limit=1)
-        fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
-        consultc = "SET DATEFORMAT ymd SELECT CONCAT(sw,'-',tipo,'-',numero_documento) FROM Documentos "\
-            f"WHERE {cond} AND fecha_hora >= CAST('{fecha}' AS datetime) "\
-            "AND exportado = 'T' AND tipo<>0 ORDER BY tipo,numero_documento"
+        connection_date = config.date.strftime('%Y-%m-%d %H:%M:%S')
+        consultc = "SET DATEFORMAT ymd "\
+            "SELECT CONCAT(sw,'-',tipo,'-',numero_documento) FROM Documentos "\
+            f"WHERE {condition} "\
+            f"AND fecha_hora >= CAST('{connection_date}' AS datetime) "\
+            "AND exportado = 'T' "\
+            "AND tipo<>0 ORDER BY tipo,numero_documento"
         result_tecno = Config.get_data(consultc)
         result_tecno = [r[0] for r in result_tecno]
         list_difference = [r for r in result_tecno if r not in result_tryton]
-        # Se guarda el registro y se marcan los documentos para ser importados de nuevo
-        logs = {}
+        # Save the registry and mark the document to be imported
         for falt in list_difference:
             lid = falt.split('-')
             query = "UPDATE dbo.Documentos SET exportado = 'N' "\
-                f"WHERE sw = {lid[0]} AND tipo = {lid[1]} AND Numero_documento = {lid[2]}"
+                f"WHERE sw = {lid[0]} "\
+                f"AND tipo = {lid[1]} "\
+                f"AND Numero_documento = {lid[2]}"
             Config.set_data(query)
-            logs[falt] = "EL DOCUMENTO ESTABA MARCADO COMO IMPORTADO (T) SIN ESTARLO. "\
+            logs[falt] = "EL DOCUMENTO ESTABA MARCADO COMO IMPORTADO "\
+                "(T) SIN ESTARLO. \n"\
                 "AHORA FUE MARACADO COMO PENDIENTE PARA IMPOTAR (N)"
         actualizacion, = Actualizacion.search([('name', '=', name)])
         actualizacion.add_logs(logs)
 
     @classmethod
     def _missing_documents(cls):
-        print("RUN missing documents")
+        """Print to review missing documents"""
         cursor = Transaction().connection.cursor()
         cursor.execute("SELECT name FROM conector_actualizacion")
-        result = cursor.fetchall()
-        for r in result:
+        results = cursor.fetchall()
+        for r in results:
             cls.revisa_secuencia_imp(r[0])
-        print("FINISH missing documents")
 
-    # Biometric access
     @classmethod
     def import_biometric_access(cls, event_time=None):
-        print("RUN import_biometric_access")
+        """Function to import access of biometric"""
+        """ ***Primera  entrada debe ignorarse porque es hora de ingreso
+            ***Pimera  salida es entrada a trabajar
+            ***Ultima entrada es salida de trabajar
+            ***Ultima salida debe ignorararse porque es hora de salida
+            ***Salida a descanso sin entrada se castiga,
+                debe valida que no coincida con Entrada a Trabajar
+            ***Es salida a descanso si hay entrada a trabajar
+        """
         pool = Pool()
         Configuration = pool.get('conector.configuration')
         configuration = Configuration.get_configuration()
-        if not configuration:
-            return
-        if not event_time:
-            yesterday = datetime.date.today() - datetime.timedelta(days=1)
-            event_time = datetime.datetime(yesterday.year, yesterday.month,
-                                           yesterday.day, 0, 0, 0)
-        data = configuration.get_biometric_access_transactions(event_time)
         Access = pool.get('staff.access')
         Rest = pool.get('staff.access.rests')
         Employee = pool.get('company.employee')
         to_save = {}
         to_rest = {}
         start_work = None
-        for d in data:
-            if d.Nit_cedula not in to_save:
+
+        if not configuration:
+            return
+        if not event_time:
+            yesterday = datetime.date.today() - datetime.timedelta(days=1)
+            event_time = datetime.datetime(yesterday.year, yesterday.month,
+                                           yesterday.day, 0, 0, 0)
+        biometric_data = configuration.get_biometric_access_transactions(
+            event_time)
+
+        for data in biometric_data:
+            if data.Nit_cedula not in to_save:
                 employee = Employee.search([('party.id_number', '=',
-                                             d.Nit_cedula)])
+                                             data.Nit_cedula)])
                 if not employee:
                     continue
-                    # raise UserError(f'Could not find employee with id_number = {d.Nit_cedula}')
                 employee, = employee
                 start_work = None
-                to_save[d.Nit_cedula] = Access()
-                to_save[d.Nit_cedula].employee = employee
-                to_save[d.Nit_cedula].payment_method = 'extratime'
-                to_save[d.Nit_cedula].enter_timestamp = None
-                to_save[d.Nit_cedula].exit_timestamp = None
-                to_rest[d.Nit_cedula] = []
-                # rest = Rest()
-                # rest.start = None
-                # rest.end = None
-            access = to_save[d.Nit_cedula]
+                to_save[data.Nit_cedula] = Access()
+                to_save[data.Nit_cedula].employee = employee
+                to_save[data.Nit_cedula].payment_method = 'extratime'
+                to_save[data.Nit_cedula].enter_timestamp = None
+                to_save[data.Nit_cedula].exit_timestamp = None
+                to_rest[data.Nit_cedula] = []
 
-            #Primera  entrada debe ignorarse porque es hora de ingreso a las instalaciones 	ok
-            #Pimera  salida es entrada a trabajar						ok
-            #Ultima entrada es salida de trabajar
-            #Ultima salida debe ignorararse porque es hora de salida de las instalaciones
-            #Salida a descanso sin entrada se castiga con entrada= fecha-45, debe valida que no coincida con Entrada a Trabajar
-            #Es salida a descanso si hay entrada a trabajar
+            access = to_save[data.Nit_cedula]
 
-            #entro 7 'debe ignorarse  ok
-            #salio 710 'en access.enter_timestamp ok
-            #entro 10 'rest.start ok
-            #salio 1030'  rest.end ok
-            #entro 6 ' access.exit_timestamp ok
-            #salio 610'debe ignorarse
-
-            datetime_record = d.Fecha_Hora_Marcacion + datetime.timedelta(
+            datetime_record = data.Fecha_Hora_Marcacion + datetime.timedelta(
                 hours=5)
-            if d.TipoEventoEntraoSale.upper() == 'SALIDA':
+            if data.TipoEventoEntraoSale.upper() == 'SALIDA':
                 if not access.enter_timestamp:
-                    access.enter_timestamp = datetime_record  # 'Primera Salida es Entrada a Trabajar
+                    access.enter_timestamp = datetime_record
                     continue
 
-            if d.TipoEventoEntraoSale.upper() == 'ENTRADA':
-                if not start_work:  # 'Primera entrada se Ignora, Es ingreso a instalaciones
+            if data.TipoEventoEntraoSale.upper() == 'ENTRADA':
+                if not start_work:
                     start_work = datetime_record
                     continue
                 else:
-                    access.exit_timestamp = datetime_record  # 'ultima entrada
+                    access.exit_timestamp = datetime_record
+            rests = to_rest[data.Nit_cedula]
 
-            rests = to_rest[d.Nit_cedula]
-
-            if d.TipoEventoEntraoSale.upper() == 'ENTRADA':
+            if data.TipoEventoEntraoSale.upper() == 'ENTRADA':
                 rest = Rest()
-                rest.start = datetime_record  #inicio descanso
+                rest.start = datetime_record
                 rest.end = None
-                # rests.append(rest)
                 continue
 
-            if d.TipoEventoEntraoSale.upper() == 'SALIDA':
+            if data.TipoEventoEntraoSale.upper() == 'SALIDA':
                 if not access.enter_timestamp:
                     continue
-                if not 'rest' in locals():
-                    # Si se registra una salida sin una entrada previa, se castiga
+                if 'rest' not in locals():
                     rest = Rest()
                     rest.start = datetime_record - datetime.timedelta(
                         minutes=45)
@@ -484,12 +477,12 @@ class Actualizacion(ModelSQL, ModelView):
                         rest.end = datetime_record
                         rests.append(rest)
                     continue
-        # Se busca los registros del mismo día
+        # Search records of the same day
         tomorrow = event_time + datetime.timedelta(days=1)
         access_search = list(
             Access.search([('enter_timestamp', '>=', event_time),
                            ('enter_timestamp', '<', tomorrow)]))
-        # to_create = []
+
         for nit, acess in to_save.items():
             exists = False
             for acces_search in access_search:
@@ -501,8 +494,8 @@ class Actualizacion(ModelSQL, ModelView):
                 continue
             if not acess.enter_timestamp:
                 continue
-            if acess.exit_timestamp \
-                and acess.enter_timestamp >= acess.exit_timestamp:
+            if acess.exit_timestamp\
+                    and acess.enter_timestamp >= acess.exit_timestamp:
                 continue
             if to_rest[nit]:
                 to_rest[nit].pop()
@@ -512,15 +505,12 @@ class Actualizacion(ModelSQL, ModelView):
                         rest.start = rest.end - datetime.timedelta(minutes=45)
                 Rest.save(to_rest[nit])
                 acess.rests = to_rest[nit]
-            # to_create.append(acess)
             acess.on_change_rests()
             acess.save()
-        # Access.save(to_create)
 
-    # Biometric access
     @classmethod
     def biometric_access_dom(cls):
-        print("RUN biometric_access_dom")
+        """Function to import Sunday access of biometric"""
         pool = Pool()
         Config = pool.get('ir.cron')
         Access = pool.get('staff.access')
@@ -530,11 +520,8 @@ class Actualizacion(ModelSQL, ModelView):
         time, = Config.search([('access_register', '=', True)])
 
         date = [int(i) for i in str(datetime.date.today()).split('-')]
-
         time_enter = [int(i) for i in str(time.enter_timestamp).split(':')]
-
         time_exit = [int(i) for i in str(time.exit_timestamp).split(':')]
-
         enter = datetime.datetime(*date, *time_enter)
         exit = datetime.datetime(*date, *time_exit)
 
@@ -577,10 +564,9 @@ class Actualizacion(ModelSQL, ModelView):
                         values=[Decimal(7.83), 0, 0, 0, 0, 0, 0, 0],
                         where=access_table.id.in_([to_save.id])))
 
-    # Biometric access
     @classmethod
     def holidays_access_fes(cls):
-        print("RUN holidays_access_fes")
+        """Function to import Holydays access of biometric"""
         Holiday = Pool().get('staff.holidays')
         validate = datetime.date.today() + datetime.timedelta(hours=5)
         holidays = Holiday.search([('holiday', '=', validate)])
@@ -589,18 +575,16 @@ class Actualizacion(ModelSQL, ModelView):
             cls.biometric_access_dom()
 
 
-# Vista para mportancion de documentos tryton
 class ImportedDocument(ModelView):
-    'Imported Document'
+    'Imported Document View'
     __name__ = 'conector.actualizacion.imported_document'
 
     file = fields.Binary('File', help="Enter the file to import with (;)")
     type_file = fields.Selection(TYPES_FILE, 'Type file')
 
 
-# Asistente para mportancion de documentos tryton
 class ImportedDocumentWizard(Wizard):
-
+    'Imported Document Wizard'
     __name__ = 'conector.actualizacion.imported_document_asistend'
 
     start = StateView(
@@ -659,11 +643,9 @@ class ImportedDocumentWizard(Wizard):
 
         return 'end'
 
-
-#     imported = fields.Function(fields.Integer('Imported'), 'getter_imported')
-
     @classmethod
     def import_csv_parties(cls, lineas):
+        """Function to import csv parties"""
         pool = Pool()
         Party = pool.get('party.party')
         City = pool.get('party.city_code')
@@ -674,20 +656,27 @@ class ImportedDocumentWizard(Wizard):
             linea = linea.strip()
             if not linea:
                 continue
+
             linea = linea.split(';')
             if len(linea) != 13:
                 raise UserError(
                     'Error de plantilla',
-                    'type_document | id_number | name | address/party_name | address/name | address/street | address/country_code | address/department_code | address/city_code | address/phone | address/email | regime_tax | type_person'
-                )
+                    'type_document | id_number | name | address/party_name | '
+                    'address/name | address/street | address/country_code | '
+                    'address/department_code | address/city_code |'
+                    'address/phone | address/email | '
+                    'regime_tax | type_person')
+
             if firts:
                 firts = False
                 continue
 
             id_number = linea[1].strip()
             party = Party.search([('id_number', '=', id_number)])
+
             if party:
                 continue
+
             to_save = {
                 'type_document': linea[0].strip(),
                 'id_number': id_number,
@@ -735,9 +724,9 @@ class ImportedDocumentWizard(Wizard):
             print(contacts)
             Transaction().connection.commit()
 
-    #Importar productos
     @classmethod
     def import_csv_products(cls, lineas):
+        """Function to import csv products"""
         pool = Pool()
         Product = pool.get('product.template')
         Category = pool.get('product.category')
@@ -745,6 +734,7 @@ class ImportedDocumentWizard(Wizard):
         products = []
         not_products = []
         first = True
+
         for linea in lineas:
             linea = linea.strip()
             if linea:
@@ -752,16 +742,20 @@ class ImportedDocumentWizard(Wizard):
                 if len(linea) != 13:
                     raise UserError(
                         'Error de plantilla',
-                        'code | name | list_price | sale_price_w_tax | account_category | name_uom | salable | purchasable | producible | consumable | type | depreciable | cost_price'
-                    )
+                        'code | name | list_price | sale_price_w_tax |'
+                        'account_category | name_uom | salable | '
+                        'purchasable | producible | consumable | '
+                        'type | depreciable | cost_price')
                 if first:
                     first = False
                     continue
+
                 code = linea[0].strip()
                 product = Product.search([('code', '=', code)])
                 if product:
                     not_products.append(code)
                     continue
+
                 salable = cls.get_boolean(linea[6].strip())
                 purchasable = cls.get_boolean(linea[7].strip())
                 producible = cls.get_boolean(linea[8].strip())
@@ -805,13 +799,11 @@ class ImportedDocumentWizard(Wizard):
                     int(linea[12].strip()),
                 }])]
                 products.append(prod)
-        print(len(products))
         Product.create(products)
-        print(not_products)
 
-    #Importar saldos iniciales
     @classmethod
     def import_csv_balances(cls, lineas):
+        """Function to import opening balances"""
         pool = Pool()
         Account = pool.get('account.account')
         Journal = pool.get('account.journal')
@@ -819,9 +811,13 @@ class ImportedDocumentWizard(Wizard):
         Move = pool.get('account.move')
         Line = pool.get('account.move.line')
         Party = pool.get('party.party')
+        partiesd = {}
+        vlist = []
+        not_party = []
+        first = True
+        cont = 0
 
         parties = Party.search([()])
-        partiesd = {}
         for party in parties:
             partiesd[party.id_number] = party.id
 
@@ -832,10 +828,7 @@ class ImportedDocumentWizard(Wizard):
                 1: account.id,
                 2: account.party_required
             }
-        cont = 0
-        vlist = []
-        not_party = []
-        first = True
+
         for linea in lineas:
             print(linea)
             linea = linea.strip()
@@ -845,26 +838,33 @@ class ImportedDocumentWizard(Wizard):
             if len(linea) != 11:
                 raise UserError(
                     'Error de plantilla',
-                    'libro diario | periodo | fecha efectiva | descripcion | linea/cuenta | linea/debito | linea/credito | linea/tercero | linea/descripcion | linea/fecha vencimiento | linea/referencia'
-                )
+                    'libro diario | periodo | fecha efectiva | descripcion | '
+                    'linea/cuenta | linea/debito | linea/credito | '
+                    'linea/tercero | linea/descripcion | '
+                    'linea/fecha vencimiento | linea/referencia')
+
             if first:
                 first = False
                 continue
+
             if cont == 0:
                 name_journal = linea[0].strip()
                 name_period = linea[1].strip()
                 efective_date = cls.convert_str_date(linea[2])
                 description_move = linea[3].strip()
                 journal = Journal.search([('name', '=', name_journal)])
+
                 if not journal:
                     raise UserError(
                         'Error diario',
                         f'No se encontró el diario {name_journal}')
+
                 journal, = journal
                 period = Period.search([('name', '=', name_period)])
                 if not period:
                     raise UserError('Error periodo',
                                     f'No se encontró el diario {name_period}')
+
                 period, = period
                 move = Move()
                 move.journal = journal
@@ -873,21 +873,26 @@ class ImportedDocumentWizard(Wizard):
                 move.description = description_move
                 move.save()
                 cont += 1
+
             account_line = linea[4].strip()
             debit_line = linea[5].strip()
+
             if debit_line:
                 debit_line = Decimal(debit_line)
             else:
                 debit_line = Decimal(0)
+
             credit_line = linea[6].strip()
             if credit_line:
                 credit_line = Decimal(credit_line)
             else:
                 credit_line = Decimal(0)
+
             party_line = linea[7].strip()
             description_line = linea[8].strip()
             maturity_date = linea[9].strip()
             reference_line = linea[10].strip()
+
             line = {
                 'move': move.id,
                 'account': accountsd[account_line][1],
@@ -898,54 +903,61 @@ class ImportedDocumentWizard(Wizard):
             }
             if maturity_date:
                 line['maturity_date'] = cls.convert_str_date(maturity_date)
+
             if accountsd[account_line][2]:
-                if not party_line in partiesd.keys():
+                if party_line not in partiesd.keys():
                     if party_line not in not_party:
                         not_party.append(party_line)
                     continue
                 line['party'] = partiesd[party_line]
-            #lines.append(line)
+
             vlist.append(line)
             if len(vlist) > 1000:
                 Line.create(vlist)
                 vlist.clear()
+
         if not_party:
             raise UserError("Falta terceros", f"{not_party}")
-        #Se verifica si hay lineas por crear
+
         if vlist:
             Line.create(vlist)
-        print('FIN import_csv_balances')
 
-    # Función encargada de importar y verificar las cuentas nuevas
     @classmethod
     def import_csv_accounts(cls, lineas):
+        """Function to review and import new accounts"""
         pool = Pool()
         Account = pool.get('account.account')
         Type = pool.get('account.account.type')
+        not_account = []
         ordered = []
         firts = True
+
         for linea in lineas:
             linea = linea.strip()
             if not linea:
                 continue
+
             linea = linea.split(';')
             if linea[0] == 'code':
                 continue
+
             if len(linea) != 5:
                 raise UserError(
                     'Error plantilla',
                     'account | name | type | reconcile | party_required')
+
             if firts:
                 firts = False
                 continue
             ordered.append(linea)
+
         ordered = sorted(ordered, key=lambda item: len(item[0]))
-        not_account = []
         for linea in ordered:
             code = linea[0].strip()
             account = Account.search([('code', '=', code)])
             if account:
                 continue
+
             name = linea[1].strip().upper()
             type = linea[2].strip()
             reconcile = linea[3].strip().upper()
@@ -953,11 +965,13 @@ class ImportedDocumentWizard(Wizard):
                 reconcile = True
             else:
                 reconcile = False
+
             party_required = linea[4].strip().upper()
             if party_required and party_required == 'TRUE':
                 party_required = True
             else:
                 party_required = False
+
             account = {
                 'code': code,
                 'name': name,
@@ -970,10 +984,11 @@ class ImportedDocumentWizard(Wizard):
                 if not type:
                     raise UserError(
                         'Importación de archivo: ',
-                        f'Error en la búsqueda del tipo de cuenta de la cuenta {code} - {name}'
-                    )
+                        f'Error en la búsqueda del tipo de cuenta "\
+                        "de la cuenta {code} - {name}')
                 account['type'] = type[0].id
             code_parent = cls.get_parent_account(code)
+
             if code_parent:
                 parent_account = Account.search([('code', '=', code_parent)])
                 if not parent_account:
@@ -981,31 +996,29 @@ class ImportedDocumentWizard(Wizard):
                     continue
                 account['parent'] = parent_account[0].id
             Account.create([account])
+
         if not_account:
             raise UserError('Importación de archivo: ',
                             f'Error: Faltan las cuentas padres {not_account}')
 
-    # Función encargada de actualizar las cuentas del PUC
     @classmethod
     def update_csv_accounts(cls, lineas):
+        """Function to update PUC accounts"""
         pool = Pool()
         Account = pool.get('account.account')
         Type = pool.get('account.account.type')
-        firts = True
+        dict_account = {}
         item = []
-
+        firts = True
         columns = ['account', 'name', 'type', 'reconcile', 'party_required']
 
         for linea in lineas:
-
             if firts:
                 firts = False
                 continue
 
             linea = linea.strip()
-
             item = [i for i in linea.split(';')]
-
             if item == ['']:
                 continue
 
@@ -1015,44 +1028,43 @@ class ImportedDocumentWizard(Wizard):
                     'account | name | type | reconcile | party_required')
 
             if not firts:
-                dicAccount = {}
-                dicAccount = dict(zip(columns, item))
+                dict_account = dict(zip(columns, item))
 
             if not item:
                 continue
 
-            # Se consulta y procesa la cuenta
-            code = dicAccount['account']
-
+            code = dict_account['account']
             account = Account.search([('code', '=', code)])
-            print(account)
             if not account:
                 continue
+
             account, = account
-            name = dicAccount['name'].upper()
+            name = dict_account['name'].upper()
             if name:
                 account.name = name
-            reconcile = dicAccount['reconcile'].upper()
+
+            reconcile = dict_account['reconcile'].upper()
             if reconcile:
                 if reconcile == 'TRUE':
                     account.reconcile = True
                 if reconcile == 'FALSE':
                     account.reconcile = False
-            party_required = dicAccount['party_required'].upper()
+
+            party_required = dict_account['party_required'].upper()
             if party_required:
                 if party_required == 'TRUE':
                     account.party_required = True
                 if party_required == 'FALSE':
                     account.party_required = False
-            type = dicAccount['type']
 
+            type = dict_account['type']
             if type:
                 type = Type.search([('sequence', '=', type)])
                 if not type:
                     raise UserError(
                         'Importación de archivo: ',
-                        f'Error en la búsqueda del tipo de cuenta, para la cuenta {code} - {name}'
-                    )
+                        'Error en la búsqueda del tipo de cuenta,'
+                        f'para la cuenta {code} - {name}')
                 type, = type
                 account.type = type
 
@@ -1063,6 +1075,7 @@ class ImportedDocumentWizard(Wizard):
 
     @classmethod
     def get_parent_account(cls, code):
+        """Function to return parent account"""
         if len(code) < 2:
             return
         elif len(code) == 2:
@@ -1074,29 +1087,31 @@ class ImportedDocumentWizard(Wizard):
             return code[:-2]
 
     @classmethod
-    def convert_str_date(cls, fecha):
+    def convert_str_date(cls, date):
+        """Function to convert string data to datetime data"""
         try:
-            result = fecha.strip().split()[0].split('-')
-            result = datetime.date(int(result[0]), int(result[1]),
-                                   int(result[2]))
-        except:
+            results = date.strip().split()[0].split('-')
+            results = datetime.date(int(results[0]), int(results[1]),
+                                    int(results[2]))
+        except Exception as error:
             raise UserError(
-                f"Error fecha {fecha}",
-                "Recuerde que la fecha debe estar con el siguiente formato YY-MM-DD"
-            )
-        return result
+                f"Error fecha {date}",
+                "Recuerde que la fecha debe estar con el "
+                "siguiente formato YY-MM-DD"
+                f"{error}")
+        return results
 
-    #
     @classmethod
     def get_boolean(cls, val):
+        """Function to return boolean"""
         if int(val) == 0:
             return False
         if int(val) == 1:
             return True
 
-    # Funcion encargada de actualizar los costos de los productos
     @classmethod
     def import_csv_product_costs(cls, lineas):
+        """Function to update product costs"""
         pool = Pool()
         Product = pool.get('product.product')
         Revision = pool.get('product.cost_price.revision')
@@ -1106,10 +1121,12 @@ class ImportedDocumentWizard(Wizard):
         to_create = []
         products = []
         firts = True
+
         for linea in lineas:
             linea = linea.strip()
             if not linea:
                 continue
+
             linea = linea.split(';')
             if len(linea) != 3:
                 raise UserError('Error plantilla',
@@ -1117,21 +1134,22 @@ class ImportedDocumentWizard(Wizard):
             if firts:
                 firts = False
                 continue
+
             code_product = linea[0]
             product = Product.search([('template', '=', code_product)])
             if not product:
                 raise UserError(
                     "ERROR PRODUCTO",
                     f"No se encontro el producto con código {code_product}")
+
             product, = product
             cost = linea[1]
             if not cost or cost == 0:
                 raise UserError(
                     "ERROR COSTO",
-                    f"No se encontro el costo para el producto con código {code_product}"
-                )
+                    f"No se encontro el costo para el producto {code_product}")
+
             date = cls.convert_str_date(linea[2])
-            # Revision
             revision = {
                 "company": company,
                 "product": product.id,
@@ -1140,7 +1158,7 @@ class ImportedDocumentWizard(Wizard):
                 "date": date,
             }
             revisions.append(revision)
-            # Se procede a crear el AverageCost
+
             average_cost = {
                 "product": product.id,
                 "effective_date": date,
@@ -1148,39 +1166,49 @@ class ImportedDocumentWizard(Wizard):
             }
             to_create.append(average_cost)
             products.append(product)
+
         records = Revision.create(revisions)
         AverageCost.create(to_create)
+
         if records:
-            # start = min((r.date for r in products), default=None)
             Product.recompute_cost_price(products, start=datetime.date.today())
 
-    # Funcion encargada de cargar el inventario
     @classmethod
     def import_csv_inventory(cls, lineas):
+        """Function to load the inventory"""
         pool = Pool()
         Inventory = pool.get('stock.inventory')
         Line = pool.get('stock.inventory.line')
         Location = pool.get('stock.location')
         Product = pool.get('product.product')
         ProductTemplate = pool.get('product.template')
+        Analytic_Account = pool.get('analytic_account.account')
+
         inventory = Inventory()
         to_lines = []
         first = True
+
         for linea in lineas:
             linea = linea.strip()
             if not linea:
                 continue
+
             linea = linea.split(';')
-            if len(linea) != 4:
-                raise UserError('Error plantilla',
-                                ' location | date | product | quantity ')
-            # Se verifica que es la primera linea para crear el inventario
+            if len(linea) != 5:
+                raise UserError(
+                    'Error plantilla',
+                    ' location | date | product | quantity | Analytic account')
+
             if first:
                 location, = Location.search([('name', '=', linea[0].strip())])
                 inventory.location = location
                 date = cls.convert_str_date(linea[1])
                 inventory.date = date
+                inventory.analitic_account, = Analytic_Account.search([
+                    ('code', '=', linea[4])
+                ])
                 first = False
+
             line = Line()
             code_product = linea[2]
             template = ProductTemplate.search([('code', '=', code_product)])
@@ -1188,23 +1216,25 @@ class ImportedDocumentWizard(Wizard):
                 raise UserError(
                     "ERROR PRODUCTO",
                     f"No se encontro el producto con código {code_product}")
+
             product = Product.search([('template', '=', template[0])])
             if not product:
                 raise UserError(
                     "ERROR PRODUCTO",
                     f"No se encontro La variante con código {code_product}")
+
             product, = product
             line.product = product
             line.quantity = Decimal(linea[3])
             to_lines.append(line)
+
         if to_lines:
             inventory.lines = to_lines
             inventory.save()
-        print('FIN')
 
-    # Funcion encargada de cargar las cuentas bancarias de los empleados
     @classmethod
     def import_csv_bank_account(cls, lineas):
+        """Function to load bank accounts"""
         pool = Pool()
         BankAccount = pool.get('bank.account')
         Bank = pool.get('bank')
@@ -1214,37 +1244,39 @@ class ImportedDocumentWizard(Wizard):
         BankAccountParty = pool.get('bank.account-party.party')
         to_save = []
         first = True
+
         for linea in lineas:
             linea = linea.strip()
             if not linea:
                 continue
+
             linea = linea.split(';')
             if len(linea) != 5:
                 raise UserError('Error plantilla',
                                 'id_bank | account | parties | number | type')
-            # Se verifica que es la primera linea (encabezado) para omitirla
+
             if first:
                 first = False
                 continue
+
             bank = linea[0].strip()
-            print(bank)
             bank = Bank(int(bank))
             account = linea[1].strip()
             account, = Account.search([('code', '=', account)])
-            print(account.id)
             party = linea[2].strip()
             party, = Party.search([('id_number', '=', party)])
             number = linea[3].strip()
             type = linea[4].strip()
+
             bparty = BankAccountParty.search([('owner', '=', party)])
-            print(bparty)
             domain = [('bank', '=', bank), ('account', '=', account.id)]
             if bparty:
                 domain.append(('owners', 'in', bparty))
+
             exist = BankAccount.search(domain)
             if exist and bparty:
                 continue
-            print("crear")
+
             baccount = BankAccount()
             baccount.bank = bank
             baccount.account = account
@@ -1254,8 +1286,8 @@ class ImportedDocumentWizard(Wizard):
             numbers.type = type
             baccount.numbers = [numbers]
             to_save.append(baccount)
+
         BankAccount.save(to_save)
-        print('FIN')
 
 
 class ConectorLog(ModelSQL, ModelView):

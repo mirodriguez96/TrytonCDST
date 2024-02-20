@@ -28,6 +28,7 @@ TAX_TECNO = [
     ('NA', 'No Aceptada'),
     ('renta', 'renta'),
     ('autorenta', 'autorenta'),
+    (None, None),
 ]
 
 __all__ = [
