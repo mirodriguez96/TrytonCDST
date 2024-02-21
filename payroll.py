@@ -1837,13 +1837,19 @@ class StaffEvent(metaclass=PoolMeta):
                         to_save.exit_timestamp = event.exit_timestamp + timedelta(
                             days=i)
                         to_save.line_event = event
-                        to_save.reco = 0
-                        to_save.recf = 0
-                        to_save.dom = 0
-                        to_save.hedo = 0
-                        to_save.heno = 0
-                        to_save.henf = 0
-                        to_save.hedf = 0
+                        to_save.reco = Decimal(0.00)
+                        to_save.save()
+                        to_save.recf = Decimal(0.00)
+                        to_save.save()
+                        to_save.dom = Decimal(0.00)
+                        to_save.save()
+                        to_save.hedo = Decimal(0.00)
+                        to_save.save()
+                        to_save.heno = Decimal(0.00)
+                        to_save.save()
+                        to_save.henf = Decimal(0.00)
+                        to_save.save()
+                        to_save.hedf = Decimal(0.00)
                         to_save.save()
 
     @classmethod
