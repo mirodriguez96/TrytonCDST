@@ -1881,7 +1881,7 @@ class AuxiliaryParty(metaclass=PoolMeta):
             fields_names=['id'],
         )
         moves_ids = [move['id'] for move in moves]
-        dom_lines = [('move', 'in', moves_ids)]
+        dom_lines = [('move', 'in', moves_ids), ('party', '=', data['party'])]
 
         # Build conditions to Account Move Lines
         if data.get('reference'):
@@ -1892,108 +1892,104 @@ class AuxiliaryParty(metaclass=PoolMeta):
             accounts_dom = ('account', 'in', data['accounts'])
             dom_lines.append(accounts_dom)
 
-        if data.get('party'):
-            parties_dom = ('party', '=', data['party'])
-            dom_lines.append(parties_dom)
-
         lines = MoveLine.search(dom_lines, order=[('move.date', 'ASC')])
+        if not lines:
+            raise UserError(
+                '¡SIN INFORMACIÓN!',
+                'El tercero no tiene movimientos en el rango de fecha')
 
-        if lines:
-            for line in lines:
-                if not line.party:
-                    continue
+        for line in lines:
+            if not line.party:
+                continue
 
-                if data['only_reference']:
-                    id_ = line.reference
-                    name = line.reference
-                    id_number = ''
-                else:
-                    id_ = line.party.id
-                    name = line.party.rec_name
-                    id_number = line.party.id_number
+            if data['only_reference']:
+                id_ = line.reference
+                name = line.reference
+                id_number = ''
+            else:
+                id_ = line.party.id
+                name = line.party.rec_name
+                id_number = line.party.id_number
 
-                account_id = line.account.id
-                if data['grouped_by_location'] or data['grouped_by_oc']:
-                    grouped_by_loc = True
-                    if data['grouped_by_location']:
-                        city_name = ' '
-                        if line.party.city_name:
-                            city_name = line.party.city_name
-                        id_loc = city_name
-                    elif data['grouped_by_oc']:
-                        id_loc = 'CO.'
-                        if line.operation_center:
-                            id_loc = 'CO. [' + line.operation_center.code + '] ' + line.operation_center.name
+            account_id = line.account.id
+            if data['grouped_by_location'] or data['grouped_by_oc']:
+                grouped_by_loc = True
+                if data['grouped_by_location']:
+                    city_name = ' '
+                    if line.party.city_name:
+                        city_name = line.party.city_name
+                    id_loc = city_name
+                elif data['grouped_by_oc']:
+                    id_loc = 'CO.'
+                    if line.operation_center:
+                        id_loc = 'CO. [' + line.operation_center.code + '] ' + line.operation_center.name
 
-                    location = id_loc
+                location = id_loc
 
-                    if id_loc not in res.keys():
-                        res[id_loc] = {}
-                        accounts_id[id_loc] = {
-                            'name': id_loc,
-                            'sum_debit': [],
-                            'sum_credit': [],
-                            'balance': []
-                        }
+                if id_loc not in res.keys():
+                    res[id_loc] = {}
+                    accounts_id[id_loc] = {
+                        'name': id_loc,
+                        'sum_debit': [],
+                        'sum_credit': [],
+                        'balance': []
+                    }
 
-                    if id_ not in res[id_loc].keys():
-                        res[id_loc][id_] = {
-                            'name': name,
-                            'id_number': id_number,
-                            'accounts': [],
-                            'balances': []
-                        }
-                        accounts_id[id_loc][id_] = {}
+                if id_ not in res[id_loc].keys():
+                    res[id_loc][id_] = {
+                        'name': name,
+                        'id_number': id_number,
+                        'accounts': [],
+                        'balances': []
+                    }
+                    accounts_id[id_loc][id_] = {}
 
-                    if account_id not in accounts_id[id_loc][id_].keys():
-                        accounts_id[id_loc][id_][account_id] = {
-                            'account': line.account,
-                            'lines': [],
-                            'sum_debit': [],
-                            'sum_credit': [],
-                            'balance': []
-                        }
-                        res[id_loc][id_]['accounts'].append(account_id)
-                        account_ids.append(account_id)
-                    accounts_id[id_loc][id_][account_id]['lines'].append(line)
-                    accounts_id[id_loc][id_][account_id]['sum_debit'].append(
-                        line.debit)
-                    accounts_id[id_loc][id_][account_id]['sum_credit'].append(
-                        line.credit)
-                    accounts_id[id_loc][id_][account_id]['balance'].append(
-                        line.debit - line.credit)
-                    accounts_id[id_loc]['sum_debit'].append(line.debit)
-                    accounts_id[id_loc]['sum_credit'].append(line.credit)
-                    accounts_id[id_loc]['balance'].append(line.debit -
-                                                          line.credit)
-                else:
-                    if id_ not in res.keys():
-                        res[id_] = {
-                            'name': name,
-                            'id_number': id_number,
-                            'accounts': [],
-                            'balances': []
-                        }
-                        accounts_id[id_] = {}
+                if account_id not in accounts_id[id_loc][id_].keys():
+                    accounts_id[id_loc][id_][account_id] = {
+                        'account': line.account,
+                        'lines': [],
+                        'sum_debit': [],
+                        'sum_credit': [],
+                        'balance': []
+                    }
+                    res[id_loc][id_]['accounts'].append(account_id)
+                    account_ids.append(account_id)
+                accounts_id[id_loc][id_][account_id]['lines'].append(line)
+                accounts_id[id_loc][id_][account_id]['sum_debit'].append(
+                    line.debit)
+                accounts_id[id_loc][id_][account_id]['sum_credit'].append(
+                    line.credit)
+                accounts_id[id_loc][id_][account_id]['balance'].append(
+                    line.debit - line.credit)
+                accounts_id[id_loc]['sum_debit'].append(line.debit)
+                accounts_id[id_loc]['sum_credit'].append(line.credit)
+                accounts_id[id_loc]['balance'].append(line.debit - line.credit)
+            else:
+                if id_ not in res.keys():
+                    res[id_] = {
+                        'name': name,
+                        'id_number': id_number,
+                        'accounts': [],
+                        'balances': []
+                    }
+                    accounts_id[id_] = {}
 
-                    # if id_ not in accounts_id.keys():
-                    if account_id not in accounts_id[id_].keys():
-                        accounts_id[id_][account_id] = {
-                            'account': line.account,
-                            'lines': [],
-                            'sum_debit': [],
-                            'sum_credit': [],
-                            'balance': []
-                        }
-                        res[id_]['accounts'].append(account_id)
-                        account_ids.append(account_id)
-                    accounts_id[id_][account_id]['lines'].append(line)
-                    accounts_id[id_][account_id]['sum_debit'].append(
-                        line.debit)
-                    accounts_id[id_][account_id]['sum_credit'].append(
-                        line.credit)
-                    accounts_id[id_][account_id]['balance'].append(line.debit -
-                                                                   line.credit)
+                # if id_ not in accounts_id.keys():
+                if account_id not in accounts_id[id_].keys():
+                    accounts_id[id_][account_id] = {
+                        'account': line.account,
+                        'lines': [],
+                        'sum_debit': [],
+                        'sum_credit': [],
+                        'balance': []
+                    }
+                    res[id_]['accounts'].append(account_id)
+                    account_ids.append(account_id)
+                accounts_id[id_][account_id]['lines'].append(line)
+                accounts_id[id_][account_id]['sum_debit'].append(line.debit)
+                accounts_id[id_][account_id]['sum_credit'].append(line.credit)
+                accounts_id[id_][account_id]['balance'].append(line.debit -
+                                                               line.credit)
 
         # Define start period to balances
         start_period = Period(data['start_period'])
@@ -2018,9 +2014,8 @@ class AuxiliaryParty(metaclass=PoolMeta):
             order_by=account_move_line.account,
         )
         select2.where = join1.right.period.in_(start_periods_ids)
-        if data['party']:
-            select2.where = select2.where & (account_move_line.party
-                                             == data['party'])
+        select2.where = select2.where & (account_move_line.party
+                                         == data['party'])
         if data['accounts']:
             select2.where = select2.where & (
                 account_move_line.account.in_(account_ids))
@@ -2037,9 +2032,7 @@ class AuxiliaryParty(metaclass=PoolMeta):
                                         values=result_start,
                                         by_location=location)
             else:
-                cls._get_process_result(res,
-                                        accounts_id,
-                                        values=result_start)
+                cls._get_process_result(res, accounts_id, values=result_start)
 
         report_context['_records'] = res
         report_context['_accounts'] = accounts_id
@@ -2066,7 +2059,6 @@ class AuxiliaryParty(metaclass=PoolMeta):
             id_account = val[0]
             key = val[1]
             start_balance = Decimal(val[2])
-
             if by_location:
                 if id_account in records[by_location][key]["accounts"]:
                     already_accounts.append(id_account)
@@ -2096,7 +2088,6 @@ class AuxiliaryParty(metaclass=PoolMeta):
 
         if by_location:
             for key_, values_ in records.items():
-                print(values_)
                 accounts = values_[key].get("accounts", [])
                 for account_id in accounts:
                     if account_id not in already_accounts:
