@@ -45,7 +45,7 @@ INVOICE_CODES = {
 }
 
 MESSAGES = {
-    'software_id': 'Falta ID del software Facturador',
+    #'software_id': 'Falta ID del software Facturador',
     'company_id': 'Falta numero NIT de la empresa',
     #'company_registration': 'Falta la matricula mercantil de la empresa',
     'company_name': 'Falta el nombre de la empresa',
