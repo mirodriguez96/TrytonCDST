@@ -1,6 +1,8 @@
 from trytond.model import fields, ModelView
 from trytond.pool import Pool, PoolMeta
 from decimal import Decimal
+from itertools import chain
+
 import datetime
 from trytond.exceptions import UserError
 from trytond.modules.company import CompanyReport
@@ -70,6 +72,106 @@ class Production(metaclass=PoolMeta):
             Product = Pool().get('product.product')
             Product.update_product_parent(to_update)
 
+    @classmethod
+    def delete_productions_account(cls, production):
+        Actualizacion = Pool().get('conector.actualizacion')
+        actualizacion = Actualizacion.create_or_update(
+            'FORZAR BORRADOR PRODUCCIONES')
+        Production = Pool().get('production')
+        stock_move = Table('stock_move')
+        account_move = Table('account_move')
+        Period = Pool().get('account.period')
+        cursor = Transaction().connection.cursor()
+
+        logs = {}
+        exceptions = []
+        to_save = []
+        to_delete = []
+
+        for prod in production:
+            if prod.move:
+                validate = prod.move.state
+            else:
+                dat = str(prod.effective_date).split()[0].split('-')
+                name = f"{dat[0]}-{dat[1]}"
+                validate_period = Period.search([('name', '=', name)])
+                validate = validate_period[0].state
+            if validate == 'close':
+                exceptions.append(prod.id)
+                logs[prod.
+                     id] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA \
+                CERRADO Y NO ES POSIBLE FORZAR A BORRADOR"
+
+                actualizacion.add_logs(logs)
+                return False
+
+            if prod.state == 'draft':
+                continue
+            if prod.move:
+                # Se agrega a la lista el asiento que debe ser eliminado
+                to_delete.append(prod.move.id)
+            inputs = [mv.id for mv in prod.inputs]
+            outputs = [mv.id for mv in prod.outputs]
+            moves = inputs + outputs
+            if moves:
+                cursor.execute(
+                    *stock_move.update(columns=[stock_move.state],
+                                       values=['draft'],
+                                       where=stock_move.id.in_(moves)))
+            prod.state = 'draft'
+            to_save.append(prod)
+
+        if to_delete:
+            cursor.execute(
+                *account_move.update(columns=[account_move.state],
+                                     values=['draft'],
+                                     where=account_move.id.in_(to_delete)))
+            cursor.execute(*account_move.delete(
+                where=account_move.id.in_(to_delete)))
+
+        if to_save:
+            Production.save(to_save)
+
+        cls.delete_productions(production)
+        return True
+
+    @classmethod
+    def delete_productions(cls, productions):
+        pool = Pool()
+        Move = pool.get('stock.move')
+        Product = Pool().get('product.product')
+
+        to_draft, to_delete = [], []
+        id_products = []
+
+        cursor = Transaction().connection.cursor()
+        sql_table = cls.__table__()
+        _today = datetime.date.today()
+
+        for production in productions:
+            # Save data of move stock to delete it
+            for move in chain(production.inputs, production.outputs):
+                id_products.append(move.product.id)
+                if move.state != 'cancelled':
+                    to_draft.append(move)
+                else:
+                    to_delete.append(move)
+
+            # Delete data from table production
+            try:
+                ids = [production.id]
+                cursor.execute(*sql_table.delete(
+                    where=sql_table.id.in_(ids or [None])))
+                print("produccion eliminada")
+            except Exception as error:
+                print(error)
+                return False
+        Move.draft(to_draft)
+        Move.delete(to_delete)
+
+        products = Product.search([('id', 'in', id_products)])
+        Product.recompute_cost_price(products, start=_today)
+
     # Función encargada de importar las producciones de TecnoCarnes a Tryton
     @classmethod
     def import_data_production(cls):
@@ -78,42 +180,55 @@ class Production(metaclass=PoolMeta):
         Config = pool.get('conector.configuration')
         Actualizacion = pool.get('conector.actualizacion')
         Period = pool.get('account.period')
-        actualizacion = Actualizacion.create_or_update('PRODUCCION')
-        parametro = Config.get_data_parametros('177')
-        valor_parametro = parametro[0].Valor.split(',')
-        data = []
-        for tipo in valor_parametro:
-            result = Config.get_documentos_tipo(None, tipo)
-            if result:
-                data += result
-        if not data:
-            actualizacion.save()
-            print("FINISH PRODUCTION")
-            return
         Production = pool.get('production')
         Location = pool.get('stock.location')
         Product = pool.get('product.product')
         Template = pool.get('product.template')
+
         logs = {}
         to_created = []
         to_exception = []
         not_import = []
+        data = []
+        _today = datetime.date.today()
+        actualizacion = Actualizacion.create_or_update('PRODUCCION')
+        parametro = Config.get_data_parametros('177')
+        valor_parametro = parametro[0].Valor.split(',')
+        for tipo in valor_parametro:
+            result = Config.get_documentos_tipo(None, tipo)
+            if result:
+                data += result
+
+        if not data:
+            actualizacion.save()
+            print("FINISH PRODUCTION")
+            return
+
         for transformacion in data:
+            data_products = []
             try:
                 sw = transformacion.sw
                 numero_doc = transformacion.Numero_documento
                 tipo_doc = transformacion.tipo
                 id_tecno = str(sw) + '-' + tipo_doc + '-' + str(numero_doc)
                 print(id_tecno)
+
                 if transformacion.anulado == 'S':
                     logs[id_tecno] = "Documento anulado en TecnoCarnes"
                     not_import.append(id_tecno)
                     continue
-                existe = Production.search([('id_tecno', '=', id_tecno)])
-                if existe:
-                    logs[id_tecno] = "La producción ya existe en Tryton"
-                    to_created.append(id_tecno)
-                    continue
+
+                already_production = Production.search([('id_tecno', '=',
+                                                         id_tecno)])
+                if already_production:
+                    delete_production = Production.delete_productions_account(
+                        already_production)
+                    if not delete_production:
+                        logs[id_tecno] = "La producción no fue eliminada"
+                        continue
+                    logs[id_tecno] = "La producción fue eliminada y "\
+                        "se creara de nuevo"
+
                 fecha = str(
                     transformacion.Fecha_Hora_Factura).split()[0].split('-')
                 name = f"{fecha[0]}-{fecha[1]}"
@@ -122,11 +237,11 @@ class Production(metaclass=PoolMeta):
                 validate_period = Period.search([('name', '=', name)])
                 if validate_period[0].state == 'close':
                     to_exception.append(id_tecno)
-                    logs[
-                        id_tecno] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
-                    Y NO ES POSIBLE SU CREACION"
+                    logs[id_tecno] = "EXCEPCION: EL PERIODO DEL DOCUMENTO \
+                    SE ENCUENTRA CERRADO Y NO ES POSIBLE SU CREACION"
 
                     continue
+
                 reference = tipo_doc + '-' + str(numero_doc)
                 id_bodega = transformacion.bodega
                 bodega, = Location.search([('id_tecno', '=', id_bodega)])
@@ -163,6 +278,7 @@ class Production(metaclass=PoolMeta):
                         logs[id_tecno] = msg
                         to_exception.append(id_tecno)
                         break
+
                     producto, = producto
                     if not producto.account_category.account_stock:
                         raise UserError('msg_missing_account_stock',
@@ -170,6 +286,7 @@ class Production(metaclass=PoolMeta):
                     # Se valida si el producto esta creado en unidades para eliminar sus decimales
                     if producto.default_uom.symbol.upper() == 'U':
                         cantidad = float(int(cantidad))
+                    data_products.append(producto.id)
                     transf = {
                         'product': producto.id,
                         'quantity': abs(cantidad),
@@ -238,9 +355,16 @@ class Production(metaclass=PoolMeta):
                 Production.run(producciones)
                 Production.done(producciones)
                 to_created.append(id_tecno)
+
+                if data_products:
+                    products_to_recalcule = Product.search([('id', 'in',
+                                                             data_products)])
+                    Product.recompute_cost_price(products_to_recalcule,
+                                                 start=_today)
             except Exception as e:
                 logs[id_tecno] = f"EXCEPCION: {str(e)}"
                 to_exception.append(id_tecno)
+
         actualizacion.add_logs(logs)
         for idt in not_import:
             Config.update_exportado(idt, 'X')
@@ -248,6 +372,7 @@ class Production(metaclass=PoolMeta):
             Config.update_exportado(idt, 'E')
         for idt in to_created:
             Config.update_exportado(idt, 'T')
+
         print('FINISH PRODUCTION')
 
     # Función que recibe una producción y de acuerdo a esa información crea un asiento contable
@@ -541,7 +666,7 @@ class ProductionForceDraft(Wizard):
         if ids_:
             Actualizacion = Pool().get('conector.actualizacion')
             actualizacion = Actualizacion.create_or_update(
-                'FORZAR BORRADOR PRESTAMOS')
+                'FORZAR BORRADOR PRODUCCIONES')
             Production = Pool().get('production')
             stock_move = Table('stock_move')
             logs = {}
