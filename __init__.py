@@ -29,6 +29,7 @@ from . import liquidation
 from . import permissions
 from . import currency
 from . import account_dunning
+from . import collection
 
 
 def register():
@@ -208,5 +209,6 @@ def register():
                   sale.SaleShopDetailedCDSReport,
                   liquidation.LiquidationReport,
                   payroll.PayrollPaycheckReportExten,
+                  collection.PortfolioStatusReport,
                   module='conector',
                   type_='report')
