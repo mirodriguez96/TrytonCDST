@@ -29,6 +29,7 @@ from . import liquidation
 from . import permissions
 from . import currency
 from . import account_dunning
+from . import collection
 
 
 def register():
@@ -191,6 +192,7 @@ def register():
                   account.IncomeStatementReport,
                   account.TrialBalanceDetailedCds,
                   account.PartyWithholding,
+                  collection.PortfolioStatusReport,
                   liquidation.LiquidationReport,
                   payment_bank.PaymentBankGroupReport,
                   payment_bank.BankReportBancolombia,
