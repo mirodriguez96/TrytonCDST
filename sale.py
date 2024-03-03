@@ -53,6 +53,7 @@ class Sale(metaclass=PoolMeta):
         actualizacion_che = Actualizacion.create_or_update('SIN DOCUMENTO CHE')
         if not data:
             return
+        AccountInvoice = pool.get('account.invoice')
         Sale = pool.get('sale.sale')
         SaleLine = pool.get('sale.line')
         Period = pool.get('account.period')
@@ -89,11 +90,12 @@ class Sale(metaclass=PoolMeta):
         if venta_electronica:
             venta_electronica = (venta_electronica[0].Valor).strip().split(',')
         logs = {}
-        logs_che =  {}
+        logs_che = {}
         to_created = []
         to_exception = []
         not_import = []
         parties = Party._get_party_documentos(data, 'nit_Cedula')
+
         #Procedemos a realizar una venta
         for venta in data:
             try:
@@ -101,8 +103,8 @@ class Sale(metaclass=PoolMeta):
                 numero_doc = venta.Numero_documento
                 tipo_doc = venta.tipo
                 id_venta = str(sw) + '-' + tipo_doc + '-' + str(numero_doc)
-                existe = Sale.search([('id_tecno', '=', id_venta)])
-                if existe:
+                already_sale = Sale.search([('id_tecno', '=', id_venta)])
+                if already_sale:
                     if venta.anulado == 'S':
                         dat = str(venta.fecha_hora).split()[0].split('-')
                         name = f"{dat[0]}-{dat[1]}"
@@ -114,9 +116,10 @@ class Sale(metaclass=PoolMeta):
                             Y NO ES POSIBLE SU ELIMINACION O MODIFICACION"
 
                             continue
+                        cls.delete_imported_sales(already_sale)
+
                         logs[
                             id_venta] = "El documento fue eliminado de tryton porque fue anulado en TecnoCarnes"
-                        cls.delete_imported_sales(existe)
                         not_import.append(id_venta)
                         continue
                     to_created.append(id_venta)
@@ -446,7 +449,7 @@ class Sale(metaclass=PoolMeta):
                     elif sale.payment_term.id_tecno == '0':
                         logs_che[
                             id_venta] = "EXCEPCION: No se encontraron pagos asociados en tecnocarnes (documentos_che)"
-                        cls.delete_imported_sales([sale],cod='E')
+                        cls.delete_imported_sales([sale], cod='E')
                         continue
                 to_created.append(id_venta)
             except Exception as e:
@@ -559,7 +562,7 @@ class Sale(metaclass=PoolMeta):
                     msg = f"REVISAR: NO SE ENCONTRO LA FACTURA {dcto_base} PARA CRUZAR CON LA DEVOLUCION {invoice.number}"
                     logs[sale.id_tecno] = msg
                     to_exception.append(sale.id_tecno)
-            Invoice.validate_invoice([invoice],sw=venta.sw)
+            Invoice.validate_invoice([invoice], sw=venta.sw)
             result = cls._validate_total(invoice.total_amount, venta)
             if not result['value']:
                 msg = f"REVISAR: ({sale.id_tecno}) "\
@@ -757,6 +760,10 @@ class Sale(metaclass=PoolMeta):
     # Función encargada de obtener los ids de los registros a eliminar
     @classmethod
     def _get_delete_sales(cls, sales):
+        pool = Pool()
+        LineStatement = pool.get('account.statement.line')
+        AccountMove = pool.get('account.move')
+
         ids_tecno = []
         to_delete = {
             'sale': [],
@@ -790,27 +797,41 @@ class Sale(metaclass=PoolMeta):
                         to_delete['move'].append(invoice.move.id)
                 if invoice.id not in to_delete['invoice']:
                     to_delete['invoice'].append(invoice.id)
+                    line_statement = LineStatement.search([("invoice", "=",
+                                                            invoice.id)])
+                    if line_statement:
+                        account_moves = AccountMove.search([
+                            ("id", "=", line_statement[0].move.id)
+                        ])
+                        if account_moves:
+                            to_delete['move'].append(account_moves[0].id)
+                            AccountMove.delete_lines(account_moves)
+
             # Se procede a seleccionar los envíos y movimientos de inventario de la venta
             for line in sale.lines:
                 for move in line.moves:
                     if move.id not in to_delete['stock_move']:
                         to_delete['stock_move'].append(move.id)
+
             for shipment in sale.shipments:
                 if shipment.id not in to_delete['shipment']:
                     to_delete['shipment'].append(shipment.id)
                 for move in shipment.inventory_moves:
                     if move.id not in to_delete['stock_move']:
                         to_delete['stock_move'].append(move.id)
+
             for shipment in sale.shipment_returns:
                 if shipment.id not in to_delete['shipment_return']:
                     to_delete['shipment_return'].append(shipment.id)
                 for move in shipment.inventory_moves:
                     if move.id not in to_delete['stock_move']:
                         to_delete['stock_move'].append(move.id)
+
             # Se procede a seleccionar las lineas de pago (POS)
             for line in sale.payments:
                 if line.id not in to_delete['statement_line']:
                     to_delete['statement_line'].append(line.id)
+
             if sale.id not in to_delete['sale']:
                 to_delete['sale'].append(sale.id)
         return ids_tecno, to_delete
@@ -834,6 +855,7 @@ class Sale(metaclass=PoolMeta):
             cursor.execute(*reconciliation_table.delete(
                 where=reconciliation_table.id.in_(
                     to_delete['reconciliation'])))
+
         if to_delete['move']:
             cursor.execute(
                 *move_table.update(columns=[move_table.state],
@@ -841,6 +863,7 @@ class Sale(metaclass=PoolMeta):
                                    where=move_table.id.in_(to_delete['move'])))
             cursor.execute(*move_table.delete(
                 where=move_table.id.in_(to_delete['move'])))
+
         if to_delete['invoice']:
             cursor.execute(*invoice_table.update(
                 columns=[invoice_table.state, invoice_table.number],
@@ -848,6 +871,7 @@ class Sale(metaclass=PoolMeta):
                 where=invoice_table.id.in_(to_delete['invoice'])))
             cursor.execute(*invoice_table.delete(
                 where=invoice_table.id.in_(to_delete['invoice'])))
+
         if to_delete['stock_move']:
             cursor.execute(*stock_move_table.update(
                 columns=[stock_move_table.state],
@@ -855,6 +879,7 @@ class Sale(metaclass=PoolMeta):
                 where=stock_move_table.id.in_(to_delete['stock_move'])))
             cursor.execute(*stock_move_table.delete(
                 where=stock_move_table.id.in_(to_delete['stock_move'])))
+
         if to_delete['shipment']:
             cursor.execute(*shipment_table.update(
                 columns=[shipment_table.state],
@@ -862,6 +887,7 @@ class Sale(metaclass=PoolMeta):
                 where=shipment_table.id.in_(to_delete['shipment'])))
             cursor.execute(*shipment_table.delete(
                 where=shipment_table.id.in_(to_delete['shipment'])))
+
         if to_delete['shipment_return']:
             cursor.execute(*shipment_return_table.update(
                 columns=[shipment_return_table.state],
@@ -871,9 +897,11 @@ class Sale(metaclass=PoolMeta):
             cursor.execute(*shipment_return_table.delete(
                 where=shipment_return_table.id.in_(
                     to_delete['shipment_return'])))
+
         if to_delete['statement_line']:
             cursor.execute(*statement_line.delete(
                 where=statement_line.id.in_(to_delete['statement_line'])))
+
         if to_delete['sale']:
             cursor.execute(
                 *sale_table.update(columns=[
