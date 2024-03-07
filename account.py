@@ -1821,7 +1821,7 @@ class AuxiliaryPartyStart(metaclass=PoolMeta):
         super(AuxiliaryPartyStart, cls).__setup__()
         cls.start_period.required = True
         cls.end_period.required = True
-        cls.party.required = True
+        # cls.party.required = True
 
     @fields.depends('grouped_by_location', 'only_reference')
     def on_change_grouped_by_location(cls):
@@ -1861,6 +1861,7 @@ class AuxiliaryParty(metaclass=PoolMeta):
         start_period = None
         end_period = None
         location = None
+        grouped_party = False
         account_ids = []
 
         # Define start period to Account Moves
@@ -1881,9 +1882,13 @@ class AuxiliaryParty(metaclass=PoolMeta):
             fields_names=['id'],
         )
         moves_ids = [move['id'] for move in moves]
-        dom_lines = [('move', 'in', moves_ids), ('party', '=', data['party'])]
+        dom_lines = [('move', 'in', moves_ids)]
 
         # Build conditions to Account Move Lines
+        if data["party"]:
+            party_dom = ('party', '=', data['party'])
+            dom_lines.append(party_dom)
+
         if data.get('reference'):
             reference_dom = ('reference', 'ilike', data.get('reference'))
             dom_lines.append(reference_dom)
@@ -1991,41 +1996,56 @@ class AuxiliaryParty(metaclass=PoolMeta):
                 accounts_id[id_][account_id]['balance'].append(line.debit -
                                                                line.credit)
 
-        # Define start period to balances
-        start_period = Period(data['start_period'])
-        start_periods = Period.search([
-            ('end_date', '<', start_period.start_date),
-        ])
+        if not data['only_reference'] and data['party']:
+            grouped_party = True
+            # Define start period to balances
+            start_period = Period(data['start_period'])
+            start_periods = Period.search([
+                ('end_date', '<', start_period.start_date),
+            ])
 
-        # build conditions
-        entity = account_move_line.party
-        default_entity = 0
+            # build conditions
+            entity = account_move_line.party
+            default_entity = 0
 
-        # Select data from start period
-        start_periods_ids = [period.id for period in start_periods]
+            # Select data from start period
+            start_periods_ids = [period.id for period in start_periods]
 
-        join1 = account_move_line.join(account_move)
-        join1.condition = join1.right.id == account_move_line.move
-        select2 = join1.select(
-            account_move_line.account,
-            Coalesce(entity, default_entity),
-            Sum(account_move_line.debit) - Sum(account_move_line.credit),
-            group_by=(account_move_line.account, entity),
-            order_by=account_move_line.account,
-        )
-        select2.where = join1.right.period.in_(start_periods_ids)
-        select2.where = select2.where & (account_move_line.party
-                                         == data['party'])
-        if data['accounts']:
-            select2.where = select2.where & (
-                account_move_line.account.in_(account_ids))
+            join1 = account_move_line.join(account_move)
+            join1.condition = join1.right.id == account_move_line.move
+            select2 = join1.select(
+                account_move_line.account,
+                Coalesce(entity, default_entity),
+                Sum(account_move_line.debit) - Sum(account_move_line.credit),
+                group_by=(account_move_line.account, entity),
+                order_by=account_move_line.account,
+            )
+            if start_periods_ids:
+                select2.where = join1.right.period.in_(start_periods_ids)
 
-        if data['posted']:
-            select2.where = select2.where & (account_move.state == 'posted')
-        cursor.execute(*select2)
-        result_start = cursor.fetchall()
+            if account_move_line.party:
+                if select2.where:
+                    select2.where = (select2.where & (account_move_line.party
+                                                      == data['party']))
+                else:
+                    select2.where = account_move_line.party == data['party']
 
-        if not data['only_reference']:
+            if data['accounts']:
+                if select2.where:
+                    select2.where = select2.where & (
+                        account_move_line.account.in_(account_ids))
+                else:
+                    select2.where = account_move_line.account.in_(account_ids)
+
+            if data['posted']:
+                if select2.where:
+                    select2.where = select2.where & (account_move.state
+                                                     == 'posted')
+                else:
+                    select2.where = account_move.state == 'posted'
+
+            cursor.execute(*select2)
+            result_start = cursor.fetchall()
             if data['grouped_by_location'] or data['grouped_by_oc']:
                 cls._get_process_result(res,
                                         accounts_id,
@@ -2039,6 +2059,7 @@ class AuxiliaryParty(metaclass=PoolMeta):
         report_context['grouped_by_account'] = data['grouped_by_account']
         report_context['grouped_by_location'] = grouped_by_loc
         report_context['grouped_by_reference'] = data['only_reference']
+        report_context['grouped_by_party'] = grouped_party
         report_context[
             'start_period'] = start_period.name if start_period else '*'
         report_context['end_period'] = end_period.name if end_period else '*'
@@ -2054,7 +2075,6 @@ class AuxiliaryParty(metaclass=PoolMeta):
                             by_location=None):
         balances = {}
         already_accounts = []
-
         for val in values:
             id_account = val[0]
             key = val[1]
