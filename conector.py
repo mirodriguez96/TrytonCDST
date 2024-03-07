@@ -286,6 +286,7 @@ class Actualizacion(ModelSQL, ModelView):
         and to mark to be imported"""
         pool = Pool()
         Config = pool.get('conector.configuration')
+        Sale = pool.get('sale.sale')
         Actualizacion = pool.get('conector.actualizacion')
         cursor = Transaction().connection.cursor()
         results = None
@@ -346,6 +347,7 @@ class Actualizacion(ModelSQL, ModelView):
             cursor.execute(consultv)
             results = cursor.fetchall()
             condition = "sw=31"
+
         # save the results in a list
         if not result_tryton and results:
             result_tryton = [result[0] for result in results]
@@ -358,13 +360,35 @@ class Actualizacion(ModelSQL, ModelView):
         config, = Config.search([], order=[('id', 'DESC')], limit=1)
         connection_date = config.date.strftime('%Y-%m-%d %H:%M:%S')
         consultc = "SET DATEFORMAT ymd "\
-            "SELECT CONCAT(sw,'-',tipo,'-',numero_documento) FROM Documentos "\
+            "SELECT CONCAT(sw,'-',tipo,'-',numero_documento), valor_total,\
+                Valor_impuesto, Impuesto_Consumo FROM Documentos "\
             f"WHERE {condition} "\
             f"AND fecha_hora >= CAST('{connection_date}' AS datetime) "\
             "AND exportado = 'T' "\
             "AND tipo<>0 ORDER BY tipo,numero_documento"
         result_tecno = Config.get_data(consultc)
+        result_value = result_tecno
         result_tecno = [r[0] for r in result_tecno]
+
+        if condition == "(sw=1 OR sw=2)":
+            for value in result_value:
+                id_tecno = value[0]
+                invoice_amount = Decimal(value[1]).quantize(Decimal('0.00'))
+                tax_ammount = Decimal(value[2]).quantize(Decimal('0.00'))
+                tax_consumption = Decimal(value[3]).quantize(Decimal('0.00'))
+
+                sale = Sale.search([("id_tecno", "=", id_tecno)])
+                if sale:
+                    tryton_value = sale[0].invoice_amount_tecno
+                    if tryton_value != invoice_amount:
+                        print(f"actualizando venta {id_tecno}")
+                        print(f"Factura tecno {invoice_amount}, \
+                                Factura tryton {tryton_value},\
+                                impuesto {tax_ammount}")
+                        sale[0].invoice_amount_tecno = invoice_amount\
+                            - tax_consumption
+                        sale[0].tax_amount_tecno = tax_ammount
+                        Sale.save(sale)
         list_difference = [r for r in result_tecno if r not in result_tryton]
         # Save the registry and mark the document to be imported
         for falt in list_difference:
@@ -375,7 +399,7 @@ class Actualizacion(ModelSQL, ModelView):
                 f"AND Numero_documento = {lid[2]}"
             Config.set_data(query)
             logs[falt] = "EL DOCUMENTO ESTABA MARCADO COMO IMPORTADO "\
-                "(T) SIN ESTARLO. \n"\
+                "(T) SIN ESTARLO."\
                 "AHORA FUE MARACADO COMO PENDIENTE PARA IMPOTAR (N)"
         actualizacion, = Actualizacion.search([('name', '=', name)])
         actualizacion.add_logs(logs)
