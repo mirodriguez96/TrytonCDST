@@ -862,3 +862,31 @@ msgstr "Imprimir"
 msgctxt "wizard_button:account.income_statement_wizard_cds,start,end:"
 msgid "Cancel"
 msgstr "Cancelar"
+
+msgctxt "model:ir.action,name:wizard_invoice_values_cdst"
+msgid "Sale Invoices Report"
+msgstr "Reporte de facturas"
+
+msgctxt "model:ir.action,name:report_invoice_values_cdst"
+msgid "Sale Invoices Report"
+msgstr "Reporte de facturas"
+
+msgctxt "model:ir.ui.menu,name:menu_invoice_values_cdst"
+msgid "Sale Invoices Report"
+msgstr "Reporte de facturas"
+
+msgctxt "field:sale.invoice_values_cdst.start,from_date:"
+msgid "From Date"
+msgstr "Fecha Inicial"
+
+msgctxt "field:sale.invoice_values_cdst.start,to_date:"
+msgid "To Date"
+msgstr "Fecha Final"
+
+msgctxt "field:sale.invoice_values_cdst.start,state:"
+msgid "State"
+msgstr "Estado"
+
+msgctxt "field:sale.invoice_values_cdst.start,document_type:"
+msgid "Type Document"
+msgstr "Tipo de documento"

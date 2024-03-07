@@ -12,12 +12,20 @@ from trytond.report import Report
 from sql.aggregate import Sum
 from trytond.pyson import Eval, If
 
+STATES = [("", ""), ("draft", "Borrador"), ("done", "Finalizado")]
+TYPE_DOCUMENT = [("", "")]
 
-#Heredamos del modelo sale.sale para agregar el campo id_tecno
+
 class Sale(metaclass=PoolMeta):
-    'Sale'
+    'Sale inheritance Model'
     __name__ = 'sale.sale'
     id_tecno = fields.Char('Id Tabla Sqlserver', required=False, select=True)
+    invoice_amount_tecno = fields.Numeric('Value_Tecno',
+                                          digits=(16, 2),
+                                          required=False)
+    tax_amount_tecno = fields.Numeric('Value_Tax_Tecno',
+                                      digits=(16, 2),
+                                      required=False)
 
     # V6.6 en adelante
     # def __setup__(cls):
@@ -48,6 +56,7 @@ class Sale(metaclass=PoolMeta):
             return
         Actualizacion = pool.get('conector.actualizacion')
         data = Config.get_documentos_tecno(swt)
+
         #Se crea o actualiza la fecha de importación
         actualizacion = Actualizacion.create_or_update('VENTAS')
         actualizacion_che = Actualizacion.create_or_update('SIN DOCUMENTO CHE')
@@ -103,7 +112,11 @@ class Sale(metaclass=PoolMeta):
                 numero_doc = venta.Numero_documento
                 tipo_doc = venta.tipo
                 id_venta = str(sw) + '-' + tipo_doc + '-' + str(numero_doc)
+                invoice_amount_tecno = venta.valor_total
+                tax_amount_tecno = venta.valor_impuesto
+                tax_consumption = venta.Impuesto_Consumo
                 already_sale = Sale.search([('id_tecno', '=', id_venta)])
+
                 if already_sale:
                     if venta.anulado == 'S':
                         dat = str(venta.fecha_hora).split()[0].split('-')
@@ -120,6 +133,7 @@ class Sale(metaclass=PoolMeta):
 
                         logs[
                             id_venta] = "El documento fue eliminado de tryton porque fue anulado en TecnoCarnes"
+                        cls.delete_imported_sales(already_sale)
                         not_import.append(id_venta)
                         continue
                     to_created.append(id_venta)
@@ -259,24 +273,27 @@ class Sale(metaclass=PoolMeta):
                 sale.self_pick_up = False
                 sale.invoice_number = sale.number
                 sale.invoice_date = fecha_date
-                #Se revisa si la venta es clasificada como electronica o pos y se cambia el tipo
+                sale.invoice_amount_tecno = invoice_amount_tecno\
+                    - tax_consumption
+                sale.tax_amount_tecno = tax_amount_tecno
+
+                # Se revisa si la venta es clasificada como electronica o pos y se cambia el tipo
                 if tipo_doc in venta_electronica:
-                    #continue #TEST
                     sale.invoice_type = '1'
                 elif tipo_doc in venta_pos:
                     sale.shop = shop
                     sale.invoice_type = 'P'
                     sale.pos_create_date = fecha_date
-                    #sale.self_pick_up = True
                     sale.sale_device = sale_device
-                #Se busca una dirección del tercero para agregar en la factura y envio
+
+                # Se busca una dirección del tercero para agregar en la factura y envio
                 address = Address.search([('party', '=', party.id)], limit=1)
                 if address:
                     sale.invoice_address = address[0].id
                     sale.shipment_address = address[0].id
-                #SE CREA LA VENTA
+                # SE CREA LA VENTA
                 sale.save()
-                #Se revisa si se aplico alguno de los 3 impuestos en la venta
+                # Se revisa si se aplico alguno de los 3 impuestos en la venta
                 retencion_iva = False
                 if venta.retencion_iva > 0:
                     retencion_iva = True
@@ -290,8 +307,7 @@ class Sale(metaclass=PoolMeta):
                     elif (venta.retencion_iva +
                           venta.retencion_ica) != venta.retencion_causada:
                         retencion_rete = True
-                #Ahora se procede a crear las líneas para la venta
-                #_lines = []
+
                 for lin in documentos_linea:
                     producto = Product.search([
                         'OR', ('id_tecno', '=', str(lin.IdProducto)),
@@ -428,6 +444,7 @@ class Sale(metaclass=PoolMeta):
                 #Se procesa los registros creados
                 with Transaction().set_user(1):
                     context = User.get_preferences()
+
                 with Transaction().set_context(context, _skip_warnings=True):
                     Sale.quote([sale])
                     Sale.confirm([sale])
@@ -534,11 +551,13 @@ class Sale(metaclass=PoolMeta):
         PaymentLine = pool.get('account.invoice-account.move.line')
         Config = pool.get('conector.configuration')
         #Procesamos la venta para generar la factura y procedemos a rellenar los campos de la factura
+
         if not sale.invoices:
-            sale._process_invoice([sale])
-            if not sale.invoices:
-                logs[sale.id_tecno] = "REVISAR: VENTA SIN FACTURA"
-                to_exception.append(sale.id_tecno)
+            print(dir(sale))
+            # sale._process_invoice([sale])
+            logs[sale.id_tecno] = "REVISAR: VENTA SIN FACTURA"
+            to_exception.append(sale.id_tecno)
+
         for invoice in sale.invoices:
             invoice.accounting_date = sale.sale_date
             invoice.number = sale.number
@@ -1226,4 +1245,153 @@ class SaleShopDetailedCDSReport(Report):
         report_context['start_date'] = data['start_date']
         report_context['end_date'] = data['end_date']
         report_context['company'] = Company(data['company'])
+        return report_context
+
+
+class SaleInvoiceValueCdstStart(ModelView):
+    'Sale Invoice Values View Report'
+    __name__ = 'sale.invoice_values_cdst.start'
+    company = fields.Many2One('company.company', 'Company', required=True)
+    from_date = fields.Date('From Date', required=True)
+    to_date = fields.Date('To Date', required=True)
+    document_type = fields.Selection('get_document_type', 'Type Document')
+    state = fields.Selection(STATES, 'State')
+
+    @staticmethod
+    def default_company():
+        return Transaction().context.get('company')
+
+    def get_document_type():
+        pool = Pool()
+        Config = pool.get('conector.configuration')
+        condition = "(tipo=1 OR tipo=2)"
+        consultc = "SET DATEFORMAT ymd "\
+            "SELECT idTipoDoctos FROM TblTipoDoctos "\
+            f"WHERE {condition} "
+        result_tecno = Config.get_data(consultc)
+        list_document = [row[0] for row in result_tecno]
+        TYPE_DOCUMENT = [(val, val) for val in list_document]
+        return TYPE_DOCUMENT
+
+
+class SaleInvoiceValueCdst(Wizard):
+    'Sale Invoice Values Wizard'
+    __name__ = 'sale.invoice_values_cdst'
+    start = StateView('sale.invoice_values_cdst.start',
+                      'conector.form_view_invoice_values_cdst_start', [
+                          Button('Cancel', 'end', 'tryton-cancel'),
+                          Button('Print', 'print_', 'tryton-ok', default=True),
+                      ])
+    print_ = StateReport('sale.invoice_values_cdst.report')
+
+    def do_print_(self, action):
+        """Function to save form values and return to build report"""
+
+        from_date = self.start.from_date
+        to_date = self.start.to_date
+        if (to_date - from_date).days > 31:
+            raise UserError(
+                'El rango de fecha no puede exceder mas de 31 dias.')
+
+        data = {
+            'company': self.start.company.id,
+            'from_date': from_date,
+            'to_date': to_date,
+            'type_document': self.start.document_type,
+            'state': self.start.state,
+        }
+        return action, data
+
+
+class SaleInvoiceValueCdstReport(Report):
+    'Sale Invoice Values Report'
+    __name__ = 'sale.invoice_values_cdst.report'
+
+    @classmethod
+    def get_context(cls, records, header, data):
+        """Function that take context of report and import it"""
+        report_context = super().get_context(records, header, data)
+
+        pool = Pool()
+        Company = pool.get('company.company')
+        Sale = pool.get('sale.sale')
+
+        info_invoices = []
+        type_document = ""
+        state = ""
+        total_amount_tecno = Decimal(0)
+        total_amount_tryton = Decimal(0)
+        init_date = data["from_date"]
+        end_date = data["to_date"]
+
+        # build init domain
+        domain_sales = [("sale_date", ">=", init_date),
+                        ("sale_date", "<=", end_date)]
+
+        # validate if type document was selected and add to domain
+        if data["type_document"]:
+            type_document = data["type_document"]
+            domain_sales.append(("reference", "ilike", f"{type_document}-%"))
+
+        if data["state"]:
+            state = "Borrador" if data["state"] == "draft" else "Finalizado"
+            domain_sales.append(("state", "=", data["state"]))
+
+        sales = Sale.search(domain_sales)
+
+        if sales:
+            for sale in sales:
+                invoices = {}
+                invoice_difference = 0
+
+                if sale.invoice:
+                    invoice_amount_tecno = sale.invoice_amount_tecno
+                    tax_amount_tecno = sale.tax_amount_tecno
+                    invoice_value_tryton = sale.invoice.untaxed_amount_cache
+
+                    if invoice_amount_tecno is not None\
+                            and invoice_value_tryton is not None:
+
+                        invoice_amount_tecno = Decimal(
+                            abs(invoice_amount_tecno))
+                        invoice_value_tryton = Decimal(
+                            abs(invoice_value_tryton))
+                        tax_amount_tecno = Decimal(abs(tax_amount_tecno))
+
+                        invoice_without_tax = invoice_amount_tecno\
+                            - tax_amount_tecno
+                        invoice_difference = invoice_without_tax\
+                            - invoice_value_tryton
+
+                        invoice_difference = Decimal(abs(invoice_difference))
+                        total_amount_tecno += invoice_without_tax
+                        total_amount_tryton += invoice_value_tryton
+
+                        if invoice_difference > 5:
+                            invoices = {
+                                "date": sale.sale_date,
+                                "reference": sale.reference,
+                                "description": sale.invoice.description,
+                                "value_tecno": invoice_without_tax,
+                                "value_tryton": invoice_value_tryton,
+                                "difference": invoice_difference,
+                                "tax_amount": tax_amount_tecno,
+                            }
+                            info_invoices.append(invoices)
+            total_difference = abs(total_amount_tecno - total_amount_tryton)
+
+        if not sales or not info_invoices:
+            raise UserError(
+                message="SIN INFORMACION",
+                description="No hay documentos en el rango de fecha"
+                "con inconsistencias.")
+
+        report_context['info_report'] = info_invoices
+        report_context['company'] = Company(data['company'])
+        report_context['type'] = type_document
+        report_context['total_tecno'] = total_amount_tecno
+        report_context['total_tryton'] = total_amount_tryton
+        report_context['state'] = state
+        report_context['total_difference'] = total_difference
+        
         return report_context

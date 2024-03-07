@@ -23,5 +23,30 @@ this repository contains the full copyright notices and license terms. -->
         </record>
 
         <menuitem parent="sale.menu_reporting" id="menu_sale_shop_detailed_cds" action="wizard_print_sale_shop_detailed_cds"/>
+
+
+        <!-- REPORT AND WIZARD OF INVOICE SALES -->
+        <record model="ir.ui.view" id="form_view_invoice_values_cdst_start">
+            <field name="model">sale.invoice_values_cdst.start</field>
+            <field name="type">form</field>
+            <field name="name">form_invoice_values_cdst_start</field>
+        </record>
+
+        <record model="ir.action.wizard" id="wizard_invoice_values_cdst">
+            <field name="name">Sale Invoices Report</field>
+            <field name="wiz_name">sale.invoice_values_cdst</field>
+        </record>
+
+        <record model="ir.action.report" id="report_invoice_values_cdst">
+            <field name="name">Sale Invoices Report</field>
+            <field name="model"></field>
+            <field name="report_name">sale.invoice_values_cdst.report</field>
+            <field name="report">conector/reports/invoice_sales.fods</field>
+            <field name="template_extension">ods</field>
+            <field name="translatable">False</field>
+        </record>
+
+        <menuitem parent="sale.menu_reporting" id="menu_invoice_values_cdst" icon="tryton-print" action="wizard_invoice_values_cdst" />
+
     </data>
 </tryton>
