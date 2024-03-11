@@ -26,7 +26,7 @@ this repository contains the full copyright notices and license terms. -->
 
 
         <!-- REPORT AND WIZARD OF INVOICE SALES -->
-        <record model="ir.ui.view" id="form_view_invoice_values_cdst_start">
+        <!-- <record model="ir.ui.view" id="form_view_invoice_values_cdst_start">
             <field name="model">sale.invoice_values_cdst.start</field>
             <field name="type">form</field>
             <field name="name">form_invoice_values_cdst_start</field>
@@ -46,7 +46,7 @@ this repository contains the full copyright notices and license terms. -->
             <field name="translatable">False</field>
         </record>
 
-        <menuitem parent="sale.menu_reporting" id="menu_invoice_values_cdst" icon="tryton-print" action="wizard_invoice_values_cdst" />
+        <menuitem parent="sale.menu_reporting" id="menu_invoice_values_cdst" icon="tryton-print" action="wizard_invoice_values_cdst" /> -->
 
     </data>
 </tryton>
