@@ -30,6 +30,7 @@ from . import permissions
 from . import currency
 from . import account_dunning
 from . import collection
+from . import line
 
 
 def register():
@@ -57,6 +58,7 @@ def register():
                   invoice.InvoiceLine,
                   invoice.UpdateInvoiceTecnoStart,
                   loan.Loan,
+                  line.Line,
                   pay_mode.VoucherPayMode,
                   payment_bank.PaymentBankGroupStart,
                   payment_bank.AccountBankParty,
