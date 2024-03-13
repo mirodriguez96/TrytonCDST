@@ -1,6 +1,5 @@
 from decimal import Decimal
-from datetime import timedelta, date
-import datetime
+from datetime import timedelta, date, datetime
 from trytond.model import ModelSQL, ModelView, fields, Workflow
 from trytond.pool import Pool, PoolMeta
 from trytond.wizard import (Wizard, StateView, Button, StateReport,
@@ -2239,17 +2238,14 @@ class StaffAccess(metaclass=PoolMeta):
                     vals["state"] = "close"
                 if any(item in v_keys for item in v_eval):
                     if vals["enter_timestamp"] or vals["exit_timestamp"]:
-                        if isinstance(vals["enter_timestamp"],
-                                      datetime.datetime):
+                        if isinstance(vals["enter_timestamp"], datetime):
                             enter_timestamp = vals[
-                                "enter_timestamp"] + datetime.timedelta(
-                                    hours=5)
+                                "enter_timestamp"] + timedelta(hours=5)
                             vals["enter_timestamp"] = enter_timestamp
 
-                        if isinstance(vals["exit_timestamp"],
-                                      datetime.datetime):
+                        if isinstance(vals["exit_timestamp"], datetime):
                             exit_timestamp = vals[
-                                "exit_timestamp"] + datetime.timedelta(hours=5)
+                                "exit_timestamp"] + timedelta(hours=5)
                             vals["exit_timestamp"] = exit_timestamp
                     extras = cls.get_extras(user_access, vals)
                     vals.update(extras)
@@ -2439,7 +2435,7 @@ class StaffAccess(metaclass=PoolMeta):
                 'het': het,
                 'hedo': hedo,
                 'heno': heno,
-                'reco': reco,
+                'reco': reco.quantize(Decimal('0.00')),
                 'recf': recf,
                 'dom': dom,
                 'hedf': hedf,
@@ -2562,25 +2558,17 @@ class StaffAccess(metaclass=PoolMeta):
         elif ttt <= 7.83 and dom > Decimal(0.0):
             dom = ttt
 
-        # hedo = round(Decimal(ttt) - Decimal(7.83),2) if hedo != float(0) else float(0)
-        # heno = round(Decimal(ttt) - Decimal(7.83),2) if heno != float(0) else float(0)
-        # hedf = round(Decimal(ttt) - Decimal(7.83),2) if hedf != float(0) else float(0)
-        # henf = round(Decimal(ttt) - Decimal(7.83),2) if henf != float(0) else float(0)
-
         return {
             'ttt': ttt,
             'het': round(het, 2),
             'hedo': round(het - heno, 2) if dom == 0 else hedo,
             'heno': round(heno, 2),
-            'reco': reco,
+            'reco': reco.quantize(Decimal('0.00')),
             'recf': recf,
             'dom': dom,
             'hedf': round(het - henf, 2) if dom != 0 else hedf,
             'henf': round(henf, 2)
         }
-
-        # return {'ttt': ttt, 'het': round(het,2), 'hedo': float(0) if hedo <= float(0) else hedo, 'heno': float(0) if heno <= float(0) else heno,
-        #         'reco': reco, 'recf': recf, 'dom': dom, 'hedf': float(0) if hedf <= float(0) else hedf, 'henf': float(0) if henf <= float(0) else  henf}
 
     # Obtiene la suma de los descansos
     def _get_all_rests(self, index_rest, all_rests, contador):
