@@ -1,6 +1,6 @@
 from decimal import Decimal
-from datetime import timedelta, date
-import datetime
+from datetime import timedelta, datetime, date
+
 from trytond.model import ModelSQL, ModelView, fields, Workflow
 from trytond.pool import Pool, PoolMeta
 from trytond.wizard import (Wizard, StateView, Button, StateReport,
@@ -1714,8 +1714,8 @@ class StaffEvent(metaclass=PoolMeta):
                                             liquidation_date=event.start_date,
                                             days=days,
                                             end_date=end_date_period)
-
-                if get_day not in [30, 31]:
+                
+                if get_day not in [30,31]:
                     days = (event.days - days)
                 else:
                     days = (event.days - days - 1)
@@ -2020,7 +2020,7 @@ class Payroll(metaclass=PoolMeta):
         values_append = values.append
 
         self.process_loans_to_pay(LoanLine, PayrollLine, MoveLine)
-
+        
         for wage, party, fix_amount in wages:
             if not fix_amount:
                 salary_args = get_salary_full(wage)
@@ -2223,37 +2223,6 @@ class StaffAccess(metaclass=PoolMeta):
                                   selection='get_origin',
                                   select=True,
                                   readonly=True)
-
-    @classmethod
-    def write(cls, access, vals):
-        v_keys = vals.keys()
-        v_eval = [
-            'enter_timestamp', 'exit_timestamp', 'rest', 'start_rest',
-            'end_rest'
-        ]
-
-        for user_access in access:
-            if "employee" in vals and user_access.employee.id == vals[
-                    "employee"]:
-                if "state" not in vals:
-                    vals["state"] = "close"
-                if any(item in v_keys for item in v_eval):
-                    if vals["enter_timestamp"] or vals["exit_timestamp"]:
-                        if isinstance(vals["enter_timestamp"],
-                                      datetime.datetime):
-                            enter_timestamp = vals[
-                                "enter_timestamp"] + datetime.timedelta(
-                                    hours=5)
-                            vals["enter_timestamp"] = enter_timestamp
-
-                        if isinstance(vals["exit_timestamp"],
-                                      datetime.datetime):
-                            exit_timestamp = vals[
-                                "exit_timestamp"] + datetime.timedelta(hours=5)
-                            vals["exit_timestamp"] = exit_timestamp
-                    extras = cls.get_extras(user_access, vals)
-                    vals.update(extras)
-                super(StaffAccess, cls).write([user_access], vals)
 
     @staticmethod
     def _get_origin():
