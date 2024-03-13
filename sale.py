@@ -113,7 +113,9 @@ class Sale(metaclass=PoolMeta):
                 tipo_doc = venta.tipo
                 id_venta = str(sw) + '-' + tipo_doc + '-' + str(numero_doc)
                 invoice_amount_tecno = venta.valor_total
-                tax_amount_tecno = venta.valor_impuesto
+                tax_amount_tecno = venta.Valor_impuesto\
+                    if venta.Valor_impuesto else Decimal(0)
+
                 tax_consumption = venta.Impuesto_Consumo
                 already_sale = Sale.search([('id_tecno', '=', id_venta)])
 
@@ -1393,5 +1395,5 @@ class SaleInvoiceValueCdstReport(Report):
         report_context['total_tryton'] = total_amount_tryton
         report_context['state'] = state
         report_context['total_difference'] = total_difference
-        
+
         return report_context
