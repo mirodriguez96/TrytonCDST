@@ -80,7 +80,7 @@ class Production(metaclass=PoolMeta):
         Production = Pool().get('production')
         stock_move = Table('stock_move')
         account_move = Table('account_move')
-        Period = Pool().get('account.period')
+        Period = Pool().get('stock.period')
         cursor = Transaction().connection.cursor()
 
         logs = {}
@@ -89,6 +89,7 @@ class Production(metaclass=PoolMeta):
         to_delete = []
 
         for prod in production:
+
             if prod.move:
                 validate = prod.move.state
             else:
@@ -96,6 +97,7 @@ class Production(metaclass=PoolMeta):
                 name = f"{dat[0]}-{dat[1]}"
                 validate_period = Period.search([('name', '=', name)])
                 validate = validate_period[0].state
+
             if validate == 'close':
                 exceptions.append(prod.id)
                 logs[prod.
@@ -218,16 +220,18 @@ class Production(metaclass=PoolMeta):
                     not_import.append(id_tecno)
                     continue
 
-                already_production = Production.search([('id_tecno', '=',
-                                                         id_tecno)])
-                if already_production:
-                    delete_production = Production.delete_productions_account(
-                        already_production)
-                    if not delete_production:
-                        logs[id_tecno] = "La producción no fue eliminada"
-                        continue
-                    logs[id_tecno] = "La producción fue eliminada y "\
-                        "se creara de nuevo"
+                if transformacion.exportado == 'N':
+                    already_production = Production.search([('id_tecno', '=',
+                                                             id_tecno)])
+                    if already_production:
+                        delete_production = Production.delete_productions_account(
+                            already_production)
+
+                        if not delete_production:
+                            logs[id_tecno] = "La producción no fue eliminada"
+                            continue
+                        logs[id_tecno] = "La producción fue eliminada y "\
+                            "se creara de nuevo"
 
                 fecha = str(
                     transformacion.Fecha_Hora_Factura).split()[0].split('-')
