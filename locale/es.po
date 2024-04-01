@@ -890,3 +890,11 @@ msgstr "Estado"
 msgctxt "field:sale.invoice_values_cdst.start,document_type:"
 msgid "Type Document"
 msgstr "Tipo de documento"
+
+msgctxt "field:account_voucher.taxes_consolidation.start,date_note:"
+msgid "Date Note"
+msgstr "Fecha de nota"
+
+msgctxt "field:account_voucher.taxes_consolidation.start,operation_center:"
+msgid "Operation Center"
+msgstr "Centro de operaciones"

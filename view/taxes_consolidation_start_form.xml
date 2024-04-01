@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<!-- This file is part of Tryton.  The COPYRIGHT file at the top level of
+this repository contains the full copyright notices and license terms. -->
+<data>
+
+    <xpath expr="/form/field[@name='payoff_account']" position="after">
+        <!-- <label name="payoff_account_cds"/>
+        <field name="payoff_account_cds"/> -->
+        <label name="date_note"/>
+        <field name="date_note"/>
+        <label name="operation_center"/>
+        <field name="operation_center"/>
+    </xpath>
+</data>
