@@ -77,17 +77,16 @@ class TaxesConsolidationStart(metaclass=PoolMeta):
     'Taxes Consolidation Start'
     __name__ = 'account_voucher.taxes_consolidation.start'
 
-    payoff_account_cds = fields.Many2One('account.account',
-                                         'Payoff Account',
-                                         domain=[
-                                             ('type', '!=', None),
-                                         ],
-                                         required=True)
+    # payoff_account_cds = fields.Many2One('account.account',
+    #                                      'Payoff Account',
+    #                                      domain=[
+    #                                          ('type', '!=', None),
+    #                                      ],
+    #                                      required=True)
 
     date_note = fields.Many2One('account.period',
                                 'Date Note',
                                 domain=[
-                                    ('type', '=', 'adjustment'),
                                     ('fiscalyear', '=', Eval('fiscalyear')),
                                 ],
                                 required=True)
@@ -105,7 +104,6 @@ class TaxesConsolidation(metaclass=PoolMeta):
     __name__ = 'account_voucher.taxes_consolidation'
 
     def transition_create_(self):
-        print('Hola')
         pool = Pool()
         Note = pool.get('account.note')
         Move = pool.get('account.move')
@@ -187,7 +185,7 @@ class TaxesConsolidation(metaclass=PoolMeta):
         NoteLine.create(lines_to_create)
 
         payable_line = {
-            'account': self.start.payoff_account_cds.id,
+            'account': self.start.payoff_account.id,
             'note': note.id,
             'debit': _ZERO,
             'credit': _ZERO,
