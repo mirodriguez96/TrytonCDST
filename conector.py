@@ -367,6 +367,11 @@ class Actualizacion(ModelSQL, ModelView):
             "AND exportado = 'T' "\
             "AND tipo<>0 ORDER BY tipo,numero_documento"
         result_tecno = Config.get_data(consultc)
+
+        # Validate that existe data from tecno
+        if not result_tecno:
+            return
+
         result_value = result_tecno
         result_tecno = [r[0] for r in result_tecno]
 
@@ -389,6 +394,7 @@ class Actualizacion(ModelSQL, ModelView):
                             - tax_consumption
                         sale[0].tax_amount_tecno = tax_ammount
                         Sale.save(sale)
+
         list_difference = [r for r in result_tecno if r not in result_tryton]
         # Save the registry and mark the document to be imported
         for falt in list_difference:
