@@ -288,11 +288,14 @@ class Actualizacion(ModelSQL, ModelView):
         Config = pool.get('conector.configuration')
         Sale = pool.get('sale.sale')
         Actualizacion = pool.get('conector.actualizacion')
+        Log = pool.get('conector.log')
         cursor = Transaction().connection.cursor()
         results = None
         result_tryton = []
         condition = None
         logs = {}
+        print(name)
+
         if name == 'VENTAS':
             consultv = "SELECT id_tecno FROM sale_sale "\
                 "WHERE id_tecno is not null"
@@ -354,24 +357,29 @@ class Actualizacion(ModelSQL, ModelView):
         elif result_tryton and results:
             for result in results:
                 result_tryton.append(result[0])
+
         # If not data document condition, exit
         if not condition:
             return
+
         config, = Config.search([], order=[('id', 'DESC')], limit=1)
         connection_date = config.date.strftime('%Y-%m-%d %H:%M:%S')
         consultc = "SET DATEFORMAT ymd "\
-            "SELECT CONCAT(sw,'-',tipo,'-',numero_documento), valor_total,\
-                Valor_impuesto, Impuesto_Consumo FROM Documentos "\
+            "SELECT CONCAT(sw,'-',tipo,'-',numero_documento), valor_total,"\
+            "Valor_impuesto, Impuesto_Consumo, anulado FROM Documentos "\
             f"WHERE {condition} "\
             f"AND fecha_hora >= CAST('{connection_date}' AS datetime) "\
             "AND exportado = 'T' "\
             "AND tipo<>0 ORDER BY tipo,numero_documento"
-        result_tecno = Config.get_data(consultc)
-
-        # Validate that existe data from tecno
-        if not result_tecno:
+        try:
+            result_tecno = Config.get_data(consultc)
+        except Exception as error:
+            print(error)
             return
 
+        if not result_tecno:
+            return
+        
         result_value = result_tecno
         result_tecno = [r[0] for r in result_tecno]
 
@@ -386,16 +394,15 @@ class Actualizacion(ModelSQL, ModelView):
                 if sale:
                     tryton_value = sale[0].invoice_amount_tecno
                     if tryton_value != invoice_amount:
-                        print(f"actualizando venta {id_tecno}")
-                        print(f"Factura tecno {invoice_amount}, \
-                                Factura tryton {tryton_value},\
-                                impuesto {tax_ammount}")
                         sale[0].invoice_amount_tecno = invoice_amount\
                             - tax_consumption
                         sale[0].tax_amount_tecno = tax_ammount
                         Sale.save(sale)
 
         list_difference = [r for r in result_tecno if r not in result_tryton]
+        list_already_values = [r for r in result_tecno if r in result_tryton]
+        list_canceled = [r[0] for r in result_value if r[4] == "S"]
+
         # Save the registry and mark the document to be imported
         for falt in list_difference:
             lid = falt.split('-')
@@ -407,6 +414,25 @@ class Actualizacion(ModelSQL, ModelView):
             logs[falt] = "EL DOCUMENTO ESTABA MARCADO COMO IMPORTADO "\
                 "(T) SIN ESTARLO."\
                 "AHORA FUE MARACADO COMO PENDIENTE PARA IMPOTAR (N)"
+
+        """Update logs that was completed"""
+        for values in list_already_values:
+            id_tecno = values
+            already_log = Log.search(["id_tecno", "=", id_tecno])
+            if already_log:
+                for log in already_log:
+                    log.state = "done"
+                    log.save()
+
+        """Update logs of document that was canceled in Tecno"""
+        for values in list_canceled:
+            id_tecno = values
+            already_log = Log.search(["id_tecno", "=", id_tecno])
+            if already_log:
+                for log in already_log:
+                    log.state = "done"
+                    log.save()
+
         actualizacion, = Actualizacion.search([('name', '=', name)])
         actualizacion.add_logs(logs)
 
