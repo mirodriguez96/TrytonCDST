@@ -1260,7 +1260,7 @@ class SaleInvoiceValueCdstStart(ModelView):
     from_date = fields.Date('From Date', required=True)
     to_date = fields.Date('To Date', required=True)
     document_type = fields.Selection('get_document_type', 'Type Document')
-    state = fields.Selection(STATES, 'State')
+    #state = fields.Selection(STATES, 'State')
 
     @staticmethod
     def default_company():
@@ -1303,7 +1303,7 @@ class SaleInvoiceValueCdst(Wizard):
             'from_date': from_date,
             'to_date': to_date,
             'type_document': self.start.document_type,
-            'state': self.start.state,
+            #'state': self.start.state,
         }
         return action, data
 
@@ -1326,21 +1326,19 @@ class SaleInvoiceValueCdstReport(Report):
         state = ""
         total_amount_tecno = Decimal(0)
         total_amount_tryton = Decimal(0)
+        total_amount_tax_tecno = Decimal(0)
         init_date = data["from_date"]
         end_date = data["to_date"]
 
         # build init domain
         domain_sales = [("sale_date", ">=", init_date),
-                        ("sale_date", "<=", end_date)]
+                        ("sale_date", "<=", end_date),
+                        ("state", "!=", "draft")]
 
         # validate if type document was selected and add to domain
         if data["type_document"]:
             type_document = data["type_document"]
-            domain_sales.append(("reference", "ilike", f"{type_document}-%"))
-
-        if data["state"]:
-            state = "Borrador" if data["state"] == "draft" else "Finalizado"
-            domain_sales.append(("state", "=", data["state"]))
+            domain_sales.append(("number", "ilike", f"{type_document}-%"))
 
         sales = Sale.search(domain_sales)
 
@@ -1348,12 +1346,11 @@ class SaleInvoiceValueCdstReport(Report):
             for sale in sales:
                 invoices = {}
                 invoice_difference = 0
-
                 if sale.invoice:
                     invoice_amount_tecno = sale.invoice_amount_tecno
                     tax_amount_tecno = sale.tax_amount_tecno
-                    invoice_value_tryton = sale.invoice.untaxed_amount_cache
-
+                    invoice_value_tryton = sale.untaxed_amount_cache
+                    total_amount_tax_tecno += tax_amount_tecno
                     if invoice_amount_tecno is not None\
                             and invoice_value_tryton is not None:
 
@@ -1385,7 +1382,7 @@ class SaleInvoiceValueCdstReport(Report):
                             info_invoices.append(invoices)
             total_difference = abs(total_amount_tecno - total_amount_tryton)
 
-        if not sales or not info_invoices:
+        if not sales:
             raise UserError(
                 message="SIN INFORMACION",
                 description="No hay documentos en el rango de fecha"
@@ -1398,5 +1395,5 @@ class SaleInvoiceValueCdstReport(Report):
         report_context['total_tryton'] = total_amount_tryton
         report_context['state'] = state
         report_context['total_difference'] = total_difference
-
+        report_context['total_amount_tax_tecno'] = total_amount_tax_tecno
         return report_context

@@ -8,12 +8,12 @@ this repository contains the full copyright notices and license terms. -->
         <field name="company"/>
     </group>
 
-    <label name="document_type"/>
-    <field name="document_type" widget="selection"/>
-    <label name="state"/>
-    <field name="state" widget="selection"/>
+    <!-- <label name="state"/>
+    <field name="state" widget="selection"/> -->
     <label name="from_date"/>
     <field name="from_date"/>
     <label name="to_date"/>
     <field name="to_date"/>
+    <label name="document_type"/>
+    <field name="document_type" widget="selection"/>
 </form>
