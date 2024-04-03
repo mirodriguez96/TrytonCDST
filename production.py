@@ -4,6 +4,7 @@ from decimal import Decimal
 from itertools import chain
 
 import datetime
+import calendar
 from trytond.exceptions import UserError
 from trytond.modules.company import CompanyReport
 from trytond.report import Report
@@ -75,8 +76,7 @@ class Production(metaclass=PoolMeta):
     @classmethod
     def delete_productions_account(cls, production):
         Actualizacion = Pool().get('conector.actualizacion')
-        actualizacion = Actualizacion.create_or_update(
-            'FORZAR BORRADOR PRODUCCIONES')
+        actualizacion = Actualizacion.create_or_update('PRODUCCION')
         Production = Pool().get('production')
         stock_move = Table('stock_move')
         account_move = Table('account_move')
@@ -89,26 +89,27 @@ class Production(metaclass=PoolMeta):
         to_delete = []
 
         for prod in production:
+            dat = str(prod.effective_date).split()[0].split('-')
+            year = int(dat[0])
+            month = int(dat[1])
+            _, day = calendar.monthrange(year, month)
+            date = f"{year}-{month}-{day}"
+            validate_period = Period.search([('date', '=', date)])
+            if validate_period:
+                period = validate_period[0].state
+                if period == 'closed':
+                    print("periodo cerrado")
+                    exceptions.append(prod.id_tecno)
+                    logs[prod.
+                         id_tecno] = "EL PERIODO DEL DOCUMENTO SE ENCUENTRA \
+                    CERRADO Y NO ES POSIBLE MODIFICAR LA PRODUCCION"
 
-            if prod.move:
-                validate = prod.move.state
-            else:
-                dat = str(prod.effective_date).split()[0].split('-')
-                name = f"{dat[0]}-{dat[1]}"
-                validate_period = Period.search([('name', '=', name)])
-                validate = validate_period[0].state
-
-            if validate == 'close':
-                exceptions.append(prod.id)
-                logs[prod.
-                     id] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA \
-                CERRADO Y NO ES POSIBLE FORZAR A BORRADOR"
-
-                actualizacion.add_logs(logs)
-                return False
+                    actualizacion.add_logs(logs)
+                    return False
 
             if prod.state == 'draft':
                 continue
+
             if prod.move:
                 # Se agrega a la lista el asiento que debe ser eliminado
                 to_delete.append(prod.move.id)
@@ -226,13 +227,10 @@ class Production(metaclass=PoolMeta):
                     if already_production:
                         delete_production = Production.delete_productions_account(
                             already_production)
-
                         if not delete_production:
-                            logs[id_tecno] = "La producción no fue eliminada"
                             continue
                         logs[id_tecno] = "La producción fue eliminada y "\
                             "se creara de nuevo"
-
                 fecha = str(
                     transformacion.Fecha_Hora_Factura).split()[0].split('-')
                 name = f"{fecha[0]}-{fecha[1]}"
@@ -669,8 +667,7 @@ class ProductionForceDraft(Wizard):
         ids_ = Transaction().context['active_ids']
         if ids_:
             Actualizacion = Pool().get('conector.actualizacion')
-            actualizacion = Actualizacion.create_or_update(
-                'FORZAR BORRADOR PRODUCCIONES')
+            actualizacion = Actualizacion.create_or_update('PRODUCCION')
             Production = Pool().get('production')
             stock_move = Table('stock_move')
             logs = {}

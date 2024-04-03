@@ -112,7 +112,8 @@ class Sale(metaclass=PoolMeta):
                 numero_doc = venta.Numero_documento
                 tipo_doc = venta.tipo
                 id_venta = str(sw) + '-' + tipo_doc + '-' + str(numero_doc)
-                invoice_amount_tecno = venta.valor_total
+                invoice_amount_tecno = Decimal(str(round(venta.valor_total,
+                                                         2)))
                 tax_amount_tecno = venta.Valor_impuesto\
                     if venta.Valor_impuesto else Decimal(0)
 
@@ -275,8 +276,10 @@ class Sale(metaclass=PoolMeta):
                 sale.self_pick_up = False
                 sale.invoice_number = sale.number
                 sale.invoice_date = fecha_date
-                sale.invoice_amount_tecno = invoice_amount_tecno\
-                    - tax_consumption
+
+                invoice_amount_tecno = Decimal(
+                    str(round(invoice_amount_tecno - tax_consumption, 2)))
+
                 sale.tax_amount_tecno = tax_amount_tecno
 
                 # Se revisa si la venta es clasificada como electronica o pos y se cambia el tipo
