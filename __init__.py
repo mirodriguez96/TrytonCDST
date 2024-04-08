@@ -31,6 +31,7 @@ from . import currency
 from . import account_dunning
 from . import collection
 from . import line
+from . import contract
 
 
 def register():
@@ -51,6 +52,7 @@ def register():
                   conector.ImportedDocument,
                   conector.ConectorLog,
                   configuration.Configuration,
+                  contract.Contract,
                   currency.Cron,
                   currency.CurrencyRate,
                   cron.Cron,
