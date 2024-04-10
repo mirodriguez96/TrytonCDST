@@ -226,7 +226,6 @@ class Voucher(ModelSQL, ModelView):
         if not configuration:
             return
         Actualizacion = pool.get('conector.actualizacion')
-        #Module = pool.get('ir.module')
         Voucher = pool.get('account.voucher')
         Line = pool.get('account.voucher.line')
         Party = pool.get('party.party')
@@ -306,6 +305,7 @@ class Voucher(ModelSQL, ModelView):
                         logs[id_tecno] = msg
                         exceptions.append(id_tecno)
                     continue
+
                 #Se obtiene la forma de pago, según la tabla Documentos_Che de TecnoCarnes
                 tipo_pago = Config.get_tipos_pago(id_tecno)
                 if not tipo_pago:
@@ -313,6 +313,7 @@ class Voucher(ModelSQL, ModelView):
                         id_tecno] = "EXCEPCION: NO SE ENCONTRO FORMA(S) DE PAGO EN TECNOCARNES (DOCUMENTOS_CHE) PARA EL DOCUMENTO"
                     exceptions.append(id_tecno)
                     continue
+
                 # Comprobante con mas de 1 forma de pago (MULTI-INGRESO)
                 if len(tipo_pago) > 1:
                     print('MULTI-INGRESO:', id_tecno)
@@ -324,7 +325,6 @@ class Voucher(ModelSQL, ModelView):
                     multingreso.id_tecno = id_tecno
                     # Se crea una lista con las formas de pago (transacciones)
                     to_transactions = []
-                    # doble_fp = False
                     for pago in tipo_pago:
                         paymode = PayMode.search([('id_tecno', '=',
                                                    pago.forma_pago)])
@@ -333,14 +333,6 @@ class Voucher(ModelSQL, ModelView):
                             logs[id_tecno] = msg
                             exceptions.append(id_tecno)
                             break
-                        # for existr in to_transactions:
-                        #     if existr.payment_mode == paymode[0]:
-                        #         existr.amount += Decimal(pago.valor) #
-                        #         doble_fp = True
-                        #         continue
-                        # if doble_fp:
-                        #     doble_fp = False
-                        #     continue
                         fecha_date = cls.convert_fecha_tecno(pago.fecha)
                         transaction = Transaction()
                         transaction.description = 'IMPORTACION TECNO'
@@ -373,8 +365,10 @@ class Voucher(ModelSQL, ModelView):
                                     amount_to_pay = move_line.move.origin.amount_to_pay
                                 if valor_pagado > amount_to_pay:
                                     valor_pagado = amount_to_pay
-                                line.amount = valor_pagado
-                                line.original_amount = amount_to_pay
+                                line.amount = Decimal(
+                                    str(round(valor_pagado, 2)))
+                                line.original_amount = Decimal(
+                                    str(round(amount_to_pay, 2)))
                                 line.is_prepayment = False
                                 line.reference_document = reference
                                 line.others_concepts = cls.get_others_tecno(
@@ -396,6 +390,7 @@ class Voucher(ModelSQL, ModelView):
                     multingreso.save()
                     MultiRevenue.create_voucher_tecno(multingreso)
                     created.append(id_tecno)
+
                 # Comprobantes de ingreso (UNA SOLA FORMA DE PAGO)
                 elif len(tipo_pago) == 1:
                     print('VOUCHER:', id_tecno)
@@ -476,14 +471,11 @@ class Voucher(ModelSQL, ModelView):
                 exceptions.append(id_tecno)
         actualizacion.add_logs(logs)
         for idt in exceptions:
-            #print('EXCEPCIONES...', idt) #TEST
             Config.update_exportado(idt, 'E')
         for idt in created:
             Config.update_exportado(idt, 'T')
-            #print('CREADO...', idt) #TEST
         for idt in not_import:
             Config.update_exportado(idt, 'X')
-            # print('not_import...', idt) #TEST
         print("FINISH COMPROBANTES DE INGRESO")
 
     #Se obtiene las lineas de la factura que se desea pagar
