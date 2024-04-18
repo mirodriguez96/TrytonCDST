@@ -1702,6 +1702,10 @@ class StaffEvent(metaclass=PoolMeta):
                     ('end', '>=', f'{start_date}-{get_day}')
                 ])
 
+                if not end_period:
+                    raise UserError(
+                        'ERROR:', 'No se encontro periodo para la liquidacion')
+
                 if get_day == 31:
                     days = abs(int(_date_start[2]) - get_day)
                     end_date_period = end_period[0].end - timedelta(days=1)
