@@ -379,7 +379,7 @@ class Actualizacion(ModelSQL, ModelView):
 
         if not result_tecno:
             return
-        
+
         result_value = result_tecno
         result_tecno = [r[0] for r in result_tecno]
 
@@ -414,7 +414,6 @@ class Actualizacion(ModelSQL, ModelView):
             logs[falt] = "EL DOCUMENTO ESTABA MARCADO COMO IMPORTADO "\
                 "(T) SIN ESTARLO."\
                 "AHORA FUE MARACADO COMO PENDIENTE PARA IMPOTAR (N)"
-
         """Update logs that was completed"""
         for values in list_already_values:
             id_tecno = values
@@ -423,7 +422,6 @@ class Actualizacion(ModelSQL, ModelView):
                 for log in already_log:
                     log.state = "done"
                     log.save()
-
         """Update logs of document that was canceled in Tecno"""
         for values in list_canceled:
             id_tecno = values
@@ -564,71 +562,89 @@ class Actualizacion(ModelSQL, ModelView):
             acess.on_change_rests()
             acess.save()
 
-    @classmethod
-    def biometric_access_dom(cls):
-        """Function to import Sunday access of biometric"""
-        pool = Pool()
-        Config = pool.get('ir.cron')
-        Access = pool.get('staff.access')
-        Employee = pool.get('company.employee')
-        access_table = Table('staff_access')
-        cursor = Transaction().connection.cursor()
-        time, = Config.search([('access_register', '=', True)])
+    # @classmethod
+    # def biometric_access_dom(cls):
+    #     """Function to import Sunday access of biometric"""
+    #     pool = Pool()
+    #     Config = pool.get('ir.cron')
+    #     Access = pool.get('staff.access')
+    #     Employee = pool.get('company.employee')
+    #     access_table = Table('staff_access')
+    #     cursor = Transaction().connection.cursor()
+    #     time = Config.search([('access_register', '=', True)])
+    #     if not time:
+    #         return
 
-        date = [int(i) for i in str(datetime.date.today()).split('-')]
-        time_enter = [int(i) for i in str(time.enter_timestamp).split(':')]
-        time_exit = [int(i) for i in str(time.exit_timestamp).split(':')]
-        enter = datetime.datetime(*date, *time_enter)
-        exit = datetime.datetime(*date, *time_exit)
+    #     print(time)
+    #     time = time[0]
+    #     if not time.enter_timestamp or not time.exit_timestamp:
+    #         raise UserError('Datos incompletos: ',
+    #                         'Complete hora de ingreso y hora de salida')
 
-        employees = Employee.search([
-            ('active', '=', 'active'),
-            ('contracting_state', '=', 'active'),
-        ])
+    #     date = [int(i) for i in str(datetime.date.today()).split('-')]
+    #     time_enter = [int(i) for i in str(time.enter_timestamp).split(':')]
+    #     time_exit = [int(i) for i in str(time.exit_timestamp).split(':')]
 
-        for employee in employees:
-            if enter and exit:
-                is_access = Access.search([
-                    ('enter_timestamp', '<=',
-                     enter + datetime.timedelta(hours=5)),
-                    ('exit_timestamp', '>=',
-                     exit + datetime.timedelta(hours=5)),
-                    ('employee', '=', employee)
-                ])
+    #     if time_enter > time_exit:
+    #         raise UserError(
+    #             'Fechas incorrectas: ', 'La hora de salida no puede \
+    #                             ser menor a la hora de entrada.')
+    #     enter = datetime.datetime(*date, *time_enter)
+    #     exit = datetime.datetime(*date, *time_exit)
+    #     date_today = datetime.date.today()
 
-                if not is_access:
-                    to_save = Access()
-                    to_save.employee = employee
-                    to_save.payment_method = 'extratime'
-                    to_save.enter_timestamp = enter + datetime.timedelta(
-                        hours=5)
-                    to_save.exit_timestamp = exit + datetime.timedelta(hours=5)
-                    to_save.line_event = time
-                    to_save.save()
+    #     employees = Employee.search([('active', '=', 'active'),
+    #                                  ('contracting_state', '=', 'active')])
 
-                    cursor.execute(*access_table.update(
-                        columns=[
-                            access_table.ttt,
-                            access_table.hedo,
-                            access_table.heno,
-                            access_table.hedf,
-                            access_table.henf,
-                            access_table.reco,
-                            access_table.recf,
-                            access_table.dom,
-                        ],
-                        values=[Decimal(7.83), 0, 0, 0, 0, 0, 0, 0],
-                        where=access_table.id.in_([to_save.id])))
+    #     date_today = datetime.datetime.now().date()
 
-    @classmethod
-    def holidays_access_fes(cls):
-        """Function to import Holydays access of biometric"""
-        Holiday = Pool().get('staff.holidays')
-        validate = datetime.date.today() + datetime.timedelta(hours=5)
-        holidays = Holiday.search([('holiday', '=', validate)])
+    #     # Create a new datetime object with the current date and time set to 00:00:00
+    #     date_today_with_time = datetime.datetime.combine(
+    #         date_today, datetime.datetime.min.time())
 
-        if holidays:
-            cls.biometric_access_dom()
+    #     print(len(employees))
+    #     for employee in employees:
+    #         if employee.end_date is None or employee.end_date >= date_today:
+    #             if enter and exit:
+    #                 is_access = Access.search([('enter_timestamp', '>=',
+    #                                             date_today_with_time),
+    #                                            ('employee', '=', employee)])
+
+    #                 if not is_access:
+    #                     print(employee.party.name)
+    #                     to_save = Access()
+    #                     to_save.employee = employee
+    #                     to_save.payment_method = 'extratime'
+    #                     to_save.enter_timestamp = enter + datetime.timedelta(
+    #                         hours=5)
+    #                     to_save.exit_timestamp = exit + datetime.timedelta(
+    #                         hours=5)
+    #                     to_save.line_event = time
+    #                     to_save.save()
+
+    #                     cursor.execute(*access_table.update(
+    #                         columns=[
+    #                             access_table.ttt,
+    #                             access_table.hedo,
+    #                             access_table.heno,
+    #                             access_table.hedf,
+    #                             access_table.henf,
+    #                             access_table.reco,
+    #                             access_table.recf,
+    #                             access_table.dom,
+    #                         ],
+    #                         values=[Decimal(7.83), 0, 0, 0, 0, 0, 0, 0],
+    #                         where=access_table.id.in_([to_save.id])))
+
+    # @classmethod
+    # def holidays_access_fes(cls):
+    #     """Function to import Holydays access of biometric"""
+    #     Holiday = Pool().get('staff.holidays')
+    #     validate = datetime.date.today() + datetime.timedelta(hours=5)
+    #     holidays = Holiday.search([('holiday', '=', validate)])
+
+    #     if holidays:
+    #         cls.biometric_access_dom()
 
 
 class ImportedDocument(ModelView):

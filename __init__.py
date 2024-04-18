@@ -32,11 +32,17 @@ from . import account_dunning
 from . import collection
 from . import line
 from . import contract
+from . import access
 
 
 def register():
     """Function that register model view, wizard and reports with pool"""
-    Pool.register(account.Account,
+    Pool.register(access.CreateAccessHolidaysView,
+                  access.StaffAccessRests,
+                  access.StaffAccess,
+                  access.ImportBiometricRecordsParameters,
+                  access.StaffAccessView,
+                  account.Account,
                   account.Move,
                   account.MoveLine,
                   account.BalanceStockStart,
@@ -76,12 +82,8 @@ def register():
                   payroll.LiquidationPaymentStartBcl,
                   payroll.SettlementSendStart,
                   payroll.PayrollElectronic,
-                  payroll.StaffAccessRests,
-                  payroll.StaffAccess,
                   payroll.PayrollLine,
-                  payroll.ImportBiometricRecordsParameters,
                   payroll.CertificateOfIncomeAndWithholdingSendStart,
-                  payroll.StaffAccessView,
                   payroll.PayrollIBCView,
                   payroll.PayrollElectronicCDS,
                   payroll.LineLiquidationEvent,
@@ -138,7 +140,10 @@ def register():
                   module='conector',
                   type_='model')
 
-    Pool.register(account.BalanceStock,
+    Pool.register(access.CreateAccessHolidaysWizard,
+                  access.ImportBiometricRecords,
+                  access.StaffAccessWizard,
+                  account.BalanceStock,
                   account.PrintAuxiliaryBookCDS,
                   account.IncomeStatementWizard,
                   account.ActiveForceDraft,
@@ -157,8 +162,6 @@ def register():
                   payroll.LiquidationPaymentBcl,
                   payroll.SettlementSend,
                   payroll.SendCertificateOfIncomeAndWithholding,
-                  payroll.ImportBiometricRecords,
-                  payroll.StaffAccessWizard,
                   payroll.PayrollIBCWizard,
                   production.ProductionDetailed,
                   production.ProductionForceDraft,
@@ -193,7 +196,8 @@ def register():
                   module='conector',
                   type_='wizard')
 
-    Pool.register(account.AuxiliaryParty,
+    Pool.register(access.StaffAccessReport,
+                  account.AuxiliaryParty,
                   account.AuxiliaryBookCDS,
                   account.IncomeStatementReport,
                   account.TrialBalanceDetailedCds,
@@ -206,7 +210,6 @@ def register():
                   payroll.LiquidationPaymentReportBcl,
                   payroll.PayrollReport,
                   payroll.PayrollExo2276,
-                  payroll.StaffAccessReport,
                   payroll.PayrollIBCReport,
                   payroll.PayrollPaycheckReportExten,
                   production.ProductionDetailedReport,
