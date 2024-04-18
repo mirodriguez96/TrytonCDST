@@ -162,6 +162,7 @@ class FixBugsConector(Wizard):
         logs[self.start.user.name] = message
         actualizacion.add_logs(logs)
 
+
 class DocumentsForImportParameters(ModelView):
     'Documents For Import Parameters'
     __name__ = 'conector.configuration.documents_for_import_parameters'
@@ -589,7 +590,7 @@ class CreateAdjustmentNotesParameters(ModelView):
                                          'Adjustment account',
                                          domain=[('type', '!=', None)],
                                          required=True)
-    analytic_account = fields.Char('Analytic account')
+    analytic_account = fields.Char('Analytic account', required=True)
     date_start = fields.Date('Date initial', required=True)
     date_finish = fields.Date('Date end', required=True)
     date = fields.Date('Date for notes', required=True)
@@ -626,13 +627,14 @@ class CreateAdjustmentNotes(Wizard):
                             "has to be greater than zero")
         if hasattr(Line, 'analytic_account'):
             AnalyticAccount = pool.get('analytic_account.account')
-            if self.start.analytic_account:
-                analytic_account, = AnalyticAccount.search([
-                    ('code', '=', self.start.analytic_account)
-                ])
-                data['analytic_account'] = analytic_account
-            else:
-                raise UserError("msg_analytic_account_missing")
+            analytic_account = AnalyticAccount.search([
+                ('code', '=', self.start.analytic_account)
+            ])
+            if not analytic_account:
+                raise UserError(
+                    "ERROR: No se encontro cuenta analitica asociada.")
+            data['analytic_account'] = analytic_account[0]
+
         Note.create_adjustment_note(data)
         return 'end'
 
