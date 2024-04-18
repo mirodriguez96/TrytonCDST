@@ -4,7 +4,7 @@ from trytond.pool import PoolMeta
 class Contract(metaclass=PoolMeta):
     __name__ = 'staff.contract'
 
-    def get_time_days(self, start_date=None, end_date=None):
+    def get_time_days_contract(self, start_date=None, end_date=None):
         if start_date and end_date:
             n = 1
             # init days at start_date
