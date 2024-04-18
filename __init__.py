@@ -127,7 +127,6 @@ def register():
                   tax.TaxesConsolidationStart,
                   voucher.Voucher,
                   voucher.MultiRevenue,
-                  voucher.Note,
                   voucher.VoucherConfiguration,
                   wiz.CreateAdjustmentNotesParameters,
                   wiz.AddCenterOperationLineP,
