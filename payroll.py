@@ -259,14 +259,12 @@ EXTRAS = {
     },
 }
 
-_TYPES_BANK_ACCOUNT = [('S', 'S'), ('D', 'D')]
-
 _TYPE_DOCUMENT = {
-    '13': '1',  #Cedula
-    '22': '2',  #Cedula de extranjeria
-    '31': '3',  #Nit
-    '12': '4',  #Tarjeta de identidad
-    '41': '5',  #Pasaporte
+    '13': '1',  # Cedula
+    '22': '2',  # Cedula de extranjeria
+    '31': '3',  # Nit
+    '12': '4',  # Tarjeta de identidad
+    '41': '5',  # Pasaporte
 }
 
 _TYPE_TRANSACTION = [
@@ -1874,8 +1872,8 @@ class Payroll(metaclass=PoolMeta):
     def __setup__(cls):
         super(Payroll, cls).__setup__()
 
-    # Se hereda y modifica la función preliquidation para añadir las cuentas analiticas en las liquidaciones que la tenga
     def set_preliquidation(self, extras, discounts=None):
+        """Function to add analytic accounts to liquidation"""
         super(Payroll, self).set_preliquidation(extras, discounts)
         ttt = 0
         discount = 0
@@ -1887,6 +1885,7 @@ class Payroll(metaclass=PoolMeta):
         if not hasattr(PayrollLine, 'analytic_accounts'):
             return
         AnalyticAccount = Pool().get('analytic_account.account')
+
         for line in self.lines:
             if not line.is_event:
                 continue
@@ -2059,8 +2058,9 @@ class Payroll(metaclass=PoolMeta):
 class PayrollLine(metaclass=PoolMeta):
     __name__ = "staff.payroll.line"
 
-    # Se reescribe el metodo para que aumente támbien el valor de la cuenta analitica a crear
     def update_move_line(self, move_line, values):
+        """Function to update analytic account value to create"""
+
         if values['debit']:
             move_line['debit'] += values['debit']
             if 'analytic_lines' in move_line:
