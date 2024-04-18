@@ -333,10 +333,12 @@ class Voucher(ModelSQL, ModelView):
                             logs[id_tecno] = msg
                             exceptions.append(id_tecno)
                             break
+                        amount_ = Decimal(
+                                    str(round(pago.valor, 2)))
                         fecha_date = cls.convert_fecha_tecno(pago.fecha)
                         transaction = Transaction()
                         transaction.description = 'IMPORTACION TECNO'
-                        transaction.amount = Decimal(pago.valor)
+                        transaction.amount = amount_
                         transaction.date = fecha_date
                         transaction.payment_mode = paymode[0]
                         to_transactions.append(transaction)
@@ -436,8 +438,13 @@ class Voucher(ModelSQL, ModelView):
                     #Se verifica que el comprobante tenga lineas para ser procesado y contabilizado (doble verificación por error)
                     if voucher.lines and voucher.amount_to_pay > 0:
                         Voucher.process([voucher])
-                        diferencia = abs(voucher.amount_to_pay -
-                                         valor_aplicado)
+                        diferencia = abs(
+                            Decimal(
+                                str(
+                                    round(
+                                        voucher.amount_to_pay - valor_aplicado,
+                                        2))))
+
                         #print(diferencia, (diferencia < Decimal(6.0)))
                         if voucher.amount_to_pay == valor_aplicado:
                             Voucher.post([voucher])
