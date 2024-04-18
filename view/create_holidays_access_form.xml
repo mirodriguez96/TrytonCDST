@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+
+<form>
+    <label name="time_in"/>
+    <field name="time_in"/>
+
+    <label name="time_out"/>
+    <field name="time_out"/>
+
+    <label name="date"/>
+    <field name="date"/>
+</form>

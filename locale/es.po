@@ -898,3 +898,24 @@ msgstr "Fecha de nota"
 msgctxt "field:account_voucher.taxes_consolidation.start,operation_center:"
 msgid "Operation Center"
 msgstr "Centro de operaciones"
+
+
+msgctxt "model:ir.action,name:act_create_holidays_access"
+msgid "Create Holidays Access"
+msgstr "Crear registros de festivos"
+
+msgctxt "field:staff.create_holidays_view_wizard,date:"
+msgid "Date"
+msgstr "Fecha"
+
+msgctxt "field:staff.create_holidays_view_wizard,time_in:"
+msgid "Time in"
+msgstr "Hora de ingreso"
+
+msgctxt "field:staff.create_holidays_view_wizard,time_out:"
+msgid "Time out"
+msgstr "Hora de salida"
+
+msgctxt "model:ir.action,name:act_report_access"
+msgid "Staff access report"
+msgstr "Reporte de accesos"

@@ -131,84 +131,9 @@ this repository contains the full copyright notices and license terms. -->
         </record>
         <menuitem parent="staff.menu_assitants" id="menu_settlement_send" action="wizard_payroll_settlement_send"/>
 
-        <!-- # Rests # -->
-        <record model="ir.ui.view" id="access_view_form">
-            <field name="model">staff.access</field>
-            <field name="inherit" ref="staff_access.access_view_form"/>
-            <field name="name">access_form</field>
-        </record>
-
-        <!-- ############### -->
-        <!-- # Model:Rests # -->
-        <!-- ############### -->
-        <record model="ir.ui.view" id="rests_view_form">
-            <field name="model">staff.access.rests</field>
-            <field name="type">form</field>
-            <field name="name">rests_form</field>
-        </record>
-
-        <record model="ir.ui.view" id="rests_view_tree">
-            <field name="model">staff.access.rests</field>
-            <field name="type">tree</field>
-            <field name="name">rests_tree</field>
-        </record>
-
-        <!-- ############################ -->
-        <!-- # Import Biometric Records # -->
-        <!-- ############################ -->
-        <record model="ir.action.wizard" id="act_import_biometric_records">
-            <field name="name">Import Biometric Records</field>
-            <field name="wiz_name">staff.access.import_biometric_records</field>
-        </record>
-        <record model="ir.action.keyword" id="act_import_biometric_records_keyword">
-            <field name="keyword">form_action</field>
-            <field name="model">staff.access,-1</field>
-            <field name="action" ref="act_import_biometric_records"/>
-        </record>
-        <!-- ####################################### -->
-        <!-- # Import Biometric Records Parameters # -->
-        <!-- ####################################### -->
-        <record model="ir.ui.view" id="import_biometric_records_parameters_view_form">
-            <field name="model">staff.access.import_biometric_records.parameters</field>
-            <field name="type">form</field>
-            <field name="name">import_biometric_records_parameters_form</field>
-        </record>
-
-        <!-- ###################################### -->
-        <!-- # Asistente para reporte de accesos  #-->
-        <!-- ###################################### -->
-        <record model="ir.action.wizard" id="act_report_access">
-            <field name="name">Staff access report</field>
-            <field name="wiz_name">staff.access_wizard</field>
-        </record>
-
-        <record model="ir.action.keyword" id="act_report_access_keyword">
-            <field name="keyword">form_action</field>
-            <field name="model">staff.access,-1</field>
-            <field name="action" ref="act_report_access"/>
-        </record>
-
-        <record model="ir.ui.view" id="staff_access_report_form">
-            <field name="model">staff.access_view_start</field>
-            <field name="type">form</field>
-            <field name="name">staff_access_report_form</field>
-        </record>
-
-        <!-- Reportes ACCESOS -->
-        <record model="ir.action.report" id="staff_access_report">
-            <field name="name">Staff access format</field>
-            <field name="model">staff.access</field>
-            <field name="report_name">staff.access_report</field>
-            <field name="report">conector/staff_access_report.fods</field>
-            <field name="template_extension">ods</field>
-            <field name="translatable">False</field>
-        </record>
-
-
         <!-- ####################################################### -->
         <!-- # interfaz para la generación del reporte payroll IBC #-->
         <!-- ####################################################### -->
-
 
         <record model="ir.ui.view" id="payroll_ibc_form">
             <field name="model">staff.payroll_ibc.start</field>
