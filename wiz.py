@@ -608,12 +608,9 @@ class CreateAdjustmentNotes(Wizard):
     add_note = StateTransition()
 
     def transition_add_note(self):
-        """Function to build info to process"""
-
         pool = Pool()
+        Note = pool.get('account.note')
         Line = pool.get('account.note.line')
-        Invoice = pool.get('account.invoice')
-
         data = {
             'invoice_type': self.start.invoice_type,
             'adjustment_account': self.start.adjustment_account,
@@ -638,7 +635,7 @@ class CreateAdjustmentNotes(Wizard):
                     "ERROR: No se encontro cuenta analitica asociada.")
             data['analytic_account'] = analytic_account[0]
 
-        Invoice.launch(data)
+        Note.create_adjustment_note(data)
         return 'end'
 
 

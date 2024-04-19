@@ -84,3 +84,9 @@ class Cron(metaclass=PoolMeta):
         cls.method.selection.append(
             ('stock.shipment.internal|import_tecnocarnes',
              'Importar traslados'), )
+        # cls.method.selection.append(
+        #     ('conector.actualizacion|biometric_access_dom',
+        #      'Generar Ingresos Domingos'), )
+        # cls.method.selection.append(
+        #     ('conector.actualizacion|holidays_access_fes',
+        #      'Generar Ingresos Festivos'), )
