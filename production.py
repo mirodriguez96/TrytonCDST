@@ -296,7 +296,7 @@ class Production(metaclass=PoolMeta):
                         'planned_date': fecha,
                         'effective_date': fecha,
                     }
-                    #Entrada (-1)
+                    # Entrada (-1)
                     if cantidad < 0:
                         transf['from_location'] = bodega.storage_location.id
                         transf['to_location'] = bodega.production_location.id
@@ -310,11 +310,14 @@ class Production(metaclass=PoolMeta):
                             production['quantity'] = abs(cantidad)
                             production['uom'] = producto.default_uom.id
                         entradas.append(transf)
-                    #Salida (+1)
+                    # Salida (+1)
                     elif cantidad > 0:
                         transf['from_location'] = bodega.production_location.id
                         transf['to_location'] = bodega.storage_location.id
-                        valor_unitario = Decimal(round(line.Valor_Unitario, 2))
+                        valor_unitario = Decimal(0)
+                        if line.Valor_Unitario:
+                            valor_unitario = Decimal(
+                                round(line.Valor_Unitario, 2))
                         transf['unit_price'] = valor_unitario
                         salidas.append(transf)
                         # Se valida que el precio de venta sea diferente de 0
