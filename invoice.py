@@ -1,20 +1,20 @@
 """INVOICE MODULE"""
-from trytond.wizard import Wizard, StateTransition, StateView, Button
-from trytond.exceptions import UserError, UserWarning
-from trytond.transaction import Transaction
+
+import datetime
+from datetime import date
+from decimal import Decimal
+from trytond.i18n import gettext
+from trytond.pool import PoolMeta, Pool
 from trytond.model import fields, ModelView
 from trytond.pyson import Eval, Or, And
-from trytond.pool import PoolMeta, Pool
-from trytond.i18n import gettext
-
-from sentry_sdk.integrations.trytond import TrytondWSGIIntegration
-from .it_supplier_noova import SendElectronicInvoice
-from decimal import Decimal
+from trytond.wizard import Wizard, StateTransition, StateView, Button, StateAction
+from trytond.transaction import Transaction
+from trytond.exceptions import UserError, UserWarning
 from sql import Table
 import sentry_sdk
-import datetime
+from sentry_sdk.integrations.trytond import TrytondWSGIIntegration
 
-# Config Sentry
+# Configura Sentry con tu DSN
 sentry_sdk.init(
     dsn=
     "https://7e7c4557c2a9cbbed7aad24d58fd218f@o4506147189751808.ingest.sentry.io/4506147193028608",
@@ -22,7 +22,12 @@ sentry_sdk.init(
     environment="produccion",
     traces_sample_rate=1.0,
     profiles_sample_rate=1.0,
+
+    # Control dinamico de usuario
+    # profiles_sampler = Pool().get('res.user')(Transaction().user)
 )
+
+from .it_supplier_noova import SendElectronicInvoice
 
 _ZERO = Decimal('0.0')
 
@@ -60,150 +65,17 @@ _SW = {
 
 
 class Invoice(metaclass=PoolMeta):
-    'Account Invoice'
+    'Invoice'
     __name__ = 'account.invoice'
     id_tecno = fields.Char('Id Tabla Sqlserver (credit note)', required=False)
-    note_analytic_account = ''
-    note_adjustment_account = ''
-    note_date = ''
-    note_invoice_type = ''
 
     @staticmethod
     def default_electronic_state():
         return 'none'
 
-    @classmethod
-    def launch(cls, data):
-        pool = Pool()
-        Invoice = pool.get('account.invoice')
-        invoice_to_post = []
-
-        invoices = Invoice.search([('type', '=', data['invoice_type']),
-                                   ('state', '=', 'posted'),
-                                   ('invoice_date', '>=', data['date_start']),
-                                   ('invoice_date', '<=', data['date_finish'])
-                                   ])
-        transaction = Transaction()
-        context = transaction.context
-        cls.note_analytic_account = data['analytic_account']
-        cls.note_invoice_type = data['invoice_type']
-        cls.note_adjustment_account = data['adjustment_account']
-        cls.note_date = data['date']
-
-        inv_adjustment = [
-            inv for inv in invoices if 0 < inv.amount_to_pay <= data['amount']
-        ]
-
-        if not inv_adjustment:
-            raise UserError("ERROR: No se encontraron facturas asociadas.")
-        for invoice in inv_adjustment:
-            invoice_to_post.append(
-                cls.__queue__.create_adjustment_note(invoice))
-
-        for invoice in invoice_to_post:
-            with transaction.set_context(
-                    queue_batch=context.get('queue_batch', True)):
-                cls.__queue__.process([invoice])
-
-    @classmethod
-    def create_adjustment_note(cls, inv):
-        """Function to create account note for invoices
-        to required adjustment"""
-
-        pool = Pool()
-        Period = pool.get('account.period')
-        Config = pool.get('account.voucher_configuration')
-        Note = pool.get('account.note')
-        Line = pool.get('account.note.line')
-        Note = pool.get('account.note')
-        config = Config.get_configuration()
-
-        adjustment_account = cls.note_adjustment_account
-        analytic_account = cls.note_analytic_account
-        invoice_type = cls.note_invoice_type
-        note_date = cls.note_date
-
-        operation_center = pool.get('company.operation_center')(1)
-        lines_to_create = []
-        note = Note()
-
-        last_date = inv.invoice_date
-        amount_to_pay = inv.amount_to_pay
-        move_lines = inv.move.lines
-        payment_lines = inv.payment_lines
-
-        for ml in move_lines:
-            account_move = inv.account
-            account_move_line = ml.account
-            payable_move_line = ml.account.type.payable
-            receivable_move_line = ml.account.type.receivable
-
-            if account_move == account_move_line and (payable_move_line
-                                                      or receivable_move_line):
-                _line = Line()
-                _line.debit = ml.credit
-                _line.credit = ml.debit
-                _line.party = ml.party
-                _line.account = ml.account
-                _line.description = ml.description
-                _line.move_line = ml
-
-                operation_center = ml.operation_center\
-                    if ml.operation_center else operation_center
-                _line.operation_center = operation_center
-                lines_to_create.append(_line)
-
-        for pl in payment_lines:
-            _line = Line()
-            _line.debit = pl.credit
-            _line.credit = pl.debit
-            _line.party = pl.party
-            _line.account = pl.account
-            _line.description = pl.description
-            _line.move_line = pl
-            _line.operation_center = operation_center
-
-            if last_date:
-                if last_date < pl.date:
-                    last_date = pl.date
-            else:
-                last_date = pl.date
-            lines_to_create.append(_line)
-        inv.payment_lines = []
-        inv.save()
-
-        # created adjusted line
-        _line = Line()
-        _line.party = inv.party
-        _line.account = adjustment_account
-        _line.description = f"AJUSTE FACTURA {inv.number}"
-
-        if invoice_type == 'out':
-            _line.debit = amount_to_pay
-            _line.credit = 0
-        else:
-            _line.debit = 0
-            _line.credit = amount_to_pay
-        if operation_center:
-            _line.operation_center = operation_center
-        if analytic_account:
-            _line.analytic_account = analytic_account
-        lines_to_create.append(_line)
-
-        # build note info
-        period = Period.search([('state', '=', 'open'),
-                                ('start_date', '>=', last_date),
-                                ('end_date', '<=', last_date)])
-        if period:
-            note.date = last_date
-        else:
-            note.date = note_date
-        note.journal = config.default_journal_note
-        note.description = f"AJUSTE FACTURA {inv.number}"
-        note.lines = lines_to_create
-        Note.save([note])
-        Note.post([note])
-        return inv
+    # @staticmethod
+    # def default_cufe():
+    #     return '0'
 
     # se sobreescribe el metodo del modulo account_col
     @classmethod
