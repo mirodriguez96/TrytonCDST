@@ -4,7 +4,6 @@ from trytond.wizard import Wizard, StateTransition, StateView, Button
 from trytond.pool import Pool
 from trytond.transaction import Transaction
 from trytond.exceptions import UserError, UserWarning
-
 from sql import Table
 from . import fixes
 
@@ -597,10 +596,10 @@ class CreateAdjustmentNotesParameters(ModelView):
     date = fields.Date('Date for notes', required=True)
 
 
+# Asistente encargado de crear las notas contables que realizaran el ajuste a las facturas con salod menor a 600 pesos
 class CreateAdjustmentNotes(Wizard):
-    """Wizard to Create Adjustment Note"""
+    'Create Exemplaries'
     __name__ = 'account.note.create_adjustment_note'
-
     start = StateView('account.note.create_adjustment_note.parameters',
                       'conector.view_adjustment_note_form', [
                           Button('Cancel', 'end', 'tryton-cancel'),
@@ -609,13 +608,9 @@ class CreateAdjustmentNotes(Wizard):
     add_note = StateTransition()
 
     def transition_add_note(self):
-        """Function to build info to process"""
-
         pool = Pool()
+        Note = pool.get('account.note')
         Line = pool.get('account.note.line')
-        Invoice = pool.get('account.invoice')
-        AnalyticAccount = pool.get('analytic_account.account')
-
         data = {
             'invoice_type': self.start.invoice_type,
             'adjustment_account': self.start.adjustment_account,
@@ -624,26 +619,23 @@ class CreateAdjustmentNotes(Wizard):
             'date_start': self.start.date_start,
             'date_finish': self.start.date_finish
         }
-
-        # Get config account_voucher
         config = pool.get('account.voucher_configuration')(1)
         if config.adjustment_amount and config.adjustment_amount > 0:
             data['amount'] = config.adjustment_amount
         else:
             raise UserError("msg_adjustment_amount",
                             "has to be greater than zero")
-
-        # Get analytic account
         if hasattr(Line, 'analytic_account'):
+            AnalyticAccount = pool.get('analytic_account.account')
             analytic_account = AnalyticAccount.search([
                 ('code', '=', self.start.analytic_account)
             ])
             if not analytic_account:
                 raise UserError(
-                    "ERROR: No se encontró cuenta analítica asociada.")
+                    "ERROR: No se encontro cuenta analitica asociada.")
             data['analytic_account'] = analytic_account[0]
 
-        Invoice.launch(data)
+        Note.create_adjustment_note(data)
         return 'end'
 
 
