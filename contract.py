@@ -1,4 +1,5 @@
 from trytond.pool import PoolMeta
+import datetime
 
 
 class Contract(metaclass=PoolMeta):
@@ -27,6 +28,11 @@ class Contract(metaclass=PoolMeta):
             bisciestos_count = self.count_bisciestos_years(
                 start_date.year, end_date.year)
             pre_count -= bisciestos_count
+
+            if start_date.month > 2 and self.validate_bisciesto_year(
+                    start_date.year):
+                pre_count += 1
+
             return pre_count
         else:
             return 0
@@ -37,3 +43,32 @@ class Contract(metaclass=PoolMeta):
             if (year % 4 == 0 and year % 100 != 0) or (year % 400 == 0):
                 count += 1
         return count
+
+    def validate_bisciesto_year(self, year):
+        if year % 4 == 0:
+            if year % 100 == 0:
+                if year % 400 == 0:
+                    return True
+                else:
+                    return False
+            else:
+                return True
+        else:
+            return False
+
+    def get_time_worked(self, name=None):
+        start_date = self.start_date
+        end_date = datetime.date.today()
+        if self.end_date and self.finished_date and self.finished_date < end_date:
+            end_date = self.finished_date
+        return self.get_time_days_contract(start_date, end_date)
+
+    def get_duration(self, name=None):
+        res = None
+        field_name = name[9:]
+        if self.end_date and self.start_date:
+            res = self.get_time_days_contract(self.start_date,
+                                              self.finished_date)
+            if field_name != 'days':
+                res = int(round(res / 30.0, 0))
+        return res

@@ -1694,7 +1694,7 @@ class StaffEvent(metaclass=PoolMeta):
                 if get_day not in [30, 31]:
                     days = (event.days - days)
                 else:
-                    days = (event.days - days - 1)
+                    days = (event.days - days)
 
                 end_period = Period.search([('start', '<=', event.end_date),
                                             ('end', '>=', event.end_date)])
