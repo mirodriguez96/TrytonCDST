@@ -722,6 +722,19 @@ class Liquidation(metaclass=PoolMeta):
             m.save()
             LoanLine.write([m], {'state': 'paid', 'origin': line_})
 
+    @fields.depends('start_period', 'end_period', 'contract')
+    def on_change_with_time_contracting(self):
+        delta = None
+        if self.start_period and self.end_period and self.contract:
+            try:
+                date_start, date_end = self._get_dates()
+                delta = self.contract.get_time_days_contract(
+                    date_start, date_end)
+            except Exception as error:
+                raise UserError('Error', f'{self.employee.party.name} {error}')
+                delta = 0
+        return delta
+
 
 class PayrollPaymentStartBcl(ModelView):
     'Payroll Payment Start'
