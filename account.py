@@ -84,6 +84,32 @@ class Account(metaclass=PoolMeta):
             Account.write(parents, {'type': None})
 
 
+class Period(metaclass=PoolMeta):
+    __name__ = 'account.period'
+
+    @classmethod
+    @ModelView.button
+    @Workflow.transition('close')
+    def close(cls, periods):
+        pool = Pool()
+        Invoice = pool.get('account.invoice')
+        company_ids = list({p.company.id for p in periods})
+        invoices = Invoice.search([
+            ('company', 'in', company_ids),
+            ('state', '=', 'posted'),
+            ('move', '=', None),
+        ])
+        if invoices:
+            names = ', '.join(i.rec_name for i in invoices[:5])
+            if len(invoices) > 5:
+                names += '...'
+
+            raise UserError(
+                "ERROR", f'Hay facturas contabilizadas sin movimientos\
+                            {names}')
+        super().close(periods)
+
+
 class Move(ModelSQL, metaclass=PoolMeta):
     __name__ = 'account.move'
 
