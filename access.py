@@ -648,8 +648,10 @@ class CreateAccessHolidaysWizard(Wizard):
         date = self.start.date
         date_today = datetime.today().date()
         date_difference = (date - date_today)
-        date_init_day = datetime.combine(date, datetime.min.time())
-        date_end_day = datetime.combine(date, datetime.max.time())
+        date_init_day = datetime.combine(
+            date, datetime.min.time()) + timedelta(hours=5)
+        date_end_day = datetime.combine(
+            date, datetime.max.time()) + timedelta(hours=5)
         enter_timestamp = datetime.combine(date, self.start.time_in)
         exit_timestamp = datetime.combine(date, self.start.time_out)
         hour_difference = (exit_timestamp -
