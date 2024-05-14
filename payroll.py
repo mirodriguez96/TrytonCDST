@@ -1,30 +1,32 @@
-from decimal import Decimal
-from datetime import timedelta, datetime, date
-
-from trytond.model import ModelSQL, ModelView, fields
-from trytond.pool import Pool, PoolMeta
 from trytond.wizard import (Wizard, StateView, Button, StateReport,
                             StateTransition)
-from sql.aggregate import Sum
-from sql.operators import Between
+from trytond.exceptions import UserError, UserWarning
+from trytond.model import ModelSQL, ModelView, fields
+from trytond.modules.company import CompanyReport
 from trytond.pyson import Eval, Or, Not, If, Bool
 from trytond.transaction import Transaction
+from trytond.pool import Pool, PoolMeta
+from trytond.sendmail import sendmail
+from trytond.config import config
 from trytond.report import Report
-from trytond.exceptions import UserError, UserWarning
 
 from .it_supplier_noova import ElectronicPayrollCdst
-from itertools import chain
-import mimetypes
-from email.encoders import encode_base64
-from email.header import Header
-from email.mime.application import MIMEApplication
-from email.mime.multipart import MIMEMultipart
 from email.mime.nonmultipart import MIMENonMultipart
-from email.mime.text import MIMEText
+from email.mime.application import MIMEApplication
 from email.utils import formataddr, getaddresses
-from trytond.modules.company import CompanyReport
-from trytond.sendmail import sendmail
+from email.mime.multipart import MIMEMultipart
+from email.encoders import encode_base64
+from email.mime.text import MIMEText
+from email.header import Header
+
+from sql.operators import Between
+from sql.aggregate import Sum
+
+from datetime import timedelta, date
+from decimal import Decimal
+from itertools import chain
 from dateutil import tz
+import mimetypes
 import calendar
 
 
