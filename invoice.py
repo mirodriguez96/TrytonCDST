@@ -723,7 +723,8 @@ class Invoice(metaclass=PoolMeta):
         data = cls._create_invoice_tecno(data)
         # Se marca los documentos en Tecnocarnes de acuerdo a las diferentes excepciones
         for idt, exportado in data['exportado'].items():
-            Config.update_exportado(idt, exportado)
+            if exportado != 'E':
+                Config.update_exportado(idt, exportado)
         actualizacion.add_logs(data['logs'])
         print(f"FINISH {_SW[sw]['name']}")
 
