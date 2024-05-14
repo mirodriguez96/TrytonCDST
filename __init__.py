@@ -50,6 +50,7 @@ def register():
                   account.BalanceStockStart,
                   account.AnalyticAccountEntry,
                   account.PartyWithholdingStart,
+                  account.Period,
                   account.Reconciliation,
                   account.AuxiliaryPartyStart,
                   account.AccountAsset,
