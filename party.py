@@ -9,6 +9,22 @@ from trytond.transaction import Transaction
 
 RECEIVABLE_PAYABLE_TECNO = {}
 
+TYPE_DOCUMENT = [
+    ('11', 'Registro Civil de Nacimiento'),
+    ('12', 'Tarjeta de Identidad'),
+    ('13', 'Cedula de Ciudadania'),
+    ('21', 'Tarjeta de Extranjeria'),
+    ('22', 'Cedula de Extranjeria'),
+    ('31', 'NIT'),
+    ('41', 'Pasaporte'),
+    ('42', 'Tipo de Documento Extranjero'),
+    ('47', 'PEP'),
+    ('50', 'NIT de otro pais'),
+    ('91', 'NUIP'),
+    ('43', 'Cuantías menores'),
+    ('', ''),
+]
+
 
 #Herencia del party.party e insercción de la función actualizar terceros
 class Party(metaclass=PoolMeta):
@@ -30,6 +46,13 @@ class Party(metaclass=PoolMeta):
         states={'invisible': Eval('type_document') != '41'})
 
     validate_dian = fields.Boolean('Validate DIAN', states={'invisible': True})
+
+    @classmethod
+    def __setup__(cls):
+        super(Party, cls).__setup__()
+        cls.type_document = fields.Selection(TYPE_DOCUMENT,
+                                             'Tipo de Documento',
+                                             required=True)
 
     # Funcion encargada de consultar en TecnoCarnes el saldo por pagar y cobrar de los terceros
     def get_receivable_payable_tecno(self, name):

@@ -33,6 +33,7 @@ from . import collection
 from . import line
 from . import contract
 from . import access
+from . import exogena
 from . import email_
 
 
@@ -206,6 +207,13 @@ def register():
                   account.TrialBalanceDetailedCds,
                   account.PartyWithholding,
                   collection.PortfolioStatusReport,
+                  exogena.TemplateExogena,
+                  exogena.F1001,
+                  exogena.F1005,
+                  exogena.F1006,
+                  exogena.F1007,
+                  exogena.F1008,
+                  exogena.F1009,
                   liquidation.LiquidationReport,
                   payment_bank.PaymentBankGroupReport,
                   payment_bank.BankReportBancolombia,
@@ -215,6 +223,7 @@ def register():
                   payroll.PayrollExo2276,
                   payroll.PayrollIBCReport,
                   payroll.PayrollPaycheckReportExten,
+                  payroll.IncomeWithholdingsReport,
                   production.ProductionDetailedReport,
                   report.PayrollExportReport,
                   report.CDSSaleIncomeDailyReport,
