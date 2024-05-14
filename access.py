@@ -649,6 +649,7 @@ class CreateAccessHolidaysWizard(Wizard):
         date_today = datetime.today().date()
         date_difference = (date - date_today)
         date_init_day = datetime.combine(date, datetime.min.time())
+        date_end_day = datetime.combine(date, datetime.max.time())
         enter_timestamp = datetime.combine(date, self.start.time_in)
         exit_timestamp = datetime.combine(date, self.start.time_out)
         hour_difference = (exit_timestamp -
@@ -695,9 +696,11 @@ class CreateAccessHolidaysWizard(Wizard):
 
             if contracts:
                 if employee.end_date is None or employee.end_date >= date:
-                    is_access = Access.search([('enter_timestamp', '>=',
-                                                date_init_day),
-                                               ('employee', '=', employee)])
+                    is_access = Access.search([
+                        ('enter_timestamp', '>=', date_init_day),
+                        ('exit_timestamp', '<=', date_end_day),
+                        ('employee', '=', employee)
+                    ])
 
                     if not is_access:
                         to_save = Access()
