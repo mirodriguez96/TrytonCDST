@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<form>
+    <label name="uri"/>
+    <field name="uri"/>
+    <label name="from_to"/>
+    <field name="from_to"/>
+</form>
