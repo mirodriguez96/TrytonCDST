@@ -222,7 +222,7 @@ class Configuration(ModelSQL, ModelView):
     def update_exportado_list(cls, idt, e):
         ids = list_to_tuple(idt, string=True)
         query = f"UPDATE dbo.Documentos SET exportado = '{e}' WHERE CONCAT(sw,'-',tipo,'-',Numero_Documento) IN {ids}"
-        print(query)
+        # print(query)
         cls.set_data(query)
 
     @classmethod

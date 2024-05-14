@@ -206,14 +206,12 @@ class Voucher(ModelSQL, ModelView):
                 logs[id_tecno] = f"EXCEPCION: {str(e)}"
                 exceptions.append(id_tecno)
         actualizacion.add_logs(logs)
-        for idt in exceptions:
-            Config.update_exportado(idt, 'E')
+        # for idt in exceptions:
+        #     Config.update_exportado(idt, 'E')
         for idt in created:
             Config.update_exportado(idt, 'T')
-            #print(id)
         for idt in not_import:
             Config.update_exportado(idt, 'X')
-            # print('not_import...', idt) #TEST
         print("FINISH COMPROBANTES DE EGRESO")
 
     # Funcion encargada de importar los recibos (comprobantes) de ingreso
@@ -476,8 +474,8 @@ class Voucher(ModelSQL, ModelView):
                 logs[id_tecno] = msg
                 exceptions.append(id_tecno)
         actualizacion.add_logs(logs)
-        for idt in exceptions:
-            Config.update_exportado(idt, 'E')
+        # for idt in exceptions:
+        #     Config.update_exportado(idt, 'E')
         for idt in created:
             Config.update_exportado(idt, 'T')
         for idt in not_import:

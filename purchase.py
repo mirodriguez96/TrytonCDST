@@ -398,13 +398,10 @@ class Purchase(metaclass=PoolMeta):
                 continue
         actualizacion.add_logs(logs)
         for idt in to_created:
-            #print('creado...', idt) #TEST
             Config.update_exportado(idt, 'T')
-        for idt in to_exception:
-            #print('excepcion...', idt) #TEST
-            Config.update_exportado(idt, 'E')
+        # for idt in to_exception:
+        #     Config.update_exportado(idt, 'E')
         for idt in not_import:
-            #print('not_import...', idt) #TEST
             Config.update_exportado(idt, 'X')
         print('FINISH COMPRAS')
 
@@ -797,7 +794,8 @@ class Purchase(metaclass=PoolMeta):
         cls._create_shipment(result['tryton'])
         actualizacion.add_logs(result['logs'])
         for idt, exportado in result['exportado'].items():
-            Config.update_exportado(idt, exportado)
+            if exportado != 'E':
+                Config.update_exportado(idt, exportado)
 
 
 class PurchaseLine(metaclass=PoolMeta):
