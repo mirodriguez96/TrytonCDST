@@ -563,6 +563,21 @@ class Actualizacion(ModelSQL, ModelView):
             acess.save()
 
 
+class Email(ModelSQL, ModelView):
+    'Email configuration'
+    __name__ = 'conector.email'
+
+    uri = fields.Char('Uri', required=True)
+    from_to = fields.Char('From to', required=True)
+
+    @classmethod
+    def default_uri(cls):
+        return 'smtps://notificaciones@cdstecno.com:98642443.Asd@mail.cdstecno.com:465'
+
+    @classmethod
+    def default_from_to(cls):
+        return 'Notificaciones TecnoCarnes-Tryton <notificaciones@cdstecno.com>'
+
 class ImportedDocument(ModelView):
     'Imported Document View'
     __name__ = 'conector.actualizacion.imported_document'

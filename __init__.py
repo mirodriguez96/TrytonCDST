@@ -33,6 +33,7 @@ from . import collection
 from . import line
 from . import contract
 from . import access
+from . import email_
 
 
 def register():
@@ -55,6 +56,7 @@ def register():
                   account.IncomeStatementView,
                   company.Company,
                   conector.Actualizacion,
+                  conector.Email,
                   conector.ImportedDocument,
                   conector.ConectorLog,
                   configuration.Configuration,
@@ -62,6 +64,7 @@ def register():
                   currency.Cron,
                   currency.CurrencyRate,
                   cron.Cron,
+                  email_.Email,
                   invoice.Invoice,
                   invoice.InvoiceLine,
                   invoice.UpdateInvoiceTecnoStart,

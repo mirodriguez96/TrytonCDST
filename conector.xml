@@ -45,6 +45,43 @@
 
         <menuitem parent="menu_importa" sequence="2" action="act_tercero" id="menu_actercero"/>
 
+        <!-- ################### -->
+        <!-- # Actualizaciones # -->
+        <!-- ################### -->
+        <!---->
+
+        <record model="ir.ui.view" id="email_view_form">
+            <field name="model">conector.email</field>
+            <field name="type">form</field>
+            <field name="name">email_form</field>
+        </record>
+        <record model="ir.ui.view" id="email_view_list">
+            <field name="model">conector.email</field>
+            <field name="type">tree</field>
+            <field name="name">email_list</field>
+        </record>
+
+
+        <!-- Vista que acciona la vista del form y list -->
+        <record model="ir.action.act_window" id="act_email">
+            <field name="name">Email configuration</field>
+            <field name="res_model">conector.email</field>
+        </record>
+
+        <record model="ir.action.act_window.view" id="act_email_view_list">
+            <field name="sequence" eval="10"/>
+            <field name="view" ref="email_view_list"/>
+            <field name="act_window" ref="act_email"/>
+        </record>
+        <record model="ir.action.act_window.view" id="act_email_view_form">
+            <field name="sequence" eval="20"/>
+            <field name="view" ref="email_view_form"/>
+            <field name="act_window" ref="act_email"/>
+        </record>
+
+        <menuitem parent="menu_importa" sequence="1" action="act_email" id="menu_act_email" icon="tryton-settings"/>
+
+
         <!-- ################## -->
         <!-- #  Configuracion # -->
         <!-- ################## -->
