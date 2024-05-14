@@ -24,17 +24,28 @@ type_shipment = {
     'internal': 'Envio Interno',
 }
 
+STATE_SHIPMENTS = [('', ''), ('draft', 'Borrador'), ('done', 'Finalizado')]
 
-#Heredamos del modelo stock.location para agregar el campo id_tecno que nos servira de relación con db sqlserver
+
+class Configuration(metaclass=PoolMeta):
+    'Stock Configuration'
+    __name__ = 'stock.configuration'
+
+    state_shipment = fields.Selection(STATE_SHIPMENTS,
+                                      'State shipment',
+                                      required=True)
+
+
 class Location(metaclass=PoolMeta):
     "Location"
     __name__ = 'stock.location'
 
     id_tecno = fields.Char('Id Tabla Sqlserver', required=False)
 
-    # Se importa de la base de datos SqlServer (TecnoCarnes) las bodegas
     @classmethod
     def import_warehouse(cls):
+        """Function to import werehouses from tecnocarnes"""
+
         print('RUN BODEGAS')
         pool = Pool()
         Config = pool.get('conector.configuration')
@@ -255,24 +266,35 @@ class ShipmentInternal(metaclass=PoolMeta):
 
     @classmethod
     def import_tecnocarnes(cls):
+        """Function to import internal shipments from tecnocarnes"""
+
         print('RUN TRASLADOS INTERNOS')
         pool = Pool()
-        Product = pool.get('product.product')
         Config = pool.get('conector.configuration')
+        Actualizacion = pool.get('conector.actualizacion')
+        ConfigShipment = pool.get('stock.configuration')
+
         configuration = Config.get_configuration()
+        config_shipment = ConfigShipment.search([])
+        state_shipment = config_shipment[0].state_shipment
         if not configuration:
             return
         data = Config.get_documentos_traslados()
         if not data:
             return
-        Actualizacion = pool.get('conector.actualizacion')
+
         actualizacion = Actualizacion.create_or_update('TRASLADOS')
         result = validate_documentos(data)
 
         try:
             shipments = cls.create(result["tryton"].values())
             for shipment in shipments:
-                shipment.save()
+                cls.save([shipment])
+                if state_shipment and state_shipment == 'done':
+                    cls.wait([shipment])
+                    cls.assign([shipment])
+                    cls.done([shipment])
+
         except Exception as e:
             result["logs"]["try_except"] = str(e)
             actualizacion.add_logs(result["logs"])

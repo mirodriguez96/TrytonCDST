@@ -919,3 +919,7 @@ msgstr "Hora de salida"
 msgctxt "model:ir.action,name:act_report_access"
 msgid "Staff access report"
 msgstr "Reporte de accesos"
+
+msgctxt "field:stock.configuration,state_shipment:"
+msgid "State shipment"
+msgstr "Estado de traslados"

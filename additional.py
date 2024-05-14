@@ -82,16 +82,23 @@ def get_products(values):
     return result
 
 
-#
 def validate_documentos(data):
+    """Function to validate documetns from internal shipments"""
+
     pool = Pool()
     Config = pool.get('conector.configuration')
     Actualizacion = pool.get('conector.actualizacion')
     actualizacion = Actualizacion.create_or_update(
         'CREAR ENVIOS INTERNOS VALIDACION DE PERIODOS')
-    Period = pool.get('account.period')
     logs = {}
+    dictprodut = {}
     to_exception = []
+    exists = []
+    tipos_doctos = []
+    bodegas = []
+    productos = []
+    selecto_product = []
+
     result = {
         "tryton": {},
         "logs": {},
@@ -101,19 +108,12 @@ def validate_documentos(data):
         },
     }
     Internal = pool.get('stock.shipment.internal')
-    # Verificar y seleccionar el primer centro de operaciones
     operation_center = get_operation_center(Internal)
     id_company = Transaction().context.get('company')
     shipments = Internal.search([('id_tecno', '!=', None)])
-    exists = []
+
     for ship in shipments:
         exists.append(ship.id_tecno)
-    tipos_doctos = []
-    bodegas = []
-    productos = []
-    # to_create = []
-    selecto_product = []
-    dictprodut = {}
 
     for p in data:
         if p.IdProducto not in selecto_product:
@@ -138,19 +138,10 @@ def validate_documentos(data):
 
     move = {}
     for value, d in enumerate(data):
-        dat = str(d.Fecha_Documento.date()).split('-')
-        name = f"{dat[0]}-{dat[1]}"
-        validate_period = Period.search([('name', '=', name)])
-        if validate_period[0].state == 'close':
-            to_exception.append(f"{d.sw}-{reference}")
-            logs[
-                f"{d.sw}-{reference}"] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA CERRADO \
-            Y NO ES POSIBLE SU CREACION"
-
-            continue
         tipo = str(d.tipo)
         reference = f"{tipo}-{d.Numero_Documento}"
         id_tecno = f"{d.sw}-{reference}"
+
         if id_tecno in exists:
             result["logs"][id_tecno] = "Ya existe en Tryton"
             result["exportado"]["T"].append(id_tecno)
@@ -179,7 +170,6 @@ def validate_documentos(data):
                 bodegas.append(id_bodega_destino)
             shipment["from_location"] = id_bodega
             shipment["to_location"] = id_bodega_destino
-            # Se agrega al diccionario
             result["tryton"][id_tecno] = shipment
             # to_create.append(shipment) #
         shipment = result["tryton"][id_tecno]

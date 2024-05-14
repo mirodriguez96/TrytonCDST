@@ -116,6 +116,7 @@ def register():
                   statement.BankStatementLineRelation,
                   statement.CreateBankLineParameters,
                   statement.StatementLine,
+                  stock.Configuration,
                   stock.Location,
                   stock.ShipmentInternal,
                   stock.WarehouseKardexStockStartCds,
