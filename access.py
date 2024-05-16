@@ -229,15 +229,15 @@ class StaffAccess(ModelSQL, metaclass=PoolMeta):
                                        restday, all_rests, restday_effective)
 
         res = {
-            'ttt': liquid['ttt'],
-            'het': liquid['het'],
-            'reco': liquid['reco'],
-            'recf': liquid['recf'],
-            'dom': liquid['dom'],
-            'hedo': liquid['hedo'],
-            'heno': liquid['heno'],
-            'hedf': liquid['hedf'],
-            'henf': liquid['henf'],
+            'ttt': round(liquid['ttt'], 2),
+            'het': round(liquid['het'], 2),
+            'reco': round(liquid['reco'], 2),
+            'recf': round(liquid['recf'], 2),
+            'dom': round(liquid['dom'], 2),
+            'hedo': round(liquid['hedo'], 2),
+            'heno': round(liquid['heno'], 2),
+            'hedf': round(liquid['hedf'], 2),
+            'henf': round(liquid['henf'], 2),
         }
         return res
 
