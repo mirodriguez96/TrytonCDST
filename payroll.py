@@ -2148,11 +2148,13 @@ class PayrollExo2276(metaclass=PoolMeta):
 
         new_objects = {}
         index = 0
-
-        domain_ = cls.get_domain_payroll(data)
-        payrolls = Payroll.search([domain_])
         start_period = data['start_period']
         end_period = data['end_period']
+
+        domain_ = cls.get_domain_payroll(data)
+        domain_ += [('start', '>=', start_period)]
+        domain_ += [('end', '<=', end_period)]
+        payrolls = Payroll.search([domain_])
 
         for payroll in payrolls:
             index += 1
@@ -2298,7 +2300,8 @@ class PayrollExo2276(metaclass=PoolMeta):
                     vals['payments'] += line.amount
                     vals['extras'] += line.amount
                 elif concept == 'holidays':
-                    continue
+                    if line.wage_type.id == 189:
+                        vals['total_benefit'] += line.amount
                 elif concept == 'bonus':
                     if line.wage_type.name in TYPE_BONUS:
                         vals['bonus_no_salarial'] += line.amount
@@ -2345,13 +2348,10 @@ class PayrollExo2276(metaclass=PoolMeta):
                     vals['other_deduction'] += line.amount
             else:
                 vals['discount'] += line.amount
-                # print('Warning: Line no processed... ', line.wage_type.name)
 
-        # vals['cesanpag'] = vals['unemployment'] + vals['interest']
         vals['others_payments'] = (vals['other'] + vals['bonus_no_salarial'] +
                                    vals['allowance'] + vals['various'] +
                                    vals['food'] + vals['transport'])
-        # vals['total_benefit'] = vals['holidays'] + vals['bonus_service']
         vals['total_retirement'] = vals['fsp'] + vals['retirement']
         vals['total_salary'] = sum(
             [vals['salary'], vals['extras'], vals['bonus']])
