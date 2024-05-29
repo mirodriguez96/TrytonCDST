@@ -179,6 +179,7 @@ def register():
                   statement.StatementMoveValidate,
                   statement.CreateBankLine,
                   tax.TaxesConsolidation,
+                  voucher.SelectMoveLines,
                   wiz.DeleteVoucherTecno,
                   wiz.VoucherMoveUnreconcile,
                   wiz.DeleteImportRecords,

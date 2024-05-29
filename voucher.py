@@ -1,17 +1,17 @@
 from trytond.model import ModelView, ModelSQL, fields
-from trytond.pool import Pool, PoolMeta
-from trytond.exceptions import UserError
 from trytond.transaction import Transaction
+from trytond.exceptions import UserError
+from trytond.pool import Pool, PoolMeta
+
 from decimal import Decimal
-import datetime
 from sql import Table, Null
-import time
 from . import fixes
+from datetime import date
 
 _ZERO = Decimal('0.0')
 
 
-#Heredamos del modelo sale.sale para agregar el campo id_tecno
+# Heredamos del modelo sale.sale para agregar el campo id_tecno
 class Voucher(ModelSQL, ModelView):
     'Voucher'
     __name__ = 'account.voucher'
@@ -136,7 +136,7 @@ class Voucher(ModelSQL, ModelView):
                     logs[id_tecno] = msg
                     exceptions.append(id_tecno)
                     continue
-                #for pago in tipo_pago:
+                # for pago in tipo_pago:
                 paymode = PayMode.search([('id_tecno', '=',
                                            tipo_pago[0].forma_pago)])
                 if not paymode:
@@ -177,7 +177,7 @@ class Voucher(ModelSQL, ModelView):
                     exceptions.append(id_tecno)
                     continue
                 voucher.save()
-                #Se verifica que el comprobante tenga lineas para ser procesado y contabilizado (doble verificación por error)
+                # Se verifica que el comprobante tenga lineas para ser procesado y contabilizado (doble verificación por error)
                 if voucher.lines and voucher.amount_to_pay > 0:
                     Voucher.process([voucher])
                     diferencia = abs(voucher.amount_to_pay - valor_aplicado)
@@ -304,7 +304,7 @@ class Voucher(ModelSQL, ModelView):
                         exceptions.append(id_tecno)
                     continue
 
-                #Se obtiene la forma de pago, según la tabla Documentos_Che de TecnoCarnes
+                # Se obtiene la forma de pago, según la tabla Documentos_Che de TecnoCarnes
                 tipo_pago = Config.get_tipos_pago(id_tecno)
                 if not tipo_pago:
                     logs[
@@ -419,8 +419,8 @@ class Voucher(ModelSQL, ModelView):
                                                                    order=[
                                                                        ('id',
                                                                         'DESC')
-                                                                   ],
-                                                                   limit=1)
+                        ],
+                            limit=1)
                         voucher.operation_center = operation_center
                     valor_aplicado = Decimal(doc.valor_aplicado)
                     lines = cls.get_lines_vtecno(facturas, voucher, logs,
@@ -432,7 +432,7 @@ class Voucher(ModelSQL, ModelView):
                         exceptions.append(id_tecno)
                         continue
                     voucher.save()
-                    #Se verifica que el comprobante tenga lineas para ser procesado y contabilizado (doble verificación por error)
+                    # Se verifica que el comprobante tenga lineas para ser procesado y contabilizado (doble verificación por error)
                     if voucher.lines and voucher.amount_to_pay > 0:
                         Voucher.process([voucher])
                         diferencia = abs(
@@ -442,7 +442,7 @@ class Voucher(ModelSQL, ModelView):
                                         voucher.amount_to_pay - valor_aplicado,
                                         2))))
 
-                        #print(diferencia, (diferencia < Decimal(6.0)))
+                        # print(diferencia, (diferencia < Decimal(6.0)))
                         if voucher.amount_to_pay == valor_aplicado:
                             Voucher.post([voucher])
                         elif diferencia < Decimal(60):
@@ -482,13 +482,13 @@ class Voucher(ModelSQL, ModelView):
             Config.update_exportado(idt, 'X')
         print("FINISH COMPROBANTES DE INGRESO")
 
-    #Se obtiene las lineas de la factura que se desea pagar
+    # Se obtiene las lineas de la factura que se desea pagar
     @classmethod
     def get_moveline(cls, reference, party, logs, account_type):
         pool = Pool()
         Invoice = pool.get('account.invoice')
         MoveLine = pool.get('account.move.line')
-        #A continuacion se consulta las lineas a pagar de la factura (reference)
+        # A continuacion se consulta las lineas a pagar de la factura (reference)
         invoice = Invoice.search([('number', '=', reference),
                                   ('state', '=', 'posted')])
         if invoice:
@@ -502,7 +502,7 @@ class Voucher(ModelSQL, ModelView):
             line_domain.append(('debit', '>', 0))
         elif account_type == 'account.type.payable':
             line_domain.append(('credit', '>', 0))
-        #Si no encuentra lineas a pagar... Se busca en saldos iniciales
+        # Si no encuentra lineas a pagar... Se busca en saldos iniciales
         moveline = MoveLine.search(line_domain)
         if moveline:
             if len(moveline) > 1:
@@ -540,7 +540,7 @@ class Voucher(ModelSQL, ModelView):
 
         return amount, amount_to_pay, untaxed_amount
 
-    #Metodo encargado de consultar y verificar si existe un comprobante de multi-ingreso con la id de la BD
+    # Metodo encargado de consultar y verificar si existe un comprobante de multi-ingreso con la id de la BD
     @classmethod
     def find_voucher(cls, idt):
         pool = Pool()
@@ -560,7 +560,7 @@ class Voucher(ModelSQL, ModelView):
     @classmethod
     def get_lines_vtecno(cls, invoices, voucher, logs, account_type):
         pool = Pool()
-        #Module = pool.get('ir.module')
+        # Module = pool.get('ir.module')
         Line = pool.get('account.voucher.line')
         config_voucher = pool.get('account.voucher_configuration')(1)
         to_lines = []
@@ -572,7 +572,7 @@ class Voucher(ModelSQL, ModelView):
                 msg = f"EXCEPCION: NO SE ENCONTRO LA FACTURA {ref} o REVISAR SI NO ESTA CONTABILIZADA EN TRYTON"
                 logs[voucher.id_tecno] = msg
                 return None
-            #print(ref)
+            # print(ref)
             valor_original, amount_to_pay, untaxed_amount = cls.get_amounts_to_pay(
                 move_line, voucher.voucher_type)
             line = Line()
@@ -722,21 +722,23 @@ class Voucher(ModelSQL, ModelView):
         if retencion > 0:
             line_rete = OthersConcepts()
             line_rete.description = 'RETENCION'
-            line_rete.account = config_voucher.account_adjust_income  #se añade cualquier cuenta
+            line_rete.account = config_voucher.account_adjust_income  # se añade cualquier cuenta
             line_rete.amount = round((retencion * -1), 2)
             to_others.append(line_rete)
             valor_pagado += line_rete.amount
         if retencion_iva > 0:
             line_retiva = OthersConcepts()
             line_retiva.description = 'RETIVA:'
-            line_retiva.account = config_voucher.account_adjust_income  #se añade cualquier cuenta
+            # se añade cualquier cuenta
+            line_retiva.account = config_voucher.account_adjust_income
             line_retiva.amount = round((retencion_iva * -1), 2)
             to_others.append(line_retiva)
             valor_pagado += line_retiva.amount
         if retencion_ica > 0:
             line_retica = OthersConcepts()
             line_retica.description = 'RETICA'
-            line_retica.account = config_voucher.account_adjust_income  #se añade cualquier cuenta
+            # se añade cualquier cuenta
+            line_retica.account = config_voucher.account_adjust_income
             line_retica.amount = round((retencion_ica * -1), 2)
             to_others.append(line_retica)
             valor_pagado += line_retica.amount
@@ -747,7 +749,7 @@ class Voucher(ModelSQL, ModelView):
             line_ajuste.amount = round(ajuste, 2)
             to_others.append(line_ajuste)
             valor_pagado += line_ajuste.amount
-        #Se verifica si la diferencia es minima para llevarla a un ajuste
+        # Se verifica si la diferencia es minima para llevarla a un ajuste
         difference = (original_amount - valor_pagado)
         if difference != 0 and abs(difference) < 50:
             line_ajuste = OthersConcepts()
@@ -760,7 +762,7 @@ class Voucher(ModelSQL, ModelView):
     @classmethod
     def convert_fecha_tecno(cls, fecha_tecno):
         fecha = str(fecha_tecno).split()[0].split('-')
-        fecha = datetime.date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
+        fecha = date(int(fecha[0]), int(fecha[1]), int(fecha[2]))
         return fecha
 
     # Función encargada de desconciliar los asientos de los comprobantes
@@ -864,7 +866,7 @@ class Voucher(ModelSQL, ModelView):
                              [
                                  'OR', ('account.type.receivable', '=', True),
                                  ('account.type.payable', '=', True)
-                             ]])
+        ]])
         """
         funcion encargada de obtener en las líneas del asiento 
         la perteneciente la línea del comprobante
@@ -873,7 +875,7 @@ class Voucher(ModelSQL, ModelView):
         def _get_move_line(line):
             for move_line in line.voucher.move.lines:
                 if move_line.reference == line.reference and \
-                    (move_line.account.type.receivable or move_line.account.type.payable):
+                        (move_line.account.type.receivable or move_line.account.type.payable):
                     return move_line
 
         logs = {}
@@ -1135,7 +1137,7 @@ class MultiRevenue(metaclass=PoolMeta):
                 if voucher.amount_to_pay and voucher.amount_to_pay > 0:
                     Voucher.post([voucher])
 
-    #Reimportar multi-ingresos
+    # Reimportar multi-ingresos
     @classmethod
     def mark_rimport(cls, multirevenue):
         pool = Pool()
@@ -1177,3 +1179,20 @@ class MultiRevenue(metaclass=PoolMeta):
             actualizacion.add_logs(logs)
         for idt in ids_tecno:
             Conexion.update_exportado(idt, 'N')
+
+
+class SelectMoveLines(metaclass=PoolMeta):
+    'Select Lines'
+    __name__ = 'account.voucher.select_move_lines'
+
+    def transition_search_lines(self):
+        Select = Pool().get('account.voucher.select_move_lines.ask')
+
+        line_domain = [
+            ('account.reconcile', '=', True),
+            ('state', '=', 'valid'),
+            ('reconciliation', '=', None),
+            ('move.state', '=', 'posted'),
+        ]
+        Select.lines.domain = line_domain
+        return 'start'
