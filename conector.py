@@ -446,6 +446,7 @@ class Actualizacion(ModelSQL, ModelView):
     @classmethod
     def import_biometric_access(cls, event_time=None):
         """Function to import access of biometric"""
+
         """ ***Primera  entrada debe ignorarse porque es hora de ingreso
             ***Pimera  salida es entrada a trabajar
             ***Ultima entrada es salida de trabajar
@@ -537,8 +538,9 @@ class Actualizacion(ModelSQL, ModelView):
             Access.search([('enter_timestamp', '>=', event_time),
                            ('enter_timestamp', '<', tomorrow)]))
 
-        for nit, acess in to_save.items():
+        for nit_cedula, acess in to_save.items():
             exists = False
+
             for acces_search in access_search:
                 if acess.employee == acces_search.employee:
                     access_search.remove(acces_search)
@@ -551,14 +553,36 @@ class Actualizacion(ModelSQL, ModelView):
             if acess.exit_timestamp\
                     and acess.enter_timestamp >= acess.exit_timestamp:
                 continue
-            if to_rest[nit]:
-                to_rest[nit].pop()
-                for rest in to_rest[nit]:
+            if to_rest[nit_cedula]:
+                to_rest[nit_cedula].pop()
+                for rest in to_rest[nit_cedula]:
                     rest.access = acess
                     if rest.start >= rest.end:
                         rest.start = rest.end - datetime.timedelta(minutes=45)
-                Rest.save(to_rest[nit])
-                acess.rests = to_rest[nit]
+
+                        # Validate if start is datetime type
+                    if isinstance(rest.start, datetime.datetime):
+                        start_time = rest.start
+                    else:
+                        start_time = datetime.datetime.strptime(
+                            rest.start, "%Y-%m-%d %H:%M:%S")
+
+                    # Validate if end is datetime type
+                    if isinstance(rest.end, datetime.datetime):
+                        end_time = rest.end
+                    else:
+                        end_time = datetime.datetime.strptime(
+                            rest.end, "%Y-%m-%d %H:%M:%S")
+
+                    # get difference in minutes
+                    difference = end_time - start_time
+                    difference_minutes = difference.total_seconds() / 60
+
+                    if difference_minutes <= 5:
+                        rest.pay = True
+
+                Rest.save(to_rest[nit_cedula])
+                acess.rests = to_rest[nit_cedula]
             acess.on_change_rests()
             acess.save()
 
@@ -577,6 +601,7 @@ class Email(ModelSQL, ModelView):
     @classmethod
     def default_from_to(cls):
         return 'Notificaciones TecnoCarnes-Tryton <notificaciones@cdstecno.com>'
+
 
 class ImportedDocument(ModelView):
     'Imported Document View'
