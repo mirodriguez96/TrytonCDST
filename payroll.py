@@ -1938,13 +1938,13 @@ class Payroll(metaclass=PoolMeta):
             for assistance in self.assistance:
                 if assistance.enter_timestamp.day == 31:
                     extras_31 = {
-                        'HED': assistance.hedo,
-                        'HEN': assistance.heno,
-                        'HRDDF': assistance.reco,
-                        'HEDDF': assistance.recf,
-                        'HRNDF': assistance.dom,
-                        'HRN': assistance.hedf,
-                        'HENDF': assistance.henf
+                        'HED': round(assistance.hedo, 2),
+                        'HEN': round(assistance.heno, 2),
+                        'HRDDF': round(assistance.reco, 2),
+                        'HEDDF': round(assistance.recf, 2),
+                        'HRNDF': round(assistance.dom, 2),
+                        'HRN': round(assistance.hedf, 2),
+                        'HENDF': round(assistance.henf, 2),
                     }
                     continue
                 if ttt == 0:
@@ -1972,7 +1972,7 @@ class Payroll(metaclass=PoolMeta):
                 ]:
                     extras[line.wage_type.type_concept_electronic] = {
                         'line': line,
-                        'quantity': line.quantity
+                        'quantity': round(line.quantity, 2)
                     }
                     exclude = lines_payroll.index(line)
                     lines_payroll.pop(exclude)
@@ -1984,8 +1984,8 @@ class Payroll(metaclass=PoolMeta):
 
         for line in lines_payroll:
             if line.wage_type.type_concept_electronic in extras_31.keys():
-                line.quantity += extras_31[
-                    line.wage_type.type_concept_electronic]
+                line.quantity += round(
+                    extras_31[line.wage_type.type_concept_electronic], 2)
                 line.save()
 
         self.lines = ()
