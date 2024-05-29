@@ -355,7 +355,7 @@ class Liquidation(metaclass=PoolMeta):
             ('holiday', '>=', start_date),
             ('holiday', '<=', end_date),
         ],
-                                  count=True)
+            count=True)
         return sundays + holidays
 
     def _validate_holidays_lines(self, event, start_date, end_date, days):
@@ -819,7 +819,8 @@ class PayrollPaymentBcl(Wizard):
         for payroll in payrolls:
             accouns_bank = list(payroll.employee.party.bank_accounts)
             if accouns_bank == []:
-                nothin_accounts = nothin_accounts + f"EL empleado {payroll.employee.party.name} no tiene una cuenta asociada  \n"
+                nothin_accounts = nothin_accounts + \
+                    f"EL empleado {payroll.employee.party.name} no tiene una cuenta asociada  \n"
                 continue
             # for ref in accouns_bank:
             #     if bank == ref.bank:
@@ -935,8 +936,8 @@ class LiquidationPaymentStartBcl(ModelView):
         ('holidays', 'Vacation'),
         ('convencional_bonus', 'Convencional Bonus'),
     ],
-                            'Kind',
-                            required=True)
+        'Kind',
+        required=True)
     date = fields.Date('Date', required=True)
     bank = fields.Many2One('bank.account',
                            'Bank Account',
@@ -1101,7 +1102,7 @@ class PayslipSend(Wizard):
             dom.append(('department', '=', self.start.department.id))
         payrolls = Payroll.search(dom)
         for payroll in payrolls:
-            #email = 'clancheros@cdstecno.com'
+            # email = 'clancheros@cdstecno.com'
             email = payroll.employee.party.email
             recipients_secondary = ''
             if self.start.cc:
@@ -1143,8 +1144,8 @@ class SettlementSendStart(ModelView):
         ('holidays', 'Vacation'),
         ('convencional_bonus', 'Convencional Bonus'),
     ],
-                            'Kind',
-                            required=True)
+        'Kind',
+        required=True)
 
     @staticmethod
     def default_company():
@@ -1417,8 +1418,8 @@ class SettlementSend(Wizard):
 
         for liquidation in liquidations:
             if liquidation.state == 'confirmed' or liquidation.state == 'posted':
-                #email = 'gisela.sanchez@cdstecno.com'
-                #email = 'andres.genes@cdstecno.com'
+                # email = 'gisela.sanchez@cdstecno.com'
+                # email = 'andres.genes@cdstecno.com'
                 email = liquidation.employee.party.email
                 recipients_secondary = ''
                 if self.start.cc:
@@ -1902,13 +1903,16 @@ class Payroll(metaclass=PoolMeta):
     def set_preliquidation(self, extras, discounts=None):
         """Function to add analytic accounts to liquidation"""
         super(Payroll, self).set_preliquidation(extras, discounts)
-        ttt = 0
-        discount = 0
-        validate = 0
-        extras = {}
-        workin_days_salary = 15
         PayrollLine = Pool().get('staff.payroll.line')
         Event = Pool().get('staff.event')
+
+        extras = {}
+        extras_31 = {}
+        validate_event = []
+
+        workin_days_salary = 15
+        ttt = 0
+
         if not hasattr(PayrollLine, 'analytic_accounts'):
             return
         AnalyticAccount = Pool().get('analytic_account.account')
@@ -1923,14 +1927,13 @@ class Payroll(metaclass=PoolMeta):
                             ('code', '=', line.origin.analytic_account)
                         ])
                         acc.write([acc], {'account': analytic_account.id})
-                    except:
+                    except Exception as error:
+                        print(error)
                         wage = line.wage_type.rec_name
                         raise UserError(
                             'staff_event.msg_error_on_analytic_account', wage)
 
         lines_payroll = list(self.lines)
-        validate_event = []
-        extras_31 = {}
         if self.assistance:
             for assistance in self.assistance:
                 if assistance.enter_timestamp.day == 31:
@@ -1961,11 +1964,9 @@ class Payroll(metaclass=PoolMeta):
                     validate_event.append(event)
                 else:
                     event = ()
-                print(event, self.start_extras, self.end_extras)
                 if event:
                     days = [i.quantity for i in event]
                     workin_days_salary -= int(sum(days))
-                    # round(Decimal(Decimal(line.quantity) * Decimal(7.83)), 2)
                 if line.wage_type.type_concept == 'extras' and line.wage_type.type_concept_electronic in [
                         'HED', 'HEN'
                 ]:
@@ -1976,27 +1977,10 @@ class Payroll(metaclass=PoolMeta):
                     exclude = lines_payroll.index(line)
                     lines_payroll.pop(exclude)
 
-            workin_days = round(Decimal(workin_days_salary * Decimal(7.83)), 2)
-
-            validate = ttt - workin_days
-
             if extras != {}:
-                if validate > Decimal(0):
-                    discuont = abs(validate)
-                    if 'HEN' in extras.keys(
-                    ) and extras['HEN']['line'].quantity > discuont:
-                        extras['HEN']['line'].quantity = discuont
-                        extras['HED']['line'].quantity = 0
-                    else:
-                        if 'HEN' in extras.keys():
-                            extras['HED']['line'].quantity = discount - extras[
-                                'HEN']['line'].quantity
-                        else:
-                            extras['HED']['line'].quantity = discuont
-
-                    for key, value in extras.items():
-                        if value['quantity'] > 0:
-                            lines_payroll.append(value['line'])
+                for key, value in extras.items():
+                    if value['quantity'] > 0:
+                        lines_payroll.append(value['line'])
 
         for line in lines_payroll:
             if line.wage_type.type_concept_electronic in extras_31.keys():
@@ -2009,13 +1993,21 @@ class Payroll(metaclass=PoolMeta):
         self.save()
 
     def _create_payroll_lines(self, wages, extras, discounts=None):
+        """Function to create payroll lines"""
+
         PayrollLine = Pool().get('staff.payroll.line')
         MoveLine = Pool().get('account.move.line')
         LoanLine = Pool().get('staff.loan.line')
-        # Wage = Pool().get('staff.wage.type')
-        values = []
-        # events = 0
+        Event = Pool().get('staff.event')
+
         salary_args = {}
+        validate_event = []
+        values = []
+        workin_days_salary = 15
+        real_working_days = 0
+        discount = 0
+        ttt = 0
+
         salary_in_date = self.contract.get_salary_in_date(self.end)
         get_line = self.get_line
         get_line_quantity = self.get_line_quantity
@@ -2024,6 +2016,68 @@ class Payroll(metaclass=PoolMeta):
         values_append = values.append
 
         self.process_loans_to_pay(LoanLine, PayrollLine, MoveLine)
+
+        if self.assistance:
+            for assistance in self.assistance:
+                if assistance.enter_timestamp.day == 31:
+                    continue
+                real_working_days += 1
+                ttt += round(Decimal(str(assistance.ttt)), 2)
+
+        for line in self.lines:
+            event = Event.search([
+                ('category.wage_type.type_concept_electronic', '=',
+                 'LicenciaNR'),
+                ('start_date', '>=', self.start_extras),
+                ('end_date', '<=', self.end_extras),
+                ('employee.id', '=', self.employee.id),
+            ])
+            if event not in validate_event:
+                validate_event.append(event)
+            else:
+                event = ()
+
+            if event:
+                days = [i.quantity for i in event]
+                workin_days_salary -= int(sum(days))
+
+        if workin_days_salary != real_working_days:
+            workin_days_salary = real_working_days
+
+        workin_days = round(Decimal(str(workin_days_salary * Decimal(7.83))),
+                            2)
+
+        difference = round(ttt - workin_days, 2)
+        if difference < 0:
+            if extras:
+                for type, cant_extras in extras.items():
+                    if type == 'hedo':
+                        if difference < 0:
+                            if abs(difference) >= cant_extras:
+                                difference += cant_extras
+                                extras[type] = Decimal(0)
+                            else:
+                                extras[type] -= abs(difference)
+                                difference = 0
+        else:
+            sum_extras = 0
+            sum_extras = sum(cant_extras
+                             for type, cant_extras in extras.items()
+                             if type == 'hedo')
+            if sum_extras > difference:
+                for type, cant_extras in extras.items():
+                    if type == 'hedo':
+                        if sum_extras > difference:
+                            if difference > cant_extras:
+                                difference -= cant_extras
+                                extras[type] = Decimal(0)
+                            else:
+                                value_rest = abs(sum_extras - difference)
+                                extras[type] -= value_rest
+            else:
+                for type, cant_extras in extras.items():
+                    if type == 'hedo':
+                        extras[type] = sum_extras
 
         for wage, party, fix_amount in wages:
             if not fix_amount:
@@ -2049,7 +2103,8 @@ class Payroll(metaclass=PoolMeta):
         PayrollLine.create(values)
 
     def process_loans_to_pay(self, LoanLine, PayrollLine, MoveLine):
-        #super(Payroll, self).process_loans_to_pay(self, LoanLine, PayrollLine, MoveLine)
+        """Function to process employee loans to pay"""
+
         dom = [
             ('loan.party', '=', self.employee.party.id),
             ('loan.wage_type', '!=', None),
@@ -2057,6 +2112,7 @@ class Payroll(metaclass=PoolMeta):
             ('state', 'in', ['pending', 'partial']),
         ]
         lines_loan = LoanLine.search(dom)
+
         for m, r in zip(lines_loan, range(len(lines_loan))):
             party = m.loan.party_to_pay if m.loan.party_to_pay else None
             move_lines = MoveLine.search([
@@ -2105,7 +2161,7 @@ class PayrollLine(metaclass=PoolMeta):
 class PayrollReport(CompanyReport):
     __name__ = 'staff.payroll'
 
-    #Metodo para heredar el metodo de generacion del reporte.
+    # Metodo para heredar el metodo de generacion del reporte.
     @classmethod
     def get_context(cls, records, header, data):
         report_context = super().get_context(records, header, data)
@@ -2114,20 +2170,20 @@ class PayrollReport(CompanyReport):
         amount = 0.0
         for record in report_context['records']:
             party = record.employee.party.name
-        #busco el prestamo de ese tercero
+        # busco el prestamo de ese tercero
         loans = Loans.search([('party', '=', party), ('state', '=', 'posted')])
-        #Si no hay prestamo limpio la variable
+        # Si no hay prestamo limpio la variable
         if not loans:
             for keys in report_context['records']:
                 keys.total_cost = 0.0
         else:
             for loan in loans:
                 for line in loan.lines:
-                    #busco que las lineas que tenga esten pendientes de pago y las guardo.
+                    # busco que las lineas que tenga esten pendientes de pago y las guardo.
                     if line.state == 'pending':
                         amount += float(line.amount)
 
-        #asigno el monto en una variable que no se usa
+        # asigno el monto en una variable que no se usa
         for keys in report_context['records']:
             keys.total_cost = amount
         return report_context
@@ -2580,7 +2636,7 @@ class PayrollIBCReport(Report):
         Department = pool.get('company.department')
         Contract = pool.get('staff.contract')
 
-        #Asignacion de tabalas para extraccion de la data
+        # Asignacion de tabalas para extraccion de la data
         staffPayroll = StaffPayroll.__table__()
         staffPayrollLine = StaffPayrollLine.__table__()
         party = Party.__table__()
@@ -2694,7 +2750,7 @@ class PayrollIBCReport(Report):
                                 'bonus': 0,
                                 'comision': 0,
                                 'total': 0,
-                            }
+                        }
 
                     # Verificamos cual es el tipo de concepto para acomularlo en cada uno de ellos
                     if fila_dict['type_concept'] == 'salary':
@@ -2753,7 +2809,7 @@ class PayrollIBCReport(Report):
                         items[index]['values'][fila_dict['description']][
                             'comision'] += fila_dict['amount']
 
-                    #Totalisamos los valores
+                    # Totalisamos los valores
                     items[index]['values'][fila_dict['description']][
                         'total'] += fila_dict['amount']
 
@@ -2856,7 +2912,7 @@ class PayrollPaycheckReportExten(metaclass=PoolMeta):
                             'AND',
                             ('wage_type.provision_cancellation', '!=', None),
                         ]
-                    ]]
+        ]]
 
         order = [('payroll.employee', 'DESC'), ('payroll', 'ASC')]
         payroll_lines = PayrollLine.search_read(dom_line,
@@ -3013,8 +3069,8 @@ class PayrollElectronicCDS(metaclass=PoolMeta):
                 'interest', 'holidays', 'unemployment', 'bonus_service',
                 'convencional_bonus'
             ]
-            if concept and line.quantity > 0 and (concept_normal not in wage_exceptions \
-                or not line.wage_type.contract_finish) and not excluded:
+            if concept and line.quantity > 0 and (concept_normal not in wage_exceptions
+                                                  or not line.wage_type.contract_finish) and not excluded:
                 wage_id = line.wage_type.id
                 sequence = list_concepts.index(concept)
                 if wage_id not in wage_to_create:
