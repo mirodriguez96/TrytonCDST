@@ -1118,6 +1118,7 @@ class PayslipSend(Wizard):
                           record=record,
                           reports=reports,
                           attachments=None)
+
                 Payroll.write([payroll], {'sended_mail': True})
                 Transaction().connection.commit()
             except Exception as e:
@@ -1461,6 +1462,14 @@ def send_mail(to='',
     User = pool.get('res.user')
     ActionReport = pool.get('ir.action.report')
     Attachment = pool.get('ir.attachment')
+    ConfigEmail = pool.get('conector.email')
+    emails = ConfigEmail.search([])
+
+    if not emails:
+        raise UserError('Error email: ',
+                        'No se encontro informacion para envio de emails')
+    _email = emails[0]
+
     transaction = Transaction()
     user = User(transaction.user)
     Model = pool.get(record[0])
@@ -1518,7 +1527,8 @@ def send_mail(to='',
             msg.attach(attachment)
     else:
         msg = content
-    msg['From'] = from_ = config.get('email', 'from')
+
+    msg['From'] = from_ = _email.from_to
     if user.email:
         if user.name:
             user_email = formataddr((user.name, user.email))
@@ -1529,11 +1539,14 @@ def send_mail(to='',
     msg['To'] = ', '.join(formataddr(a) for a in getaddresses([to]))
     msg['Cc'] = ', '.join(formataddr(a) for a in getaddresses([cc]))
     msg['Subject'] = Header(subject, 'utf-8')
-    to_addrs = list(
-        filter(
-            None,
-            map(str.strip,
-                _get_emails(to) + _get_emails(cc) + _get_emails(bcc))))
+    try:
+        to_addrs = list(
+            filter(
+                None,
+                map(str.strip,
+                    _get_emails(to) + _get_emails(cc) + _get_emails(bcc))))
+    except Exception as error:
+        print(error)
     sendmail(from_, to_addrs, msg, server=None, strict=True)
     email = Email(recipients=to,
                   recipients_secondary=cc,
