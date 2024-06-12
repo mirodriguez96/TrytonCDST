@@ -189,7 +189,7 @@ class MoveLine(ModelSQL, metaclass=PoolMeta):
                     ('credit', '=', amount > Decimal('0.0') and amount
                      or Decimal('0.0')),
                 ],
-                                    limit=1)
+                    limit=1)
             reconciliations.append({
                 'company': reconcile_account.company,
                 'lines': [('add', [x.id for x in lines])],
@@ -414,7 +414,7 @@ class BalanceStock(Wizard):
             ('state', '=', 'closed'),
             ('date', '>=', self.start.date),
         ],
-                                limit=1)
+            limit=1)
         if not periods:
             lang = Lang.get()
             raise PeriodCloseError(
@@ -479,7 +479,7 @@ class AccountAsset(metaclass=PoolMeta):
             return Decimal(0)
 
 
-#reporte de libro auxiliar
+# reporte de libro auxiliar
 class AuxiliaryBookStartCDS(ModelView):
     'Auxiliary Book Start'
     __name__ = 'account_col.auxiliary_book_cds.start'
@@ -751,7 +751,7 @@ class AuxiliaryBookCDS(Report):
             cursor.execute(*query)
             initial_balance = cursor.fetchall()
             print(initial_balance)
-            #retornamos la consulta con los saldos debitos, credito y el balance inicial, ademas, con la cuenta respectiva para asociarlos
+            # retornamos la consulta con los saldos debitos, credito y el balance inicial, ademas, con la cuenta respectiva para asociarlos
             return initial_balance, result_start, account
 
         with Transaction().set_context(fiscalyear=data['fiscalyear'],
@@ -768,7 +768,7 @@ class AuxiliaryBookCDS(Report):
         accountBalance = {}
         for account in start_accounts:
             id2start_account[account.id] = account
-            #Evalua si el reporte fue filtrado por tercero o no, si lo esta ingresa a realiza la consulta del tercero por cada una de las cuentas seleccionadas
+            # Evalua si el reporte fue filtrado por tercero o no, si lo esta ingresa a realiza la consulta del tercero por cada una de las cuentas seleccionadas
             if data['party'] != None:
                 party, = Party.search([('id', '=', data['party'])])
                 initial_balance, result_start, accountId = get_party(
@@ -824,7 +824,7 @@ class AuxiliaryBookCDS(Report):
 
         if party != None:
             for start_account in accountBalance:
-                #Recorremos el diccionario con la informacion de los saldos iniciales de cada una de las cuenta y evaluamos si esta cuenta, tiene informaciones relacionada para cargas los datos
+                # Recorremos el diccionario con la informacion de los saldos iniciales de cada una de las cuenta y evaluamos si esta cuenta, tiene informaciones relacionada para cargas los datos
                 if start_account in result.keys():
                     credit = result[start_account].get('credit') or 0
                     debit = result[start_account].get('debit') or 0
@@ -876,7 +876,7 @@ class AuxiliaryBookCDS(Report):
         accountfilter = [a.id for a in accounts]
         periodsfilter = [p.id for p in periods]
 
-        #Estructura condicional de where para realizar el filtro de la informacion
+        # Estructura condicional de where para realizar el filtro de la informacion
         if periodsfilter:
             where = account.period.in_(periodsfilter)
         if accountfilter:
@@ -888,7 +888,7 @@ class AuxiliaryBookCDS(Report):
         if reference:
             where &= moveLine.reference.like_(reference)
         print(accountfilter, periodsfilter)
-        #Consulta que trae cada una de las lineas de las cuentas
+        # Consulta que trae cada una de las lineas de las cuentas
         query = moveLine.join(
             partys, 'LEFT', condition=(partys.id == moveLine.party)).join(
                 account, 'LEFT',
@@ -912,7 +912,7 @@ class AuxiliaryBookCDS(Report):
 
         lines = _get_structured_json_data(
             _lineas
-        )  #Aqui se obtiene la estructura de json que pasara para generar el reporte
+        )  # Aqui se obtiene la estructura de json que pasara para generar el reporte
         key = operator.itemgetter('account')
         lines.sort(key=key)
         val = groupby(lines, key)
@@ -958,12 +958,11 @@ class AuxiliaryBookCDS(Report):
             # Si el reporte no cuenta con informacion, el usuario recibira este mensaje y no se ejectara el reporte.
             raise UserError(
                 message=None,
-                description=
-                f"El reporte no contiene informacion, no es posible generarlo")
+                description=f"El reporte no contiene informacion, no es posible generarlo")
         return res, result
 
 
-#Forzar a borrador de activo fijo
+# Forzar a borrador de activo fijo
 class ActiveForceDraft(Wizard):
     'Active Force Draft'
     __name__ = 'account.invoice_asset.force_draft'
@@ -977,23 +976,23 @@ class ActiveForceDraft(Wizard):
         for id_ in ids_:
             asset = Asset(id_)
             assetTable = Asset.__table__()
-            #Validacion para saber si el activo se encuentra cerrado
+            # Validacion para saber si el activo se encuentra cerrado
             if asset.state == 'closed':
                 raise UserError(
                     'AVISO',
                     f'El activo numero {asset.number} se encuentra cerrado y no es posible forzar su borrado'
                 )
-            #Validacion para saber si el activo ya se encuentra en borrador
+            # Validacion para saber si el activo ya se encuentra en borrador
             if asset.state == 'draft':
                 return 'end'
             cursor = Transaction().connection.cursor()
-            #Consulta que le asigna el estado borrado al activo
+            # Consulta que le asigna el estado borrado al activo
             if id_:
                 cursor.execute(*assetTable.update(columns=[
                     assetTable.state,
                 ],
-                                                  values=["draft"],
-                                                  where=assetTable.id == id_))
+                    values=["draft"],
+                    where=assetTable.id == id_))
 
         return 'end'
 
@@ -1296,7 +1295,7 @@ class IncomeStatementReport(Report):
                             'account_type_result': name[0]['name'],
                             'sequence': name[0]['sequence'],
                             'neto_secuence': 0,
-                        }
+                    }
 
                 finalitems[analytic_name]['parent_results'][parent_results][
                     'neto_secuence'] += fila_dict['neto']
@@ -1306,8 +1305,7 @@ class IncomeStatementReport(Report):
             # Si el reporte no cuenta con informacion, el usuario recibira este mensaje y no se ejectara el reporte.
             raise UserError(
                 message=None,
-                description=
-                f"El reporte no contiene informacion, no es posible generarlo")
+                description=f"El reporte no contiene informacion, no es posible generarlo")
 
         report_context['accumulated'] = str(data['accumulated'])
         report_context['Analitic_filter'] = str(data['Analitic_filter'])
@@ -1450,8 +1448,8 @@ class TrialBalanceDetailedCds(metaclass=PoolMeta):
                 ('id', 'in', list(set(accs_ids))),
                 ('active', 'in', [False, True]),
             ],
-                                              order=[('code', 'ASC')],
-                                              fields_names=['code', 'name'])
+                order=[('code', 'ASC')],
+                fields_names=['code', 'name'])
 
             for acc in acc_records:
                 accounts[acc['id']] = [
@@ -1953,7 +1951,8 @@ class AuxiliaryParty(metaclass=PoolMeta):
                 elif data['grouped_by_oc']:
                     id_loc = 'CO.'
                     if line.operation_center:
-                        id_loc = 'CO. [' + line.operation_center.code + '] ' + line.operation_center.name
+                        id_loc = 'CO. [' + line.operation_center.code + \
+                            '] ' + line.operation_center.name
 
                 location = id_loc
 

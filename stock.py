@@ -67,25 +67,25 @@ class Location(metaclass=PoolMeta):
                     logs[
                         id_tecno] = f'Se actualiza nombre de la bodega "{nombre}"'
                 continue
-            #zona de entrada
+            # zona de entrada
             ze = Location()
             ze.id_tecno = 'ze-' + str(id_tecno)
             ze.name = 'ZE ' + nombre
             ze.type = 'storage'
             _zones.append(ze)
-            #zona de salida
+            # zona de salida
             zs = Location()
             zs.id_tecno = 'zs-' + str(id_tecno)
             zs.name = 'ZS ' + nombre
             zs.type = 'storage'
             _zones.append(zs)
-            #zona de almacenamiento
+            # zona de almacenamiento
             za = Location()
             za.id_tecno = 'za-' + str(id_tecno)
             za.name = 'ZA ' + nombre
             za.type = 'storage'
             _zones.append(za)
-            #zona de producción
+            # zona de producción
             prod = Location()
             prod.id_tecno = 'prod-' + str(id_tecno)
             prod.name = 'PROD ' + nombre
@@ -231,7 +231,7 @@ class ShipmentDetailedReport(metaclass=PoolMeta):
             records = {}
             for m in moves:
                 key = str(m['to_location.']['id']) + \
-                          '_' + str(m['product.']['id'])
+                    '_' + str(m['product.']['id'])
                 try:
                     records[key]['cost_w_tax'] += m['cost_w_tax']
                     records[key]['price_w_tax'] += m['price_w_tax']
@@ -465,6 +465,7 @@ class MoveCDT(metaclass=PoolMeta):
     __name__ = 'stock.move'
 
     def set_average_cost(self):
+        print('paso1')
         Product = Pool().get('product.product')
         AverageCost = Pool().get('product.average_cost')
         Revision = Pool().get('product.cost_price.revision')
@@ -495,7 +496,8 @@ class MoveCDT(metaclass=PoolMeta):
         '''
         pool = Pool()
         Uom = pool.get('product.uom')
-        AccountMoveLine = pool.get('account.move.line')
+        Account = pool.get('account.account')
+
         assert type_.startswith('in_') or type_.startswith('out_'), \
             'wrong type'
 
@@ -513,8 +515,22 @@ class MoveCDT(metaclass=PoolMeta):
 
         account = self.product.account_expense_used
 
-        if self.product.template.salable:
-            account = self.product.account_cogs_used
+        category = self.product.template.account_category
+        category_name = category.name
+        product_name = self.product.template.name
+        lost_found_account = category.account_lost_found
+        product_salable = self.product.template.salable
+        product_purchasable = self.product.template.purchasable
+
+        if product_salable or (product_salable and product_purchasable):
+
+            if not lost_found_account:
+                raise UserError(
+                    'ERROR', f'Debe configurar la cuenta de perdidos\
+                          y encontrados en la categoria \
+                            ({category_name}) del producto {product_name}')
+            _account = Account.search(['id', '=', lost_found_account])
+            account = _account[0]
 
         if type_.startswith('in_'):
             line = {
@@ -585,8 +601,10 @@ class MoveCDT(metaclass=PoolMeta):
         '''
         Return counterpart move line value for stock move
         '''
+
         if not amount:
             return
+
         if amount >= Decimal('0.0'):
             line = {
                 'account': self.product.account_stock_used,
@@ -608,7 +626,6 @@ class MoveCDT(metaclass=PoolMeta):
         '''
         Get account move type
         '''
-
         type_ = (self.from_location.type, self.to_location.type)
         if type_ == ('storage', 'lost_found'):
             return 'out_lost_found'
@@ -619,8 +636,8 @@ class MoveCDT(metaclass=PoolMeta):
         '''
         Return account move for stock move
         '''
+
         pool = Pool()
-        AccountMove = pool.get('account.move')
         Date = pool.get('ir.date')
         Period = pool.get('account.period')
         AccountConfiguration = pool.get('account.configuration')
