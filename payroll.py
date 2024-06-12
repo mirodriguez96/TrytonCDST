@@ -28,6 +28,10 @@ from itertools import chain
 from dateutil import tz
 import mimetypes
 import calendar
+import copy
+
+
+from .constants import (FIELDS_AMOUNT,  SHEET_SUMABLES, EXTRAS)
 
 
 def ultimo_dia_del_mes(year, month):
@@ -126,6 +130,8 @@ TYPE_CONCEPT_ELECTRONIC = [
     ('Deuda', 'Deuda'),
 ]
 
+EXTRAS_CORE = EXTRAS
+
 EXTRAS = {
     'HED': {
         'code': 1,
@@ -208,6 +214,7 @@ STATE = {
     'invisible': Not(Bool(Eval('access_register'))),
     'readonly': Bool(Eval('state') != 'draft'),
 }
+
 
 try:
     import html2text
@@ -3153,3 +3160,498 @@ class PayrollElectronicCDS(metaclass=PoolMeta):
             if getattr(a, field) == value:
                 accesses.remove(a)
         return accesses
+
+
+class PayrollGlobalStart(metaclass=PoolMeta):
+    'Consolidated Payroll View'
+    __name__ = 'staff.payroll_global.start'
+
+    analytic_account = fields.Many2One('analytic_account.account',
+                                       'Analytic Account')
+
+    account = fields.Selection(
+        'get_wage_types', 'Account'
+    )
+
+    @staticmethod
+    def get_wage_types():
+        pool = Pool()
+        WageType = pool.get('staff.wage_type')
+        wage_types = WageType.search(['type_concept', '=', 'salary'])
+        return [(str(wt.debit_account.id), wt.name) for wt in wage_types if wt.debit_account]
+
+
+class PayrollGlobal(metaclass=PoolMeta):
+    'Consolidated Payroll Wizard'
+    __name__ = 'staff.payroll.global'
+
+    def do_print_(self, action):
+        end_period_id = None
+        department_id = None
+        analytic_account_id = None
+        account_id = None
+
+        if self.start.end_period:
+            end_period_id = self.start.end_period.id
+        if self.start.department:
+            department_id = self.start.department.id
+        if self.start.analytic_account:
+            analytic_account_id = self.start.analytic_account.id
+        if self.start.account:
+            account_id = self.start.account
+
+        data = {
+            'ids': [],
+            'company': self.start.company.id,
+            'start_period': self.start.start_period.id,
+            'end_period': end_period_id,
+            'analytic_account': analytic_account_id,
+            'account': account_id,
+            'department': department_id,
+            'include_finished': self.start.include_finished,
+        }
+        return action, data
+
+
+class PayrollGlobalReport(Report, metaclass=PoolMeta):
+    'Consolidated Payroll Report'
+    __name__ = 'staff.payroll.global_report'
+
+    @classmethod
+    def get_context(cls, records, header, data):
+        """Function to build report"""
+
+        report_context = Report.get_context(records, header, data)
+        pool = Pool()
+        user = pool.get('res.user')(Transaction().user)
+        Payroll = pool.get('staff.payroll')
+        Period = pool.get('staff.payroll.period')
+        Department = pool.get('company.department')
+        PayrollLine = Pool().get('staff.payroll.line')
+
+        parties = {}
+        sum_total_deductions = []
+        sum_gross_payments = []
+        sum_net_payment = []
+        dom_periods = []
+
+        account_id = None
+        analytic_account_id = None
+
+        start_period = Period(data['start_period'])
+        if data['end_period']:
+            end_period = Period(data['end_period'])
+            dom_periods.extend([
+                ('start', '>=', start_period.start),
+                ('end', '<=', end_period.end),
+            ])
+        else:
+            dom_periods.append(
+                ('id', '=', start_period.id)
+            )
+
+        periods = Period.search(dom_periods)
+        dom_pay = cls.get_domain_payroll(data)
+        dom_pay.append(
+            ('period', 'in', [p.id for p in periods]),
+        )
+        dom_pay.append(
+            ('state', 'in', ['processed', 'posted', 'draft']),
+        )
+        if data['department']:
+            dom_pay.append(
+                ['AND', ['OR', [
+                    ('employee.department', '=', data['department']),
+                    ('department', '=', None),
+                ], [
+                    ('department',  '=', data['department']),
+                ],
+                ]]
+            )
+            department = Department(data['department']).name
+        else:
+            department = 'TODOS LOS DEPARTAMENTOS'
+
+        if not data['include_finished']:
+            dom_pay.append(
+                ('contract.state', '!=', 'finished')
+            )
+
+        # Build domain to filter by accounts
+        if data['analytic_account']:
+            analytic_account_id = data['analytic_account']
+            lines = PayrollLine.search(
+                [('analytic_accounts.account.id', '=', analytic_account_id),
+                 ('payroll.date_effective', '>=', start_period.start),
+                    ('payroll.date_effective', '<=', end_period.end),
+                    ('wage_type.type_concept', '=', 'salary')])
+            if not lines:
+                raise UserError(
+                    'Error', 'No se encontro informacion asociada.')
+
+            line_list = list({_line for _line in lines})
+            dom_pay.append(
+                ('lines', 'in', line_list)
+            )
+
+        # Define account if selected in view
+        if data['account']:
+            account_id = data['account']
+            payroll_lines = PayrollLine.search(
+                [('wage_type.debit_account.id', '=', account_id)])
+            if payroll_lines:
+                lines = list([line.id for line in payroll_lines])
+                dom_pay.append(
+                    ('lines', 'in', lines)
+                )
+
+        payrolls = Payroll.search(dom_pay)
+        if not payrolls:
+            raise UserError('Error', 'No se encontro informacion asociada.')
+
+        periods_number = len(periods)
+        default_vals = cls.default_values()
+        payments = ['salary', 'transport', 'extras', 'food', 'bonus', 'commission',
+                    'incapacity_less_to_2_days', 'incapacity_greater_to_2_days', 'incapacity_arl']
+        deductions = [
+            'health', 'retirement', 'tax', 'syndicate',
+            'fsp', 'acquired_product'
+        ]
+
+        for payroll in payrolls:
+            party_health = ''
+            party_retirement = ''
+
+            employee_id = payroll.employee.id
+
+            if employee_id not in parties.keys():
+                position_employee = payroll.employee.position.name if payroll.employee.position else ''
+                position_contract = payroll.contract.position.name if payroll.contract and payroll.contract.position else ''
+                parties[employee_id] = default_vals.copy()
+                parties[employee_id]['employee_code'] = payroll.employee.code
+                parties[employee_id]['employee'] = payroll.employee.party.name
+                parties[employee_id]['employee_id_number'] = payroll.employee.party.id_number
+                if payroll.employee.party_health:
+                    party_health = payroll.employee.party_health.name
+                if payroll.employee.party_retirement:
+                    party_retirement = payroll.employee.party_retirement.name
+                parties[employee_id]['party_health'] = party_health
+                parties[employee_id]['party_retirement'] = party_retirement
+                parties[employee_id]['basic_salary'] = payroll.contract.get_salary_in_date(
+                    payroll.end)
+                parties[employee_id]['employee_position'] = position_contract or position_employee or ''
+                parties[employee_id]['account'] = None
+                parties[employee_id]['analytic_account'] = None
+
+            for line in payroll.lines:
+                if parties[employee_id]['account'] is None:
+                    if line.wage_type.type_concept == 'salary':
+                        parties[employee_id]['account'] = line.wage_type.debit_account.code
+
+                if parties[employee_id]['analytic_account'] is None:
+                    if line.wage_type.type_concept == 'salary':
+                        analytic_account = line.analytic_accounts
+                        if analytic_account:
+                            for analytic in analytic_account:
+                                if analytic.account is not None:
+                                    code = analytic.account.code
+                                    name = analytic.account.name
+                                    analytic_name = f'{code}-{name}'
+                                    parties[employee_id]['analytic_account'] = analytic_name
+
+                if line.wage_type.type_concept in (payments + deductions):
+                    concept = line.wage_type.type_concept
+                else:
+                    if line.wage_type.definition == 'payment' and line.wage_type.receipt:
+                        concept = 'others_payments'
+                    elif line.wage_type.definition == 'deduction' or \
+                        line.wage_type.definition == 'discount' and \
+                            line.wage_type.receipt:
+                        concept = 'others_deductions'
+                    else:
+                        concept = line.wage_type.type_concept
+                if not concept:
+                    raise UserError(
+                        'ERROR', f'El concepto no existe {line.wage_type.name}')
+
+                parties[employee_id][concept] += line.amount
+            parties[employee_id]['worked_days'] += Decimal(
+                payroll.worked_days_effective)
+            parties[employee_id]['gross_payments'] += payroll.gross_payments
+            parties[employee_id]['total_deductions'] += payroll.total_deductions
+            parties[employee_id]['net_payment'] += payroll.net_payment
+            sum_gross_payments.append(payroll.gross_payments)
+            sum_total_deductions.append(payroll.total_deductions)
+            sum_net_payment.append(payroll.net_payment)
+
+        employee_dict = {e['employee']: e for e in parties.values()}
+
+        report_context['records'] = sorted(
+            employee_dict.items(), key=lambda t: t[0])
+        report_context['department'] = department
+        report_context['periods_number'] = periods_number
+        report_context['start_period'] = start_period
+        report_context['end_period'] = end_period
+        report_context['company'] = user.company
+        report_context['user'] = user
+        report_context['sum_gross_payments'] = sum(sum_gross_payments)
+        report_context['sum_net_payment'] = sum(sum_net_payment)
+        report_context['sum_total_deductions'] = sum(sum_total_deductions)
+        return report_context
+
+
+class PayrollSheetStart(metaclass=PoolMeta):
+    'Comprehensive Payroll View'
+    __name__ = 'staff.payroll.sheet.start'
+
+    analytic_account = fields.Many2One('analytic_account.account',
+                                       'Analytic Account')
+
+    account = fields.Selection(
+        'get_wage_types', 'Account'
+    )
+
+    @staticmethod
+    def get_wage_types():
+        pool = Pool()
+        WageType = pool.get('staff.wage_type')
+        wage_types = WageType.search(['type_concept', '=', 'salary'])
+        return [(str(wt.debit_account.id), wt.name) for wt in wage_types if wt.debit_account]
+
+
+class PayrollSheet(metaclass=PoolMeta):
+    'Comprehensive Payroll Wizard'
+    __name__ = 'staff.payroll.sheet'
+
+    def do_print_(self, action):
+        analytic_account_id = None
+        account_id = None
+
+        if self.start.analytic_account:
+            analytic_account_id = self.start.analytic_account.id
+        if self.start.account:
+            account_id = self.start.account
+
+        periods = [p.id for p in self.start.periods]
+        data = {
+            'ids': [],
+            'analytic_account': analytic_account_id,
+            'account': account_id,
+            'company': self.start.company.id,
+            'periods': periods,
+        }
+        return action, data
+
+
+class PayrollSheetReport(Report, metaclass=PoolMeta):
+    'Comprehensive Payroll Report'
+    __name__ = 'staff.payroll.sheet_report'
+
+    @classmethod
+    def get_context(cls, records, header, data):
+        """Function to build data to report"""
+
+        report_context = Report.get_context(records, header, data)
+        pool = Pool()
+        user = pool.get('res.user')(Transaction().user)
+        Payroll = pool.get('staff.payroll')
+        Period = pool.get('staff.payroll.period')
+        PayrollLine = Pool().get('staff.payroll.line')
+
+        sum_total_deductions = []
+        sum_gross_payments = []
+        sum_net_payment = []
+        new_objects = []
+        list_date_periods = []
+        periods_names = ''
+        item = 0
+
+        dom_payroll = cls.get_domain_payroll(data)
+        if data['periods']:
+            periods = Period.browse(data['periods'])
+            # Order periodios asc by date
+            sorted_periods = sorted(periods, key=lambda period: period.start)
+
+            # save the date in a list
+            list_date_periods = [period.start for period in sorted_periods]
+            periods_names = [p.name + ' / ' for p in periods]
+            dom_payroll.append([('period', 'in', data['periods'])])
+
+        # Build domain to filter by accounts
+        if data['analytic_account']:
+            analytic_account_id = data['analytic_account']
+            lines = PayrollLine.search(
+                [('analytic_accounts.account.id', '=', analytic_account_id),
+                 ('payroll.date_effective', '>=', list_date_periods[0]),
+                    ('wage_type.type_concept', '=', 'salary')])
+            if not lines:
+                raise UserError(
+                    'Error', 'No se encontro informacion asociada.')
+
+            line_list = list({_line for _line in lines})
+            dom_payroll.append(
+                ('lines', 'in', line_list)
+            )
+
+        # Define account if selected in view
+        if data['account']:
+            account_id = data['account']
+            payroll_lines = PayrollLine.search(
+                [('wage_type.debit_account.id', '=', account_id)])
+            if payroll_lines:
+                lines = list([line.id for line in payroll_lines])
+                dom_payroll.append(
+                    ('lines', 'in', lines)
+                )
+
+        payrolls = Payroll.search(dom_payroll,
+                                  order=[
+                                      ('employee.party.name', 'ASC'),
+                                      ('period.name', 'ASC')
+                                  ])
+        if not payrolls:
+            raise UserError('Error', 'No se encontro informacion asociada.')
+
+        default_vals = cls.default_values()
+        for payroll in payrolls:
+            item += 1
+            project = ""
+
+            values = copy.deepcopy(default_vals)
+            values['item'] = item
+            values['employee'] = payroll.employee.party.name
+            values['id_number'] = payroll.employee.party.id_number
+            position_name, position_contract = '', ''
+            if payroll.employee.position:
+                position_name = payroll.employee.position.name
+            if payroll.contract and payroll.contract.position:
+                position_contract = payroll.contract.position.name
+            values['position'] = position_contract or position_name
+            values['department'] = payroll.employee.department.name \
+                if payroll.employee.department else ''
+            values['company'] = user.company.party.name
+            values['legal_salary'] = payroll.contract.get_salary_in_date(
+                payroll.end)
+            values['period'] = payroll.period.name
+            salary_day_in_date = payroll.contract.get_salary_in_date(
+                payroll.end) / 30
+            values['salary_day'] = salary_day_in_date
+            values['salary_hour'] = (
+                salary_day_in_date / 8) if salary_day_in_date else 0
+            values['worked_days'] = payroll.worked_days
+            values['gross_payment'] = payroll.gross_payments
+            values['account'] = None
+            values['analytic_account'] = None
+
+            # Add compatibility with staff contracting
+            if hasattr(payroll, 'project'):
+                if payroll.project:
+                    project = payroll.project.name
+
+            if hasattr(payroll.employee, 'project_contract'):
+                if payroll.employee.project_contract and \
+                        payroll.employee.project_contract.reference:
+                    project = payroll.employee.project_contract.reference
+            values['project'] = project
+
+            values.update(cls._prepare_lines(payroll, values))
+            sum_gross_payments.append(payroll.gross_payments)
+            sum_total_deductions.append(payroll.total_deductions)
+            sum_net_payment.append(payroll.net_payment)
+            new_objects.append(values)
+
+        report_context['records'] = new_objects
+        report_context['periods'] = periods_names
+        report_context['company'] = user.company.rec_name
+        report_context['user'] = user
+        report_context['sum_gross_payments'] = sum(sum_gross_payments)
+        report_context['sum_net_payment'] = sum(sum_net_payment)
+        report_context['sum_total_deductions'] = sum(sum_total_deductions)
+        return report_context
+
+    @classmethod
+    def _prepare_lines(cls, payroll, vals):
+        for line in payroll.lines:
+            # Add account
+            if vals['account'] is None and\
+                    line.wage_type.type_concept == 'salary':
+                vals['account'] = line.wage_type.debit_account.code
+
+            if vals['analytic_account'] is None and\
+                    line.wage_type.type_concept == 'salary':
+                analytic_account = line.analytic_accounts
+                if analytic_account:
+                    for analytic in analytic_account:
+                        if analytic.account is not None:
+                            code = analytic.account.code
+                            name = analytic.account.name
+                            analytic_name = f'{code}-{name}'
+                            vals['analytic_account'] = analytic_name
+
+            concept = line.wage_type.type_concept
+            amount = line.amount
+            definition = line.wage_type.definition
+            if definition == 'payment':
+                if concept == 'extras':
+                    vals['total_extras'].append(amount)
+                    for e in EXTRAS_CORE:
+                        if e.upper() in line.wage_type.name:
+                            vals[e].append(line.quantity or 0)
+                            vals['cost_' + e].append(amount)
+                            break
+                elif concept in FIELDS_AMOUNT:
+                    vals[concept].append(amount)
+                else:
+                    vals['other'].append(amount)
+            elif definition == 'deduction':
+                vals['total_deduction'].append(amount)
+                if concept == 'health':
+                    vals['health'].append(amount)
+                    vals['health_provision'].append(line.get_expense_amount())
+                elif concept == 'retirement':
+                    vals['retirement'].append(amount)
+                    vals['retirement_provision'].append(
+                        line.get_expense_amount())
+                else:
+                    if concept == 'fsp':
+                        vals['fsp'].append(amount)
+                    elif concept == 'tax':
+                        vals['retefuente'].append(amount)
+                    else:
+                        vals['other_deduction'].append(amount)
+            else:
+                vals['discount'].append(amount)
+                print('Warning: Line no processed... ', line.wage_type.name)
+
+        for key in SHEET_SUMABLES:
+            vals[key] = sum(vals[key])
+
+        vals['gross_payment'] = sum([
+            vals['salary'],
+            vals['total_extras'],
+            vals['transport'],
+            vals['food'],
+            vals['bonus']
+        ])
+
+        vals['net_payment'] = vals['gross_payment'] - vals['total_deduction']
+        vals['ibc'] = vals['gross_payment']
+        vals['total_benefit'] = sum([
+            vals['unemployment'],
+            vals['interest'],
+            vals['holidays'],
+            vals['bonus_service'],
+        ])
+        vals['total_parafiscales'] = sum([
+            vals['box_family'],
+            vals['sena'],
+            vals['icbf']
+        ])
+        vals['total_ssi'] = vals['retirement_provision'] + vals['risk']
+        vals['total_cost'] = sum([
+            vals['total_ssi'],
+            vals['box_family'],
+            vals['gross_payment'],
+            vals['total_benefit']
+        ])
+        return vals

@@ -923,3 +923,20 @@ msgstr "Reporte de accesos"
 msgctxt "field:stock.configuration,state_shipment:"
 msgid "State shipment"
 msgstr "Estado de traslados"
+
+msgctxt "field:staff.payroll_global.start,analytic_account:"
+msgid "Analytic Account"
+msgstr "Cuenta analitica"
+
+msgctxt "field:staff.payroll_global.start,account:"
+msgid "Account"
+msgstr "Cuenta contable"
+
+
+msgctxt "field:staff.payroll.sheet.start,analytic_account:"
+msgid "Analytic Account"
+msgstr "Cuenta analitica"
+
+msgctxt "field:staff.payroll.sheet.start,account:"
+msgid "Account"
+msgstr "Cuenta contable"

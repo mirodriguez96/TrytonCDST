@@ -159,5 +159,24 @@ this repository contains the full copyright notices and license terms. -->
         <menuitem parent="staff.menu_reporting" id="menu_payroll_ibc_report" action="wizard_payroll_ibc"/>
 
 
+
+        <!-- ####################################################### -->
+        <!-- # Interfaz para nuevos campos en reporte de nomina Consolidada #-->
+        <!-- ####################################################### -->
+        <record model="ir.ui.view" id="payroll_global_start_view_form">
+            <field name="model">staff.payroll_global.start</field>
+            <field name="inherit" ref="staff_payroll_co.payroll_global_start_view_form"/>
+            <field name="name">payroll_global_start_form</field>
+        </record>
+
+
+        <!-- ####################################################### -->
+        <!-- # Interfaz para nuevos campos en reporte de nomina Integral #-->
+        <!-- ####################################################### -->
+        <record model="ir.ui.view" id="payroll_sheet_start_view_form">
+            <field name="model">staff.payroll.sheet.start</field>
+            <field name="inherit" ref="staff_payroll_co.payroll_sheet_start_view_form"/>
+            <field name="name">payroll_sheet_start_form</field>
+        </record>
     </data>
 </tryton>
