@@ -1,7 +1,8 @@
-from trytond.model import fields
-from trytond.pool import Pool, PoolMeta
-import datetime
 from trytond.transaction import Transaction
+from trytond.pool import Pool, PoolMeta
+from trytond.model import fields
+
+from datetime import timedelta, date
 from decimal import Decimal
 
 
@@ -96,7 +97,7 @@ class Product(metaclass=PoolMeta):
         Category = pool.get('product.category')
         Product = pool.get('product.product')
         Template = pool.get('product.template')
-        #to_category = []
+        # to_category = []
         to_product = []
         to_template = []
         logs = {}
@@ -134,20 +135,18 @@ class Product(metaclass=PoolMeta):
                 if producto.PromedioVenta > 0:
                     valor_unitario = producto.PromedioVenta
                 valor_unitario = round(valor_unitario, 2)
-                #En caso de existir el producto se procede a verificar su ultimo cambio y a modificar
+                # En caso de existir el producto se procede a verificar su ultimo cambio y a modificar
                 if existe:
                     existe, = existe
                     ultimo_cambio = producto.Ultimo_Cambio_Registro
                     create_date = None
                     write_date = None
-                    #LA HORA DEL SISTEMA DE TRYTON TIENE UNA DIFERENCIA HORARIA DE 5 HORAS CON LA DE TECNO
+                    # LA HORA DEL SISTEMA DE TRYTON TIENE UNA DIFERENCIA HORARIA DE 5 HORAS CON LA DE TECNO
                     if existe.write_date:
-                        write_date = (existe.write_date -
-                                      datetime.timedelta(hours=5))
+                        write_date = (existe.write_date - timedelta(hours=5))
                     elif existe.create_date:
-                        create_date = (existe.create_date -
-                                       datetime.timedelta(hours=5))
-                    #print(ultimo_cambio, create_date, write_date)
+                        create_date = (existe.create_date - timedelta(hours=5))
+                    # print(ultimo_cambio, create_date, write_date)
                     if (ultimo_cambio and write_date and ultimo_cambio
                             > write_date) or (ultimo_cambio and not write_date
                                               and ultimo_cambio > create_date):
@@ -186,7 +185,7 @@ class Product(metaclass=PoolMeta):
                     to_product.append(prod)
             except Exception as e:
                 logs[id_producto] = f"EXCEPCION: {str(e)}"
-        #Category.save(to_category)
+        # Category.save(to_category)
         Template.save(to_template)
         Product.save(to_product)
         actualizacion.add_logs(logs)
@@ -195,7 +194,7 @@ class Product(metaclass=PoolMeta):
     # FIX (REPETICION METODO)
     def get_avg_cost_price(self, name=None):
         super(Product, self).get_avg_cost_price(name)
-        target_date = datetime.date.today()
+        target_date = date.today()
         stock_date_end = Transaction().context.get('stock_date_end')
         if stock_date_end:
             target_date = stock_date_end
@@ -204,37 +203,37 @@ class Product(metaclass=PoolMeta):
             ('product', '=', self.id),
             ('effective_date', '<=', target_date),
         ],
-                                         order=[('create_date', 'DESC')],
-                                         limit=1)
+            order=[('create_date', 'DESC')],
+            limit=1)
         if avg_product:
             return avg_product[0].cost_price
         else:
             return self.cost_price
 
-    #Función encargada de retornar que tipo de producto será un al realizar la equivalencia con el manejo de inventario de la bd de TecnoCarnes
+    # Función encargada de retornar que tipo de producto será un al realizar la equivalencia con el manejo de inventario de la bd de TecnoCarnes
     @classmethod
     def tipo_producto(cls, inventario):
-        #equivalencia del tipo de producto (si maneja inventario o no)
+        # equivalencia del tipo de producto (si maneja inventario o no)
         if inventario == 'N':
             return 'service'
         else:
             return 'goods'
 
-    #Función encargada de retornar la unidad de medida de un producto, al realizar la equivalencia con kg y unidades de la bd de TecnoCarnes
+    # Función encargada de retornar la unidad de medida de un producto, al realizar la equivalencia con kg y unidades de la bd de TecnoCarnes
     @classmethod
     def udm_producto(cls, udm):
-        #Equivalencia de la unidad de medida en Kg y Unidades.
+        # Equivalencia de la unidad de medida en Kg y Unidades.
         if udm == 1:
             return 2
         else:
             return 1
 
-    #Función encargada de verificar si el producto es vendible, de acuerdo a su tipo
+    # Función encargada de verificar si el producto es vendible, de acuerdo a su tipo
     @classmethod
     def vendible_producto(cls, tipo):
         Config = Pool().get('conector.configuration')
         tipoproducto = Config.get_tbltipoproducto(str(tipo))
-        #Se verifica que el tipo de producto exista y el valor SI es vendible o NO
+        # Se verifica que el tipo de producto exista y el valor SI es vendible o NO
         if tipoproducto and tipoproducto[0].ProductoParaVender == 'S':
             return True
         else:
@@ -248,7 +247,7 @@ class Product(metaclass=PoolMeta):
         Product = pool.get('product.product')
         Revision = pool.get('product.cost_price.revision')
         AverageCost = pool.get('product.average_cost')
-        _today = datetime.date.today()
+        _today = date.today()
         if not _products:
             products = Product.search([])
             if not products:
@@ -263,7 +262,7 @@ class Product(metaclass=PoolMeta):
         averages = []
         for r in result:
             if str(r.IdProducto) in _products and \
-                str(r.IdResponsable) in _products:
+                    str(r.IdResponsable) in _products:
                 product = _products[str(r.IdProducto)]
                 responsable = _products[str(r.IdResponsable)]
                 factor = Decimal(r.tiempo_del_ciclo)
@@ -291,10 +290,15 @@ class Product(metaclass=PoolMeta):
         print("FINISH update_product_parent")
 
 
-#Herencia del party.contact_mechanism e insercción del campo id_tecno
+# Herencia del party.contact_mechanism e insercción del campo id_tecno
 class ProductCategory(metaclass=PoolMeta):
     __name__ = 'product.category'
     id_tecno = fields.Char('Id TecnoCarnes', required=False)
+    account_lost_found = fields.Many2One('account.account', 'Lost and Found Account',
+                                         domain=[
+                                             ('type.id', 'in', ['92']),
+                                         ]
+                                         )
 
     @classmethod
     def import_categories_tecno(cls):
@@ -327,7 +331,7 @@ class ProductCategory(metaclass=PoolMeta):
                         'accounting': True
                     }
 
-                    #Gastos
+                    # Gastos
                     l_expense = list(modelo.CUENTA1)
                     if int(l_expense[0]) >= 5:
                         expense = Account.search([('code', '=', modelo.CUENTA1)
@@ -335,7 +339,7 @@ class ProductCategory(metaclass=PoolMeta):
                         if expense:
                             category['account_expense'] = expense[0]
 
-                    #Ingresos
+                    # Ingresos
                     l_revenue = list(modelo.CUENTA3)
                     if l_revenue[0] == '4':
                         revenue = Account.search([('code', '=', modelo.CUENTA3)
@@ -343,7 +347,7 @@ class ProductCategory(metaclass=PoolMeta):
                         if revenue:
                             category['account_revenue'] = revenue[0]
 
-                    #Devolucion venta
+                    # Devolucion venta
                     l_return_sale = list(modelo.CUENTA4)
                     if int(l_return_sale[0]) >= 4:
                         return_sale = Account.search([('code', '=',

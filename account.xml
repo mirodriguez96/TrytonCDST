@@ -92,6 +92,5 @@ this repository contains the full copyright notices and license terms. -->
             <field name="inherit" ref="account_col.print_party_withholding_start_view_form"/>
             <field name="name">print_party_withholding_start_form</field>
         </record>
-
     </data>
 </tryton>

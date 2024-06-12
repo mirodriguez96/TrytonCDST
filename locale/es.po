@@ -940,3 +940,8 @@ msgstr "Cuenta analitica"
 msgctxt "field:staff.payroll.sheet.start,account:"
 msgid "Account"
 msgstr "Cuenta contable"
+
+msgctxt "field:product.category,account_lost_found:"
+msgid "Lost and Found Account"
+msgstr "Cuenta de perdidos y encontrados"
+>>>>>>> locale/es.po
