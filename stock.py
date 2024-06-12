@@ -465,7 +465,6 @@ class MoveCDT(metaclass=PoolMeta):
     __name__ = 'stock.move'
 
     def set_average_cost(self):
-        print('paso1')
         Product = Pool().get('product.product')
         AverageCost = Pool().get('product.average_cost')
         Revision = Pool().get('product.cost_price.revision')
@@ -484,8 +483,13 @@ class MoveCDT(metaclass=PoolMeta):
         }
         Revision.create([revision])
         AverageCost.create([data])
-        Product.recompute_cost_price([self.product], start=self.effective_date)
-
+        try:
+            Product.recompute_cost_price([self.product], start=self.effective_date)
+        except Exception as error:
+            code_product = self.product.template.code
+            name_product = self.product.template.name
+            raise UserError(f"ERROR:",
+                            f"El producto con codigo [{code_product}-{name_product}] No coinice la UDM")
     @classmethod
     def _get_origin(cls):
         return super(MoveCDT, cls)._get_origin() + ['production']
