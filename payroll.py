@@ -3099,7 +3099,7 @@ class PayrollElectronicCDS(metaclass=PoolMeta):
                         'sequence': sequence,
                         'wage_type': line.wage_type,
                         'description': line.description,
-                        'quantity': line.quantity,
+                        'quantity': round(line.quantity, 2),
                         'unit_value': abs(line.unit_value),
                         'uom': line.wage_type.uom,
                         'amount': abs(line.amount),
@@ -3117,7 +3117,8 @@ class PayrollElectronicCDS(metaclass=PoolMeta):
                 else:
                     wage_to_create[wage_id]['lines_payroll'][0][1].append(
                         line.id)
-                    wage_to_create[wage_id]['quantity'] += line.quantity
+                    wage_to_create[wage_id]['quantity'] += round(
+                        line.quantity, 2)
                     wage_to_create[wage_id]['amount'] += abs(line.amount)
 
         for wage in liquidations_lines:
