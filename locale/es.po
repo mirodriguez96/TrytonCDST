@@ -932,7 +932,6 @@ msgctxt "field:staff.payroll_global.start,account:"
 msgid "Account"
 msgstr "Cuenta contable"
 
-
 msgctxt "field:staff.payroll.sheet.start,analytic_account:"
 msgid "Analytic Account"
 msgstr "Cuenta analitica"
@@ -944,4 +943,3 @@ msgstr "Cuenta contable"
 msgctxt "field:product.category,account_lost_found:"
 msgid "Lost and Found Account"
 msgstr "Cuenta de perdidos y encontrados"
->>>>>>> locale/es.po
