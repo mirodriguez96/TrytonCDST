@@ -14,9 +14,9 @@ class Configuration(metaclass=PoolMeta):
     type_order_tecno = fields.Char('Type order TecnoCarnes')
 
 
-#Heredamos del modelo purchase.purchase para agregar el campo id_tecno
 class Purchase(metaclass=PoolMeta):
-    'Purchase'
+    'Purchase Model inheritance'
+
     __name__ = 'purchase.purchase'
     id_tecno = fields.Char('Id Tabla Sqlserver', required=False)
     order_tecno = fields.Selection(
@@ -38,7 +38,6 @@ class Purchase(metaclass=PoolMeta):
             default = {}
         else:
             default = default.copy()
-        # default.setdefault('order_tecno', 'no')
         default.setdefault('order_tecno_sent', False)
         return super(Purchase, cls).copy(purchases, default=default)
 
@@ -52,34 +51,43 @@ class Purchase(metaclass=PoolMeta):
         print('RUN DEVOLUCIONES DE COMPRAS')
         cls.import_tecnocarnes('4')
 
-    # Función encargada de importar de SqlServer (TecnoCarnes) las compras y devoluciones de las compras
     @classmethod
     def import_tecnocarnes(cls, swt):
+        """Function to import purchases data from tecnocarnes"""
+
         pool = Pool()
+        PaymentLine = pool.get('account.invoice-account.move.line')
+        payment_term = pool.get('account.invoice.payment_term')
+        Actualizacion = pool.get('conector.actualizacion')
         Config = pool.get('conector.configuration')
+        Purchase = pool.get('purchase.purchase')
+        PurchaseLine = pool.get('purchase.line')
+        Invoice = pool.get('account.invoice')
+        Product = pool.get('product.product')
+        Location = pool.get('stock.location')
+        Address = pool.get('party.address')
+        Period = pool.get('account.period')
+        Party = pool.get('party.party')
+        Tax = pool.get('account.tax')
+        Module = pool.get('ir.module')
+
+        logs = {}
+        to_exception = []
+        to_created = []
+        not_import = []
+
         configuration = Config.get_configuration()
         if not configuration:
             return
-        Actualizacion = pool.get('conector.actualizacion')
+
         data = Config.get_documentos_tecno(swt)
-        #Se crea o actualiza la fecha de importación
+
         actualizacion = Actualizacion.create_or_update('COMPRAS')
         if not data:
             actualizacion.save()
-            print('FINISH COMPRAS')
+            print('FINISH COMPRAS - NO DATA')
             return
-        Invoice = pool.get('account.invoice')
-        Purchase = pool.get('purchase.purchase')
-        PurchaseLine = pool.get('purchase.line')
-        Product = pool.get('product.product')
-        Location = pool.get('stock.location')
-        payment_term = pool.get('account.invoice.payment_term')
-        PaymentLine = pool.get('account.invoice-account.move.line')
-        Party = pool.get('party.party')
-        Address = pool.get('party.address')
-        Period = pool.get('account.period')
-        Tax = pool.get('account.tax')
-        Module = pool.get('ir.module')
+
         company_operation = Module.search([('name', '=', 'company_operation'),
                                            ('state', '=', 'activated')])
         if company_operation:
@@ -87,15 +95,10 @@ class Purchase(metaclass=PoolMeta):
             operation_center = CompanyOperation.search([],
                                                        order=[('id', 'DESC')],
                                                        limit=1)
-        logs = {}
-        to_created = [
-        ]  # lista utilizada para almacenar los documentos que se importaron correctamente
-        to_exception = [
-        ]  # lista utilizada para almacenar los documentos que tuvieron alguna excepcion en el proceso de la importación
-        not_import = [
-        ]  # lista utilizada para almacenar los documentos que NO se deben importar (anulados)
+
         parties = Party._get_party_documentos(data, 'nit_Cedula')
-        # Procedemos a realizar la compra
+
+        # build the purchase
         for compra in data:
             sw = compra.sw
             numero_doc = compra.Numero_documento
@@ -146,7 +149,7 @@ class Purchase(metaclass=PoolMeta):
                 purchase.description = compra.notas.replace('\n', ' ').replace(
                     '\r', '')
                 purchase.order_tecno = 'no'
-                #Se trae la fecha de la compra y se adapta al formato correcto para Tryton
+                # Se trae la fecha de la compra y se adapta al formato correcto para Tryton
                 fecha = str(compra.fecha_hora).split()[0].split('-')
                 fecha_date = datetime.date(int(fecha[0]), int(fecha[1]),
                                            int(fecha[2]))
@@ -162,11 +165,11 @@ class Purchase(metaclass=PoolMeta):
                         to_exception.append(id_compra)
                     continue
                 purchase.party = party
-                #Se busca una dirección del tercero para agregar en la factura y envio
+                # Se busca una dirección del tercero para agregar en la factura y envio
                 address = Address.search([('party', '=', party.id)], limit=1)
                 if address:
                     purchase.invoice_address = address[0].id
-                #Se indica a que bodega pertenece
+                # Se indica a que bodega pertenece
                 bodega = Location.search([('id_tecno', '=', compra.bodega)])
                 if not bodega:
                     msg = f"EXCEPCION: No se econtro la bodega {compra.bodega}"
@@ -175,7 +178,7 @@ class Purchase(metaclass=PoolMeta):
                     continue
                 bodega = bodega[0]
                 purchase.warehouse = bodega
-                #Se le asigna el plazo de pago correspondiente
+                # Se le asigna el plazo de pago correspondiente
                 plazo_pago = payment_term.search([('id_tecno', '=',
                                                    compra.condicion)])
                 if not plazo_pago:
@@ -203,10 +206,8 @@ class Purchase(metaclass=PoolMeta):
                     elif (compra.retencion_iva +
                           compra.retencion_ica) != compra.retencion_causada:
                         retencion_rete = True
-                #Ahora traemos las lineas de producto para la compra a procesar
-                #_lines = []
+
                 for lin in lineas_tecno:
-                    #print(id_producto)
                     producto = Product.search([('id_tecno', '=',
                                                 str(lin.IdProducto))])
                     if not producto:
@@ -214,15 +215,16 @@ class Purchase(metaclass=PoolMeta):
                         logs[id_compra] = msg
                         to_exception.append(id_compra)
                         break
-                    #mensaje si la busqueda de "Product" trae mas de un producto
+                    # mensaje si la busqueda de "Product" trae mas de un producto
                     elif len(producto) > 1:
-                        msg = f"EXCEPCION: Hay mas de un producto que tienen el mismo código o id_tecno."
+                        msg = f"EXCEPCION: Hay mas de un producto que tienen el mismo id_tecno. {lin.IdProducto}"
                         logs[id_compra] = msg
                         to_exception.append(id_compra)
                         break
                     producto, = producto
+
                     cantidad_facturada = abs(round(lin.Cantidad_Facturada, 3))
-                    if cantidad_facturada < 0:  # negativo = devolucion (TecnoCarnes)
+                    if cantidad_facturada < 0:
                         cant = cantidad_facturada
                         for line in compra.lines:
                             line_quantity = line.quantity
@@ -241,10 +243,10 @@ class Purchase(metaclass=PoolMeta):
                     line.purchase = purchase
                     line.type = 'line'
                     line.unit = producto.template.default_uom
-                    #Se verifica si es una devolución
+                    # Se verifica si es una devolución
                     if sw == 4:
                         line.quantity = cantidad_facturada * -1
-                        #Se indica a que documento hace referencia la devolucion
+                        # Se indica a que documento hace referencia la devolucion
                         purchase.reference = compra.Tipo_Docto_Base.strip(
                         ) + '-' + str(compra.Numero_Docto_Base)
                     else:
@@ -252,11 +254,11 @@ class Purchase(metaclass=PoolMeta):
                         purchase.reference = tipo_doc + '-' + str(numero_doc)
                     if company_operation:
                         line.operation_center = operation_center[0]
-                    #Comprueba los cambios y trae los impuestos del producto
+                    # Comprueba los cambios y trae los impuestos del producto
                     line.on_change_product()
-                    #Se verifica si el impuesto al consumo fue aplicado
+                    # Se verifica si el impuesto al consumo fue aplicado
                     impuesto_consumo = lin.Impuesto_Consumo
-                    #A continuación se verifica las retenciones e impuesto al consumo
+                    # A continuación se verifica las retenciones e impuesto al consumo
                     impuestos_linea = []
                     for impuestol in line.taxes:
                         clase_impuesto = impuestol.classification_tax_tecno
@@ -270,7 +272,7 @@ class Purchase(metaclass=PoolMeta):
                             if impuestol not in impuestos_linea:
                                 impuestos_linea.append(impuestol)
                         elif impuestol.consumo and impuesto_consumo > 0:
-                            #Se busca el impuesto al consumo con el mismo valor para aplicarlo
+                            # Se busca el impuesto al consumo con el mismo valor para aplicarlo
                             tax = Tax.search([
                                 ('consumo', '=', True), ('type', '=', 'fixed'),
                                 ('amount', '=', impuesto_consumo),
@@ -281,9 +283,9 @@ class Purchase(metaclass=PoolMeta):
                             ])
                             if tax:
                                 if len(tax) > 1:
-                                    msg = "EXCEPCION: Se encontro mas de un impuesto de tipo consumo "\
-                                        f"con el importe igual a {impuesto_consumo} del grupo compras, "\
-                                            "recuerde que se debe manejar un unico impuesto con esta configuracion"
+                                    msg = f"EXCEPCION: Se encontro mas de un impuesto de tipo consumo\
+                                        con el importe igual a {impuesto_consumo} del grupo compras,\
+                                        recuerde que se debe manejar un unico impuesto con esta configuracion"
                                     logs[id_compra] = msg
                                     to_exception.append(id_compra)
                                     break
@@ -300,9 +302,9 @@ class Purchase(metaclass=PoolMeta):
                     if id_compra in to_exception:
                         break
                     line.taxes = impuestos_linea
-                    # line.gross_unit_price = lin.Valor_Unitario
                     line.unit_price = lin.Valor_Unitario
-                    #Verificamos si hay descuento para la linea de producto y se agrega su respectivo descuento
+
+                    # Verificamos si hay descuento para la linea de producto y se agrega su respectivo descuento
                     if lin.Porcentaje_Descuento_1 > 0:
                         porcentaje = round((lin.Porcentaje_Descuento_1 / 100),
                                            4)
@@ -312,12 +314,12 @@ class Purchase(metaclass=PoolMeta):
                     line.save()
                 if id_compra in to_exception:
                     continue
-                #Procesamos la compra para generar la factura y procedemos a rellenar los campos de la factura
+                # Procesamos la compra para generar la factura y procedemos a rellenar los campos de la factura
                 purchase.quote([purchase])
                 purchase.confirm([purchase])
-                #Se requiere procesar de forma 'manual' la compra para que genere la factura
+                # Se requiere procesar de forma 'manual' la compra para que genere la factura
                 purchase.process([purchase])
-                #Se hace uso del asistente para crear el envio del proveedor
+                # Se hace uso del asistente para crear el envio del proveedor
                 if compra.sw == 3:
                     Purchase.generate_shipment([purchase])
                 for shipment in purchase.shipments:
@@ -344,11 +346,8 @@ class Purchase(metaclass=PoolMeta):
                 for invoice in purchase.invoices:
                     invoice.number = purchase.number
                     invoice.invoice_date = fecha_date
-                    #Se agrega en la descripcion el nombre del tipo de documento de la tabla en sqlserver
-                    # desc = Config.get_tbltipodoctos(tipo_doc)
-                    # if desc:
-                    #     invoice.description = desc[0].TipoDoctos.replace('\n', ' ').replace('\r', '')
                     original_invoice = None
+
                     if compra.sw == 4:
                         dcto_base = str(compra.Tipo_Docto_Base) + '-' + str(
                             compra.Numero_Docto_Base)
@@ -362,7 +361,6 @@ class Purchase(metaclass=PoolMeta):
                             msg = f"NO SE ENCONTRO LA FACTURA {dcto_base} PARA CRUZAR CON LA DEVOLUCION {invoice.number}"
                             logs[id_compra] = msg
                     invoice.save()
-                    #Verificamos que el total de la tabla en sqlserver coincidan o tengan una diferencia menor a 4 decimales, para contabilizar la factura
                     ttecno = {
                         'retencion_causada': compra.retencion_causada,
                         'valor_total': compra.valor_total,
@@ -370,10 +368,10 @@ class Purchase(metaclass=PoolMeta):
                     result = Invoice._validate_total_tecno(
                         invoice.total_amount, ttecno)
                     if not result['value']:
-                        msg = f"REVISAR: ({id_compra}) "\
-                        f"El total de Tryton {invoice.total_amount} "\
-                        f"es diferente al total de TecnoCarnes {result['total_tecno']} "\
-                        f"La diferencia es de {result['diferencia']}"
+                        msg = f"REVISAR: ({id_compra})\
+                            El total de Tryton {invoice.total_amount}\
+                            es diferente al total de TecnoCarnes {result['total_tecno']}\
+                            La diferencia es de {result['diferencia']}"
                         logs[id_compra] = msg
                         to_exception.append(id_compra)
                         continue
@@ -382,8 +380,6 @@ class Purchase(metaclass=PoolMeta):
                         Invoice.post_batch([invoice])
                         Invoice.post([invoice])
                         if original_invoice:
-                            # payment_lines = invoice.payment_lines + (invoice.lines_to_pay[0])
-                            # original_invoice.payment_lines = payment_lines
                             paymentline = PaymentLine()
                             paymentline.invoice = original_invoice
                             paymentline.invoice_account = invoice.account
@@ -396,6 +392,7 @@ class Purchase(metaclass=PoolMeta):
                 logs[id_compra] = f"EXCEPCION: {str(e)}"
                 to_exception.append(id_compra)
                 continue
+
         actualizacion.add_logs(logs)
         for idt in to_created:
             Config.update_exportado(idt, 'T')
@@ -403,13 +400,13 @@ class Purchase(metaclass=PoolMeta):
         #     Config.update_exportado(idt, 'E')
         for idt in not_import:
             Config.update_exportado(idt, 'X')
-        print('FINISH COMPRAS')
+        print('FINISH COMPRAS - DATA PROCESSED')
 
     # Se elimina vía base de datos las compras y pagos relacionados
     @classmethod
     def delete_imported_purchases(cls, purchases):
         pool = Pool()
-        #Purchase = pool.get('purchase.purchase')
+        # Purchase = pool.get('purchase.purchase')
         purchase_table = Table('purchase_purchase')
         invoice_table = Table('account_invoice')
         move_table = Table('account_move')
@@ -474,7 +471,7 @@ class Purchase(metaclass=PoolMeta):
                     columns=[shipment_table.state],
                     values=['draft'],
                     where=shipment_table.id.in_(shipments)))
-                #Eliminación de los envíos
+                # Eliminación de los envíos
                 cursor.execute(*shipment_table.delete(
                     where=shipment_table.id.in_(shipments)))
 
@@ -483,7 +480,7 @@ class Purchase(metaclass=PoolMeta):
                     columns=[shipment_return_table.state],
                     values=['draft'],
                     where=shipment_return_table.id.in_(shipment_returns)))
-                #Eliminación de las devoluciones de envíos
+                # Eliminación de las devoluciones de envíos
                 cursor.execute(*shipment_return_table.delete(
                     where=shipment_return_table.id.in_(shipment_returns)))
 
