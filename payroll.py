@@ -1924,19 +1924,12 @@ class Payroll(metaclass=PoolMeta):
         """Function to add analytic accounts to liquidation"""
         super(Payroll, self).set_preliquidation(extras, discounts)
         PayrollLine = Pool().get('staff.payroll.line')
-        Event = Pool().get('staff.event')
-
-        extras = {}
-        extras_31 = {}
-        validate_event = []
-
-        workin_days_salary = 15
-        ttt = 0
 
         if not hasattr(PayrollLine, 'analytic_accounts'):
             return
         AnalyticAccount = Pool().get('analytic_account.account')
 
+        # Create analytic account lines
         for line in self.lines:
             if not line.is_event:
                 continue
@@ -1953,26 +1946,61 @@ class Payroll(metaclass=PoolMeta):
                         raise UserError(
                             'staff_event.msg_error_on_analytic_account', wage)
 
-        lines_payroll = list(self.lines)
+        # Save staff payroll lines
+        self.lines = tuple(self.lines)
+        self.save()
+
+    def _create_payroll_lines(self, wages, extras, discounts=None):
+        """Function to create payroll lines"""
+
+        PayrollLine = Pool().get('staff.payroll.line')
+        MoveLine = Pool().get('account.move.line')
+        LoanLine = Pool().get('staff.loan.line')
+        Contract = Pool().get('staff.contract')
+        Event = Pool().get('staff.event')
+        salary_args = {}
+        validate_event = []
+        values = []
+        workin_days_salary = 15
+        real_working_days = 0
+        discount = 0
+        ttt = 0
+
+        start_date_extras = self.start_extras
+        end_date_extras = self.end_extras
+        salary_in_date = self.contract.get_salary_in_date(self.end)
+        get_line = self.get_line
+        get_line_quantity = self.get_line_quantity
+        get_line_quantity_special = self.get_line_quantity_special
+        get_salary_full = self.get_salary_full
+        values_append = values.append
+
+        self.process_loans_to_pay(LoanLine, PayrollLine, MoveLine)
+
+        # Calculate days registered in assistance
         if self.assistance:
             for assistance in self.assistance:
                 if assistance.enter_timestamp.day == 31:
-                    extras_31 = {
-                        'HED': round(assistance.hedo, 2),
-                        'HEN': round(assistance.heno, 2),
-                        'HRDDF': round(assistance.reco, 2),
-                        'HEDDF': round(assistance.recf, 2),
-                        'HRNDF': round(assistance.dom, 2),
-                        'HRN': round(assistance.hedf, 2),
-                        'HENDF': round(assistance.henf, 2),
-                    }
+                    ttt += round(assistance.hedo, 2)
+                    ttt += round(assistance.heno, 2)
+                    ttt += round(assistance.hedf, 2)
+                    ttt += round(assistance.henf, 2)
                     continue
-                if ttt == 0:
-                    ttt = assistance.ttt
-                else:
-                    ttt += Decimal(assistance.ttt)
+                real_working_days += 1
+                ttt += round(Decimal(str(assistance.ttt)), 2)
 
-            for line in lines_payroll:
+        # Validate if select date from extras
+        if not start_date_extras or not end_date_extras:
+            extras = {}
+
+        if extras:
+            sum_extras = sum(cant_extras
+                             for type, cant_extras in extras.items()
+                             if type == 'hedo' or type == 'heno' or
+                             type == 'hedf' or type == 'henf')
+
+            # Validate if party have LicenciaNR to discount it from assistance
+            for line in self.lines:
                 event = Event.search([
                     ('category.wage_type.type_concept_electronic', '=',
                      'LicenciaNR'),
@@ -1984,120 +2012,60 @@ class Payroll(metaclass=PoolMeta):
                     validate_event.append(event)
                 else:
                     event = ()
+
                 if event:
                     days = [i.quantity for i in event]
                     workin_days_salary -= int(sum(days))
-                if line.wage_type.type_concept == 'extras' and line.wage_type.type_concept_electronic in [
-                        'HED', 'HEN'
-                ]:
-                    extras[line.wage_type.type_concept_electronic] = {
-                        'line': line,
-                        'quantity': round(line.quantity, 2)
-                    }
-                    exclude = lines_payroll.index(line)
-                    lines_payroll.pop(exclude)
 
-            if extras != {}:
-                for key, value in extras.items():
-                    if value['quantity'] > 0:
-                        lines_payroll.append(value['line'])
+            # Validate if ttte is different to real ttt
+            if workin_days_salary != real_working_days:
+                employee = self.employee.id
+                contact = Contract.search(['employee', '=', employee])
+                start_date_contract = contact[0].start_date
+                end_date_contract = contact[0].end_date
 
-        for line in lines_payroll:
-            if line.wage_type.type_concept_electronic in extras_31.keys():
-                line.quantity += round(
-                    extras_31[line.wage_type.type_concept_electronic], 2)
-                line.save()
+                if start_date_contract > start_date_extras:
+                    difference = end_date_extras - start_date_contract
+                    workin_days_salary = difference.days + 1
+                elif end_date_contract and end_date_contract < end_date_extras:
+                    difference = end_date_contract - start_date_extras
+                    workin_days_salary = difference.days + 1
 
-        self.lines = ()
-        self.lines = tuple(lines_payroll)
-        self.save()
+            # Get difference from ttte and ttt
+            workin_days = round(Decimal(str(workin_days_salary * Decimal(7.83))),
+                                2)
+            difference = round(ttt - workin_days, 2)
 
-    def _create_payroll_lines(self, wages, extras, discounts=None):
-        """Function to create payroll lines"""
-
-        PayrollLine = Pool().get('staff.payroll.line')
-        MoveLine = Pool().get('account.move.line')
-        LoanLine = Pool().get('staff.loan.line')
-        Event = Pool().get('staff.event')
-
-        salary_args = {}
-        validate_event = []
-        values = []
-        workin_days_salary = 15
-        real_working_days = 0
-        discount = 0
-        ttt = 0
-
-        salary_in_date = self.contract.get_salary_in_date(self.end)
-        get_line = self.get_line
-        get_line_quantity = self.get_line_quantity
-        get_line_quantity_special = self.get_line_quantity_special
-        get_salary_full = self.get_salary_full
-        values_append = values.append
-
-        self.process_loans_to_pay(LoanLine, PayrollLine, MoveLine)
-
-        if self.assistance:
-            for assistance in self.assistance:
-                if assistance.enter_timestamp.day == 31:
-                    continue
-                real_working_days += 1
-                ttt += round(Decimal(str(assistance.ttt)), 2)
-
-        for line in self.lines:
-            event = Event.search([
-                ('category.wage_type.type_concept_electronic', '=',
-                 'LicenciaNR'),
-                ('start_date', '>=', self.start_extras),
-                ('end_date', '<=', self.end_extras),
-                ('employee.id', '=', self.employee.id),
-            ])
-            if event not in validate_event:
-                validate_event.append(event)
-            else:
-                event = ()
-
-            if event:
-                days = [i.quantity for i in event]
-                workin_days_salary -= int(sum(days))
-
-        if workin_days_salary != real_working_days:
-            workin_days_salary = real_working_days
-
-        workin_days = round(Decimal(str(workin_days_salary * Decimal(7.83))),
-                            2)
-
-        difference = round(ttt - workin_days, 2)
-        if difference < 0:
-            if extras:
+            if difference < 0:
+                pending_value = abs(difference)
                 for type, cant_extras in extras.items():
-                    if type == 'hedo':
-                        if difference < 0:
-                            if abs(difference) >= cant_extras:
-                                difference += cant_extras
+                    if type == 'hedo' or type == 'heno' or\
+                            type == 'hedf' or type == 'henf':
+                        if pending_value > 0:
+                            if pending_value > cant_extras:
+                                pending_value -= cant_extras
                                 extras[type] = Decimal(0)
                             else:
-                                extras[type] -= abs(difference)
-                                difference = 0
-        else:
-            sum_extras = 0
-            sum_extras = sum(cant_extras
-                             for type, cant_extras in extras.items()
-                             if type == 'hedo')
-            if sum_extras > difference:
-                for type, cant_extras in extras.items():
-                    if type == 'hedo':
-                        if sum_extras > difference:
-                            if difference > cant_extras:
-                                difference -= cant_extras
-                                extras[type] = Decimal(0)
-                            else:
-                                value_rest = abs(sum_extras - difference)
-                                extras[type] -= value_rest
+                                rest_extras = round(
+                                    cant_extras - pending_value, 2)
+                                extras[type] = rest_extras
+                                pending_value = 0
             else:
-                for type, cant_extras in extras.items():
-                    if type == 'hedo':
-                        extras[type] = sum_extras
+                if sum_extras > difference:
+                    pending_value = round(
+                        sum_extras - difference, 2)
+                    for type, cant_extras in extras.items():
+                        if type == 'hedo' or type == 'heno' or\
+                                type == 'hedf' or type == 'henf':
+                            if pending_value > 0:
+                                if pending_value > cant_extras:
+                                    pending_value -= cant_extras
+                                    extras[type] = Decimal(0)
+                                else:
+                                    rest_extras = round(
+                                        cant_extras - pending_value, 2)
+                                    extras[type] = rest_extras
+                                    pending_value = 0
 
         for wage, party, fix_amount in wages:
             if not fix_amount:
@@ -2105,7 +2073,6 @@ class Payroll(metaclass=PoolMeta):
                 if wage.salary_constitute:
                     salary_args['salary'] = salary_in_date
 
-                # Este metodo instancia podria pasarse a un metodo de clase
                 unit_value = wage.compute_unit_price(salary_args)
             else:
                 unit_value = fix_amount
@@ -2118,8 +2085,8 @@ class Payroll(metaclass=PoolMeta):
                 qty = get_line_quantity(wage, self.start, self.end, extras,
                                         discount)
             line_ = get_line(wage, qty, unit_value, party)
-
             values_append(line_)
+
         PayrollLine.create(values)
 
     def process_loans_to_pay(self, LoanLine, PayrollLine, MoveLine):

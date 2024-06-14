@@ -461,6 +461,7 @@ class Actualizacion(ModelSQL, ModelView):
         Access = pool.get('staff.access')
         Rest = pool.get('staff.access.rests')
         Employee = pool.get('company.employee')
+        Contract = pool.get('staff.contract')
         to_save = {}
         to_rest = {}
         start_work = None
@@ -473,14 +474,35 @@ class Actualizacion(ModelSQL, ModelView):
                                            yesterday.day, 0, 0, 0)
         biometric_data = configuration.get_biometric_access_transactions(
             event_time)
+        start_date = (event_time + datetime.timedelta(hours=5)).date()
 
         for data in biometric_data:
             if data.Nit_cedula not in to_save:
                 employee = Employee.search([('party.id_number', '=',
                                              data.Nit_cedula)])
+
                 if not employee:
                     continue
                 employee, = employee
+                contracts = Contract.search([
+                    'OR',
+                    [
+                        ('employee', '=', employee.id),
+                        ('start_date', '<=', start_date),
+                        ('finished_date', '>=', start_date),
+                    ],
+                    [
+                        ('employee', '=', employee.id),
+                        ('start_date', '<=', start_date),
+                        ('finished_date', '=', None),
+                    ]
+                ],
+                    limit=1,
+                    order=[('start_date', 'DESC')])
+
+                if not contracts:
+                    continue
+
                 start_work = None
                 to_save[data.Nit_cedula] = Access()
                 to_save[data.Nit_cedula].employee = employee
