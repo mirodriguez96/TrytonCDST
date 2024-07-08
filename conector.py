@@ -1167,6 +1167,8 @@ class ImportedDocumentWizard(Wizard):
         Revision = pool.get('product.cost_price.revision')
         AverageCost = Pool().get('product.average_cost')
         company = Transaction().context.get('company')
+        StockPeriod = Pool().get('stock.period')
+
         revisions = []
         to_create = []
         products = []
@@ -1185,6 +1187,15 @@ class ImportedDocumentWizard(Wizard):
                 firts = False
                 continue
 
+            date = cls.convert_str_date(linea[2])
+            date_period = StockPeriod.search(
+                [('date', '=', date), ('state', '!=', 'closed')])
+            if not date_period:
+                raise UserError(
+                    'ERROR', 'No se encontro un periodo abierto para '
+                    'la fecha, la fecha debe coincidir con la fecha de '
+                    'cierre del periodo')
+
             code_product = linea[0]
             product = Product.search([('template', '=', code_product)])
             if not product:
@@ -1199,7 +1210,6 @@ class ImportedDocumentWizard(Wizard):
                     "ERROR COSTO",
                     f"No se encontro el costo para el producto {code_product}")
 
-            date = cls.convert_str_date(linea[2])
             revision = {
                 "company": company,
                 "product": product.id,

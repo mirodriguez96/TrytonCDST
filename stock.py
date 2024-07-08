@@ -413,9 +413,19 @@ class ModifyCostPrice(metaclass=PoolMeta):
         Product = pool.get('product.product')
         Revision = pool.get('product.cost_price.revision')
         AverageCost = Pool().get('product.average_cost')
+        StockPeriod = Pool().get('stock.period')
         Date = pool.get('ir.date')
-        today = Date.today()
         revisions = []
+        today = Date.today()
+        date_period = StockPeriod.search(
+            [('date', '=', self.start.date), ('state', '!=', 'closed')])
+
+        if not date_period:
+            raise UserError(
+                'ERROR', 'No se encontro un periodo abierto para '
+                'la fecha, la fecha debe coincidir con la fecha de '
+                'cierre del periodo')
+
         costs = defaultdict(list)
         if self.model.__name__ == 'product.product':
             records = list(self.records)
@@ -484,12 +494,14 @@ class MoveCDT(metaclass=PoolMeta):
         Revision.create([revision])
         AverageCost.create([data])
         try:
-            Product.recompute_cost_price([self.product], start=self.effective_date)
+            Product.recompute_cost_price(
+                [self.product], start=self.effective_date)
         except Exception as error:
             code_product = self.product.template.code
             name_product = self.product.template.name
             raise UserError(f"ERROR:",
                             f"El producto con codigo [{code_product}-{name_product}] No coinice la UDM")
+
     @classmethod
     def _get_origin(cls):
         return super(MoveCDT, cls)._get_origin() + ['production']
