@@ -56,6 +56,7 @@ def register():
                   account.AccountAsset,
                   account.AuxiliaryBookStartCDS,
                   account.IncomeStatementView,
+                  collection.Tracking,
                   company.Company,
                   conector.Actualizacion,
                   conector.Email,
