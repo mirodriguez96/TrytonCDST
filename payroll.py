@@ -22,6 +22,7 @@ from email.header import Header
 from sql.operators import Between
 from sql.aggregate import Sum
 
+from dateutil.relativedelta import relativedelta
 from datetime import timedelta, date
 from decimal import Decimal
 from itertools import chain
@@ -51,17 +52,6 @@ CONCEPT_ACCESS = {
     'HRNDF': 'dom',
 }
 
-TYPE_BONUS = [
-    'BONIFICACION NO SALARIAL', 'BONIFICACIONES NO SALARIAL ADMIN',
-    'BONIFICACIONES NO SALARIAL VENTAS', 'BONIFICACIONES NO SALARIAL PROCESOS',
-    'BONIFICACIONES NO SALARIAL MOI'
-]
-
-OTHER_NO_PAYMENT = [
-    'LICENCIA NO REMUNERADA ADMIN', 'LICENCIA NO REMUNERADA VENTAS',
-    'LICENCIA NO REMUNERADA PROCESOS', 'LICENCIA NO REMUNERADA MOI',
-    'PERMISO NO REMUNERADO', 'LICENCIA NO REMUNERADA OPERATIVA', 'SUSPENSION'
-]
 
 TYPE_CONCEPT_ELECTRONIC = [
     ('', ''),
@@ -2190,6 +2180,8 @@ class PayrollExo2276(metaclass=PoolMeta):
         LiquidationLine = pool.get('staff.liquidation.line')
 
         new_objects = {}
+        employees = []
+
         index = 0
         start_period = data['start_period']
         end_period = data['end_period']
@@ -2202,6 +2194,7 @@ class PayrollExo2276(metaclass=PoolMeta):
         for payroll in payrolls:
             index += 1
             party = payroll.employee.party
+            employees.append(payroll.employee.party.id)
             if party.id in new_objects.keys():
                 continue
 
@@ -2218,16 +2211,15 @@ class PayrollExo2276(metaclass=PoolMeta):
                 'city_code': party.city_code,
                 'country_code': party.country_code,
                 'email': party.email,
-                'payments': 0,
+                'salary_payment': 0,
+                'total_benefit': 0,
+                'other_payments': 0,
                 'cesanpag': 0,
                 'incapacity': 0,
                 'interest': 0,
                 'holidays': 0,
                 'bonus': 0,
-                'bonus_no_salarial': 0,
                 'bonus_service': 0,
-                'transport': 0,
-                'food': 0,
                 'total_deduction': 0,
                 'health': 0,
                 'retirement': 0,
@@ -2238,34 +2230,31 @@ class PayrollExo2276(metaclass=PoolMeta):
                 'afc_account': 0,
                 'avc_account': 0,
                 'discount': 0,
-                'other': 0,
-                'various': 0,
-                'salary': 0,
-                'extras': 0,
                 'box_family': 0,
                 'risk': 0,
                 'unemployment': 0,
-                'allowance': 0,
                 'syndicate': 0,
                 'commission': 0,
-                'total_benefit': 0,
                 'gross_payment': 0,
-                '_cesanpag': 0,
                 'others_payments': 0,
                 'total_retirement': 0,
                 'total_salary': 0,
+                'latest_payment': 0,
+                'total': 0
             }
             new_objects[party.id] = cls._prepare_lines(payrolls,
                                                        new_objects[party.id],
                                                        party.id)
 
             _cesanpag = 0
+            _unemployment = 0
             _total_benefit = 0
             _other = 0
             _health = 0
             _retirement = 0
             _tax = 0
             _retirement_voluntary = 0
+            _salary_payments = 0
 
             lines_liquid = LiquidationLine.search_read(
                 [('liquidation.employee.party', '=', party.id),
@@ -2273,15 +2262,22 @@ class PayrollExo2276(metaclass=PoolMeta):
                  ('liquidation.liquidation_date', '<=', data['end_period']),
                  ('wage.type_concept', 'in', [
                      'unemployment', 'interest', 'holidays', 'bonus_service',
-                     'health', 'retirement', 'tax', 'fsp', 'other'
+                     'health', 'retirement', 'tax', 'fsp', 'other', 'extras'
                  ])],
-                fields_names=['amount', 'wage.type_concept', 'wage.name'])
+                fields_names=[
+                    'amount', 'wage.type_concept', 'wage.name',
+                    'liquidation.kind', 'wage.type_concept_electronic'
+                ])
 
             for line in lines_liquid:
                 if line['wage.']['type_concept'] in [
                         'unemployment', 'interest'
                 ]:
-                    _cesanpag += line['amount']
+                    if line['liquidation.']['kind'] == 'unemployment' and line[
+                            'wage.']['type_concept'] == 'unemployment':
+                        _unemployment += line['amount']
+                    else:
+                        _cesanpag += line['amount']
                 elif line['wage.']['type_concept'] == 'convencional_bonus':
                     _other += line['amount']
                 elif line['wage.']['type_concept'] == 'health':
@@ -2291,13 +2287,21 @@ class PayrollExo2276(metaclass=PoolMeta):
                     _retirement += abs(line['amount'])
                 elif line['wage.']['type_concept'] == 'tax':
                     _tax += abs(line['amount'])
+                elif line['wage.']['type_concept'] == 'extras':
+                    _salary_payments += line['amount']
                 elif line['wage.']['type_concept'] == 'other':
                     if line['wage.']['name'] == "PENSIONES VOLUNTARIAS":
                         _retirement_voluntary += abs(line['amount'])
+                    if line['wage.']['type_concept_electronic'] == 'Indemnizacion':
+                        _other += line['amount']
+                    if line['wage.']['type_concept_electronic'] == 'PrimasNS':
+                        _other += line['amount']
                 else:
                     _total_benefit += line['amount']
 
             new_objects[party.id]['cesanpag'] = _cesanpag
+            new_objects[party.id]['total_salary'] += _salary_payments
+            new_objects[party.id]['unemployment'] = _unemployment
             new_objects[party.id]['total_benefit'] += _total_benefit
             new_objects[party.id]['others_payments'] += _other
             new_objects[party.id]['health'] += _health
@@ -2305,6 +2309,14 @@ class PayrollExo2276(metaclass=PoolMeta):
             new_objects[party.id]['retefuente'] += _tax
             new_objects[
                 party.id]['retirement_voluntary'] += _retirement_voluntary
+
+        employees = list(set(employees))
+
+        # Set percent last six months payments
+        for party_id in employees:
+            cls.get_domain_payroll_employees(party_id,
+                                             end_period=end_period,
+                                             new_objects=new_objects)
 
         report_context['records'] = new_objects.values()
         report_context['end_period'] = end_period
@@ -2326,50 +2338,46 @@ class PayrollExo2276(metaclass=PoolMeta):
         for line in lines:
             concept = line.wage_type.type_concept
             if line.wage_type.definition == 'payment':
-                vals['payments'] += line.amount
-                if concept == 'unemployment':
-                    continue
-                elif concept == 'interest':
+                if concept == 'unemployment' or concept == 'interest':
                     continue
                 elif concept == 'salary':
-                    vals['salary'] += line.amount
-                elif concept == 'commission':
-                    vals['payments'] += line.amount
-                    vals['commission'] += line.amount
-                elif concept == 'allowance':
-                    vals['payments'] += line.amount
-                    vals['allowance'] += line.amount
+                    vals['salary_payment'] += line.amount
                 elif concept == 'extras':
-                    vals['payments'] += line.amount
-                    vals['extras'] += line.amount
+                    vals['salary_payment'] += line.amount
+                elif concept == 'incapacity_greater_to_2_days':
+                    vals['salary_payment'] += line.amount
+                elif concept == 'incapacity_arl':
+                    vals['salary_payment'] += line.amount
+                elif concept == 'other':
+                    if line.wage_type.type_concept_electronic == 'LicenciaR':
+                        vals['salary_payment'] += line.amount
+                    elif line.wage_type.type_concept_electronic == 'ConceptoS':
+                        vals['salary_payment'] += line.amount
+                    elif line.wage_type.type_concept_electronic != 'LicenciaNR':
+                        vals['other_payments'] += line.amount
+
                 elif concept == 'holidays':
-                    if line.wage_type.id == 189:
+                    if line.wage_type.name == 'VACACIONES DISFRUTADAS EN NOMINA':
                         vals['total_benefit'] += line.amount
-                elif concept == 'bonus':
-                    if line.wage_type.name in TYPE_BONUS:
-                        vals['bonus_no_salarial'] += line.amount
-                    else:
-                        vals['bonus'] += line.amount
-                    vals['payments'] += line.amount
-                elif concept == 'bonus_service':
-                    vals['payments'] += line.amount
-                    vals['bonus_service'] += line.amount
                 elif concept == 'transport':
-                    vals['payments'] += line.amount
-                    vals['transport'] += line.amount
+                    vals['other_payments'] += line.amount
+                elif concept == 'bonus':
+                    vals['other_payments'] += line.amount
                 elif concept == 'food':
-                    vals['payments'] += line.amount
-                    vals['food'] += line.amount
+                    vals['other_payments'] += line.amount
+                elif concept == 'allowance':
+                    vals['other_payments'] += line.amount
+                elif concept == 'commission':
+                    vals['commission'] += line.amount
+                elif concept == 'bonus_service':
+                    vals['bonus_service'] += line.amount
                 elif concept == 'box_family':
                     vals['box_family'] += line.amount
                 elif concept == 'risk':
                     vals['risk'] += line.amount
-                elif concept in ['other', 'convencional_bonus']:
-                    if line.wage_type.name not in OTHER_NO_PAYMENT:
-                        vals['other'] += line.amount
                 else:
                     if concept != "sena" and concept != "icbf":
-                        vals['various'] += line.amount
+                        vals['other_payments'] += line.amount
             elif line.wage_type.definition == 'deduction':
                 vals['total_deduction'] += line.amount
                 if concept == 'health':
@@ -2392,13 +2400,101 @@ class PayrollExo2276(metaclass=PoolMeta):
             else:
                 vals['discount'] += line.amount
 
-        vals['others_payments'] = (vals['other'] + vals['bonus_no_salarial'] +
-                                   vals['allowance'] + vals['various'] +
-                                   vals['food'] + vals['transport'])
+        vals['total_salary'] = vals['salary_payment']
+        vals['others_payments'] = vals['other_payments']
         vals['total_retirement'] = vals['fsp'] + vals['retirement']
-        vals['total_salary'] = sum(
-            [vals['salary'], vals['extras'], vals['bonus']])
         return vals
+
+    @classmethod
+    def prepare_lines_employee(cls, payrolls):
+        """Function to build data to report"""
+
+        payroll_ids = [payroll.id for payroll in payrolls]
+        Lines = Pool().get('staff.payroll.line')
+        lines = Lines.search([
+            ('payroll', 'in', payroll_ids),
+        ])
+        payments = 0
+        for line in lines:
+            concept = line.wage_type.type_concept
+            if line.wage_type.definition == 'payment':
+                if concept == 'salary':
+                    payments += line.amount
+                elif concept == 'extras':
+                    payments += line.amount
+                elif concept == 'commission':
+                    payments += line.amount
+                elif concept == 'bonus':
+                    payments += line.amount
+                elif concept == 'incapacity_greater_to_2_days':
+                    payments += line.amount
+                elif concept == 'incapacity_arl':
+                    payments += line.amount
+                elif concept == 'holidays':
+                    if line.wage_type.name == 'VACACIONES DISFRUTADAS EN NOMINA':
+                        payments += line.amount
+                elif concept == 'transport':
+                    payments += line.amount
+                elif concept == 'other':
+                    if line.wage_type.type_concept_electronic == 'LicenciaR':
+                        payments += line.amount
+
+        return payments
+
+    @classmethod
+    def get_domain_payroll_employees(cls,
+                                     party_id,
+                                     end_period=None,
+                                     new_objects=None):
+        """Last six months payments"""
+
+        Payroll = Pool().get('staff.payroll')
+        LiquidationLine = Pool().get('staff.liquidation.line')
+        total_payroll = 0
+        vacations = 0
+
+        payrolls = Payroll.search([
+            ('date_effective', '<=', end_period),
+            ('employee.party.id', '=', party_id),
+        ],
+            order=[('date_effective', 'DESC')])
+        end_date = payrolls[0].date_effective if payrolls else None
+        start_date = end_date - relativedelta(months=6)
+        data = {'start_period': start_date,
+                'end_period': end_date, 'employees': None}
+
+        domain = cls.get_domain_payroll(data)
+        domain += [('employee.party.id', '=', party_id)]
+        payrolls = Payroll.search([domain])
+
+        lines_liquid = LiquidationLine.search_read(
+            [('liquidation.employee.party', '=', party_id),
+             ('liquidation.kind', '!=', 'contract'),
+             ('liquidation.liquidation_date', '>', start_date),
+             ('liquidation.liquidation_date', '<=', end_date),
+             ('wage.type_concept', '=', 'holidays')],
+            fields_names=[
+                'amount', 'wage.type_concept_electronic',
+            ])
+        for line in lines_liquid:
+            if line['wage.']['type_concept_electronic'] == 'VacacionesComunes':
+                vacations += line['amount']
+
+        count_payrolls = Payroll.search(domain, count=True)
+
+        if count_payrolls != 0:
+            if count_payrolls % 2 != 0:
+                count_payrolls += 1
+            count_payrolls /= 2
+        else:
+            count_payrolls = 1
+
+        for payroll in payrolls:
+            value_payroll = cls.prepare_lines_employee([payroll])
+            total_payroll += value_payroll
+        total = total_payroll + vacations
+        month_prom = total / Decimal(count_payrolls)
+        new_objects[party_id]['latest_payment'] = round(month_prom, 0)
 
 
 class IncomeWithholdingsReport(PayrollExo2276, metaclass=PoolMeta):
