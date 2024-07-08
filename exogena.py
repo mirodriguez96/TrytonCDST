@@ -124,13 +124,14 @@ DEFINITIONS = {
 }
 
 
-class TemplateExogena(metaclass=PoolMeta):
+class TemplateExogena(Report, metaclass=PoolMeta):
     "0000 Template"
     __name__ = 'account.f0000'
 
     @classmethod
     def get_context(cls, records, header, data):
-        report_context = super().get_context(records, header, data)
+        """Function to build info to exogena"""
+
         pool = Pool()
         Concept = pool.get('account.exogena_concepto')
         LineTax = pool.get('account.tax.line')
@@ -147,6 +148,7 @@ class TemplateExogena(metaclass=PoolMeta):
         concept_accounts = []
         party_cuantia = None
 
+        report_context = Report.get_context(records, header, data)
         party_cuantias = Party.search([
             ('id_number', '=', '222222222'),
         ])
@@ -158,7 +160,7 @@ class TemplateExogena(metaclass=PoolMeta):
             ('report', '=', report_number),
             ('concept', '!=', ''),
             ('definition', '!=', ''),
-        ])
+        ], order=[('concept', 'DESC')])
 
         for c in concepts:
             if not c.definition or not c.concept:
@@ -185,7 +187,6 @@ class TemplateExogena(metaclass=PoolMeta):
         if report_number in ('1009', '1008'):
             periods = Period.search([
                 ('start_date', '<=', end_period.start_date),
-                # ('type', '=', 'standard'),
             ])
         else:
             periods = Period.search([
@@ -198,8 +199,9 @@ class TemplateExogena(metaclass=PoolMeta):
         period_ids = [p.id for p in periods]
         banks = Bank.search([('account_expense', 'in', concept_accounts)])
 
-        for bank in banks:
-            concept_banks[bank.account] = bank
+        if banks:
+            for bank in banks:
+                concept_banks[bank.account_expense] = bank
 
         if concepts:
             for c in concepts:
@@ -279,7 +281,7 @@ class TemplateExogena(metaclass=PoolMeta):
                             if ml.account.id == line.account.id:
                                 continue
                             if ml.debit > _ZERO and line.debit > _ZERO or \
-                                ml.credit > _ZERO and line.credit > _ZERO:
+                                    ml.credit > _ZERO and line.credit > _ZERO:
                                 peer_account = accounts_target.get(
                                     ml.account.id)
                                 if peer_account:
@@ -290,7 +292,6 @@ class TemplateExogena(metaclass=PoolMeta):
                     records.setdefault(concept_exo, {})
                     records[concept_exo].setdefault(party, {}.fromkeys(
                         definitions.keys(), Decimal(0)))
-
                     # Build dict to cuantia
                     if party_cuantia:
                         records_cuantia.setdefault(concept_exo, {})
@@ -331,19 +332,22 @@ class TemplateExogena(metaclass=PoolMeta):
                 or report_number == '1008' or report_number == '1009'):
             new_records = cls.update_cuantia_data(records.items(),
                                                   party_cuantia,
-                                                  records_cuantia, definitions,
-                                                  report_number)
+                                                  records_cuantia,
+                                                  definitions,
+                                                  report_number,
+                                                  concepts)
             report_context['records'] = new_records.items()
         return report_context
 
     @classmethod
     def update_cuantia_data(cls, records, party_cuantia, records_cuantia,
-                            definitions, report):
+                            definitions, report, concepts):
 
         if report == "1001":
             records_cuantia = cls.get_records_1001(records, party_cuantia,
                                                    records_cuantia,
-                                                   definitions)
+                                                   definitions,
+                                                   concepts)
         if report == "1005":
             records_cuantia = cls.get_records_1005(records, party_cuantia,
                                                    records_cuantia,
@@ -367,10 +371,8 @@ class TemplateExogena(metaclass=PoolMeta):
         return records_cuantia
 
     @classmethod
-    def get_records_1001(cls, records, party_cuantia, records_cuantia,
-                         definitions):
+    def get_records_1001(cls, records, party_cuantia, records_cuantia, definitions, concepts):
         """Function to update data of exogena 1001"""
-
         for concept, parties in records:
             for party, values in parties.items():
                 if 0 < values["1001_pagoded"] < 100000:
@@ -380,18 +382,18 @@ class TemplateExogena(metaclass=PoolMeta):
                     )
                     for key, value in values.items():
                         records_cuantia[concept][party_cuantia][key] += value
-
                 elif 0 == values["1001_pagoded"]\
-                    and (values["1001_pagonoded"] > 0
-                         or values["1001_ivaded"] > 0
-                         or values["1001_ivanoded"] > 0
-                         or values["1001_retprac"] > 0
-                         or values["1001_retasum"] > 0
-                         or values["1001_retpracivarc"] > 0
-                         or values["1001_retasumivars"] > 0
-                         or values["1001_retpracivanodo"] > 0
-                         or values["1001_retpracree"] > 0
-                         or values["1001_retasumcree"] > 0):
+                        and (values["1001_pagonoded"] > 0
+                             or values["1001_ivaded"] > 0
+                             or values["1001_ivanoded"] > 0
+                             or values["1001_retprac"] > 0
+                             or values["1001_retasum"] > 0
+                             or values["1001_retpracivarc"] > 0
+                             or values["1001_retasumivars"] > 0
+                             or values["1001_retpracivanodo"] > 0
+                             or values["1001_retpracree"] > 0
+                             or values["1001_retasumcree"] > 0)\
+                        and concept != '0000':
                     records_cuantia[concept].setdefault(
                         party_cuantia,
                         {}.fromkeys(definitions.keys(), Decimal(0)),
@@ -405,6 +407,47 @@ class TemplateExogena(metaclass=PoolMeta):
                     )
                     for key, value in values.items():
                         records_cuantia[concept][party][key] = value
+
+        list_concepts = set([_concept.concept for _concept in concepts])
+        for concept, parties in records_cuantia.items():
+            if concept == '0000':
+                for party, values in parties.items():
+                    total_pay_deductible = 0
+                    total_pay_non_deductible = 0
+                    iva_total = records_cuantia[concept][party]['1001_ivaded']
+                    iva_total_non_deductible = records_cuantia[concept][party]['1001_ivanoded']
+
+                    for _concept in list_concepts:
+                        if _concept in records_cuantia\
+                                and party in records_cuantia[_concept]\
+                                and _concept != concept:
+                            for key, value in values.items():
+                                if key == '1001_pagoded':
+                                    pay_deductible = records_cuantia[_concept][party]['1001_pagoded']
+                                    total_pay_deductible += pay_deductible
+                                if key == '1001_pagonoded':
+                                    pay_non_deductible = records_cuantia[_concept][party]['1001_pagonoded']
+                                    total_pay_non_deductible += pay_non_deductible
+
+                    for _concept in list_concepts:
+                        if _concept in records_cuantia\
+                                and party in records_cuantia[_concept]\
+                                and _concept != concept:
+                            for key, value in values.items():
+                                if key == '1001_pagoded':
+                                    pay_deductible = records_cuantia[_concept][party][key]
+                                    iva_deductible = round(
+                                        (pay_deductible/total_pay_deductible * iva_total))
+                                    records_cuantia[_concept][party]['1001_ivaded'] = iva_deductible
+                                if key == '1001_pagonoded':
+                                    pay_non_deductible = records_cuantia[_concept][party][key]
+                                    iva_non_deductible = 0
+                                    if total_pay_non_deductible > 0:
+                                        iva_non_deductible = round(
+                                            (pay_non_deductible/total_pay_non_deductible
+                                             * iva_total_non_deductible))
+                                    records_cuantia[_concept][party]['1001_ivanoded'] = iva_non_deductible
+        del records_cuantia['0000']
         return records_cuantia
 
     @classmethod
@@ -563,6 +606,11 @@ class F1001(TemplateExogena, metaclass=PoolMeta):
     __name__ = 'account.f1001'
 
 
+class F1003(TemplateExogena, metaclass=PoolMeta):
+    "1003 Retenciones en la fuente que le practicaron"
+    __name__ = 'account.f1003'
+
+
 class F1005(TemplateExogena, metaclass=PoolMeta):
     "1005 Impuesto a las ventas por pagar (Descontable)"
     __name__ = 'account.f1005'
@@ -586,3 +634,63 @@ class F1008(TemplateExogena, metaclass=PoolMeta):
 class F1009(TemplateExogena, metaclass=PoolMeta):
     "1009 Saldo de cuentas por Pagar"
     __name__ = 'account.f1009'
+
+
+class F1011(TemplateExogena, metaclass=PoolMeta):
+    "1011 Información de las declaraciones Tributarias"
+    __name__ = 'account.f1011'
+
+
+class F1012(TemplateExogena, metaclass=PoolMeta):
+    "1012 Información de declaraciones tributarias, acciones, inversiones en bonos títulos valores y cuentas de ahorro y cuentas corrientes "
+    __name__ = 'account.f1012'
+
+
+class F1043(TemplateExogena, metaclass=PoolMeta):
+    "1043 Pagos o Abonos en cuenta y retenciones practicadas de consorcio y uniones temporales"
+    __name__ = 'account.f1043'
+
+
+class F1045(TemplateExogena, metaclass=PoolMeta):
+    "1045 Información de ingresos recibidos por consorcios y uniones temporales"
+    __name__ = 'account.f1045'
+
+
+class F2015(TemplateExogena, metaclass=PoolMeta):
+    "2015 Retenciones"
+    __name__ = 'account.f2015'
+
+
+class F2276(TemplateExogena, metaclass=PoolMeta):
+    "2276 Información Certificado de Ingresos y Retenciones para Personas Naturales Empleados"
+    __name__ = 'account.f2276'
+
+
+class F5247(TemplateExogena, metaclass=PoolMeta):
+    "5247 Pagos o abonos en cuenta y retenciones practicadas en contratos de colaboración empresarial"
+    __name__ = 'account.f5247'
+
+
+class F5248(TemplateExogena, metaclass=PoolMeta):
+    "5248 Ingresos recibidos en contratos de colaboración empresarial"
+    __name__ = 'account.f5248'
+
+
+class F5249(TemplateExogena, metaclass=PoolMeta):
+    "5249 IVA descontable en contratos de colaboración empresarial"
+    __name__ = 'account.f5249'
+
+
+class F5250(TemplateExogena, metaclass=PoolMeta):
+    "5250 IVA generado en contratos de colaboración empresarial"
+    __name__ = 'account.f5250'
+
+
+class F5251(TemplateExogena, metaclass=PoolMeta):
+    "5251 Saldos cuentas por cobrar a 31 de diciembre en contratos de colaboración empresarial"
+    __name__ = 'account.f5251'
+
+
+class F5252(TemplateExogena, metaclass=PoolMeta):
+    "5252 Saldos de cuentas por pagar al 31 de diciembre en contratos de colaboración empresarial"
+    __name__ = 'account.f5252'
