@@ -70,6 +70,7 @@ class Voucher(ModelSQL, ModelView):
                             Y NO ES POSIBLE SU ELIMINACION O MODIFICACION"
 
                             continue
+
                         if comprobante.__name__ == 'account.voucher':
                             cls.unreconcilie_move_voucher([comprobante])
                             cls.force_draft_voucher([comprobante])
@@ -203,6 +204,8 @@ class Voucher(ModelSQL, ModelView):
             return
         Actualizacion = pool.get('conector.actualizacion')
         Voucher = pool.get('account.voucher')
+        MoveLine = pool.get('account.move.line')
+        BankStatementLines = pool.get('bank_statement.line-account.move.line')
         Line = pool.get('account.voucher.line')
         Party = pool.get('party.party')
         PayMode = pool.get('account.voucher.paymode')
@@ -228,6 +231,41 @@ class Voucher(ModelSQL, ModelView):
                 comprobante = cls.find_voucher(id_tecno)
                 if comprobante:
                     if doc.anulado == 'S':
+
+                        if comprobante.__name__ == 'account.voucher':
+                            move_voucher = comprobante.move
+                            move_lines_voucher = MoveLine.search(
+                                ['move', '=', move_voucher])
+                            if move_lines_voucher:
+                                bank_statement = False
+                                for lines_voucher in move_lines_voucher:
+                                    bank_statement_line = BankStatementLines.search(
+                                        ['move_line', '=', lines_voucher])
+                                    if bank_statement_line:
+                                        bank_statement = True
+
+                                if bank_statement:
+                                    exceptions.append(id_tecno)
+                                    logs[
+                                        id_tecno] = "EXCEPCION: El comprobante tiene extractos bancarios asociados"
+                                    continue
+                        if comprobante.__name__ == 'account.multirevenue':
+                            move_lines_multi = MoveLine.search(
+                                ['reference', '=', comprobante.code])
+                            if move_lines_multi:
+                                bank_statement = False
+                                for lines_multirevenue in move_lines_multi:
+                                    bank_statement_line = BankStatementLines.search(
+                                        ['move_line', '=', lines_multirevenue])
+                                    if bank_statement_line:
+                                        bank_statement = True
+                                if bank_statement:
+                                    exceptions.append(id_tecno)
+                                    msg = "EXCEPCION: El multi "\
+                                        "ingreso tiene extractos bancarios "\
+                                        "asociados."
+                                    logs[id_tecno] = msg
+                                    continue
                         if comprobante.__name__ == 'account.voucher':
                             if comprobante.move:
                                 if comprobante.move.period.state == 'close':
@@ -448,12 +486,12 @@ class Voucher(ModelSQL, ModelView):
                         id_tecno] = "EXCEPCION: NO ENCONTRO FORMA DE PAGO EN TECNOCARNES"
                     continue
             except Exception as e:
+                print(f'error {e}')
                 msg = f"EXCEPCION RECIBO {id_tecno} : {str(e)}"
                 logs[id_tecno] = msg
                 exceptions.append(id_tecno)
         actualizacion.add_logs(logs)
-        # for idt in exceptions:
-        #     Config.update_exportado(idt, 'E')
+
         for idt in created:
             Config.update_exportado(idt, 'T')
         for idt in not_import:
@@ -770,21 +808,24 @@ class Voucher(ModelSQL, ModelView):
                 if voucher:
                     if voucher.move:
                         for lines in voucher.move.lines:
-                            if lines.origin:
-                                if lines.origin.move_line.move.origin:
-                                    for notes in lines.origin.move_line.move.origin.payment_lines:
-                                        if notes.origin and notes.origin.__name__ == 'account.note.line':
-                                            note = notes.origin.note
-                                            fixes.desconciliar_borrar_asientos(
-                                                ids_=None,
-                                                id_tecno=note.move.id)
-                                            Note.draft([note])
-                                            note.lines[0].delete(note.lines)
-                                            note.number = Null
-                                            Note.delete([note])
+                            if lines.origin and lines.origin.move_line\
+                                and lines.origin.move_line.move\
+                                    and lines.origin.move_line.move.origin:
+                                for notes in lines.origin.move_line.move.origin.payment_lines:
+                                    if notes.origin and notes.origin.__name__ == 'account.note.line':
+                                        note = notes.origin.note
+                                        fixes.draft_unconciliate_delete_account_move(
+                                            [note.move.id], action="draft")
+                                        fixes.draft_unconciliate_delete_account_move(
+                                            [note.move.id], action="unconciliate")
+                                        fixes.draft_unconciliate_delete_account_move(
+                                            [note.move.id], action="moves")
+                                        Note.draft([note])
+                                        note.lines[0].delete(note.lines)
+                                        note.number = Null
+                                        Note.delete([note])
         except Exception as e:
             print(e)
-        # return reconciliations
 
     # Función que se encarga de forzar a borrador los comprobantes
     @classmethod
