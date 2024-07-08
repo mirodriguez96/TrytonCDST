@@ -1,20 +1,20 @@
-from trytond.model import fields, ModelView
-from trytond.pool import Pool, PoolMeta
-from decimal import Decimal
-from itertools import chain
-
-import datetime
-import calendar
-from trytond.exceptions import UserError
-from trytond.modules.company import CompanyReport
-from trytond.report import Report
 from trytond.wizard import (Wizard, StateReport, StateView, Button,
                             StateTransition)
+from trytond.modules.company import CompanyReport
 from trytond.transaction import Transaction
+from trytond.model import fields, ModelView
+from trytond.exceptions import UserError
+from trytond.pool import Pool, PoolMeta
+from trytond.report import Report
+
+from decimal import Decimal
+from itertools import chain
 from sql import Table
+import datetime
+import calendar
 
 
-#Heredamos del modelo sale.sale para agregar el campo id_tecno
+# Heredamos del modelo sale.sale para agregar el campo id_tecno
 class Production(metaclass=PoolMeta):
     'Production'
     __name__ = 'production'
@@ -302,7 +302,7 @@ class Production(metaclass=PoolMeta):
                         transf['to_location'] = bodega.production_location.id
                         if first:
                             first = False
-                            #Se actualiza el producto para que sea producible
+                            # Se actualiza el producto para que sea producible
                             if not producto.template.producible:
                                 Template.write([producto.template],
                                                {'producible': True})
@@ -346,7 +346,7 @@ class Production(metaclass=PoolMeta):
                     continue
                 production['inputs'] = [('create', entradas)]
                 production['outputs'] = [('create', salidas)]
-                #Se crea y procesa las producciones
+                # Se crea y procesa las producciones
                 producciones = Production.create([production])
                 for productions in producciones:
                     for inputs in productions.inputs:
@@ -519,8 +519,7 @@ class ProductionDetailedStart(ModelView):
     'Production Detailed Start'
     __name__ = 'production.detailed.start'
     company = fields.Many2One('company.company', 'Company', required=True)
-    grouped = fields.Boolean('Grouped', help='Grouped by products')
-    start_date = fields.Date('Start Date')
+    start_date = fields.Date('Start Date', required=True)
     end_date = fields.Date('End Date', required=True)
 
     @staticmethod
@@ -554,7 +553,6 @@ class ProductionDetailed(Wizard):
             'company': self.start.company.id,
             'start_date': self.start.start_date,
             'end_date': self.start.end_date,
-            'grouped': self.start.grouped,
         }
         return action, data
 
@@ -568,96 +566,154 @@ class ProductionDetailedReport(Report):
 
     @classmethod
     def get_context(cls, records, header, data):
+        """Function to build data to report"""
+
         report_context = super().get_context(records, header, data)
         Production = Pool().get('production')
-        production = {}
+        production_data = {}
+
         domain = [
             ('company', '=', data['company']),
             ('effective_date', '>=', data['start_date']),
             ('effective_date', '<=', data['end_date']),
-            ('write_uid', '!=', 0),
             ('state', '!=', 'draft'),
         ]
-
         productions = Production.search(domain)
+        cls.set_outputs(productions, production_data)
+        cls.set_inputs(productions, production_data)
 
-        # if not data['grouped']:
-        #     records = productions
-        # else:
-        #     records = {}
-        #     for p in productions:
-        #         key = str(p.product.id) + p.location.name
-        #         try:
-        #             records[key]['quantity'] += p['quantity']
-        #             records[key]['cost'] += p['cost']
-        #         except:
-        #             records[key] = p
-        #             records[key]['effective_date'] = None
-        #             records[key]['numero'] = None
-        #     records = records.values() if records else []
+        for production, data in production_data.items():
+            total_sell_price = data['totals']['total_sell_price']
+            total_prod_price = data['totals']['_total_cost_production']
+            total_input_amount = data['totals']['total_estimated_amount']
+            total_output_amount = data['totals']['total_production_amount']
+
+            if total_prod_price != 0:
+                margin = (total_sell_price - total_prod_price) / \
+                    total_prod_price
+                production_data[production]['totals']['margin'] = margin
+
+            if total_input_amount != 0:
+                performance = (total_output_amount/total_input_amount)
+                production_data[production]['totals']['performance'] = performance
+
+        report_context['records'] = production_data
+        report_context['Decimal'] = Decimal
+        return report_context
+
+    @classmethod
+    def set_outputs(cls, productions, production):
+        """Function to save outputs and totals data"""
 
         for record in productions:
-            for pro in record.outputs:
-                if record.number not in production:
-                    production[record.number] = {
-                        'werehouse':
-                        record.warehouse.name,
-                        'location':
-                        record.location.name,
-                        'date':
-                        record.effective_date,
-                        'estimated_amount':
-                        Decimal(record.quantity),
-                        'not_production_amount_total':
-                        Decimal(record.quantity),
-                        'cost_base':
-                        record.cost,
-                        'unit_cost':
-                        Decimal(record.cost) /
-                        Decimal(record.quantity) if record.quantity > 0 else 0,
-                        'percentage':
-                        0,
-                        'percentage_merma':
-                        0,
-                        'merma_cost_total':
-                        0,
-                        'outputs': {}
-                    }
+            estimated_amount = round(Decimal(record.quantity), 2)
 
+            if record.number not in production:
+                production[record.number] = {
+                    'werehouse':
+                    record.warehouse.name,
+                    'location':
+                    record.location.name,
+                    'date':
+                    record.effective_date,
+                    'refference':
+                    record.reference,
+                    'not_production_amount_total': estimated_amount,
+                    'outputs': {},
+                    'inputs': {},
+                    'totals': {},
+                }
+
+            if production[record.number]['totals'] == {}:
+                production[record.number]['totals'] = {
+                    'total_estimated_amount': 0,
+                    'total_production_amount': 0,
+                    'total_cost_production': 0,
+                    '_total_cost_production': 0,
+                    'total_sell_price': 0,
+                    'margin': 0,
+                    'performance': 0,
+                }
+
+            for pro in record.outputs:
                 if pro.product.name not in production[
                         record.number]['outputs']:
                     production[record.number]['outputs'][pro.product.name] = {
+                        'id_product': pro.product.code,
                         'udm': pro.product.template.default_uom.symbol,
                         'production_amount': 0,
-                        'unit_cost_estimated': 0,
-                        'unit_cost_production': 0,
+                        'production_cost': 0,
+                        'output_unit_cost': 0,
+                        'sale_price': 0,
+                        'sell_price': 0
                     }
+                sale_price = 0
+                if pro.product.list_price:
+                    sale_price = pro.product.list_price
+                    production[record.number]['outputs'][
+                        pro.product.name]['sale_price'] = sale_price
 
-                production_amount = Decimal(pro.quantity)
-                cost_estimated = Decimal(record.cost) / Decimal(
-                    record.quantity) if record.quantity > 0 else 0
-                unit_cost_production = Decimal(record.cost) / Decimal(
-                    pro.quantity) if pro.quantity > 0 else 0
-                unit_cost_estimated = production_amount * cost_estimated
+                production_amount = round(Decimal(pro.quantity), 2)
+                sell_price = production_amount * sale_price
+                output_unit_cost = round(pro.unit_price, 2)
+                production_cost = round(production_amount * output_unit_cost)
 
                 production[record.number]['outputs'][
                     pro.product.name]['production_amount'] += production_amount
+                production[record.number]['outputs'][
+                    pro.product.name]['sell_price'] += sell_price
                 production[record.number]['outputs'][pro.product.name][
-                    'unit_cost_estimated'] += unit_cost_estimated
+                    'output_unit_cost'] += output_unit_cost
                 production[record.number]['outputs'][pro.product.name][
-                    'unit_cost_production'] += unit_cost_production
-                production[record.number]['percentage'] += production_amount
-                production[record.number]['percentage_merma'] += Decimal(
-                    record.quantity) - production_amount
+                    'production_cost'] += production_cost
                 production[record.number][
                     'not_production_amount_total'] -= production_amount
-                production[record.number][
-                    'merma_cost_total'] = cost_estimated * production[
-                        record.number]['not_production_amount_total']
 
-        report_context['records'] = production
-        report_context['Decimal'] = Decimal
-        return report_context
+                # create total values
+                production[record.number]['totals']['total_sell_price'] += sell_price
+                production[record.number][
+                    'totals']['total_production_amount'] += production_amount
+                production[record.number][
+                    'totals']['total_cost_production'] += production_cost
+
+    @classmethod
+    def set_inputs(cls, productions, production):
+        """Function to save inputs data"""
+
+        for record in productions:
+
+            for pro in record.inputs:
+                unit_cost_estimated_prod = 0
+                production_cost = 0
+
+                inputs_amount = round(Decimal(pro.quantity),
+                                      2) if pro.quantity else 0
+                if pro.cost_price:
+                    unit_cost_estimated_prod = pro.cost_price
+                    _production_cost = round(
+                        (unit_cost_estimated_prod * inputs_amount), 2)
+                    production_cost = (_production_cost * -1)
+                if pro.product.name not in production[
+                        record.number]['inputs']:
+                    production[record.number]['inputs'][pro.product.name] = {
+                        'id_product': pro.product.code,
+                        'udm': pro.product.template.default_uom.symbol,
+                        'inputs_amount': inputs_amount,
+                        'estimated_unit_cost': unit_cost_estimated_prod,
+                        'production_cost': production_cost,
+                    }
+                else:
+                    production[record.number]['inputs'][
+                        pro.product.name]['inputs_amount'] += inputs_amount
+                    production[record.number]['inputs'][
+                        pro.product.name]['production_cost'] += production_cost
+
+                production[record.number][
+                    'totals']['total_cost_production'] += production_cost
+                production[record.number][
+                    'totals']['_total_cost_production'] += _production_cost
+                production[record.number][
+                    'totals']['total_estimated_amount'] += inputs_amount
 
 
 class ProductionForceDraft(Wizard):

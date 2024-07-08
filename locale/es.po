@@ -690,13 +690,18 @@ msgctxt "model:ir.ui.menu,name:menu_reports"
 msgid "Reports"
 msgstr "Informes"
 
-msgctxt "model:ir.ui.menu,name:wizard_production_detailed"
-msgid "Report Production Detailed"
-msgstr "Informe de producción detallada"
-
 msgctxt "model:ir.action,name:wizard_production_detailed"
 msgid "Report Production Detailed"
 msgstr "Informe de producción detallada"
+
+msgctxt "model:ir.action,name:report_production_detailed"
+msgid "Report Production Detailed"
+msgstr "Informe de producción detallada"
+
+msgctxt "model:ir.ui.menu,name:menu_production_detailed"
+msgid "Report Production Detailed"
+msgstr "Informe de producción detallada"
+
 
 msgctxt "model:ir.ui.menu,name:wizard_payroll_settlement_send"
 msgid "Settlement Send"

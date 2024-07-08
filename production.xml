@@ -30,22 +30,23 @@ this repository contains the full copyright notices and license terms. -->
             <field name="type">form</field>
             <field name="name">production_detailed_start_view_form</field>
         </record>
-        <record model="ir.action.report" id="report_production_detailed">
-            <field name="name">Production Detailed</field>
-            <field name="model">production</field>
-            <field name="report_name">production.detailed_report</field>
-            <field name="report">conector/production_detailed.fods</field>
-            <field name="template_extension">ods</field>
-            <field name="translatable">False</field>
-        </record>
         <record model="ir.action.wizard" id="wizard_production_detailed">
             <field name="name">Report Production Detailed</field>
             <field name="wiz_name">production.detailed</field>
         </record>
+        <record model="ir.action.report" id="report_production_detailed">
+            <field name="name">Report Production Detailed</field>
+            <field name="model">production</field>
+            <field name="report_name">production.detailed_report</field>
+            <field name="report">conector/detail_production.fods</field>
+            <field name="template_extension">ods</field>
+            <field name="translatable">False</field>
+        </record>
+
 
         <menuitem parent="production.menu_production" sequence="400" name="Reports" id="menu_reports" icon="tryton-folder"/>
 
-        <menuitem parent="menu_reports" sequence="100" action="wizard_production_detailed" id="menu_production_detailed"/>
+        <menuitem parent="menu_reports" sequence="100" name="Report Production Detailed" action="wizard_production_detailed" id="menu_production_detailed"/>
 
         <record model="ir.action.wizard" id="wizard_production_force_draft">
             <field name="name">Force Draft</field>
