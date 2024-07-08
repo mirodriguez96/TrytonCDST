@@ -52,31 +52,8 @@ class Voucher(ModelSQL, ModelView):
         account_type = 'account.type.payable'
         # Obtenemos los comprobantes de egreso de TecnoCarnes
         documentos = Config.get_documentos_tecno('6')
+
         # Comenzamos a recorrer los documentos a procesar y almacenamos los registros y creados en una lista
-
-        # tecno = {}
-        # vouchers = {}
-        # to_delete = []
-        # for doc in documentos:
-        #     id_tecno = f"{doc.sw}-{doc.tipo}-{doc.Numero_documento}"
-        #     tecno[id_tecno] = doc
-        # tryton_vouchers = Voucher.search([('id_tecno', 'in', tecno.keys())])
-        # for tryton_voucher in tryton_vouchers:
-        #     vouchers[tryton_voucher.id_tecno] = tryton_voucher
-        # for id_tecno, doc in tecno.items():
-        #     if id_tecno in vouchers and doc.anulado == 'S':
-        #         to_delete.append(vouchers[id_tecno])
-        #         msg = f"El documento {id_tecno} fue eliminado de tryton porque fue anulado en TecnoCarnes"
-        #         logs[id_tecno] = msg
-        #         not_import.append(id_tecno)
-        #         continue
-        #     elif id_tecno in vouchers and doc.anulado == 'N':
-        #         created.append(id_tecno)
-        #         continue
-        # cls.unreconcilie_move_voucher(to_delete)
-        # cls.force_draft_voucher(to_delete)
-        # Voucher.delete(to_delete)
-
         parties = Party._get_party_documentos(documentos, 'nit_Cedula')
         for doc in documentos:
             try:
@@ -167,7 +144,7 @@ class Voucher(ModelSQL, ModelView):
                                                                       ],
                                                                limit=1)
                     voucher.operation_center = operation_center
-                valor_aplicado = Decimal(doc.valor_aplicado)
+                valor_aplicado = round(Decimal(doc.valor_aplicado), 2)
                 lines = cls.get_lines_vtecno(facturas, voucher, logs,
                                              account_type)
                 if lines:
@@ -180,7 +157,8 @@ class Voucher(ModelSQL, ModelView):
                 # Se verifica que el comprobante tenga lineas para ser procesado y contabilizado (doble verificación por error)
                 if voucher.lines and voucher.amount_to_pay > 0:
                     Voucher.process([voucher])
-                    diferencia = abs(voucher.amount_to_pay - valor_aplicado)
+                    diferencia = round(
+                        abs(voucher.amount_to_pay - valor_aplicado), 2)
                     if voucher.amount_to_pay == valor_aplicado:
                         Voucher.post([voucher])
                     elif diferencia < Decimal(60):
