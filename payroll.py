@@ -2968,7 +2968,6 @@ class PayrollPaycheckReportExten(metaclass=PoolMeta):
                 res[key]['subtotal'] = 0
 
         payroll_ids = [p['id'] for p in payrolls]
-        PayrollLine = pool.get('staff.payroll.line')
 
         fields_lines = [
             'amount', 'quantity', 'party.name', 'wage_type.type_concept',
@@ -3024,14 +3023,13 @@ class PayrollPaycheckReportExten(metaclass=PoolMeta):
         other_health_retirement = line['wage_type.'][
             'excluded_payroll_electronic']
 
-        # other_key = str(line['payroll.']['employee']) +'_' + str(line['payroll.']['contract'])
-
         if concept == 'holidays' and other_health_retirement and validate:
             staff_line, = PayrollLine.search([('id', '=', line['id'])])
             wages = [(wage_type.wage_type.credit_account, wage_type)
                      for wage_type in
                      staff_line.payroll.contract.employee.mandatory_wages
                      if wage_type.wage_type.type_concept in CONCEPT]
+            
             if staff_line.origin:
                 event = Staff_event_liquidation.search([
                     ('event', '=', staff_line.origin.id),
@@ -3055,8 +3053,11 @@ class PayrollPaycheckReportExten(metaclass=PoolMeta):
                 if 'health' in staff_lines.keys():
                     res[key]['health_amount'] += staff_lines['health'][
                         'amount']
+                    res[key]['subtotal'] += staff_lines['health']['amount']
                 if 'retirement' in staff_lines.keys():
                     res[key]['retirement_amount'] += staff_lines['retirement'][
+                        'amount']
+                    res[key]['subtotal'] += staff_lines['retirement'][
                         'amount']
                 validate = False
 
@@ -3091,11 +3092,10 @@ class PayrollPaycheckReportExten(metaclass=PoolMeta):
             res[key]['subtotal'] += line['amount']
             total += line['amount']
             res[key][concept + '_amount'] += line['amount']
+            
         elif concept_electronic in ['LicenciaR', 'LicenciaMP', 'ConceptoS']:
             res[key]['license_amount'] += line['amount']
             res[key]['variation'] -= line['amount']
-            # dict_employee[concept]['start_date'] = line['start_date']
-            # dict_employee[concept]['end_date'] = line['start_date']
         elif concept.startswith('incapacity'):
             res[key]['incapacity_amount'] += line['amount']
             res[key]['variation'] -= line['amount']
@@ -3109,9 +3109,6 @@ class PayrollPaycheckReportExten(metaclass=PoolMeta):
         elif concept == 'extras':
             res[key]['variation'] -= line['amount']
             res[key]['extras'] += line['amount']
-
-            # dict_employee[concept]['start_date'] = line['start_date']
-            # dict_employee[concept]['end_date'] = line['start_date']
 
         return total
 
