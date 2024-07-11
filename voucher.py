@@ -231,7 +231,6 @@ class Voucher(ModelSQL, ModelView):
                 comprobante = cls.find_voucher(id_tecno)
                 if comprobante:
                     if doc.anulado == 'S':
-
                         if comprobante.__name__ == 'account.voucher':
                             move_voucher = comprobante.move
                             move_lines_voucher = MoveLine.search(
@@ -276,15 +275,28 @@ class Voucher(ModelSQL, ModelView):
 
                                     continue
                         if comprobante.__name__ == 'account.voucher':
+                            validate_note = cls.delete_note([comprobante])
+                            if not validate_note:
+                                exceptions.append(id_tecno)
+                                logs[
+                                    id_tecno] = "EXCEPCION: La nota no pudo ser eliminada"\
+                                    " revisar origenes."
+                                continue
                             cls.unreconcilie_move_voucher([comprobante])
-                            cls.delete_note([comprobante])
                             cls.force_draft_voucher([comprobante])
                             Voucher.delete([comprobante])
                         if comprobante.__name__ == 'account.multirevenue':
                             vouchers = Voucher.search([('reference', '=',
                                                         comprobante.code)])
+                            validate_note = cls.delete_note(vouchers)
+                            if not validate_note:
+                                exceptions.append(id_tecno)
+                                logs[
+                                    id_tecno] = "EXCEPCION: La nota no pudo ser eliminada"\
+                                    " revisar origenes."
+                                continue
+
                             cls.unreconcilie_move_voucher(vouchers)
-                            cls.delete_note(vouchers)
                             cls.force_draft_voucher(vouchers)
                             Voucher.delete(vouchers)
                             for line in comprobante.lines:
@@ -824,6 +836,9 @@ class Voucher(ModelSQL, ModelView):
                                         note.lines[0].delete(note.lines)
                                         note.number = Null
                                         Note.delete([note])
+                            else:
+                                return False
+            return True
         except Exception as e:
             print(e)
 

@@ -108,7 +108,6 @@ def draft_unconciliate_delete_account_move(ids_=None, action=None):
 
     logs = {}
     exceptions = []
-    response = True
 
     if ids_:
         account_move = pool.get('account.move')
@@ -135,33 +134,32 @@ def draft_unconciliate_delete_account_move(ids_=None, action=None):
 
         try:
             if action == "draft":
-                response = draft_move(to_delete, context)
+                draft_move(to_delete, context)
             elif action == "unconciliate":
-                response = delete_conciliations(to_delete, context)
+                delete_conciliations(to_delete, context)
             else:
-                response = delete_move(to_delete, context)
+                delete_move(to_delete, context)
         except Exception as e:
             print(f"Error: {e}")
 
-    return response
+    return True
 
 
 def draft_move(to_delete, context):
     """Function that change state to draft"""
     pool = Pool()
     AccountMove = pool.get('account.move')
-    draft_moves = True
     with Transaction().set_context(context):
         to_draft = []
         for move_id in to_delete:
             account_move = AccountMove.search([('id', '=', move_id)])
             if account_move:
                 to_draft.append(move_id)
-
-        draft_moves = AccountMove.draft(to_draft)
+                print('forzando a borrador')
+        AccountMove.draft(to_draft)
     Transaction().commit()
 
-    return draft_moves
+    return True
 
 
 def delete_conciliations(move_ids, context):
@@ -169,13 +167,12 @@ def delete_conciliations(move_ids, context):
     pool = Pool()
     Reconciliation = pool.get('account.move.reconciliation')
     Move = pool.get('account.move')
-    delete_conciliation = True
 
     with Transaction().set_context(context):
         moves = Move.browse(move_ids)
+        print(f'movimiento {moves}')
         if moves:
             for move in moves:
-                print(f"movimiento - {move.id}")
                 reconciliations = [
                     lines.reconciliation.id for lines in move.lines
                     if lines.reconciliation
@@ -183,27 +180,25 @@ def delete_conciliations(move_ids, context):
 
                 if reconciliations:
                     records = Reconciliation.browse(reconciliations)
-                    delete_conciliation = Reconciliation.delete(records,
-                                                                conector=True)
+                    Reconciliation.delete(records, conector=True)
                 reconciliations = []
     Transaction().commit()
 
-    return delete_conciliation
+    return True
 
 
 def delete_move(to_delete, context):
     """Function to delete account_move"""
     pool = Pool()
     AccountMove = pool.get('account.move')
-    delete_moves = True
 
     for move_id in to_delete:
         try:
             account_move = AccountMove.search([('id', '=', move_id)])
             if account_move:
                 print(f"Eliminando cuenta {move_id}")
-                delete_moves = AccountMove.delete_lines(account_move)
+                AccountMove.delete_lines(account_move)
         except Exception as error:
             print(f"error: {error}")
 
-    return delete_moves
+    return True
