@@ -1,33 +1,34 @@
-from collections import defaultdict
-from decimal import Decimal
+from trytond.model import ModelView, fields, Workflow, ModelSQL
+from trytond.modules.stock.exceptions import PeriodCloseError
+from trytond.modules.account.exceptions import PostError, \
+    ReconciliationError
+from trytond.wizard import Wizard, StateView, StateAction, \
+    Button, StateReport, StateTransition
+from trytond.model.exceptions import AccessError
+from trytond.pyson import Eval, If, Bool, Not
+from trytond.transaction import Transaction
+from trytond.exceptions import UserError
+from trytond.pool import Pool, PoolMeta
+from trytond.tools import grouped_slice
+from trytond.report import Report
+from trytond.i18n import gettext
+
 from timeit import default_timer as timer
-from datetime import date, datetime
-import operator
+from collections import defaultdict
 from itertools import groupby
-import time
+from decimal import Decimal
+from datetime import date
+import operator
+
+from sql.conditionals import Coalesce
+from collections import OrderedDict
+from sql.aggregate import Sum, Max
+from sql import Null
 
 try:
     from itertools import izip
 except ImportError:
     izip = zip
-from trytond.report import Report
-
-from sql import Column, Null, Literal, functions, Cast
-from sql.aggregate import Sum, Max, Min
-from sql.conditionals import Coalesce
-from collections import OrderedDict
-from sql.operators import Like, Between
-
-from trytond.model.exceptions import AccessError
-from trytond.i18n import gettext
-from trytond.exceptions import UserError
-from trytond.model import ModelView, fields, Workflow, ModelSQL
-from trytond.pyson import Eval, Or, If, Bool, Not
-from trytond.transaction import Transaction
-from trytond.tools import grouped_slice, reduce_ids, lstrip_wildcard
-from trytond.wizard import Wizard, StateView, StateAction, Button, StateReport, StateTransition
-from trytond.modules.stock.exceptions import PeriodCloseError
-from trytond.pool import Pool, PoolMeta
 
 TYPES_PRODUCT = [('no_consumable', 'No consumable'),
                  ('consumable', 'Consumable')]
@@ -135,9 +136,96 @@ class Move(ModelSQL, metaclass=PoolMeta):
             print(error)
             return False
 
+    @classmethod
+    def post(cls, moves):
+        pool = Pool()
+        Date = pool.get('ir.date')
+        Line = pool.get('account.move.line')
+        Employee = pool.get('company.employee')
+        Wagetype = pool.get('staff.wage_type')
+        account = None
+        party = None
+        for move in moves:
+            amount = Decimal('0.0')
+            if not move.lines:
+                raise PostError(
+                    gettext('account.msg_post_empty_move', move=move.rec_name))
+            company = None
+            for line in move.lines:
+                if account is None and line.party:
+                    party = line.party
+                    employee = Employee.search(['party', '=', line.party])
+                    if employee:
+                        department = employee[0].department
+                        if department:
+                            wage_type = Wagetype.search(
+                                [('department', '=', department.id),
+                                 ('type_concept_electronic', '=', 'VacacionesComunes')])
+                            if wage_type:
+                                account = wage_type[0].debit_account
+
+                amount += line.debit - line.credit
+                if not company:
+                    company = line.account.company
+
+            if not company.currency.is_zero(amount):
+                line_cociled = False
+                if abs(amount) < 1:
+                    if account is not None:
+                        line = Line()
+                        debit = 0
+                        credit = 0
+                        if amount > 0:
+                            credit += abs(amount)
+                        else:
+                            debit += abs(amount)
+
+                        line.account = account
+                        line.description = 'Ajuste de pesos decimales'
+                        line.credit = credit
+                        line.debit = debit
+                        line.move = move
+                        line.party = party
+                        line.save()
+
+                        move_lines_list = list(move.lines)
+                        move_lines_list.append(line)
+                        move.lines = tuple(move_lines_list)
+                        move.save()
+                        line_cociled = True
+
+                    if not line_cociled:
+                        raise UserError('ERROR', 'Hay diferencia en debitos'
+                                        'y creditos y no se puede contabilizar.'
+                                        'Si es liquidacion de vacaciones, '
+                                        'validar que este configurada la '
+                                        'cuenta para el ajuste en los'
+                                        'conceptos obligatorios.')
+
+                else:
+                    raise UserError('ERROR', 'Hay diferencia en debitos'
+                                    'y creditos, no se puede contabilizar.')
+
+        for move in moves:
+            move.state = 'posted'
+            if not move.post_number:
+                move.post_date = Date.today()
+                move.post_number = move.period.post_move_sequence_used.get()
+
+            def keyfunc(l):
+                return l.party, l.account
+            to_reconcile = [l for l in move.lines
+                            if ((l.debit == l.credit == Decimal('0'))
+                                and l.account.reconcile)]
+            to_reconcile = sorted(to_reconcile, key=keyfunc)
+            for _, zero_lines in groupby(to_reconcile, keyfunc):
+                Line.reconcile(list(zero_lines))
+        cls.save(moves)
+
 
 class MoveLine(ModelSQL, metaclass=PoolMeta):
-    """doc"""
+    """Account move line inheritance"""
+
     __name__ = 'account.move.line'
 
     @classmethod
@@ -242,6 +330,65 @@ class Reconciliation(metaclass=PoolMeta):
         except Exception as error:
             print(error)
             return False
+
+    @classmethod
+    def check_lines(cls, reconciliations):
+        """Function to check if lines is valid to posted"""
+
+        Lang = Pool().get('ir.lang')
+        for reconciliation in reconciliations:
+            debit = Decimal('0.0')
+            credit = Decimal('0.0')
+            account = None
+            if reconciliation.lines:
+                party = reconciliation.lines[0].party
+
+            amount = 0
+            for line in reconciliation.lines:
+                amount += round(line.debit - line.credit, 2)
+
+            for line in reconciliation.lines:
+                if line.state != 'valid':
+                    if amount == 0:
+                        line.state = 'valid'
+                        line.save()
+                    else:
+                        raise ReconciliationError(
+                            gettext('account.msg_reconciliation_line_not_valid',
+                                    line=line.rec_name))
+
+                debit += line.debit
+                credit += line.credit
+                if not account:
+                    account = line.account
+                elif account.id != line.account.id:
+                    raise ReconciliationError(
+                        gettext('account'
+                                '.msg_reconciliation_different_accounts',
+                                line=line.rec_name,
+                                account1=line.account.rec_name,
+                                account2=account.rec_name))
+                if not account.reconcile:
+                    raise ReconciliationError(
+                        gettext('account'
+                                '.msg_reconciliation_account_not_reconcile',
+                                line=line.rec_name,
+                                account=line.account.rec_name))
+                if line.party != party:
+                    raise ReconciliationError(
+                        gettext('account'
+                                '.msg_reconciliation_different_parties',
+                                line=line.rec_name,
+                                party1=line.party.rec_name,
+                                party2=party.rec_name))
+            if not reconciliation.company.currency.is_zero(debit - credit):
+                lang = Lang.get()
+                debit = lang.currency(debit, reconciliation.company.currency)
+                credit = lang.currency(credit, reconciliation.company.currency)
+                raise ReconciliationError(
+                    gettext('account.msg_reconciliation_unbalanced',
+                            debit=debit,
+                            credit=credit))
 
 
 class BalanceStockStart(ModelView):

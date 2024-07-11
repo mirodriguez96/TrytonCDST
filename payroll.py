@@ -462,7 +462,6 @@ class Liquidation(metaclass=PoolMeta):
                 if grouped[(ml.account.id, ml.description, 'payment')]:
                     to_reconcile.extend(grouped[(ml.account.id, ml.description,
                                                  'payment')]['lines'])
-                print(to_reconcile)
                 if len(to_reconcile) > 1 and reconcile:
                     reconcile = False
                     note = Note.search([])
@@ -478,18 +477,14 @@ class Liquidation(metaclass=PoolMeta):
         grouped = {}
         amount = []
         validate = True
-        validate_health = True
-        result = ''
+        result = None
+
         wages = [
             wage_type for wage_type in self.employee.mandatory_wages
             if wage_type.wage_type.type_concept == 'retirement'
             and self.kind == 'holidays'
         ]
-        wages_health = [
-            wage_type for wage_type in self.employee.mandatory_wages
-            if wage_type.wage_type.type_concept == 'health'
-            and self.kind == 'holidays'
-        ]
+
         for line in self.lines:
             if line.move_lines:
                 for moveline in line.move_lines:
@@ -501,6 +496,8 @@ class Liquidation(metaclass=PoolMeta):
                         grouped[account_id] = {
                             'amount': [],
                             'description': line.description,
+                            'wage': line.wage,
+                            'party_to_pay': line.party_to_pay,
                             'lines': [],
                         }
                     grouped[account_id]['amount'].append(amount_line)
@@ -512,16 +509,21 @@ class Liquidation(metaclass=PoolMeta):
                     grouped[account_id] = {
                         'amount': [],
                         'description': line.description,
+                        'wage': line.wage,
+                        'party_to_pay': line.party_to_pay,
                         'lines': [],
                     }
                 grouped[account_id]['amount'].append(line.amount)
                 amount.append(line.amount)
+
             for adjust in line.adjustments:
                 key = (adjust.account.id, adjust.description)
                 if key not in grouped.keys():
                     grouped[key] = {
                         'amount': [],
                         'description': adjust.description,
+                        'wage': line.wage,
+                        'party_to_pay': line.party_to_pay,
                         'lines': [],
                     }
                     if hasattr(adjust,
@@ -532,31 +534,27 @@ class Liquidation(metaclass=PoolMeta):
 
         for account_id, values in grouped.items():
             account_id = account_id[0]
-            print(account_id)
-            party_payment = None
-            for wage_health in wages_health:
-                if wage_health.wage_type.credit_account.name == values[
-                        'description']:
-                    party_payment = wage_health.party.id
-                    validate_health = False
+            party_payment = values['party_to_pay']
+            wage = values['wage']
 
-            for wage in wages:
-                if validate:
-                    if wage.wage_type.credit_account.name == values[
-                            'description']:
-                        validate = False
-                        result = self._prepare_line(
-                            values['description'],
-                            wages[0].wage_type.debit_account.id,
-                            debit=round(self.gross_payments * Decimal(0.12),
-                                        2),
-                            credit=_ZERO,
-                            analytic=values.get('analytic', None))
+            if party_payment:
+                for wage in wages:
+                    if validate:
+                        if values['wage'].id == wage.wage_type.id:
+                            party_payment = wage.party.id
+                            validate = False
+                            result = self._prepare_line(
+                                values['description'],
+                                wages[0].wage_type.debit_account.id,
+                                debit=round(self.gross_payments * Decimal(0.12),
+                                            2),
+                                credit=_ZERO,
+                                analytic=values.get('analytic', None))
 
-                        party_payment = wage.party.id
-                        values['amount'] = [
-                            round(self.gross_payments * Decimal(0.16), 2) * -1
-                        ]
+                            values['amount'] = [
+                                round(self.gross_payments *
+                                      Decimal(0.16), 2) * -1
+                            ]
 
             _amount = sum(values['amount'])
             debit = _amount
@@ -569,7 +567,7 @@ class Liquidation(metaclass=PoolMeta):
                                    party_to_pay_concept=party_payment,
                                    analytic=values.get('analytic', None)))
 
-        if result != '':
+        if result is not None:
             lines_moves.append(result)
 
         if lines_moves:
