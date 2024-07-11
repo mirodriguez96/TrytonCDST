@@ -154,7 +154,6 @@ EXTRAS = {
 }
 
 _ZERO = Decimal('0.0')
-WORKDAY_DEFAULT = Decimal(7.83)
 RESTDAY_DEFAULT = 0
 WEEK_DAYS = {
     1: 'monday',
@@ -285,6 +284,23 @@ _TYPE_TRANSACTION = [
     ('37', 'Abono a cuenta de ahorros'),
     ('40', 'Efectivo seguro (visa pagos o tarjeta prepago)'),
 ]
+
+
+class StaffConfiguration(metaclass=PoolMeta):
+    __name__ = 'staff.configuration'
+
+    default_hour_biweekly = fields.Numeric('Default Hour Biweekly',
+                                           digits=(16, 2),
+                                           required=True,
+                                           help='In hours')
+
+    @classmethod
+    def __setup__(cls):
+        super(StaffConfiguration, cls).__setup__()
+        cls.default_hour_workday = fields.Numeric('Default Hour Workday',
+                                                  digits=(16, 2),
+                                                  required=True,
+                                                  help='In hours')
 
 
 class Bank(metaclass=PoolMeta):
@@ -1946,13 +1962,20 @@ class Payroll(metaclass=PoolMeta):
         LoanLine = Pool().get('staff.loan.line')
         Contract = Pool().get('staff.contract')
         Event = Pool().get('staff.event')
+        Config = Pool().get('staff.configuration')
+        config = Config(1)
+
         salary_args = {}
         validate_event = []
         values = []
-        workin_days_salary = 15
-        real_working_days = 0
+        real_hour_biweekly = 0
         discount = 0
-        ttt = 0
+
+        work_day_hours = config.default_hour_workday
+        default_hour_biweekly = config.default_hour_biweekly
+
+        if not work_day_hours or not default_hour_biweekly:
+            raise UserError('ERROR', 'Debe configurar las horas reglamentadas')
 
         start_date_extras = self.start_extras
         end_date_extras = self.end_extras
@@ -1969,13 +1992,12 @@ class Payroll(metaclass=PoolMeta):
         if self.assistance:
             for assistance in self.assistance:
                 if assistance.enter_timestamp.day == 31:
-                    ttt += round(assistance.hedo, 2)
-                    ttt += round(assistance.heno, 2)
-                    ttt += round(assistance.hedf, 2)
-                    ttt += round(assistance.henf, 2)
+                    real_hour_biweekly += round(assistance.hedo, 2)
+                    real_hour_biweekly += round(assistance.heno, 2)
+                    real_hour_biweekly += round(assistance.hedf, 2)
+                    real_hour_biweekly += round(assistance.henf, 2)
                     continue
-                real_working_days += 1
-                ttt += round(Decimal(str(assistance.ttt)), 2)
+                real_hour_biweekly += round(Decimal(str(assistance.ttt)), 2)
 
         # Validate if select date from extras
         if not start_date_extras or not end_date_extras:
@@ -2003,10 +2025,10 @@ class Payroll(metaclass=PoolMeta):
 
                 if event:
                     days = [i.quantity for i in event]
-                    workin_days_salary -= int(sum(days))
+                    default_hour_biweekly -= int(sum(days)) * work_day_hours
 
             # Validate if ttte is different to real ttt
-            if workin_days_salary != real_working_days:
+            if default_hour_biweekly != real_hour_biweekly:
                 employee = self.employee.id
                 contact = Contract.search(['employee', '=', employee])
                 start_date_contract = contact[0].start_date
@@ -2014,15 +2036,14 @@ class Payroll(metaclass=PoolMeta):
 
                 if start_date_contract > start_date_extras:
                     difference = end_date_extras - start_date_contract
-                    workin_days_salary = difference.days + 1
+                    default_hour_biweekly = (
+                        difference.days + 1) * work_day_hours
                 elif end_date_contract and end_date_contract < end_date_extras:
                     difference = end_date_contract - start_date_extras
-                    workin_days_salary = difference.days + 1
+                    default_hour_biweekly = (
+                        difference.days + 1) * work_day_hours
 
-            # Get difference from ttte and ttt
-            workin_days = round(Decimal(str(workin_days_salary * Decimal(7.83))),
-                                2)
-            difference = round(ttt - workin_days, 2)
+            difference = round(real_hour_biweekly - default_hour_biweekly, 2)
 
             if difference < 0:
                 pending_value = abs(difference)

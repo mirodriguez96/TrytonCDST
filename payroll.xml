@@ -4,13 +4,6 @@ this repository contains the full copyright notices and license terms. -->
 <tryton>
     <data>
 
-        <!-- Campo para secuencia de certificado de ingresos y retenciones
-        <record model="ir.ui.view" id="staff_configuration_view_form">
-            <field name="model">staff.configuration</field>
-            <field name="inherit" ref="staff.staff_configuration_view_form"/>
-            <field name="name">configuration_form</field>
-        </record> -->
-
         <!-- vista form para las nominas electonicas -->
         <record model="ir.ui.view" id="electronic_payroll_view_form">
             <field name="model">staff.payroll.electronic</field>
@@ -169,7 +162,6 @@ this repository contains the full copyright notices and license terms. -->
             <field name="name">payroll_global_start_form</field>
         </record>
 
-
         <!-- ####################################################### -->
         <!-- # Interfaz para nuevos campos en reporte de nomina Integral #-->
         <!-- ####################################################### -->
@@ -177,6 +169,16 @@ this repository contains the full copyright notices and license terms. -->
             <field name="model">staff.payroll.sheet.start</field>
             <field name="inherit" ref="staff_payroll_co.payroll_sheet_start_view_form"/>
             <field name="name">payroll_sheet_start_form</field>
+        </record>
+
+
+        <!-- ################################################################################## -->
+        <!-- # Interfaz para nuevos campos en la vista de configuracion de gestion de personal #-->
+        <!-- ################################################################################## -->
+        <record model="ir.ui.view" id="staff_configuration_view_form">
+            <field name="model">staff.configuration</field>
+            <field name="inherit" ref="staff.staff_configuration_view_form"/>
+            <field name="name">staff_configuration_form</field>
         </record>
     </data>
 </tryton>

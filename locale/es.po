@@ -948,3 +948,7 @@ msgstr "Cuenta contable"
 msgctxt "field:product.category,account_lost_found:"
 msgid "Lost and Found Account"
 msgstr "Cuenta de perdidos y encontrados"
+
+msgctxt "field:staff.configuration,default_hour_biweekly:"
+msgid "Default Hour Biweekly"
+msgstr "Tiempo quincenal por defecto"
