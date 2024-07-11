@@ -79,6 +79,7 @@ def register():
                   payment_bank.BankPayment,
                   payment_term.PaymentTerm,
                   payroll.Bank,
+                  payroll.StaffConfiguration,
                   payroll.PayrollSheetStart,
                   payroll.PayrollGlobalStart,
                   payroll.WageType,

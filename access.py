@@ -18,7 +18,6 @@ from_zone = tz.gettz('UTC')
 to_zone = tz.gettz('America/Bogota')
 
 _ZERO = Decimal('0.0')
-WORKDAY_DEFAULT = Decimal(7.83)
 RESTDAY_DEFAULT = 0
 WEEK_DAYS = {
     1: 'monday',
@@ -118,9 +117,14 @@ class StaffAccess(ModelSQL, metaclass=PoolMeta):
                     workday=None,
                     restday=None):
         pool = Pool()
-        Workday = pool.get('staff.workday_definition')
         Holiday = pool.get('staff.holidays')
         Contract = pool.get('staff.contract')
+        Config = pool.get('staff.configuration')
+        config = Config(1)
+        work_day_hours = config.default_hour_workday
+
+        if not work_day_hours:
+            raise UserError('ERROR', 'Debe configurar las horas reglamentadas')
 
         start_date = (enter_timestamp + timedelta(hours=5)).date()
         contracts = Contract.search([
@@ -136,8 +140,8 @@ class StaffAccess(ModelSQL, metaclass=PoolMeta):
                 ('finished_date', '=', None),
             ]
         ],
-                                    limit=1,
-                                    order=[('start_date', 'DESC')])
+            limit=1,
+            order=[('start_date', 'DESC')])
 
         if not contracts:
             raise UserError(f"staff_access_extratime {start_date}",
@@ -167,23 +171,10 @@ class StaffAccess(ModelSQL, metaclass=PoolMeta):
         exit_timestamp = exit_timestamp.replace(tzinfo=from_zone)
         exit_timestamp = exit_timestamp.astimezone(to_zone)
 
-        # Contexto de cambio de turno
-        weekday_number = int(enter_timestamp.strftime("%u"))
-        weekday_ = WEEK_DAYS[weekday_number]
         if not workday:
-            # position = employee.contract.position or employee.position
-            day_work = Workday.search([
-                ('weekday', '=', weekday_),
-                ('position', '=', position_.id),
-            ])
-            if day_work and enter_timestamp.date() not in holidays:
-                workday, restday = day_work[0].workday, day_work[0].restday
-            else:
-                workday = WORKDAY_DEFAULT
+            workday = work_day_hours
         if not restday:
             restday = RESTDAY_DEFAULT
-            print("Warning: Using default restday!")
-        print(workday, 'workday...........', restday)
 
         restday_effective = 0
         if rest:
@@ -244,12 +235,21 @@ class StaffAccess(ModelSQL, metaclass=PoolMeta):
     def _calculate_shift(self, enterd, exitd, date_change, enter_holiday,
                          exit_holiday, workday, restday, all_rests,
                          restday_effective):
+        pool = Pool()
+        Config = pool.get('staff.configuration')
+        config = Config(1)
+        work_day_hours = config.default_hour_workday
+        if not workday:
+            if not work_day_hours:
+                raise UserError(
+                    'ERROR', 'Debe configurar las horas reglamentadas')
+            workday = work_day_hours
+
         ttt = het = hedo = heno = reco = recf = dom = hedf = henf = _ZERO
 
         if date_change:
             exitd += 24
 
-        # T.T.T.
         ttt = exitd - enterd - restday_effective
         if ttt <= 0:
             ttt = 0
@@ -267,7 +267,7 @@ class StaffAccess(ModelSQL, metaclass=PoolMeta):
 
         # H.E.T.
         workday_legal = Decimal(workday - restday)
-        # workday_effective = workday - restday_effective?
+
         if ttt > workday_legal:
             het = ttt - workday_legal
 
@@ -361,8 +361,8 @@ class StaffAccess(ModelSQL, metaclass=PoolMeta):
                 if (enter_holiday and contador <= 24) or (exit_holiday
                                                           and contador > 24):
                     dom = self._get_sum(dom, sumador)
-                    if dom >= round(Decimal(7.83), 2):
-                        dom = round(Decimal(7.83), 2)
+                    if dom >= round(Decimal(work_day_hours), 2):
+                        dom = round(Decimal(work_day_hours), 2)
 
             # Verifica si hay REC
             if sum_partial_rec > 0:
@@ -378,18 +378,10 @@ class StaffAccess(ModelSQL, metaclass=PoolMeta):
                 else:
                     recf = self._get_sum(recf, sum_rec)
 
-        if ttt >= 7.83 and dom > Decimal(0.0):
-            dom = round(Decimal(7.83), 2)
-        elif ttt <= 7.83 and dom > Decimal(0.0):
+        if ttt >= work_day_hours and dom > Decimal(0.0):
+            dom = round(Decimal(work_day_hours), 2)
+        elif ttt <= work_day_hours and dom > Decimal(0.0):
             dom = ttt
-        """ hedo = round(Decimal(ttt) - Decimal(7.83),2)
-                if hedo != float(0) else float(0)
-            heno = round(Decimal(ttt) - Decimal(7.83),2)
-                if heno != float(0) else float(0)
-            hedf = round(Decimal(ttt) - Decimal(7.83),2)
-                if hedf != float(0) else float(0)
-            henf = round(Decimal(ttt) - Decimal(7.83),2)
-                if henf != float(0) else float(0)"""
 
         return {
             'ttt': ttt,
@@ -642,6 +634,12 @@ class CreateAccessHolidaysWizard(Wizard):
         Holidays = pool.get('staff.holidays')
         access_table = Table('staff_access')
         Contract = pool.get('staff.contract')
+        Config = pool.get('staff.configuration')
+
+        config = Config(1)
+        work_day_hours = config.default_hour_workday
+        if not work_day_hours:
+            raise UserError('ERROR', 'Debe configurar las horas reglamentadas')
 
         cursor = Transaction().connection.cursor()
 
@@ -674,7 +672,7 @@ class CreateAccessHolidaysWizard(Wizard):
                 "ERROR:",
                 "La hora de ingreso no puede ser mayor a la hora de salida.")
 
-        if 7.83 > hour_difference or hour_difference > 8:
+        if work_day_hours > hour_difference or hour_difference > 8:
             raise UserError(
                 "ERROR:",
                 "Las horas laboradas deben coincidir con lo reglamentado.")
@@ -693,8 +691,8 @@ class CreateAccessHolidaysWizard(Wizard):
                     ('finished_date', '=', None),
                 ]
             ],
-                                        limit=1,
-                                        order=[('start_date', 'DESC')])
+                limit=1,
+                order=[('start_date', 'DESC')])
 
             if contracts:
                 if employee.end_date is None or employee.end_date >= date:
@@ -726,5 +724,6 @@ class CreateAccessHolidaysWizard(Wizard):
                                 access_table.recf,
                                 access_table.dom,
                             ],
-                            values=[Decimal(7.83), 0, 0, 0, 0, 0, 0, 0],
+                            values=[Decimal(work_day_hours), 0,
+                                    0, 0, 0, 0, 0, 0],
                             where=access_table.id.in_([to_save.id])))
