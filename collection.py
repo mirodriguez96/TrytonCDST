@@ -1,9 +1,8 @@
-from trytond.transaction import Transaction
 from trytond.pool import Pool, PoolMeta
-
-from datetime import date, timedelta
 from .exceptions import UserError
+from datetime import date
 from trytond.i18n import gettext
+from trytond.transaction import Transaction
 import copy
 
 
@@ -190,7 +189,7 @@ class PortfolioStatusReport(metaclass=PoolMeta):
             if data['procedures']:
                 cond4 = ' and ml.account in %s' % (str(
                     tuple(accounts)).replace(',', '') if len(accounts) == 1
-                    else str(tuple(accounts)))
+                                                   else str(tuple(accounts)))
             type_ = 'receivable'
             if data['kind'] == 'in':
                 type_ = 'payable'
@@ -248,29 +247,3 @@ class PortfolioStatusReport(metaclass=PoolMeta):
         report_context['records'] = records.values()
         report_context['company'] = company.party.name
         return report_context
-
-
-class Tracking(metaclass=PoolMeta):
-    'Tracking'
-    __name__ = 'collection.tracking'
-
-    def get_state(self, name):
-        pool = Pool()
-        Configuration = pool.get('collection.configuration')
-        Date = pool.get('ir.date')
-        try:
-            configuration = Configuration(1)
-        except Exception as error:
-            print(error)
-            raise UserError('ERROR', 'No hay configuracion')
-
-        if configuration:
-            _date = self.date + \
-                timedelta(days=configuration.tracking_days_expired)
-            if _date > Date.today():
-                return 'active'
-            # validate states please
-            if self.collection_amount and self.collection_amount > 0:
-                return 'done'
-            else:
-                return 'inactive'
