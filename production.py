@@ -685,7 +685,7 @@ class ProductionDetailedReport(Report):
             for pro in record.inputs:
                 unit_cost_estimated_prod = 0
                 production_cost = 0
-
+                _production_cost = 0
                 inputs_amount = round(Decimal(pro.quantity),
                                       2) if pro.quantity else 0
                 if pro.cost_price:
