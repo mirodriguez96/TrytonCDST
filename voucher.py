@@ -275,27 +275,14 @@ class Voucher(ModelSQL, ModelView):
 
                                     continue
                         if comprobante.__name__ == 'account.voucher':
-                            validate_note = cls.delete_note([comprobante])
-                            if not validate_note:
-                                exceptions.append(id_tecno)
-                                logs[
-                                    id_tecno] = "EXCEPCION: La nota no pudo ser eliminada"\
-                                    " revisar origenes."
-                                continue
+                            cls.delete_note([comprobante])
                             cls.unreconcilie_move_voucher([comprobante])
                             cls.force_draft_voucher([comprobante])
                             Voucher.delete([comprobante])
                         if comprobante.__name__ == 'account.multirevenue':
                             vouchers = Voucher.search([('reference', '=',
                                                         comprobante.code)])
-                            validate_note = cls.delete_note(vouchers)
-                            if not validate_note:
-                                exceptions.append(id_tecno)
-                                logs[
-                                    id_tecno] = "EXCEPCION: La nota no pudo ser eliminada"\
-                                    " revisar origenes."
-                                continue
-
+                            cls.delete_note(vouchers)
                             cls.unreconcilie_move_voucher(vouchers)
                             cls.force_draft_voucher(vouchers)
                             Voucher.delete(vouchers)
@@ -626,7 +613,7 @@ class Voucher(ModelSQL, ModelView):
             valor_pagado = round(valor_pagado, 2)
             if valor_pagado > amount_to_pay:
                 valor_pagado = amount_to_pay
-            line.amount = Decimal(valor_pagado)
+            line.amount = Decimal(str(round(valor_pagado, 2)))
             to_lines.append(line)
             # Se crean lineas adicionales en el comprobante en caso de ser necesario
             if descuento > 0:
@@ -815,6 +802,7 @@ class Voucher(ModelSQL, ModelView):
     def delete_note(cls, vouchers):
         pool = Pool()
         Note = pool.get('account.note')
+
         try:
             for voucher in vouchers:
                 if voucher:
@@ -823,6 +811,7 @@ class Voucher(ModelSQL, ModelView):
                             if lines.origin and lines.origin.move_line\
                                 and lines.origin.move_line.move\
                                     and lines.origin.move_line.move.origin:
+
                                 for notes in lines.origin.move_line.move.origin.payment_lines:
                                     if notes.origin and notes.origin.__name__ == 'account.note.line':
                                         note = notes.origin.note
@@ -836,9 +825,7 @@ class Voucher(ModelSQL, ModelView):
                                         note.lines[0].delete(note.lines)
                                         note.number = Null
                                         Note.delete([note])
-                            else:
-                                return False
-            return True
+
         except Exception as e:
             print(e)
 
@@ -1123,7 +1110,8 @@ class MultiRevenue(metaclass=PoolMeta):
                     line_paid.append(line.id)
                 else:
                     _line_amount = amount_tr + abs(concept_amounts)
-                    line.amount = line.amount - _line_amount
+
+                    line.amount = round(line.amount - _line_amount, 2)
                     amount_tr = 0
                 if line.move_line:
                     move_line = line.move_line
