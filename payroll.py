@@ -468,23 +468,44 @@ class Liquidation(metaclass=PoolMeta):
                 'lines': [('create', move_lines)],
             }])
             self.write([self], {'move': move.id})
-            for ml in move.lines:
-                if (ml.account.id, ml.description,
-                        'payment') not in grouped.keys() or (
-                            ml.account.type.statement not in ('balance')):
-                    continue
-                to_reconcile = [ml]
 
-                if grouped[(ml.account.id, ml.description, 'payment')]:
-                    to_reconcile.extend(grouped[(ml.account.id, ml.description,
-                                                 'payment')]['lines'])
-                if len(to_reconcile) > 1 and reconcile:
-                    reconcile = False
-                    note = Note.search([])
-                    writeoff = None
-                    if note:
-                        writeoff = note[0]
-                    MoveLine.reconcile(set(to_reconcile), writeoff=writeoff)
+            if self.kind == 'contract':
+                for ml in move.lines:
+                    if (ml.account.id, ml.description,
+                            'payment') not in grouped.keys() or (
+                                ml.account.type.statement not in ('balance')):
+                        continue
+                    to_reconcile = [ml]
+
+                    if grouped[(ml.account.id, ml.description, 'payment')]:
+                        to_reconcile.extend(grouped[(ml.account.id, ml.description,
+                                                     'payment')]['lines'])
+                    if len(to_reconcile) > 1:
+                        note = Note.search([])
+                        writeoff = None
+                        if note:
+                            writeoff = note[0]
+                        MoveLine.reconcile(
+                            set(to_reconcile), writeoff=writeoff)
+            else:
+                for ml in move.lines:
+                    if (ml.account.id, ml.description,
+                            'payment') not in grouped.keys() or (
+                                ml.account.type.statement not in ('balance')):
+                        continue
+                    to_reconcile = [ml]
+
+                    if grouped[(ml.account.id, ml.description, 'payment')]:
+                        to_reconcile.extend(grouped[(ml.account.id, ml.description,
+                                                     'payment')]['lines'])
+                    if len(to_reconcile) > 1 and reconcile:
+                        reconcile = False
+                        note = Note.search([])
+                        writeoff = None
+                        if note:
+                            writeoff = note[0]
+                        MoveLine.reconcile(
+                            set(to_reconcile), writeoff=writeoff)
             Move.post([move])
 
     def get_moves_lines(self):
@@ -3050,7 +3071,7 @@ class PayrollPaycheckReportExten(metaclass=PoolMeta):
                      for wage_type in
                      staff_line.payroll.contract.employee.mandatory_wages
                      if wage_type.wage_type.type_concept in CONCEPT]
-            
+
             if staff_line.origin:
                 event = Staff_event_liquidation.search([
                     ('event', '=', staff_line.origin.id),
@@ -3113,7 +3134,7 @@ class PayrollPaycheckReportExten(metaclass=PoolMeta):
             res[key]['subtotal'] += line['amount']
             total += line['amount']
             res[key][concept + '_amount'] += line['amount']
-            
+
         elif concept_electronic in ['LicenciaR', 'LicenciaMP', 'ConceptoS']:
             res[key]['license_amount'] += line['amount']
             res[key]['variation'] -= line['amount']
