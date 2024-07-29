@@ -488,6 +488,7 @@ class BalanceStock(Wizard):
         Line = pool.get('account.move.line')
         Period = pool.get('account.period')
         Product = pool.get('product.product')
+        description = ""
         out_account = Configuration(1).default_category_account_expense
         try:
             balances = defaultdict(Decimal)
@@ -542,13 +543,18 @@ class BalanceStock(Wizard):
                 return
         except Exception as e:
             raise UserError('msg_error_balance_stock', str(e))
-
+        company = self.start.fiscalyear.company.id
+        id_period = Period.find(company, date=self.start.date)
+        period = Period.search(['id', '=', id_period])
+        if period:
+            description = f"BALANCE STOCK {period[0].name}"
         move = Move()
-        move.company = self.start.fiscalyear.company.id
-        move.period = Period.find(move.company.id, date=self.start.date)
+        move.company = company
+        move.period = id_period
         move.journal = self.start.journal
         move.date = self.start.date
         move.lines = lines
+        move.description = description
         move.save()
         return move
 
