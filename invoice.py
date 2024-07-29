@@ -717,15 +717,19 @@ class Invoice(metaclass=PoolMeta):
         if not documentos:
             print(f"FINISH {_SW[sw]['name']}")
             return
-        # Se procede a validar los documentos importados de TecnoCarnes
-        data = cls._validate_documentos_tecno(documentos)
-        # Se procede a crear las facturas que hayan cumplido con la validación
-        data = cls._create_invoice_tecno(data)
-        # Se marca los documentos en Tecnocarnes de acuerdo a las diferentes excepciones
-        for idt, exportado in data['exportado'].items():
-            if exportado != 'E':
-                Config.update_exportado(idt, exportado)
-        actualizacion.add_logs(data['logs'])
+        for document in documentos:
+            try:
+                # Se procede a validar los documentos importados de TecnoCarnes
+                data = cls._validate_documentos_tecno([document])
+                # Se procede a crear las facturas que hayan cumplido con la validación
+                data = cls._create_invoice_tecno(data)
+                # Se marca los documentos en Tecnocarnes de acuerdo a las diferentes excepciones
+                for idt, exportado in data['exportado'].items():
+                    if exportado != 'E':
+                        Config.update_exportado(idt, exportado)
+                actualizacion.add_logs(data['logs'])
+            except Exception as error:
+                print(f"ERROR NOTA: {error}")
         print(f"FINISH {_SW[sw]['name']}")
 
     # Metodo encargado de validar el total de la factura en Tryton y TecnoCarnes
