@@ -254,5 +254,6 @@ def register():
                   sale.SaleInvoiceValueCdstReport,
                   stock.ShipmentDetailedReport,
                   stock.WarehouseCdsKardexReport,
+                  stock.WarehouseReport,
                   module='conector',
                   type_='report')
