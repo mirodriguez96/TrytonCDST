@@ -1057,3 +1057,141 @@ class WarehouseCdsKardexReport(Report):
                 products[product['id']].update({"difference": difference})
                 products[product['id']].update(
                     {"difference_porcent": difference_porcent})
+
+
+class WarehouseReport(metaclass=PoolMeta):
+    'Warehouse Report'
+    __name__ = 'stock_co.warehouse_stock.report'
+
+    @classmethod
+    def get_context(cls, records, header, data):
+        report_context = Report.get_context(records, header, data)
+        pool = Pool()
+        Company = pool.get('company.company')
+        Product = pool.get('product.product')
+        OrderPoint = pool.get('stock.order_point')
+        Location = pool.get('stock.location')
+        ids_location = data['locations']
+        locations = Location.browse(data['locations'])
+        dom_products = [
+            ('active', '=', True),
+            ('template.active', '=', True),
+            ('type', '=', 'goods'),
+        ]
+
+        stock_context = {
+            'stock_date_end': data['to_date'],
+            'locations': ids_location,
+        }
+
+        if data['category']:
+            dom_products.append(['AND', ['OR', [
+                ('account_category', '=', data['category']),
+            ], [
+                ('categories',  'in', [data['category']]),
+            ],
+            ]])
+
+        if not data['zero_quantity']:
+            dom_products.append([('quantity', '!=', 0)])
+
+        if data['only_minimal_level']:
+            order_points = OrderPoint.search([
+                ('warehouse_location', 'in', ids_location),
+                ('type', '=', 'purchase'),
+            ])
+            min_quantities = {
+                op.product.id: op.min_quantity for op in order_points}
+
+            products_ids = min_quantities.keys()
+            dom_products.append(('id', 'in', products_ids))
+        if data['suppliers']:
+            dom_products.append(
+                [('template.product_suppliers.party', 'in', data['suppliers'])])
+
+        total_amount = 0
+        values = {}
+        products = []
+        if data['group_by_location']:
+            for l in locations:
+                stock_context['locations'] = [l.id]
+                with Transaction().set_context(stock_context):
+                    prdts = Product.search(
+                        dom_products, order=[('code', 'ASC')])
+                suppliers = {}
+                if data['group_by_supplier']:
+                    for p in prdts:
+                        if not p.template.product_suppliers:
+                            continue
+                        for prod_sup in p.template.product_suppliers:
+                            sup_id = prod_sup.party.id
+                            try:
+                                suppliers[sup_id]['products'].append(p)
+                                suppliers[sup_id]['total_amount'].append(
+                                    p.amount_cost if p.amount_cost else 0)
+                            except:
+                                suppliers[sup_id] = {}
+                                suppliers[sup_id]['products'] = [p]
+                                suppliers[sup_id]['party'] = prod_sup.party
+                                suppliers[sup_id]['total_amount'] = [
+                                    p.amount_cost if p.amount_cost else 0]
+                total_amount = sum(
+                    [p.amount_cost for p in prdts if p.amount_cost])
+                values[l.id] = {
+                    'name': l.name,
+                    'products': prdts,
+                    'suppliers': suppliers.values(),
+                    'total_amount': total_amount
+                }
+            products = values.values()
+        else:
+            with Transaction().set_context(stock_context):
+                products = Product.search(
+                    dom_products, order=[('code', 'ASC')])
+
+            if data['only_minimal_level']:
+                products = [p for p in products if p.quantity <=
+                            min_quantities[p.id]]
+            total_amount = sum(
+                [p.amount_cost for p in products if p.amount_cost])
+            suppliers = {}
+            if data['group_by_supplier']:
+                for p in products:
+                    if not p.template.product_suppliers:
+                        continue
+                    for prod_sup in p.template.product_suppliers:
+                        sup_id = prod_sup.party.id
+                        try:
+                            suppliers[sup_id]['products'].append(p)
+                            suppliers[sup_id]['total_amount'].append(
+                                p.amount_cost if p.amount_cost else 0)
+                        except:
+                            suppliers[sup_id] = {}
+                            suppliers[sup_id]['products'] = [p]
+                            suppliers[sup_id]['party'] = prod_sup.party
+                            suppliers[sup_id]['total_amount'] = [
+                                p.amount_cost if p.amount_cost else 0]
+                products = suppliers.values()
+
+        cursor = Transaction().connection.cursor()
+        query = "select distinct on(p.id) p.id, t.name, p.code, s.effective_date from product_product as p right join stock_move as s on p.id=s.product join product_template as t on p.template=t.id where s.shipment ilike 'stock.shipment.in,%' and state='done' order by p.id, s.effective_date DESC;"
+        cursor.execute(query)
+        columns = list(cursor.description)
+        result = cursor.fetchall()
+        last_purchase = {}
+
+        for row in result:
+            row_dict = {}
+            for i, col in enumerate(columns):
+                row_dict[col.name] = row[i]
+            last_purchase[row[0]] = row_dict
+
+        report_context['group_by_location'] = data['group_by_location']
+        report_context['group_by_supplier'] = data['group_by_supplier']
+        report_context['records'] = products
+        report_context['total_amount'] = total_amount
+        report_context['last_purchase'] = last_purchase
+        report_context['location'] = data['location_names']
+        report_context['stock_date_end'] = data['to_date']
+        report_context['company'] = Company(data['company'])
+        return report_context
