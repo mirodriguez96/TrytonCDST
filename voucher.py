@@ -185,8 +185,8 @@ class Voucher(ModelSQL, ModelView):
                 logs[id_tecno] = f"EXCEPCION: {str(e)}"
                 exceptions.append(id_tecno)
         actualizacion.add_logs(logs)
-        # for idt in exceptions:
-        #     Config.update_exportado(idt, 'E')
+        for idt in exceptions:
+            Config.update_exportado(idt, 'E')
         for idt in created:
             Config.update_exportado(idt, 'T')
         for idt in not_import:

@@ -547,8 +547,8 @@ class Sale(metaclass=PoolMeta):
         for idt in to_created:
             if idt not in to_exception:
                 Config.update_exportado(idt, 'T')
-        # for idt in to_exception:
-        #     Config.update_exportado(idt, 'E')
+        for idt in to_exception:
+            Config.update_exportado(idt, 'E')
         for idt in not_import:
             Config.update_exportado(idt, 'X')
         print('FINISH VENTAS')

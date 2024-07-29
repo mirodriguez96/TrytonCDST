@@ -84,3 +84,6 @@ class Cron(metaclass=PoolMeta):
         cls.method.selection.append(
             ('stock.shipment.internal|import_tecnocarnes',
              'Importar traslados'), )
+        cls.method.selection.append(
+            ('conector.actualizacion|update_exception_documents',
+             "Actualizar documentos con excepcion."), )

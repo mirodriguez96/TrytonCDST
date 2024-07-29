@@ -396,8 +396,8 @@ class Purchase(metaclass=PoolMeta):
         actualizacion.add_logs(logs)
         for idt in to_created:
             Config.update_exportado(idt, 'T')
-        # for idt in to_exception:
-        #     Config.update_exportado(idt, 'E')
+        for idt in to_exception:
+            Config.update_exportado(idt, 'E')
         for idt in not_import:
             Config.update_exportado(idt, 'X')
         print('FINISH COMPRAS - DATA PROCESSED')

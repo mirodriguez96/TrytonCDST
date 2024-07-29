@@ -608,6 +608,29 @@ class Actualizacion(ModelSQL, ModelView):
             acess.on_change_rests()
             acess.save()
 
+    @classmethod
+    def update_exception_documents(cls):
+        """Function to check exist documents in Tryton and TecnoCarnes
+        and to mark to be imported"""
+        pool = Pool()
+        Config = pool.get('conector.configuration')
+
+        config, = Config.search([], order=[('id', 'DESC')], limit=1)
+        connection_date = config.date.strftime('%Y-%m-%d %H:%M:%S')
+        query = f"""
+        SET DATEFORMAT ymd
+        UPDATE Documentos
+        SET exportado = 'N'
+        WHERE fecha_hora >= CAST('{connection_date}' AS datetime)
+        AND exportado = 'E';
+        """
+
+        try:
+            Config.set_data(query)
+        except Exception as error:
+            print(error)
+            return
+
 
 class Email(ModelSQL, ModelView):
     'Email configuration'
