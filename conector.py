@@ -366,7 +366,7 @@ class Actualizacion(ModelSQL, ModelView):
         connection_date = config.date.strftime('%Y-%m-%d %H:%M:%S')
         consultc = "SET DATEFORMAT ymd "\
             "SELECT CONCAT(sw,'-',tipo,'-',numero_documento), valor_total,"\
-            "Valor_impuesto, Impuesto_Consumo, anulado, retencion_causada FROM Documentos "\
+            "Valor_impuesto, Impuesto_Consumo, anulado FROM Documentos "\
             f"WHERE {condition} "\
             f"AND fecha_hora >= CAST('{connection_date}' AS datetime) "\
             "AND exportado = 'T' "\
@@ -386,19 +386,17 @@ class Actualizacion(ModelSQL, ModelView):
         if condition == "(sw=1 OR sw=2)":
             for value in result_value:
                 id_tecno = value[0]
-                total_amount = Decimal(value[1]).quantize(Decimal('0.00'))
-                tax_amount = Decimal(value[2]).quantize(Decimal('0.00'))
+                invoice_amount = Decimal(value[1]).quantize(Decimal('0.00'))
+                tax_ammount = Decimal(value[2]).quantize(Decimal('0.00'))
                 tax_consumption = Decimal(value[3]).quantize(Decimal('0.00'))
-                caused_retention = Decimal(value[5]).quantize(Decimal('0.00'))
-                invoice_value = total_amount - tax_consumption - caused_retention
 
                 sale = Sale.search([("id_tecno", "=", id_tecno)])
                 if sale:
                     tryton_value = sale[0].invoice_amount_tecno
-                    tax_amount_tryton = sale[0].tax_amount_tecno
-                    if tryton_value != invoice_value or tax_amount_tryton != tax_amount:
-                        sale[0].invoice_amount_tecno = invoice_value
-                        sale[0].tax_amount_tecno = tax_amount
+                    if tryton_value != invoice_amount:
+                        sale[0].invoice_amount_tecno = invoice_amount\
+                            - tax_consumption
+                        sale[0].tax_amount_tecno = tax_ammount
                         Sale.save(sale)
 
         list_difference = [r for r in result_tecno if r not in result_tryton]
