@@ -16,13 +16,16 @@ class Conexion:
         Las conexiones utilizadas en un bloque with se confirmarán al final del bloque
         si no se generan errores, y se revertirán de lo contrario
         """
-        driver = "DRIVER={ODBC Driver 17 for SQL Server};"\
+        try:
+            driver = "DRIVER={ODBC Driver 17 for SQL Server};"\
                 f"SERVER={self.server};DATABASE={self.database};"\
                 f"UID={self.user};PWD={self.password}"
-        with pyodbc.connect(driver) as cnxn:
-            return cnxn
-
+            with pyodbc.connect(driver) as cnxn:
+                return cnxn
+        except Exception as error:
+            print(f'ERROR DE CONEXION: {error}')
     # Se prueba la conexión y retorna booleano
+
     def test_conexion(self):
         try:
             self.conexion()
@@ -33,17 +36,23 @@ class Conexion:
 
     #
     def get_data(self, query):
-        data = []
-        cnxn = self.conexion()
-        with cnxn.cursor() as cursor:
-            cursor.execute(query)
-            data = cursor.fetchall()
-        cnxn.close()
-        return data
-
+        try:
+            data = []
+            cnxn = self.conexion()
+            with cnxn.cursor() as cursor:
+                cursor.execute(query)
+                data = cursor.fetchall()
+            cnxn.close()
+            return data
+        except Exception as error:
+            print(f'ERROR DE CONEXION: {error}')
     #
+
     def set_data(self, query):
-        cnxn = self.conexion()
-        with cnxn.cursor() as cursor:
-            cursor.execute(query)
-        cnxn.close()
+        try:
+            cnxn = self.conexion()
+            with cnxn.cursor() as cursor:
+                cursor.execute(query)
+            cnxn.close()
+        except Exception as error:
+            print(f'ERROR DE CONEXION: {error}')
