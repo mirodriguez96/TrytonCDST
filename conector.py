@@ -72,21 +72,23 @@ class Actualizacion(ModelSQL, ModelView):
 
     def add_logs(self, logs):
         """Function to create log dictionay with message in imports"""
-        to_create = []
-        date_today = datetime.datetime.now()  # - datetime.timedelta(hours=5)
-        if not logs:
-            self.write([self], {'write_date': date_today})
-            return
-        for id_tecno, message in logs.items():
-            create = {
-                'event_time': date_today,
-                'id_tecno': id_tecno,
-                'message': message,
-                'state': 'pending'
-            }
-            to_create.append(create)
-        self.write([self], {'log': [('create', to_create)]})
-
+        try:
+            to_create = []
+            date_today = datetime.datetime.now()  # - datetime.timedelta(hours=5)
+            if not logs:
+                self.write([self], {'write_date': date_today})
+                return
+            for id_tecno, message in logs.items():
+                create = {
+                    'event_time': date_today,
+                    'id_tecno': id_tecno,
+                    'message': message,
+                    'state': 'pending'
+                }
+                to_create.append(create)
+            self.write([self], {'log': [('create', to_create)]})
+        except Exception as error:
+            print(f'ERROR CONECTOR LOG:{error}')
     def getter_quantity(self, name):
         """Function to return data count to import"""
         Config = Pool().get('conector.configuration')

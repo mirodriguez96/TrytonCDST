@@ -82,7 +82,7 @@ class Configuration(ModelSQL, ModelView):
     )
     # file = fields.Binary('File', help="Enter the file to import with (;)")
     # type_file = fields.Selection(TYPES_FILE, 'Type file')
-    #doc_types = fields.Char('Doc types', help="Example: 101;120;103")
+    # doc_types = fields.Char('Doc types', help="Example: 101;120;103")
     order_type_production = fields.Char(
         'Order types',
         help="Example: 101;202;303",
@@ -149,7 +149,7 @@ class Configuration(ModelSQL, ModelView):
             print(e)
             return False
 
-    #Función que prueba la conexión a la base de datos sqlserver
+    # Función que prueba la conexión a la base de datos sqlserver
     @classmethod
     @ModelView.button
     def test_conexion(cls, records):
@@ -157,42 +157,50 @@ class Configuration(ModelSQL, ModelView):
         cnxn.close()
         raise UserError('Conexión sqlserver: ', 'Exitosa !')
 
-    #Función encargada de establecer conexión con respecto a la configuración
+    # Función encargada de establecer conexión con respecto a la configuración
     @classmethod
     def conexion(cls):
-        last_record = cls.search([], order=[('id', 'DESC')], limit=1)
-        if last_record:
-            record, = last_record
-            #Las conexiones utilizadas en un bloque with se confirmarán al final del bloque si no se generan errores y se revertirán de lo contrario
-            with pyodbc.connect(
-                    'DRIVER={ODBC Driver 17 for SQL Server};SERVER=' +
-                    record.server + ';DATABASE=' + record.db + ';UID=' +
-                    record.user + ';PWD=' + record.password) as cnxn:
-                return cnxn
-        else:
-            raise UserError(
-                'Error: ',
-                'Ingrese por favor todos los datos de configuracion de la base de datos'
-            )
+        try:
+            last_record = cls.search([], order=[('id', 'DESC')], limit=1)
+            if last_record:
+                record, = last_record
+                # Las conexiones utilizadas en un bloque with se confirmarán al final del bloque si no se generan errores y se revertirán de lo contrario
+                with pyodbc.connect(
+                        'DRIVER={ODBC Driver 17 for SQL Server};SERVER=' +
+                        record.server + ';DATABASE=' + record.db + ';UID=' +
+                        record.user + ';PWD=' + record.password) as cnxn:
+                    return cnxn
+            else:
+                raise UserError(
+                    'Error: ',
+                    'Ingrese por favor todos los datos de configuracion de la base de datos'
+                )
+        except Exception as error:
+            print(f'ERROR DE CONEXION: {error}')
+    # Función encargada de enviar la conexión configurada con los datos del primer registro
 
-    #Función encargada de enviar la conexión configurada con los datos del primer registro
     @classmethod
     def get_data(cls, query):
         data = []
-        cnxn = cls.conexion()
-        with cnxn.cursor() as cursor:
-            cursor.execute(query)
-            data = cursor.fetchall()
-        cnxn.close()
-        return data
+        try:
+            cnxn = cls.conexion()
+            with cnxn.cursor() as cursor:
+                cursor.execute(query)
+                data = cursor.fetchall()
+            cnxn.close()
+            return data
+        except Exception as error:
+            print(f'ERROR EN GET DATA: {error}')
 
-    #
     @classmethod
     def set_data(cls, query):
-        cnxn = cls.conexion()
-        with cnxn.cursor() as cursor:
-            cursor.execute(query)
-        cnxn.close()
+        try:
+            cnxn = cls.conexion()
+            with cnxn.cursor() as cursor:
+                cursor.execute(query)
+            cnxn.close()
+        except Exception as error:
+            print(f'ERROR EN SET: {error}')
 
     @classmethod
     def set_data_rollback(cls, queries):
@@ -209,26 +217,35 @@ class Configuration(ModelSQL, ModelView):
         finally:
             cnxn.autocommit = True
 
-    #Se marca en la tabla dbo.Documentos como exportado a Tryton
+    # Se marca en la tabla dbo.Documentos como exportado a Tryton
     @classmethod
     def update_exportado(cls, id, e):
-        lista = id.split('-')
-        query = "UPDATE dbo.Documentos SET exportado = '" + e + "' WHERE sw =" + lista[
-            0] + " and tipo = " + lista[
-                1] + " and Numero_documento = " + lista[2]
-        cls.set_data(query)
+        try:
+            lista = id.split('-')
+            query = "UPDATE dbo.Documentos SET exportado = '" + e + "' WHERE sw =" + lista[
+                0] + " and tipo = " + lista[
+                    1] + " and Numero_documento = " + lista[2]
+            cls.set_data(query)
+        except Exception as error:
+            print(f'ERROR UPDATE EXPORTADO: {error}')
 
     @classmethod
     def update_exportado_list(cls, idt, e):
-        ids = list_to_tuple(idt, string=True)
-        query = f"UPDATE dbo.Documentos SET exportado = '{e}' WHERE CONCAT(sw,'-',tipo,'-',Numero_Documento) IN {ids}"
-        # print(query)
-        cls.set_data(query)
+        try:
+            ids = list_to_tuple(idt, string=True)
+            query = f"UPDATE dbo.Documentos SET exportado = '{e}' WHERE CONCAT(sw,'-',tipo,'-',Numero_Documento) IN {ids}"
+            # print(query)
+            cls.set_data(query)
+        except Exception as error:
+            print(f'ERROR UPDATE EXPORTADO LIST: {error}')
 
     @classmethod
     def get_tblproducto(cls, fecha):
         fecha = fecha.strftime('%Y-%m-%d %H:%M:%S')
-        query = "SET DATEFORMAT ymd SELECT * FROM dbo.TblProducto WHERE fecha_creacion >= CAST('" + fecha + "' AS datetime) OR Ultimo_Cambio_Registro >= CAST('" + fecha + "' AS datetime)"
+        query = "SET DATEFORMAT ymd SELECT * FROM dbo.TblProducto WHERE fecha_creacion >= CAST('" + \
+            fecha + \
+                "' AS datetime) OR Ultimo_Cambio_Registro >= CAST('" + \
+            fecha + "' AS datetime)"
         data = cls.get_data(query)
         return data
 
@@ -250,14 +267,18 @@ class Configuration(ModelSQL, ModelView):
     @classmethod
     def get_tblterceros(cls, fecha):
         fecha = fecha.strftime('%Y-%m-%d %H:%M:%S')
-        query = "SET DATEFORMAT ymd SELECT * FROM dbo.TblTerceros WHERE fecha_creacion >= CAST('" + fecha + "' AS datetime) OR Ultimo_Cambio_Registro >= CAST('" + fecha + "' AS datetime)"
+        query = "SET DATEFORMAT ymd SELECT * FROM dbo.TblTerceros WHERE fecha_creacion >= CAST('" + \
+            fecha + \
+                "' AS datetime) OR Ultimo_Cambio_Registro >= CAST('" + \
+            fecha + "' AS datetime)"
         data = cls.get_data(query)
         return data
 
     @classmethod
     def get_tercerosdir(cls, fecha):
         fecha = fecha.strftime('%Y-%m-%d %H:%M:%S')
-        query = "SET DATEFORMAT ymd SELECT * FROM dbo.Terceros_Dir WHERE Ultimo_Cambio_Registro >= CAST('" + fecha + "' AS datetime)"
+        query = "SET DATEFORMAT ymd SELECT * FROM dbo.Terceros_Dir WHERE Ultimo_Cambio_Registro >= CAST('" + \
+            fecha + "' AS datetime)"
         data = cls.get_data(query)
         return data
 
@@ -291,9 +312,13 @@ class Configuration(ModelSQL, ModelView):
         fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
         # query = "SELECT * FROM dbo.Documentos WHERE tipo = null AND Numero_documento = null" #TEST
         if not sw:
-            query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE Fecha_Hora_Factura >= CAST('" + fecha + "' AS datetime) AND tipo = " + tipo + " AND exportado != 'T' AND exportado != 'E' AND exportado != 'X' "
+            query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE Fecha_Hora_Factura >= CAST('" + fecha + \
+                "' AS datetime) AND tipo = " + tipo + \
+                    " AND exportado != 'T' AND exportado != 'E' AND exportado != 'X' "
         else:
-            query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE Fecha_Hora_Factura >= CAST('" + fecha + "' AS datetime) AND sw = " + sw + " AND tipo = " + tipo + " AND exportado != 'T' AND exportado != 'E' AND exportado != 'X' "
+            query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE Fecha_Hora_Factura >= CAST('" + fecha + \
+                "' AS datetime) AND sw = " + sw + " AND tipo = " + tipo + \
+                    " AND exportado != 'T' AND exportado != 'E' AND exportado != 'X' "
         if config.end_date:
             end_date = config.end_date.strftime('%Y-%m-%d %H:%M:%S')
             query += f" AND Fecha_Hora_Factura < CAST('{end_date}' AS datetime) "
@@ -345,7 +370,7 @@ class Configuration(ModelSQL, ModelView):
         data = cls.get_data(query)
         return data
 
-    #Metodo encargado de obtener los recibos pagados de un documento dado
+    # Metodo encargado de obtener los recibos pagados de un documento dado
     @classmethod
     def get_dctos_cruce(cls, id):
         lista = id.split('-')
@@ -354,7 +379,7 @@ class Configuration(ModelSQL, ModelView):
         data = cls.get_data(query)
         return data
 
-    #Metodo encargado de obtener la forma en que se pago el comprobante (recibos)
+    # Metodo encargado de obtener la forma en que se pago el comprobante (recibos)
     @classmethod
     def get_tipos_pago(cls, id):
         lista = id.split('-')

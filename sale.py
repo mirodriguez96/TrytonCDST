@@ -539,7 +539,8 @@ class Sale(metaclass=PoolMeta):
                         continue
                 to_created.append(id_venta)
             except Exception as e:
-                logs[id_venta] = f"EXCEPCION: {str(e)}"
+                logs[id_venta] = f"EXCEPCION: ERROR AL IMPORTAR LA VENTA"
+                # logs[id_venta] = f"EXCEPCION: {str(e)}"
                 to_exception.append(id_venta)
 
         actualizacion.add_logs(logs)
