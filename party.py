@@ -26,7 +26,7 @@ TYPE_DOCUMENT = [
 ]
 
 
-#Herencia del party.party e insercción de la función actualizar terceros
+# Herencia del party.party e insercción de la función actualizar terceros
 class Party(metaclass=PoolMeta):
     'Party'
     __name__ = 'party.party'
@@ -110,154 +110,162 @@ class Party(metaclass=PoolMeta):
             'logs': {},
         }
         parties = cls._get_party_documentos(terceros_db, 'nit_cedula')
-        # Comenzamos a recorrer los terceros traidos por la consulta
-        for tercero in terceros_db:
-            try:
-                nit_cedula = tercero.nit_cedula.replace('\n', "")
-                tipo_identificacion = cls.id_type(tercero.tipo_identificacion)
-                nombre = cls.delete_caracter(tercero.nombre.strip()).upper()
-                PrimerNombre = cls.delete_caracter(
-                    tercero.PrimerNombre.strip()).upper()
-                SegundoNombre = cls.delete_caracter(
-                    tercero.SegundoNombre.strip()).upper()
-                PrimerApellido = cls.delete_caracter(
-                    tercero.PrimerApellido.strip()).upper()
-                SegundoApellido = cls.delete_caracter(
-                    tercero.SegundoApellido.strip()).upper()
-                mail = tercero.mail.strip()
-                telefono = tercero.telefono.strip()
-                TipoPersona = cls.person_type(tercero.TipoPersona.strip())
-                ciiu = tercero.IdActividadEconomica
-                regime_tax = cls.tax_regime(tercero)
-                party = None
-                if nit_cedula in parties['active']:
-                    party = parties['active'][nit_cedula]
-                elif nit_cedula in parties['inactive']:
-                    values['logs'][
-                        nit_cedula] = "El tercero esta marcado como inactivo"
-                    continue
-                # Ahora verificamos si el tercero existe en tryton
-                if party:
-                    ultimo_cambio = tercero.Ultimo_Cambio_Registro
-                    if not ultimo_cambio:
-                        continue
-                    create_date = None
-                    write_date = None
-                    #LA HORA DEL SISTEMA DE TRYTON TIENE UNA DIFERENCIA HORARIA DE 5 HORAS CON LA DE TECNO
-                    if party.write_date:
-                        write_date = (party.write_date -
-                                      datetime.timedelta(hours=5))
-                    else:
-                        create_date = (party.create_date -
-                                       datetime.timedelta(hours=5))
-                    #Ahora vamos a verificar si el cambio más reciente fue hecho en la bd sqlserver para actualizarlo
-                    if (write_date and ultimo_cambio > write_date) or (
-                            not write_date and ultimo_cambio > create_date):
-                        if not party.validate_dian:
-                            party.name = nombre
-                            party.first_name = PrimerNombre
-                            party.second_name = SegundoNombre
-                            party.first_family_name = PrimerApellido
-                            party.second_family_name = SegundoApellido
 
-                        party.type_document = tipo_identificacion
-                        party.type_person = TipoPersona
-                        if party.type_person == 'persona_juridica':
-                            party.declarante = True
-                        #Verificación e inserción codigo ciiu
+        try:
+            for tercero in terceros_db:
+                try:
+                    nit_cedula = tercero.nit_cedula.replace('\n', "")
+                    tipo_identificacion = cls.id_type(
+                        tercero.tipo_identificacion)
+                    nombre = cls.delete_caracter(
+                        tercero.nombre.strip()).upper()
+                    PrimerNombre = cls.delete_caracter(
+                        tercero.PrimerNombre.strip()).upper()
+                    SegundoNombre = cls.delete_caracter(
+                        tercero.SegundoNombre.strip()).upper()
+                    PrimerApellido = cls.delete_caracter(
+                        tercero.PrimerApellido.strip()).upper()
+                    SegundoApellido = cls.delete_caracter(
+                        tercero.SegundoApellido.strip()).upper()
+                    mail = tercero.mail.strip()
+                    telefono = tercero.telefono.strip()
+                    TipoPersona = cls.person_type(tercero.TipoPersona.strip())
+                    ciiu = tercero.IdActividadEconomica
+                    regime_tax = cls.tax_regime(tercero)
+                    party = None
+                    if nit_cedula in parties['active']:
+                        party = parties['active'][nit_cedula]
+                    elif nit_cedula in parties['inactive']:
+                        values['logs'][
+                            nit_cedula] = "El tercero esta marcado como inactivo"
+                        continue
+                    # Ahora verificamos si el tercero existe en tryton
+                    if party:
+                        ultimo_cambio = tercero.Ultimo_Cambio_Registro
+                        if not ultimo_cambio:
+                            continue
+                        create_date = None
+                        write_date = None
+                        # LA HORA DEL SISTEMA DE TRYTON TIENE UNA DIFERENCIA HORARIA DE 5 HORAS CON LA DE TECNO
+                        if party.write_date:
+                            write_date = (party.write_date -
+                                          datetime.timedelta(hours=5))
+                        else:
+                            create_date = (party.create_date -
+                                           datetime.timedelta(hours=5))
+                        # Ahora vamos a verificar si el cambio más reciente fue hecho en la bd sqlserver para actualizarlo
+                        if (write_date and ultimo_cambio > write_date) or (
+                                not write_date and ultimo_cambio > create_date):
+                            if not party.validate_dian:
+                                party.name = nombre
+                                party.first_name = PrimerNombre
+                                party.second_name = SegundoNombre
+                                party.first_family_name = PrimerApellido
+                                party.second_family_name = SegundoApellido
+
+                            party.type_document = tipo_identificacion
+                            party.type_person = TipoPersona
+                            if party.type_person == 'persona_juridica':
+                                party.declarante = True
+                            # Verificación e inserción codigo ciiu
+                            if ciiu and ciiu != 0:
+                                party.ciiu_code = ciiu
+                            party.regime_tax = regime_tax
+                            contact_mail = Mcontact.search([
+                                ('id_tecno', '=', nit_cedula + '-mail')
+                            ])
+                            if contact_mail:
+                                contact_mail, = contact_mail
+                                contact_mail.value = mail
+                                contact_mail.save()
+                            elif len(mail) > 4:
+                                contact_mail = Mcontact()
+                                contact_mail.type = 'email'
+                                contact_mail.value = mail
+                                contact_mail.party = party
+                                contact_mail.save()
+                            contact_tel = Mcontact.search([('id_tecno', '=',
+                                                            nit_cedula + '-tel')])
+                            if contact_tel:
+                                contact_tel, = contact_tel
+                                contact_tel.type = 'other'
+                                contact_tel.value = telefono
+                                contact_tel.name = 'telefono'
+                                if len(telefono) == 10:
+                                    contact_tel.type = 'phone'
+                                    contact_tel.value = '+57' + telefono
+                                contact_tel.save()
+                            elif len(telefono) > 4:
+                                contact_tel = Mcontact()
+                                contact_tel.type = 'other'
+                                contact_tel.value = telefono
+                                contact_tel.name = 'telefono'
+                                contact_tel.party = party
+                                if len(telefono) == 10:
+                                    contact_tel.type = 'phone'
+                                    contact_tel.value = '+57' + telefono
+                                contact_tel.save()
+                            party.save()
+                    else:
+                        # Creando tercero junto con sus direcciones y metodos de contactos
+                        party = {
+                            'type_document': tipo_identificacion,
+                            'id_number': nit_cedula,
+                            'name': nombre,
+                            'first_name': PrimerNombre,
+                            'second_name': SegundoNombre,
+                            'first_family_name': PrimerApellido,
+                            'second_family_name': SegundoApellido,
+                            'regime_tax': regime_tax,
+                            'type_person': TipoPersona,
+                        }
+                        # Equivalencia tipo de persona y asignación True en declarante
+                        if TipoPersona == 'persona_juridica':
+                            party['declarante'] = True
+                        # Verificación e inserción codigo ciiu
                         if ciiu and ciiu != 0:
-                            party.ciiu_code = ciiu
-                        party.regime_tax = regime_tax
-                        contact_mail = Mcontact.search([
-                            ('id_tecno', '=', nit_cedula + '-mail')
-                        ])
-                        if contact_mail:
-                            contact_mail, = contact_mail
-                            contact_mail.value = mail
-                            contact_mail.save()
-                        elif len(mail) > 4:
-                            contact_mail = Mcontact()
-                            contact_mail.type = 'email'
-                            contact_mail.value = mail
-                            contact_mail.party = party
-                            contact_mail.save()
-                        contact_tel = Mcontact.search([('id_tecno', '=',
-                                                        nit_cedula + '-tel')])
-                        if contact_tel:
-                            contact_tel, = contact_tel
-                            contact_tel.type = 'other'
-                            contact_tel.value = telefono
-                            contact_tel.name = 'telefono'
+                            party['ciiu_code'] = ciiu
+                        # Creamos las direcciones pertenecientes al tercero
+                        direcciones_tecno = Config.get_tercerosdir_nit(
+                            nit_cedula)
+                        addresses = []
+                        for direccion in direcciones_tecno:
+                            address = cls.create_address_new(party, direccion)
+                            addresses.append(address)
+                        party['addresses'] = [('create', addresses)]
+                        # Metodos de contactos
+                        contacts = []
+                        if len(telefono) > 4:
+                            phone = {
+                                'id_tecno': nit_cedula + '-tel',
+                                'type': 'other',
+                                'name': 'telefono',
+                                'value': telefono
+                            }
                             if len(telefono) == 10:
-                                contact_tel.type = 'phone'
-                                contact_tel.value = '+57' + telefono
-                            contact_tel.save()
-                        elif len(telefono) > 4:
-                            contact_tel = Mcontact()
-                            contact_tel.type = 'other'
-                            contact_tel.value = telefono
-                            contact_tel.name = 'telefono'
-                            contact_tel.party = party
-                            if len(telefono) == 10:
-                                contact_tel.type = 'phone'
-                                contact_tel.value = '+57' + telefono
-                            contact_tel.save()
-                        party.save()
-                else:
-                    # Creando tercero junto con sus direcciones y metodos de contactos
-                    party = {
-                        'type_document': tipo_identificacion,
-                        'id_number': nit_cedula,
-                        'name': nombre,
-                        'first_name': PrimerNombre,
-                        'second_name': SegundoNombre,
-                        'first_family_name': PrimerApellido,
-                        'second_family_name': SegundoApellido,
-                        'regime_tax': regime_tax,
-                        'type_person': TipoPersona,
-                    }
-                    # Equivalencia tipo de persona y asignación True en declarante
-                    if TipoPersona == 'persona_juridica':
-                        party['declarante'] = True
-                    # Verificación e inserción codigo ciiu
-                    if ciiu and ciiu != 0:
-                        party['ciiu_code'] = ciiu
-                    #Creamos las direcciones pertenecientes al tercero
-                    direcciones_tecno = Config.get_tercerosdir_nit(nit_cedula)
-                    addresses = []
-                    for direccion in direcciones_tecno:
-                        address = cls.create_address_new(party, direccion)
-                        addresses.append(address)
-                    party['addresses'] = [('create', addresses)]
-                    # Metodos de contactos
-                    contacts = []
-                    if len(telefono) > 4:
-                        phone = {
-                            'id_tecno': nit_cedula + '-tel',
-                            'type': 'other',
-                            'name': 'telefono',
-                            'value': telefono
-                        }
-                        if len(telefono) == 10:
-                            phone['type'] = 'phone'
-                            phone['value'] = '+57' + telefono
-                        contacts.append(phone)
-                    if len(mail) > 4:
-                        email = {
-                            'id_tecno': nit_cedula + '-mail',
-                            'type': 'email',
-                            'name': 'mail',
-                            'value': mail
-                        }
-                        contacts.append(email)
-                    if contacts:
-                        party['contact_mechanisms'] = [('create', contacts)]
-                    values['to_create'].append(party)
-            except Exception as e:
-                values['logs'][nit_cedula] = f"EXCEPCION: {str(e)}"
-        if values['to_create']:
-            Party.create(values['to_create'])
-        #Se almacena los registros y finaliza el importe
+                                phone['type'] = 'phone'
+                                phone['value'] = '+57' + telefono
+                            contacts.append(phone)
+                        if len(mail) > 4:
+                            email = {
+                                'id_tecno': nit_cedula + '-mail',
+                                'type': 'email',
+                                'name': 'mail',
+                                'value': mail
+                            }
+                            contacts.append(email)
+                        if contacts:
+                            party['contact_mechanisms'] = [
+                                ('create', contacts)]
+                        values['to_create'].append(party)
+                except Exception as e:
+                    values['logs'][nit_cedula] = f"EXCEPCION: {str(e)}"
+            if values['to_create']:
+                Party.create(values['to_create'])
+        except Exception as error:
+            values['logs']['EXCEPCION'] = f"EXCEPCION: {str(error)}"
+            print(error)
+        # Se almacena los registros y finaliza el importe
         actualizacion.add_logs(values['logs'])
         print("FINISH TERCEROS")
 
@@ -309,7 +317,7 @@ class Party(metaclass=PoolMeta):
                         create_date = (address.create_date -
                                        datetime.timedelta(hours=5))
                     if (ultimo_cambiod and write_date and ultimo_cambiod > write_date) or \
-                        (ultimo_cambiod and not write_date and ultimo_cambiod > create_date):
+                            (ultimo_cambiod and not write_date and ultimo_cambiod > create_date):
                         region = list(dir.CodigoSucursal.strip())
                         if len(region) > 4:
                             department_code = Department.search([
@@ -385,7 +393,7 @@ class Party(metaclass=PoolMeta):
             adress['street'] = street
         return adress
 
-    #Función encargada de eliminar caracteres especiales y convertir string en alfanumerico
+    # Función encargada de eliminar caracteres especiales y convertir string en alfanumerico
     @classmethod
     def delete_caracter(cls, word):
         list_word = word.split(" ")
@@ -398,11 +406,11 @@ class Party(metaclass=PoolMeta):
                 result = res
         return result
 
-    #Función encargada de realizar la equivalencia entre los tipo de documentos de la db
-    #y los tipos de documentos del modulo account_col de presik
+    # Función encargada de realizar la equivalencia entre los tipo de documentos de la db
+    # y los tipos de documentos del modulo account_col de presik
     @classmethod
     def id_type(cls, type):
-        #Equivalencia tipo de identificacion
+        # Equivalencia tipo de identificacion
         if type == '1':
             return '13'
         elif type == '2':
@@ -416,22 +424,22 @@ class Party(metaclass=PoolMeta):
         else:
             return None
 
-    #Función encargada de realizar la equivalencia entre los tipos de personas de la db TecnoCarnes
+    # Función encargada de realizar la equivalencia entre los tipos de personas de la db TecnoCarnes
     # y los tipos del modulo account_col de presik
     @classmethod
     def person_type(cls, type):
-        #Equivalencia tipo de persona y asignación True en declarante
+        # Equivalencia tipo de persona y asignación True en declarante
         if type == 'Natural':
             return 'persona_natural'
         elif type == 'Juridica':
             return 'persona_juridica'
 
-    #Función encargada de realizar la equivalencia entre los regimen de impuestos de la db TecnoCarnes
+    # Función encargada de realizar la equivalencia entre los regimen de impuestos de la db TecnoCarnes
     # y los regimen de impuestos del modulo account_col de presik
     @classmethod
     def tax_regime(cls, tercero):
         regime_tax = None
-        #Equivalencia regimen de impuestos
+        # Equivalencia regimen de impuestos
         if tercero.IdRegimen_Fiscal == 48:
             regime_tax = 'regimen_responsable'
         elif tercero.IdRegimen_Fiscal == 49:
@@ -477,14 +485,14 @@ class Party(metaclass=PoolMeta):
         return parties
 
 
-#Herencia del party.address e insercción del campo id_tecno
+# Herencia del party.address e insercción del campo id_tecno
 class PartyAddress(metaclass=PoolMeta):
     'PartyAddress'
     __name__ = 'party.address'
     id_tecno = fields.Char('Id TecnoCarnes', required=False)
 
 
-#Herencia del party.contact_mechanism e insercción del campo id_tecno
+# Herencia del party.contact_mechanism e insercción del campo id_tecno
 class ContactMechanism(metaclass=PoolMeta):
     'ContactMechanism'
     __name__ = 'party.contact_mechanism'
