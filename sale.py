@@ -121,10 +121,14 @@ class Sale(metaclass=PoolMeta):
                 tipo_doc = venta.tipo
                 id_venta = str(sw) + '-' + tipo_doc + '-' + str(numero_doc)
 
-                invoice_amount_tecno = Decimal(str(round(venta.valor_total,
-                                                         2)))
+                value_total = Decimal(str(round(venta.valor_total,
+                                                2)))
+                caused_retention = Decimal(str(round(venta.retencion_causada,
+                                                     2)))
                 tax_consumption = Decimal(str(round(venta.Impuesto_Consumo,
                                                     2)))
+                invoice_amount_tecno = value_total - caused_retention
+
                 if venta.Valor_impuesto:
                     tax_amount_tecno = Decimal(
                         str(round(venta.Impuesto_Consumo, 2)))
@@ -313,7 +317,7 @@ class Sale(metaclass=PoolMeta):
                 sale.invoice_number = sale.number
                 sale.invoice_date = fecha_date
                 sale.invoice_amount_tecno = Decimal(
-                    str(round(invoice_amount_tecno - tax_consumption, 2)))
+                    str(round(invoice_amount_tecno, 2)))
                 sale.tax_amount_tecno = Decimal(str(round(tax_amount_tecno,
                                                           2)))
                 """ Se revisa si la venta es clasificada como electronica o
@@ -1418,7 +1422,7 @@ class SaleInvoiceValueCdstReport(Report):
         pool = Pool()
         Company = pool.get('company.company')
         Sale = pool.get('sale.sale')
-
+        
         info_invoices = []
         type_document = ""
         state = ""
@@ -1447,7 +1451,7 @@ class SaleInvoiceValueCdstReport(Report):
                 if sale.invoice:
                     invoice_amount_tecno = sale.invoice_amount_tecno
                     tax_amount_tecno = sale.tax_amount_tecno
-                    invoice_value_tryton = sale.untaxed_amount_cache
+                    invoice_value_tryton = sale.invoice.total_amount
                     total_amount_tax_tecno += tax_amount_tecno
                     if invoice_amount_tecno is not None\
                             and invoice_value_tryton is not None:
@@ -1458,13 +1462,11 @@ class SaleInvoiceValueCdstReport(Report):
                             abs(invoice_value_tryton))
                         tax_amount_tecno = Decimal(abs(tax_amount_tecno))
 
-                        invoice_without_tax = invoice_amount_tecno\
-                            - tax_amount_tecno
-                        invoice_difference = invoice_without_tax\
+                        invoice_difference = invoice_amount_tecno \
                             - invoice_value_tryton
 
                         invoice_difference = Decimal(abs(invoice_difference))
-                        total_amount_tecno += invoice_without_tax
+                        total_amount_tecno += invoice_amount_tecno
                         total_amount_tryton += invoice_value_tryton
 
                         if invoice_difference > 5:
@@ -1472,7 +1474,7 @@ class SaleInvoiceValueCdstReport(Report):
                                 "date": sale.sale_date,
                                 "reference": sale.reference,
                                 "description": sale.invoice.description,
-                                "value_tecno": invoice_without_tax,
+                                "value_tecno": invoice_amount_tecno,
                                 "value_tryton": invoice_value_tryton,
                                 "difference": invoice_difference,
                                 "tax_amount": tax_amount_tecno,
