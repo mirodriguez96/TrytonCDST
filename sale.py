@@ -121,10 +121,14 @@ class Sale(metaclass=PoolMeta):
                 tipo_doc = venta.tipo
                 id_venta = str(sw) + '-' + tipo_doc + '-' + str(numero_doc)
 
-                invoice_amount_tecno = Decimal(str(round(venta.valor_total,
-                                                         2)))
+                value_total = Decimal(str(round(venta.valor_total,
+                                                2)))
+                caused_retention = Decimal(str(round(venta.retencion_causada,
+                                                     2)))
                 tax_consumption = Decimal(str(round(venta.Impuesto_Consumo,
                                                     2)))
+                invoice_amount_tecno = value_total - caused_retention
+
                 if venta.Valor_impuesto:
                     tax_amount_tecno = Decimal(
                         str(round(venta.Impuesto_Consumo, 2)))
@@ -313,7 +317,7 @@ class Sale(metaclass=PoolMeta):
                 sale.invoice_number = sale.number
                 sale.invoice_date = fecha_date
                 sale.invoice_amount_tecno = Decimal(
-                    str(round(invoice_amount_tecno - tax_consumption, 2)))
+                    str(round(invoice_amount_tecno, 2)))
                 sale.tax_amount_tecno = Decimal(str(round(tax_amount_tecno,
                                                           2)))
                 """ Se revisa si la venta es clasificada como electronica o
@@ -450,7 +454,7 @@ class Sale(metaclass=PoolMeta):
                                                   'OR',
                                                   ('group.kind', '=', 'sale'),
                                                   ('group.kind', '=', 'both')
-                                              ]])
+                            ]])
                             if tax:
                                 if len(tax) > 1:
                                     msg = f"EXCEPCION: ({id_venta})\
@@ -906,7 +910,7 @@ class Sale(metaclass=PoolMeta):
             # Se procede a seleccionar las facturas de la venta
             for invoice in sale.invoices:
                 if hasattr(invoice, 'electronic_state') and \
-                    invoice.electronic_state == 'submitted':
+                        invoice.electronic_state == 'submitted':
                     raise UserError('account_col.msg_with_electronic_invoice')
                 if invoice.state == 'paid':
                     for line in invoice.move.lines:
@@ -1030,8 +1034,8 @@ class Sale(metaclass=PoolMeta):
                     sale_table.state, sale_table.shipment_state,
                     sale_table.invoice_state
                 ],
-                                   values=['draft', 'none', 'none'],
-                                   where=sale_table.id.in_(to_delete['sale'])))
+                    values=['draft', 'none', 'none'],
+                    where=sale_table.id.in_(to_delete['sale'])))
             cursor.execute(*sale_table.delete(
                 where=sale_table.id.in_(to_delete['sale'])))
 
@@ -1358,7 +1362,7 @@ class SaleInvoiceValueCdstStart(ModelView):
     from_date = fields.Date('From Date', required=True)
     to_date = fields.Date('To Date', required=True)
     document_type = fields.Selection('get_document_type', 'Type Document')
-    #state = fields.Selection(STATES, 'State')
+    # state = fields.Selection(STATES, 'State')
 
     @staticmethod
     def default_company():
@@ -1401,7 +1405,7 @@ class SaleInvoiceValueCdst(Wizard):
             'from_date': from_date,
             'to_date': to_date,
             'type_document': self.start.document_type,
-            #'state': self.start.state,
+            # 'state': self.start.state,
         }
         return action, data
 
@@ -1418,7 +1422,7 @@ class SaleInvoiceValueCdstReport(Report):
         pool = Pool()
         Company = pool.get('company.company')
         Sale = pool.get('sale.sale')
-
+        
         info_invoices = []
         type_document = ""
         state = ""
@@ -1447,7 +1451,7 @@ class SaleInvoiceValueCdstReport(Report):
                 if sale.invoice:
                     invoice_amount_tecno = sale.invoice_amount_tecno
                     tax_amount_tecno = sale.tax_amount_tecno
-                    invoice_value_tryton = sale.untaxed_amount_cache
+                    invoice_value_tryton = sale.invoice.total_amount
                     total_amount_tax_tecno += tax_amount_tecno
                     if invoice_amount_tecno is not None\
                             and invoice_value_tryton is not None:
@@ -1458,13 +1462,11 @@ class SaleInvoiceValueCdstReport(Report):
                             abs(invoice_value_tryton))
                         tax_amount_tecno = Decimal(abs(tax_amount_tecno))
 
-                        invoice_without_tax = invoice_amount_tecno\
-                            - tax_amount_tecno
-                        invoice_difference = invoice_without_tax\
+                        invoice_difference = invoice_amount_tecno \
                             - invoice_value_tryton
 
                         invoice_difference = Decimal(abs(invoice_difference))
-                        total_amount_tecno += invoice_without_tax
+                        total_amount_tecno += invoice_amount_tecno
                         total_amount_tryton += invoice_value_tryton
 
                         if invoice_difference > 5:
@@ -1472,7 +1474,7 @@ class SaleInvoiceValueCdstReport(Report):
                                 "date": sale.sale_date,
                                 "reference": sale.reference,
                                 "description": sale.invoice.description,
-                                "value_tecno": invoice_without_tax,
+                                "value_tecno": invoice_amount_tecno,
                                 "value_tryton": invoice_value_tryton,
                                 "difference": invoice_difference,
                                 "tax_amount": tax_amount_tecno,
