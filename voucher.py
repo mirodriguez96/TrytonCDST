@@ -829,12 +829,9 @@ class Voucher(ModelSQL, ModelView):
         except Exception as e:
             print(e)
 
+    # Función que se encarga de forzar a borrador los comprobantes
     @classmethod
     def force_draft_voucher(cls, vouchers):
-        """Function to force draft vouchers
-        Args:
-            vouchers (model): account_voucher model
-        """
         pool = Pool()
         Voucher = pool.get('account.voucher')
         move_table = Table('account_move')
@@ -843,7 +840,7 @@ class Voucher(ModelSQL, ModelView):
         for voucher in vouchers:
             if voucher.move:
                 move_ids.append(voucher.move.id)
-            # voucher.number = Null
+            voucher.number = Null
         if move_ids:
             cursor.execute(
                 *move_table.update(columns=[move_table.state],
