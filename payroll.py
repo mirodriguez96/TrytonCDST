@@ -1323,15 +1323,22 @@ def send_mail_certificate(to='',
                           dic=None):
 
     pool = Pool()
+    ActionReport = pool.get('ir.action.report')
+    ConfigEmail = pool.get('conector.email')
+    Attachment = pool.get('ir.attachment')
     Email = pool.get('ir.email')
     User = pool.get('res.user')
-    ActionReport = pool.get('ir.action.report')
-    Attachment = pool.get('ir.attachment')
+    emails = ConfigEmail.search([])
+
+    if not emails:
+        raise UserError('Error email: ',
+                        'No se encontro informacion para envio de emails')
+    _email = emails[0]
+
     transaction = Transaction()
     Model = pool.get(record[0])
     records = Model(record[1])
     user = User(transaction.user)
-    # seq = get_number_sequence()
     body_html = HTML_EMAIL % {
         'subject': subject,
         'body': body,
@@ -1385,7 +1392,7 @@ def send_mail_certificate(to='',
             msg.attach(attachment)
     else:
         msg = content
-    msg['From'] = from_ = config.get('email', 'from')
+    msg['From'] = from_ = _email.from_to
     if user.email:
         if user.name:
             user_email = formataddr((user.name, user.email))
@@ -1396,30 +1403,33 @@ def send_mail_certificate(to='',
     msg['To'] = ', '.join(formataddr(a) for a in getaddresses([to]))
     msg['Cc'] = ', '.join(formataddr(a) for a in getaddresses([cc]))
     msg['Subject'] = Header(subject, 'utf-8')
-    to_addrs = list(
-        filter(
-            None,
-            map(str.strip,
-                _get_emails(to) + _get_emails(cc) + _get_emails(bcc))))
-    sendmail(from_, to_addrs, msg, server=None, strict=True)
-    email = Email(recipients=to,
-                  recipients_secondary=cc,
-                  recipients_hidden=bcc,
-                  addresses=[{
-                      'address': a
-                  } for a in to_addrs],
-                  subject=subject,
-                  body=body,
-                  resource=records)
-    email.save()
-    with Transaction().set_context(_check_access=False):
-        attachments_ = []
-        for name, data in files:
-            attachments_.append(
-                Attachment(resource=email, name=name, data=data))
-        Attachment.save(attachments_)
+    try:
+        to_addrs = list(
+            filter(
+                None,
+                map(str.strip,
+                    _get_emails(to) + _get_emails(cc) + _get_emails(bcc))))
+        sendmail(from_, to_addrs, msg, server=None, strict=True)
+        email = Email(recipients=to,
+                      recipients_secondary=cc,
+                      recipients_hidden=bcc,
+                      addresses=[{
+                          'address': a
+                      } for a in to_addrs],
+                      subject=subject,
+                      body=body,
+                      resource=records)
+        email.save()
+        with Transaction().set_context(_check_access=False):
+            attachments_ = []
+            for name, data in files:
+                attachments_.append(
+                    Attachment(resource=email, name=name, data=data))
+            Attachment.save(attachments_)
 
-    return email
+        return email
+    except Exception as error:
+        raise UserError('Error envio: ', error)
 
 
 # Asistente encargado de recolectar las nóminas y enviarlas por email
@@ -1577,26 +1587,26 @@ def send_mail(to='',
                 None,
                 map(str.strip,
                     _get_emails(to) + _get_emails(cc) + _get_emails(bcc))))
+        sendmail(from_, to_addrs, msg, server=None, strict=True)
+        email = Email(recipients=to,
+                      recipients_secondary=cc,
+                      recipients_hidden=bcc,
+                      addresses=[{
+                          'address': a
+                      } for a in to_addrs],
+                      subject=subject,
+                      body=body,
+                      resource=record)
+        email.save()
+        with Transaction().set_context(_check_access=False):
+            attachments_ = []
+            for name, data in files:
+                attachments_.append(
+                    Attachment(resource=email, name=name, data=data))
+            Attachment.save(attachments_)
+        return email
     except Exception as error:
-        print(error)
-    sendmail(from_, to_addrs, msg, server=None, strict=True)
-    email = Email(recipients=to,
-                  recipients_secondary=cc,
-                  recipients_hidden=bcc,
-                  addresses=[{
-                      'address': a
-                  } for a in to_addrs],
-                  subject=subject,
-                  body=body,
-                  resource=record)
-    email.save()
-    with Transaction().set_context(_check_access=False):
-        attachments_ = []
-        for name, data in files:
-            attachments_.append(
-                Attachment(resource=email, name=name, data=data))
-        Attachment.save(attachments_)
-    return email
+        raise UserError('Error envio: ', error)
 
 
 class StaffEvent(metaclass=PoolMeta):
