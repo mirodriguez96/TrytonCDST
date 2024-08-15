@@ -450,7 +450,7 @@ class Sale(metaclass=PoolMeta):
                                                   'OR',
                                                   ('group.kind', '=', 'sale'),
                                                   ('group.kind', '=', 'both')
-                                              ]])
+                            ]])
                             if tax:
                                 if len(tax) > 1:
                                     msg = f"EXCEPCION: ({id_venta})\
@@ -539,8 +539,8 @@ class Sale(metaclass=PoolMeta):
                         continue
                 to_created.append(id_venta)
             except Exception as e:
-                logs[id_venta] = f"EXCEPCION: ERROR AL IMPORTAR LA VENTA"
-                # logs[id_venta] = f"EXCEPCION: {str(e)}"
+                # logs[id_venta] = f"EXCEPCION: ERROR AL IMPORTAR LA VENTA"
+                logs[id_venta] = f"EXCEPCION: {str(e)}"
                 to_exception.append(id_venta)
 
         actualizacion.add_logs(logs)
@@ -906,7 +906,7 @@ class Sale(metaclass=PoolMeta):
             # Se procede a seleccionar las facturas de la venta
             for invoice in sale.invoices:
                 if hasattr(invoice, 'electronic_state') and \
-                    invoice.electronic_state == 'submitted':
+                        invoice.electronic_state == 'submitted':
                     raise UserError('account_col.msg_with_electronic_invoice')
                 if invoice.state == 'paid':
                     for line in invoice.move.lines:
@@ -1030,8 +1030,8 @@ class Sale(metaclass=PoolMeta):
                     sale_table.state, sale_table.shipment_state,
                     sale_table.invoice_state
                 ],
-                                   values=['draft', 'none', 'none'],
-                                   where=sale_table.id.in_(to_delete['sale'])))
+                    values=['draft', 'none', 'none'],
+                    where=sale_table.id.in_(to_delete['sale'])))
             cursor.execute(*sale_table.delete(
                 where=sale_table.id.in_(to_delete['sale'])))
 
@@ -1358,7 +1358,7 @@ class SaleInvoiceValueCdstStart(ModelView):
     from_date = fields.Date('From Date', required=True)
     to_date = fields.Date('To Date', required=True)
     document_type = fields.Selection('get_document_type', 'Type Document')
-    #state = fields.Selection(STATES, 'State')
+    # state = fields.Selection(STATES, 'State')
 
     @staticmethod
     def default_company():
@@ -1401,7 +1401,7 @@ class SaleInvoiceValueCdst(Wizard):
             'from_date': from_date,
             'to_date': to_date,
             'type_document': self.start.document_type,
-            #'state': self.start.state,
+            # 'state': self.start.state,
         }
         return action, data
 
