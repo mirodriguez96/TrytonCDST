@@ -137,14 +137,20 @@ class Move(ModelSQL, metaclass=PoolMeta):
             return False
 
     @classmethod
+    @ModelView.button
     def post(cls, moves):
+        super(Move, cls).post(moves)
+        cls.post_(moves)
+
+    @classmethod
+    def post_(cls, moves):
         pool = Pool()
-        Date = pool.get('ir.date')
         Line = pool.get('account.move.line')
         Employee = pool.get('company.employee')
         Wagetype = pool.get('staff.wage_type')
         account = None
         party = None
+
         for move in moves:
             amount = Decimal('0.0')
             if not move.lines:
@@ -205,21 +211,6 @@ class Move(ModelSQL, metaclass=PoolMeta):
                 else:
                     raise UserError('ERROR', 'Hay diferencia en debitos'
                                     'y creditos, no se puede contabilizar.')
-
-        for move in moves:
-            move.state = 'posted'
-            if not move.post_number:
-                move.post_date = Date.today()
-                move.post_number = move.period.post_move_sequence_used.get()
-
-            def keyfunc(l):
-                return l.party, l.account
-            to_reconcile = [l for l in move.lines
-                            if ((l.debit == l.credit == Decimal('0'))
-                                and l.account.reconcile)]
-            to_reconcile = sorted(to_reconcile, key=keyfunc)
-            for _, zero_lines in groupby(to_reconcile, keyfunc):
-                Line.reconcile(list(zero_lines))
         cls.save(moves)
 
 
