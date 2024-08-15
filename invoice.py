@@ -100,11 +100,6 @@ class Invoice(metaclass=PoolMeta):
                     queue_batch=context.get('queue_batch', True)):
                 cls.__queue__.process([invoice_])
 
-        # for invoice in invoice_to_post:
-        #     with transaction.set_context(
-        #             queue_batch=context.get('queue_batch', True)):
-        #         cls.__queue__.process([invoice])
-
     @classmethod
     def create_adjustment_note(cls, inv):
         """Function to create account note for invoices
@@ -556,19 +551,6 @@ class Invoice(metaclass=PoolMeta):
                         else:
                             quantity = abs(round(linea.Cantidad_Facturada, 3))
 
-                        # Nueva linea para aplicar cuenta analitica
-                        # tbltipodocto = Config.get_tbltipodoctos(doc.tipo)
-                        # if tbltipodocto and tbltipodocto[0].Encabezado != '0':
-                        #     AnalyticAccount = pool.get('analytic_account.account')
-                        #     analytic_account = AnalyticAccount.search([('code', '=', str(tbltipodocto[0].Encabezado))])
-                        #     if not analytic_account:
-                        #         msg = f'EXCEPCION: No se encontro la asignacion de la cuenta analitica en TecnoCarnes {str(tbltipodocto[0].Encabezado)}'
-                        #         data['logs'][id_tecno] = msg
-                        #         data['exportado'][id_tecno] = 'E'
-                        #         continue
-                        # analytic_account = analytic_account[0]
-                        # Termina aqui
-
                         line = {
                             'product': productos_lin[id_producto],
                             'quantity': quantity,
@@ -975,6 +957,58 @@ class Invoice(metaclass=PoolMeta):
         cls._delete_invoices(to_delete)
         for idt in ids_tecno:
             Cnxn.update_exportado(idt, 'N')
+
+    @classmethod
+    def _post(cls, invoices):
+        pool = Pool()
+        Move = pool.get('account.move')
+        cls.set_number(invoices)
+        moves = []
+        for invoice in invoices:
+            move = invoice.get_move()
+            if move != invoice.move:
+                invoice.move = move
+                moves.append(move)
+            if invoice.state != 'posted':
+                invoice.state = 'posted'
+        if moves:
+
+            Move.save(moves)
+
+        reconciled = []
+        for invoice in invoices:
+            if invoice.type == 'out':
+                cls.configure_party(invoice.move, invoice)
+                invoice.print_invoice()
+            if invoice.reconciled:
+                reconciled.append(invoice)
+        cls.save(invoices)
+        Move.post([i.move for i in invoices if i.move.state != 'posted'])
+        if reconciled:
+            cls.__queue__.process(reconciled)
+
+    @classmethod
+    def configure_party(cls, move, invoice):
+        """Function to change party if invoice type out
+        in the move lines
+
+        Args:
+            move (object): account_move model
+            invoice (object): account_invoice model
+        """
+        for lines in invoice.lines:
+            product = lines.product
+            account_code = lines.account.code
+            account_cogs_used = product.account_cogs_used.code
+            account_stock_in_used = product.account_stock_in_used.code
+
+            if account_cogs_used and account_stock_in_used:
+                for lines in move.lines:
+                    if lines.account.code != account_code:
+                        if lines.account.code == account_cogs_used\
+                                or lines.account.code == account_stock_in_used:
+                            lines.party = move.company.party
+                            lines.save()
 
 
 class InvoiceLine(metaclass=PoolMeta):
