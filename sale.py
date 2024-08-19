@@ -685,7 +685,7 @@ class Sale(metaclass=PoolMeta):
                         values=["validated"],
                         where=account_invoice.id == invoice.id))
                 msg = f"REVISAR FACTURA: {sale.id_tecno} - {str(e)}"
-                logs.append(msg)
+                logs[sale.id_tecno] = msg
                 to_exception.append(sale.id_tecno)
                 continue
             if invoice.original_invoice:
