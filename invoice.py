@@ -965,14 +965,12 @@ class Invoice(metaclass=PoolMeta):
         cls.set_number(invoices)
         moves = []
         for invoice in invoices:
+            invoice.state = 'draft'
             move = invoice.get_move()
             if move != invoice.move:
                 invoice.move = move
                 moves.append(move)
-            if invoice.state != 'posted':
-                invoice.state = 'posted'
         if moves:
-
             Move.save(moves)
 
         reconciled = []
@@ -980,8 +978,10 @@ class Invoice(metaclass=PoolMeta):
             if invoice.type == 'out':
                 cls.configure_party(invoice.move, invoice)
                 invoice.print_invoice()
+
             if invoice.reconciled:
                 reconciled.append(invoice)
+            invoice.state = 'posted'
         cls.save(invoices)
         Move.post([i.move for i in invoices if i.move.state != 'posted'])
         if reconciled:
@@ -997,18 +997,19 @@ class Invoice(metaclass=PoolMeta):
             invoice (object): account_invoice model
         """
         for lines in invoice.lines:
-            product = lines.product
-            account_code = lines.account.code
-            account_cogs_used = product.account_cogs_used.code
-            account_stock_in_used = product.account_stock_in_used.code
+            if hasattr(lines, 'account') and hasattr(lines, 'product'):
+                product = lines.product
+                account_code = lines.account.code
+                if product.account_cogs_used and product.account_stock_in_used:
+                    account_cogs_used = product.account_cogs_used.code
+                    account_stock_in_used = product.account_stock_in_used.code
 
-            if account_cogs_used and account_stock_in_used:
-                for lines in move.lines:
-                    if lines.account.code != account_code:
-                        if lines.account.code == account_cogs_used\
-                                or lines.account.code == account_stock_in_used:
-                            lines.party = move.company.party
-                            lines.save()
+                    if account_cogs_used and account_stock_in_used:
+                        for lines in move.lines:
+                            if lines.account.code != account_code:
+                                if lines.account.code == account_cogs_used or\
+                                        lines.account.code == account_stock_in_used:
+                                    lines.party = move.company.party
 
 
 class InvoiceLine(metaclass=PoolMeta):
@@ -1075,7 +1076,7 @@ class UpdateInvoiceTecnoStart(ModelView):
         user_permission = pool.get('conector.permissions')
         permission = pool.get('res.user-ir.action.wizard')
         action = user_permission.search([('user_permission', '=',
-                                          Transaction().user)])
+                                        Transaction().user)])
         action = [i.id for i in action]
         validated = permission.search([
             ('user_permission', 'in', action),
@@ -1134,7 +1135,7 @@ class UpdateInvoiceTecno(Wizard):
                         continue
 
                 reclamacion = Reclamacion.search([('line.move.origin', '=',
-                                                   invoice)])
+                                                 invoice)])
                 rec_name = invoice.rec_name
                 party_name = invoice.party.name
                 rec_party = rec_name + ' de ' + party_name
@@ -1150,14 +1151,14 @@ class UpdateInvoiceTecno(Wizard):
                             to_delete_sales.append(sale[0])
                     elif invoice.type == 'in':
                         purchase = Purchase.search([('number', '=',
-                                                     invoice.number)])
+                                                   invoice.number)])
                         if purchase:
                             to_delete_purchases.append(purchase[0])
 
                     if reclamacion:
                         dunningTable = Dunning.__table__()
                         emails_delete = Mails.search([('dunning', 'in',
-                                                       reclamacion)])
+                                                     reclamacion)])
                         if emails_delete:
                             Mails.delete(emails_delete)
 
