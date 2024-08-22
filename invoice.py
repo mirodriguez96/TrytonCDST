@@ -1005,11 +1005,13 @@ class Invoice(metaclass=PoolMeta):
                     account_stock_in_used = product.account_stock_in_used.code
 
                     if account_cogs_used and account_stock_in_used:
-                        for lines in move.lines:
-                            if lines.account.code != account_code:
-                                if lines.account.code == account_cogs_used or\
-                                        lines.account.code == account_stock_in_used:
-                                    lines.party = move.company.party
+                        if move.state == "draft":
+                            for lines in move.lines:
+                                if lines.account.code != account_code:
+                                    if lines.account.code == account_cogs_used or\
+                                            lines.account.code == account_stock_in_used:
+                                        lines.party = move.company.party
+                                        lines.save()
 
 
 class InvoiceLine(metaclass=PoolMeta):
