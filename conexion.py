@@ -1,5 +1,6 @@
 import pyodbc
 import datetime
+import logging
 
 
 class Conexion:
@@ -10,7 +11,6 @@ class Conexion:
         self.user = data['user']
         self.password = data['password']
 
-    # Metodo encargado de realizar la conexion a la base de datos externa
     def conexion(self):
         """
         Las conexiones utilizadas en un bloque with se confirmarán al final del bloque
@@ -19,40 +19,41 @@ class Conexion:
         try:
             driver = "DRIVER={ODBC Driver 17 for SQL Server};"\
                 f"SERVER={self.server};DATABASE={self.database};"\
-                f"UID={self.user};PWD={self.password}"
+                f"UID={self.user};PWD={self.password}"\
+                "Connection Timeout=5;"
             with pyodbc.connect(driver) as cnxn:
+                cursor = cnxn.cursor()
+                cursor.execute("SELECT 1")
                 return cnxn
-        except Exception as error:
+        except pyodbc.Error as error:
+            logging.error(f'Error de conexión a SQL Server: {error}')
             print(f'ERROR DE CONEXION: {error}')
-    # Se prueba la conexión y retorna booleano
 
     def test_conexion(self):
         try:
-            self.conexion()
+            with self.conexion() as cnxn:
+                with cnxn.cursor() as cursor:
+                    cursor.execute("SELECT 1")
             return True
         except pyodbc.DatabaseError as error:
-            print(error)
+            logging.error(f'Error en la prueba de conexión: {error}')
             return False
 
-    #
     def get_data(self, query):
         try:
             data = []
-            cnxn = self.conexion()
-            with cnxn.cursor() as cursor:
-                cursor.execute(query)
-                data = cursor.fetchall()
-            cnxn.close()
+            with self.conexion() as cnxn:
+                with cnxn.cursor() as cursor:
+                    cursor.execute(query)
+                    data = cursor.fetchall()
             return data
         except Exception as error:
-            print(f'ERROR DE CONEXION: {error}')
-    #
+            logging.error(f'Error al obtener datos: {error}')
 
     def set_data(self, query):
         try:
-            cnxn = self.conexion()
-            with cnxn.cursor() as cursor:
-                cursor.execute(query)
-            cnxn.close()
+            with self.conexion() as cnxn:
+                with cnxn.cursor() as cursor:
+                    cursor.execute(query)
         except Exception as error:
-            print(f'ERROR DE CONEXION: {error}')
+            logging.error(f'Error al ejecutar la consulta: {error}')

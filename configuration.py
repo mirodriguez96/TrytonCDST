@@ -1,9 +1,12 @@
 from trytond.model import ModelSQL, ModelView, fields
-from trytond.pool import Pool
 from trytond.exceptions import UserError
-import datetime
-from .additional import list_to_tuple
 from trytond.pyson import Eval, Not
+from trytond.pool import Pool
+
+from .additional import list_to_tuple
+import datetime
+import logging
+
 
 try:
     import pyodbc
@@ -80,39 +83,7 @@ class Configuration(ModelSQL, ModelView):
         states={'invisible': ~Not(Eval('visibible'))},
         depends=['visibible'],
     )
-    # file = fields.Binary('File', help="Enter the file to import with (;)")
-    # type_file = fields.Selection(TYPES_FILE, 'Type file')
-    # doc_types = fields.Char('Doc types', help="Example: 101;120;103")
-    order_type_production = fields.Char(
-        'Order types',
-        help="Example: 101;202;303",
-        states={'invisible': ~Not(Eval('visibible'))},
-        depends=['visibible'],
-    )
-    access_enter_timestamp = fields.Char(
-        'Inicia a laborar',
-        help="Example: Laborando",
-        states={'invisible': ~Not(Eval('visibible'))},
-        depends=['visibible'],
-    )
-    access_exit_timestamp = fields.Char(
-        'Finaliza de laborar',
-        help="Example: Salir",
-        states={'invisible': ~Not(Eval('visibible'))},
-        depends=['visibible'],
-    )
-    access_start_rest = fields.Char(
-        'Inicia a descansar',
-        help="Example: Descansando",
-        states={'invisible': ~Not(Eval('visibible'))},
-        depends=['visibible'],
-    )
-    access_end_rest = fields.Char(
-        'Finaliza de descansar',
-        help="Example: Retornar",
-        states={'invisible': ~Not(Eval('visibible'))},
-        depends=['visibible'],
-    )
+
     enhabled = fields.Function(fields.Boolean('Enhabled'), 'get_enhabled')
     visibible = fields.Boolean('Visible')
 
@@ -157,63 +128,64 @@ class Configuration(ModelSQL, ModelView):
         cnxn.close()
         raise UserError('Conexión sqlserver: ', 'Exitosa !')
 
-    # Función encargada de establecer conexión con respecto a la configuración
     @classmethod
     def conexion(cls):
         try:
             last_record = cls.search([], order=[('id', 'DESC')], limit=1)
             if last_record:
                 record, = last_record
-                # Las conexiones utilizadas en un bloque with se confirmarán al final del bloque si no se generan errores y se revertirán de lo contrario
-                with pyodbc.connect(
-                        'DRIVER={ODBC Driver 17 for SQL Server};SERVER=' +
-                        record.server + ';DATABASE=' + record.db + ';UID=' +
-                        record.user + ';PWD=' + record.password) as cnxn:
-                    return cnxn
+                driver = 'DRIVER={ODBC Driver 17 for SQL Server};'\
+                    f'SERVER={record.server};'\
+                    f'DATABASE={record.db};'\
+                    f'UID={record.user};'\
+                    f'PWD={record.password};'\
+                    'Connection Timeout=5;'
+                with pyodbc.connect(driver) as cnxn:
+                    with cnxn.cursor() as cursor:
+                        cursor = cnxn.cursor()
+                        cursor.execute("SELECT 1")
+                        return cnxn
             else:
                 raise UserError(
                     'Error: ',
                     'Ingrese por favor todos los datos de configuracion de la base de datos'
                 )
         except Exception as error:
-            print(f'ERROR DE CONEXION: {error}')
-    # Función encargada de enviar la conexión configurada con los datos del primer registro
+            logging.error(f'Error de conexión a SQL Server: {error}')
 
     @classmethod
     def get_data(cls, query):
-        data = []
         try:
-            cnxn = cls.conexion()
-            with cnxn.cursor() as cursor:
-                cursor.execute(query)
-                data = cursor.fetchall()
-            cnxn.close()
+            data = []
+            with cls.conexion() as cnxn:
+                with cnxn.cursor() as cursor:
+                    cursor.execute(query)
+                    data = cursor.fetchall()
             return data
         except Exception as error:
-            print(f'ERROR EN GET DATA: {error}')
+            logging.error(f'Error al obtener datos: {error}')
 
     @classmethod
     def set_data(cls, query):
         try:
-            cnxn = cls.conexion()
-            with cnxn.cursor() as cursor:
-                cursor.execute(query)
-            cnxn.close()
+            with cls.conexion() as cnxn:
+                with cnxn.cursor() as cursor:
+                    cursor.execute(query)
         except Exception as error:
-            print(f'ERROR EN SET: {error}')
+            logging.error(f'Error al enviar datos: {error}')
 
     @classmethod
     def set_data_rollback(cls, queries):
         try:
-            cnxn = cls.conexion()
-            cnxn.autocommit = False
-            for query in queries:
-                cnxn.cursor().execute(query)
+            with cls.conexion() as cnxn:
+                with cnxn.cursor() as cursor:
+                    cnxn.autocommit = False
+                    for query in queries:
+                        cursor.execute(query)
+                cnxn.commit()
         except pyodbc.DatabaseError as err:
             cnxn.rollback()
             raise UserError('database error', err)
-        else:
-            cnxn.commit()
         finally:
             cnxn.autocommit = True
 
@@ -227,241 +199,319 @@ class Configuration(ModelSQL, ModelView):
                     1] + " and Numero_documento = " + lista[2]
             cls.set_data(query)
         except Exception as error:
-            print(f'ERROR UPDATE EXPORTADO: {error}')
+            logging.error(f'Error al actualizar datos: {error}')
 
     @classmethod
     def update_exportado_list(cls, idt, e):
         try:
             ids = list_to_tuple(idt, string=True)
             query = f"UPDATE dbo.Documentos SET exportado = '{e}' WHERE CONCAT(sw,'-',tipo,'-',Numero_Documento) IN {ids}"
-            # print(query)
             cls.set_data(query)
         except Exception as error:
-            print(f'ERROR UPDATE EXPORTADO LIST: {error}')
+            logging.error(f'Error al enviar datos en lista: {error}')
 
     @classmethod
     def get_tblproducto(cls, fecha):
-        fecha = fecha.strftime('%Y-%m-%d %H:%M:%S')
-        query = "SET DATEFORMAT ymd SELECT * FROM dbo.TblProducto WHERE fecha_creacion >= CAST('" + \
-            fecha + \
-                "' AS datetime) OR Ultimo_Cambio_Registro >= CAST('" + \
-            fecha + "' AS datetime)"
-        data = cls.get_data(query)
+        data = None
+        try:
+            fecha = fecha.strftime('%Y-%m-%d %H:%M:%S')
+            query = "SET DATEFORMAT ymd SELECT * FROM dbo.TblProducto WHERE fecha_creacion >= CAST('" + \
+                fecha + \
+                    "' AS datetime) OR Ultimo_Cambio_Registro >= CAST('" + \
+                fecha + "' AS datetime)"
+            data = cls.get_data(query)
+        except Exception as error:
+            logging.error(f'Error al obtener datos TlbProducto: {error}')
         return data
 
     @classmethod
     def get_tblproducto_parent(cls):
-        query = """
-                SELECT
-                    IdProducto,
-                    IdResponsable,
-                    tiempo_del_ciclo
-                FROM
-                    dbo.TblProducto
-                WHERE
-                    IdResponsable <> 0
-                """
-        data = cls.get_data(query)
+        data = None
+        try:
+            query = """
+                    SELECT
+                        IdProducto,
+                        IdResponsable,
+                        tiempo_del_ciclo
+                    FROM
+                        dbo.TblProducto
+                    WHERE
+                        IdResponsable <> 0
+                    """
+            data = cls.get_data(query)
+        except Exception as error:
+            logging.error(
+                f'Error al obtener datos TlbProducto parent: {error}')
         return data
 
     @classmethod
     def get_tblterceros(cls, fecha):
-        fecha = fecha.strftime('%Y-%m-%d %H:%M:%S')
-        query = "SET DATEFORMAT ymd SELECT * FROM dbo.TblTerceros WHERE fecha_creacion >= CAST('" + \
-            fecha + \
-                "' AS datetime) OR Ultimo_Cambio_Registro >= CAST('" + \
-            fecha + "' AS datetime)"
-        data = cls.get_data(query)
+        data = None
+        try:
+            fecha = fecha.strftime('%Y-%m-%d %H:%M:%S')
+            query = "SET DATEFORMAT ymd SELECT * FROM dbo.TblTerceros WHERE fecha_creacion >= CAST('" + \
+                fecha + \
+                    "' AS datetime) OR Ultimo_Cambio_Registro >= CAST('" + \
+                fecha + "' AS datetime)"
+            data = cls.get_data(query)
+        except Exception as error:
+            logging.error(
+                f'Error al obtener datos TblTerceros: {error}')
         return data
 
     @classmethod
     def get_tercerosdir(cls, fecha):
-        fecha = fecha.strftime('%Y-%m-%d %H:%M:%S')
-        query = "SET DATEFORMAT ymd SELECT * FROM dbo.Terceros_Dir WHERE Ultimo_Cambio_Registro >= CAST('" + \
-            fecha + "' AS datetime)"
-        data = cls.get_data(query)
+        data = None
+        try:
+            fecha = fecha.strftime('%Y-%m-%d %H:%M:%S')
+            query = "SET DATEFORMAT ymd SELECT * FROM dbo.Terceros_Dir WHERE Ultimo_Cambio_Registro >= CAST('" + \
+                fecha + "' AS datetime)"
+            data = cls.get_data(query)
+        except Exception as error:
+            logging.error(
+                f'Error al obtener datos Terceros_Dir: {error}')
         return data
 
     @classmethod
     def get_tercerosdir_nit(cls, nit):
-        query = "SELECT * FROM dbo.Terceros_Dir WHERE nit = '" + nit + "'"
-        data = cls.get_data(query)
+        data = None
+        try:
+            query = "SELECT * FROM dbo.Terceros_Dir WHERE nit = '" + nit + "'"
+            data = cls.get_data(query)
+        except Exception as error:
+            logging.error(
+                f'Error al obtener datos Terceros_Dir nit: {error}')
         return data
 
     @classmethod
     def get_documentos_tecno(cls, sw):
-        Config = Pool().get('conector.configuration')
-        config, = Config.search([], order=[('id', 'DESC')], limit=1)
-        fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
-        # query = "SELECT * FROM dbo.Documentos WHERE tipo = null AND Numero_documento = null " #TEST
-        query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos "\
-                f"WHERE fecha_hora >= CAST('{fecha}' AS datetime) AND "\
-                f"sw = {sw} AND exportado != 'T' AND exportado != 'E' AND exportado != 'X' "
-        # Se valida si en la configuración de la base de datos, añadieron un valor en la fecha final de importación
-        if config.end_date:
-            end_date = config.end_date.strftime('%Y-%m-%d %H:%M:%S')
-            query += f" AND fecha_hora < CAST('{end_date}' AS datetime) "
-        query += "ORDER BY fecha_hora ASC"
-        data = cls.get_data(query)
+        data = None
+        try:
+            Config = Pool().get('conector.configuration')
+            config, = Config.search([], order=[('id', 'DESC')], limit=1)
+            fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
+            # query = "SELECT * FROM dbo.Documentos WHERE tipo = null AND Numero_documento = null " #TEST
+            query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos "\
+                    f"WHERE fecha_hora >= CAST('{fecha}' AS datetime) AND "\
+                    f"sw = {sw} AND exportado != 'T' AND exportado != 'E' AND exportado != 'X' "
+            # Se valida si en la configuración de la base de datos, añadieron un valor en la fecha final de importación
+            if config.end_date:
+                end_date = config.end_date.strftime('%Y-%m-%d %H:%M:%S')
+                query += f" AND fecha_hora < CAST('{end_date}' AS datetime) "
+            query += "ORDER BY fecha_hora ASC"
+            data = cls.get_data(query)
+        except Exception as error:
+            logging.error(
+                f'Error al obtener datos Documentos: {error}')
         return data
 
     @classmethod
     def get_documentos_tipo(cls, sw, tipo):
-        Config = Pool().get('conector.configuration')
-        config, = Config.search([], order=[('id', 'DESC')], limit=1)
-        fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
-        # query = "SELECT * FROM dbo.Documentos WHERE tipo = null AND Numero_documento = null" #TEST
-        if not sw:
-            query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE Fecha_Hora_Factura >= CAST('" + fecha + \
-                "' AS datetime) AND tipo = " + tipo + \
-                    " AND exportado != 'T' AND exportado != 'E' AND exportado != 'X' "
-        else:
-            query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE Fecha_Hora_Factura >= CAST('" + fecha + \
-                "' AS datetime) AND sw = " + sw + " AND tipo = " + tipo + \
-                    " AND exportado != 'T' AND exportado != 'E' AND exportado != 'X' "
-        if config.end_date:
-            end_date = config.end_date.strftime('%Y-%m-%d %H:%M:%S')
-            query += f" AND Fecha_Hora_Factura < CAST('{end_date}' AS datetime) "
-        query += "ORDER BY Fecha_Hora_Factura ASC"
-        data = cls.get_data(query)
+        data = None
+        try:
+            Config = Pool().get('conector.configuration')
+            config, = Config.search([], order=[('id', 'DESC')], limit=1)
+            fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
+            # query = "SELECT * FROM dbo.Documentos WHERE tipo = null AND Numero_documento = null" #TEST
+            if not sw:
+                query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE Fecha_Hora_Factura >= CAST('" + fecha + \
+                    "' AS datetime) AND tipo = " + tipo + \
+                        " AND exportado != 'T' AND exportado != 'E' AND exportado != 'X' "
+            else:
+                query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos WHERE Fecha_Hora_Factura >= CAST('" + fecha + \
+                    "' AS datetime) AND sw = " + sw + " AND tipo = " + tipo + \
+                        " AND exportado != 'T' AND exportado != 'E' AND exportado != 'X' "
+            if config.end_date:
+                end_date = config.end_date.strftime('%Y-%m-%d %H:%M:%S')
+                query += f" AND Fecha_Hora_Factura < CAST('{end_date}' AS datetime) "
+            query += "ORDER BY Fecha_Hora_Factura ASC"
+            data = cls.get_data(query)
+        except Exception as error:
+            logging.error(
+                f'Error al obtener datos Documentos tipo: {error}')
         return data
 
     @classmethod
     def get_lineasd_tecno(cls, id):
-        lista = id.split('-')
-        query = "SELECT * FROM dbo.Documentos_Lin WHERE sw = " + lista[
-            0] + " AND tipo = " + lista[
-                1] + " AND Numero_Documento = " + lista[2] + " order by seq"
-        data = cls.get_data(query)
+        data = None
+        try:
+            lista = id.split('-')
+            query = "SELECT * FROM dbo.Documentos_Lin WHERE sw = " + lista[
+                0] + " AND tipo = " + lista[
+                    1] + " AND Numero_Documento = " + lista[2] + " order by seq"
+            data = cls.get_data(query)
+        except Exception as error:
+            logging.error(
+                f'Error al obtener datos Documentos_Lin: {error}')
         return data
 
     @classmethod
     def get_documentos_lin(cls, ids):
-        cond = "IN"
-        if len(ids) == 1:
-            ids = f"'{ids[0]}'"
-            cond = "="
-        query = "SELECT * FROM dbo.Documentos_Lin "\
-            f"WHERE CONCAT(sw,'-',tipo,'-',Numero_Documento) {cond} {ids} order by seq"
-        data = cls.get_data(query)
+        data = None
+        try:
+            cond = "IN"
+            if len(ids) == 1:
+                ids = f"'{ids[0]}'"
+                cond = "="
+            query = "SELECT * FROM dbo.Documentos_Lin "\
+                f"WHERE CONCAT(sw,'-',tipo,'-',Numero_Documento) {cond} {ids} order by seq"
+            data = cls.get_data(query)
+        except Exception as error:
+            logging.error(
+                f'Error al obtener datos Documentos_Lin 2: {error}')
         return data
 
     @classmethod
     def get_data_parametros(cls, id):
-        query = "SELECT * FROM dbo.TblParametro WHERE IdParametro = " + id
-        data = cls.get_data(query)
+        data = None
+        try:
+            query = "SELECT * FROM dbo.TblParametro WHERE IdParametro = " + id
+            data = cls.get_data(query)
+        except Exception as error:
+            logging.error(
+                f'Error al obtener datos TblParametro: {error}')
         return data
 
     @classmethod
     def get_tbltipodoctos(cls, id):
-        query = "SELECT * FROM dbo.TblTipoDoctos WHERE idTipoDoctos = " + id
-        data = cls.get_data(query)
+        data = None
+        try:
+            query = "SELECT * FROM dbo.TblTipoDoctos WHERE idTipoDoctos = " + id
+            data = cls.get_data(query)
+        except Exception as error:
+            logging.error(
+                f'Error al obtener datos TblTipoDoctos: {error}')
         return data
 
     @classmethod
     def get_tbltipodoctos_encabezado(cls, ids):
-        query = "SELECT idTipoDoctos, Encabezado FROM dbo.TblTipoDoctos WHERE idTipoDoctos in " + ids
-        data = cls.get_data(query)
+        data = None
+        try:
+            query = "SELECT idTipoDoctos, Encabezado FROM dbo.TblTipoDoctos WHERE idTipoDoctos in " + ids
+            data = cls.get_data(query)
+        except Exception as error:
+            logging.error(
+                f'Error al obtener datos TblTipoDoctos encabezado: {error}')
         return data
 
     @classmethod
     def get_tbltipoproducto(cls, id):
-        query = "SELECT * FROM dbo.TblTipoProducto WHERE IdTipoProducto = " + id
-        data = cls.get_data(query)
+        data = None
+        try:
+            query = "SELECT * FROM dbo.TblTipoProducto WHERE IdTipoProducto = " + id
+            data = cls.get_data(query)
+        except Exception as error:
+            logging.error(
+                f'Error al obtener datos TblTipoDoctos 2: {error}')
         return data
 
     # Metodo encargado de obtener los recibos pagados de un documento dado
     @classmethod
     def get_dctos_cruce(cls, id):
-        lista = id.split('-')
-        query = "SELECT * FROM dbo.Documentos_Cruce WHERE sw=" + lista[
-            0] + " AND tipo=" + lista[1] + " AND numero=" + lista[2]
-        data = cls.get_data(query)
+        data = None
+        try:
+            lista = id.split('-')
+            query = "SELECT * FROM dbo.Documentos_Cruce WHERE sw=" + lista[
+                0] + " AND tipo=" + lista[1] + " AND numero=" + lista[2]
+            data = cls.get_data(query)
+        except Exception as error:
+            logging.error(
+                f'Error al obtener datos Documentos_Cruce: {error}')
         return data
 
     # Metodo encargado de obtener la forma en que se pago el comprobante (recibos)
     @classmethod
     def get_tipos_pago(cls, id):
-        lista = id.split('-')
-        query = "SELECT * FROM dbo.Documentos_Che WHERE sw=" + lista[
-            0] + " AND tipo=" + lista[1] + " AND numero=" + lista[2]
-        data = cls.get_data(query)
+        data = None
+        try:
+            lista = id.split('-')
+            query = "SELECT * FROM dbo.Documentos_Che WHERE sw=" + lista[
+                0] + " AND tipo=" + lista[1] + " AND numero=" + lista[2]
+            data = cls.get_data(query)
+        except Exception as error:
+            logging.error(
+                f'Error al obtener datos Documentos_Che: {error}')
         return data
 
     @classmethod
     def get_data_table(cls, table):
-        query = "SELECT * FROM dbo." + table
-        data = cls.get_data(query)
+        data = None
+        try:
+            query = "SELECT * FROM dbo." + table
+            data = cls.get_data(query)
+        except Exception as error:
+            logging.error(
+                f'Error al obtener datos table: {error}')
         return data
 
     @classmethod
     def get_documentos_orden(cls):
-        Config = Pool().get('conector.configuration')
-        config, = Config.search([], order=[('id', 'DESC')], limit=1)
-        fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
-        query = "SET DATEFORMAT ymd SELECT d.DescuentoOrdenVenta, l.* FROM dbo.Documentos_Lin l "\
-                "INNER JOIN Documentos d ON d.sw=l.sw AND d.tipo=l.tipo AND d.Numero_documento=l.Numero_Documento "\
-                f"WHERE d.DescuentoOrdenVenta like 'T-%' AND d.fecha_hora >= CAST('{fecha}' AS datetime) "\
-                "AND d.sw = 12 AND d.exportado != 'T' AND d.exportado != 'E' AND d.exportado != 'X'"
-        if config.end_date:
-            end_date = config.end_date.strftime('%Y-%m-%d %H:%M:%S')
-            query += f" AND fecha_hora < CAST('{end_date}' AS datetime) "
-        data = cls.get_data(query)
+        data = None
+        try:
+            Config = Pool().get('conector.configuration')
+            config, = Config.search([], order=[('id', 'DESC')], limit=1)
+            fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
+            query = "SET DATEFORMAT ymd SELECT d.DescuentoOrdenVenta, l.* FROM dbo.Documentos_Lin l "\
+                    "INNER JOIN Documentos d ON d.sw=l.sw AND d.tipo=l.tipo AND d.Numero_documento=l.Numero_Documento "\
+                    f"WHERE d.DescuentoOrdenVenta like 'T-%' AND d.fecha_hora >= CAST('{fecha}' AS datetime) "\
+                    "AND d.sw = 12 AND d.exportado != 'T' AND d.exportado != 'E' AND d.exportado != 'X'"
+            if config.end_date:
+                end_date = config.end_date.strftime('%Y-%m-%d %H:%M:%S')
+                query += f" AND fecha_hora < CAST('{end_date}' AS datetime) "
+            data = cls.get_data(query)
+        except Exception as error:
+            logging.error(
+                f'Error al obtener datos Documentos_Lin & Documentos: {error}')
         return data
 
     @classmethod
     def get_documentos_traslados(cls):
-        Config = Pool().get('conector.configuration')
-        config, = Config.search([], order=[('id', 'DESC')], limit=1)
-        fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
-        # Consulta T-SQL mejorada
-        subquery = f"""SELECT TOP 50 sw, tipo, Numero_documento, bodega 
-                    FROM dbo.Documentos 
-                    WHERE sw = 16 
-                    AND Fecha_Hora_Factura >= CAST('{fecha}' AS datetime)
-                    AND anulado != 'S' 
-                    AND exportado NOT IN ('T', 'E', 'X')
+        data = None
+        try:
+            Config = Pool().get('conector.configuration')
+            config, = Config.search([], order=[('id', 'DESC')], limit=1)
+            fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
+            # Consulta T-SQL mejorada
+            subquery = f"""SELECT TOP 50 sw, tipo, Numero_documento, bodega 
+                        FROM dbo.Documentos
+                        WHERE sw = 16
+                        AND Fecha_Hora_Factura >= CAST('{fecha}' AS datetime)
+                        AND anulado != 'S'
+                        AND exportado NOT IN ('T', 'E', 'X')
+                        """
+            if config.end_date:
+                end_date = config.end_date.strftime('%Y-%m-%d %H:%M:%S')
+                subquery += f"AND Fecha_Hora_Factura < CAST('{end_date}' AS datetime) "
+            subquery += "ORDER BY Fecha_Hora_Factura ASC"
+            query = f"""
+                    SET DATEFORMAT ymd
+                    SELECT d.bodega from_location, l.*
+                    FROM dbo.Documentos_Lin AS l
+                    INNER JOIN (
+                    {subquery}
+                    ) AS d
+                    ON d.sw = l.sw AND d.tipo = l.tipo AND d.Numero_documento = l.Numero_Documento
                     """
-        if config.end_date:
-            end_date = config.end_date.strftime('%Y-%m-%d %H:%M:%S')
-            subquery += f"AND Fecha_Hora_Factura < CAST('{end_date}' AS datetime) "
-        subquery += "ORDER BY Fecha_Hora_Factura ASC"
-        query = f"""
-                SET DATEFORMAT ymd 
-                SELECT d.bodega from_location, l.* 
-                FROM dbo.Documentos_Lin AS l
-                INNER JOIN (
-                {subquery}
-                ) AS d
-                ON d.sw = l.sw AND d.tipo = l.tipo AND d.Numero_documento = l.Numero_Documento
-                """
-        data = cls.get_data(query)
+            data = cls.get_data(query)
+        except Exception as error:
+            logging.error(
+                f'Error al obtener datos Documentos traslado: {error}')
         return data
 
     @classmethod
     def get_biometric_access_transactions(cls, event_time=None):
-        if event_time:
-            tomorrow = event_time + datetime.timedelta(days=1)
-            # event_time = datetime.datetime(1111, 1, 1, 1, 1, 1)
-            query = f"SET DATEFORMAT ymd SELECT * FROM TblDatosBiometrico "\
-                f"WHERE Fecha_Hora_Marcacion >= '{event_time}' AND Fecha_Hora_Marcacion < '{tomorrow}' "\
-                "ORDER BY Nit_cedula, Fecha_Hora_Marcacion ASC"
-        else:
-            query = "SELECT * FROM TblDatosBiometrico ORDER BY Nit_cedula, Fecha_Hora_Marcacion ASC"
-        data = cls.get_data(query)
-        return data
-
-    @classmethod
-    def get_tblproducto_parent(cls):
-        query = """
-                SELECT
-                    IdProducto,
-                    IdResponsable,
-                    tiempo_del_ciclo
-                FROM
-                    dbo.TblProducto
-                WHERE
-                    IdResponsable <> 0
-                """
-        data = cls.get_data(query)
-        return data
+        data = None
+        try:
+            if event_time:
+                tomorrow = event_time + datetime.timedelta(days=1)
+                # event_time = datetime.datetime(1111, 1, 1, 1, 1, 1)
+                query = f"SET DATEFORMAT ymd SELECT * FROM TblDatosBiometrico "\
+                    f"WHERE Fecha_Hora_Marcacion >= '{event_time}' AND Fecha_Hora_Marcacion < '{tomorrow}' "\
+                    "ORDER BY Nit_cedula, Fecha_Hora_Marcacion ASC"
+            else:
+                query = "SELECT * FROM TblDatosBiometrico ORDER BY Nit_cedula, Fecha_Hora_Marcacion ASC"
+            data = cls.get_data(query)
+            return data
+        except Exception as error:
+            logging.error(
+                f'Error al obtener datos TblDatosBiometrico: {error}')
