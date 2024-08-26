@@ -515,7 +515,7 @@ class Purchase(metaclass=PoolMeta):
     @classmethod
     def _send_order(cls, purchase, type_order):
         """
-        Insert into Documentos_Ped 
+        Insert into Documentos_Ped
         (NUMERO_PEDIDO,NIT,DIRECCION_ENTREGA,DIRECCION_FACTURA,VENDEDOR,FECHA_HORA_PEDIDO,FECHA_HORA_LIMITE_ENTREGA,
         FECHA_HORA_ENTREGA,NUMERO_ENTREGAS,CONDICION,DIAS_VALIDEZ,DESCUENTO_PIE,
         VALOR_TOTAL,ANULADO,NOTAS,USUARIO,PC,DURACION,CONCEPTO,MONEDA,DESPACHO,
@@ -523,7 +523,7 @@ class Purchase(metaclass=PoolMeta):
         IDFORMAENVIO,IDTRANSPORTADOR,COMISION_VENDEDOR,TASA_MONEDA_EXT,CONTACTO_COMPRAS,
         CONTACTO_PAGOS,CERTIFICADO_COMPLETACION,PUNTO_FOB,COD_MOTIVO_ANULACIONES,
         TELEFONO2,EXPORTADO,TIPO_DESTINO,RETENCION_1,USUARIO_APROBACION,FECHA_APROBACION,
-        IdAlistador,Ultimo_Cambio_Registro,IdCanal,IdFormaPago) values 
+        IdAlistador,Ultimo_Cambio_Registro,IdCanal,IdFormaPago) values
         (3,'98642443',1,1,0,{ ts '2022-12-31 10:46:29' },{ ts '2022-12-31 10:46:29' },
         { ts '2022-12-31 10:46:29' },1,0,0,0,
         0,1,'','Cad_Lan4','CAD',0,0,1,'F',
@@ -532,14 +532,14 @@ class Purchase(metaclass=PoolMeta):
         0,'0',0,'0','N',' ',0,' ',
         { ts '2023-02-17 11:35:45' },0,{ ts '2023-02-17 11:35:45' },0,0)
 
-        Insert into Documentos_Lin_Ped 
+        Insert into Documentos_Lin_Ped
         (numero_pedido,IdProducto,cantidad,cantidad_despachada,
         valor_unitario,porcentaje_iva,porcentaje_descuento,
         und,cantidad_und,nota,despacho_virtual,porc_dcto_2,
         porc_dcto_3,sw,bodega,fecha_hora_entrega,MaxCantidad,
         MinCantidad,DireccionEnvio,IdVendedor,IdCliente,DireccionFactura,
         Producto,Linea,Exportado,Numero_Lote,Tipo_Destino,Envase,
-        Porcentaje_ReteFuente,Serial,Cantidad_Orden) values 
+        Porcentaje_ReteFuente,Serial,Cantidad_Orden) values
         (3,30,10,0,14000,0,0,'1',0,
         'NOTA ',
         0,0,0,9,1,{ ts '2022-01-03 14:38:10' },
@@ -618,12 +618,12 @@ class Purchase(metaclass=PoolMeta):
 
     @classmethod
     def _create_shipment(cls, data):
-        if not data:
-            return
         pool = Pool()
         Shipment = pool.get('stock.shipment.in')
-        # Se procede a crear los envíos segun la compra
         to_create = []
+
+        if not data:
+            return
         for number in data:
             purchase = data[number]['purchase']
             if purchase.shipments:
@@ -640,15 +640,6 @@ class Purchase(metaclass=PoolMeta):
             for move in data[number]['lines']:
                 move['to_location'] = purchase.warehouse.input_location.id
                 move['currency'] = purchase.company.currency.id
-                # move = {
-                #     'from_location': dict['from_location'].id,
-                #     'to_location': purchase.warehouse.input_location.id,
-                #     'product': dict['product'].id,
-                #     'uom': dict['uom'].id,
-                #     'quantity': dict['quantity'],
-                #     'unit_price': dict['unit_price'],
-                #     'currency': purchase.company.currency.id,
-                # }
                 for pl in purchase.lines:
                     if pl.product.id == move['product']:
                         move['origin'] = pl
@@ -667,12 +658,15 @@ class Purchase(metaclass=PoolMeta):
         Purchase = pool.get('purchase.purchase')
         Product = pool.get('product.product')
         Location = pool.get('stock.location')
-        result = {'tryton': {}, 'logs': {}, 'exportado': {}}
+        locations = {}
+        products = {}
+        tecno = {}
         excepcion = []
+
+        result = {'tryton': {}, 'logs': {}, 'exportado': {}}
         # Se trae las ubicaciones existentes en Tryton
         _locations = Location.search(
             ['OR', ('type', '=', 'warehouse'), ('type', '=', 'supplier')])
-        locations = {}
         for location in _locations:
             if 'supplier' not in locations and location.type == 'supplier':
                 locations['supplier'] = location
@@ -681,8 +675,7 @@ class Purchase(metaclass=PoolMeta):
             if id_tecno not in locations:
                 locations[id_tecno] = location
         # Se procede a validar las líneas
-        products = {}
-        tecno = {}
+
         for linea in lineas:
             id_tecno = f"{linea.sw}-{linea.tipo}-{linea.Numero_Documento}"
             if id_tecno in excepcion:
@@ -698,14 +691,7 @@ class Purchase(metaclass=PoolMeta):
                     result['exportado'][id_tecno] = 'E'
                     continue
                 products[idproducto], = product
-            # Se valida la existencia de la bodega
-            # bodega = str(linea.Bodega)
-            # if bodega not in locations:
-            #     msg = f"EXCEPCION - {id_tecno} la bodega con id {bodega} no fue encontrada"
-            #     result['logs'].append(msg)
-            #     excepcion.append(id_tecno)
-            #     result['exportado'][id_tecno] = 'E'
-            #     continue
+
             # Se valida el precio del producto
             valor_unitario = Decimal(linea.Valor_Unitario)
             if valor_unitario <= 0:
@@ -787,12 +773,13 @@ class Purchase(metaclass=PoolMeta):
         Actualizacion = pool.get('conector.actualizacion')
         actualizacion = Actualizacion.create_or_update('ENTRADA DE MERCANCIA')
         lineas = Config.get_documentos_orden()
-        result = cls._validate_order(lineas)
-        cls._create_shipment(result['tryton'])
-        actualizacion.add_logs(result['logs'])
-        for idt, exportado in result['exportado'].items():
-            if exportado != 'E':
-                Config.update_exportado(idt, exportado)
+        if lineas:
+            result = cls._validate_order(lineas)
+            cls._create_shipment(result['tryton'])
+            actualizacion.add_logs(result['logs'])
+            for idt, exportado in result['exportado'].items():
+                if exportado != 'E':
+                    Config.update_exportado(idt, exportado)
 
 
 class PurchaseLine(metaclass=PoolMeta):
@@ -801,18 +788,3 @@ class PurchaseLine(metaclass=PoolMeta):
     @classmethod
     def __setup__(cls):
         super(PurchaseLine, cls).__setup__()
-
-    # Se hereda la funcion 'compute_taxes' para posteriormente quitar el impuesto (IVA) a los terceros 'regimen_no_responsable'
-    # def compute_taxes(self, party):
-    #     taxes_id = super(PurchaseLine, self).compute_taxes(party)
-    #     Tax = Pool().get('account.tax')
-    #     if party.regime_tax == 'regimen_no_responsable':
-    #         taxes_result = set()
-    #         for tax_id in taxes_id:
-    #             tax = Tax(tax_id)
-    #             # El impuesto de IVA equivale al codigo 01
-    #             if tax.classification_tax_tecno == '01':
-    #                 continue
-    #             taxes_result.add(tax_id)
-    #         taxes_id = list(taxes_result)
-    #     return taxes_id
