@@ -27,8 +27,7 @@ class FixBugsConectorView(ModelView):
     __name__ = 'conector.configuration.documents_for_import_parameters_view'
     ids = fields.Text(
         'Ids',
-        help=
-        'Ingrese los ids de los documentos que desea para realizar la accion',
+        help='Ingrese los ids de los documentos que desea para realizar la accion',
         required=True)
     fix_exec = fields.Selection(_EXEC, 'Accion', required=True)
     user = fields.Many2One('res.user', 'User', readonly=True)
@@ -196,7 +195,8 @@ class DocumentsForImport(Wizard):
         tipo = self.start.tipo
         numero = self.start.numero
         exportado = self.start.exportado
-        query = "UPDATE dbo.Documentos SET exportado = '" + exportado + "' WHERE tipo = " + tipo + " and Numero_documento = " + numero
+        query = "UPDATE dbo.Documentos SET exportado = '" + exportado + \
+            "' WHERE tipo = " + tipo + " and Numero_documento = " + numero
         cnx.set_data(query)
         return 'end'
 
@@ -270,7 +270,7 @@ class DeleteVoucherTecno(Wizard):
             Warning = pool.get('res.user.warning')
             Voucher = pool.get('account.voucher')
             ids = Transaction().context['active_ids']
-            #Se agrega un nombre unico a la advertencia
+            # Se agrega un nombre unico a la advertencia
             warning_name = 'warning_delete_voucher_tecno'
             if Warning.check(warning_name):
                 raise UserWarning(
@@ -341,7 +341,7 @@ class ForceDraftVoucher(Wizard):
         Warning = pool.get('res.user.warning')
         Voucher = pool.get('account.voucher')
         ids = Transaction().context['active_ids']
-        #Se agrega un nombre unico a la advertencia
+        # Se agrega un nombre unico a la advertencia
         warning_name = 'warning_force_draft_voucher'
         if Warning.check(warning_name):
             raise UserWarning(
@@ -349,7 +349,7 @@ class ForceDraftVoucher(Wizard):
                 "Los comprobantes debieron ser desconciliado primero.")
         to_force = []
         for voucher in Voucher.browse(ids):
-            if voucher.move.state == 'close':
+            if voucher.move and voucher.move.state == 'close':
                 exceptions.append(voucher.id)
                 logs[
                     voucher.
@@ -376,7 +376,7 @@ class DeleteImportRecords(Wizard):
         # Actualizacion = pool.get('conector.actualizacion')
         Log = pool.get('conector.log')
         ids = Transaction().context['active_ids']
-        #Se agrega un nombre unico a la advertencia
+        # Se agrega un nombre unico a la advertencia
         warning_name = 'warning_delete_import_records'
         if Warning.check(warning_name):
             raise UserWarning(
