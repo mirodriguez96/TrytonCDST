@@ -6,7 +6,7 @@ from trytond.exceptions import UserError, UserWarning
 
 from decimal import Decimal
 import datetime
-from sql import Table
+import logging
 
 TYPES_FILE = [
     ('parties', 'Parties'),
@@ -89,6 +89,7 @@ class Actualizacion(ModelSQL, ModelView):
             self.write([self], {'log': [('create', to_create)]})
         except Exception as error:
             print(f'ERROR CONECTOR LOG:{error}')
+
     def getter_quantity(self, name):
         """Function to return data count to import"""
         Config = Pool().get('conector.configuration')
@@ -297,144 +298,149 @@ class Actualizacion(ModelSQL, ModelView):
         condition = None
         logs = {}
         print(name)
-
-        if name == 'VENTAS':
-            consultv = "SELECT id_tecno FROM sale_sale "\
-                "WHERE id_tecno is not null"
-            cursor.execute(consultv)
-            results = cursor.fetchall()
-            condition = "(sw=1 OR sw=2)"
-        if name == 'COMPRAS':
-            consultv = "SELECT id_tecno FROM purchase_purchase "\
-                "WHERE id_tecno is not null"
-            cursor.execute(consultv)
-            results = cursor.fetchall()
-            condition = "(sw=3 OR sw=4)"
-        if name == 'COMPROBANTES DE INGRESO':
-            consult1 = "SELECT id_tecno FROM account_voucher "\
-                "WHERE id_tecno LIKE '5-%'"
-            cursor.execute(consult1)
-            results = cursor.fetchall()
-            result_tryton = [result[0] for result in results]
-            consult2 = "SELECT id_tecno FROM account_multirevenue "\
-                "WHERE id_tecno is not null"
-            cursor.execute(consult2)
-            results = cursor.fetchall()
-            condition = "sw=5"
-        if name == 'COMPROBANTES DE EGRESO':
-            consultv = "SELECT id_tecno FROM account_voucher "\
-                "WHERE id_tecno  LIKE '6-%'"
-            cursor.execute(consultv)
-            results = cursor.fetchall()
-            condition = "sw=6"
-        if name == 'PRODUCCION':
-            consultv = "SELECT id_tecno FROM production "\
-                "WHERE id_tecno is not null"
-            cursor.execute(consultv)
-            results = cursor.fetchall()
-            condition = "("
-            parametro = Config.get_data_parametros('177')
-            valor_parametro = parametro[0].Valor.split(',')
-            for tipo in valor_parametro:
-                condition += "tipo=" + tipo.strip()
-                if valor_parametro.index(tipo) != (len(valor_parametro) - 1):
-                    condition += " OR "
-            condition += ")"
-        if name == 'NOTAS DE CREDITO':
-            consultv = "SELECT id_tecno FROM account_invoice "\
-                "WHERE id_tecno  LIKE '32-%'"
-            cursor.execute(consultv)
-            results = cursor.fetchall()
-            condition = "sw=32"
-        if name == 'NOTAS DE DEBITO':
-            consultv = "SELECT id_tecno FROM account_voucher "\
-                "WHERE id_tecno  LIKE '31-%'"
-            cursor.execute(consultv)
-            results = cursor.fetchall()
-            condition = "sw=31"
-
-        # save the results in a list
-        if not result_tryton and results:
-            result_tryton = [result[0] for result in results]
-        elif result_tryton and results:
-            for result in results:
-                result_tryton.append(result[0])
-
-        # If not data document condition, exit
-        if not condition:
-            return
-
-        config, = Config.search([], order=[('id', 'DESC')], limit=1)
-        connection_date = config.date.strftime('%Y-%m-%d %H:%M:%S')
-        consultc = "SET DATEFORMAT ymd "\
-            "SELECT CONCAT(sw,'-',tipo,'-',numero_documento), valor_total,"\
-            "Valor_impuesto, Impuesto_Consumo, anulado, retencion_causada FROM Documentos "\
-            f"WHERE {condition} "\
-            f"AND fecha_hora >= CAST('{connection_date}' AS datetime) "\
-            "AND exportado = 'T' "\
-            "AND tipo<>0 ORDER BY tipo,numero_documento"
         try:
-            result_tecno = Config.get_data(consultc)
+            if name == 'VENTAS':
+                consultv = "SELECT id_tecno FROM sale_sale "\
+                    "WHERE id_tecno is not null"
+                cursor.execute(consultv)
+                results = cursor.fetchall()
+                condition = "(sw=1 OR sw=2)"
+            if name == 'COMPRAS':
+                consultv = "SELECT id_tecno FROM purchase_purchase "\
+                    "WHERE id_tecno is not null"
+                cursor.execute(consultv)
+                results = cursor.fetchall()
+                condition = "(sw=3 OR sw=4)"
+            if name == 'COMPROBANTES DE INGRESO':
+                consult1 = "SELECT id_tecno FROM account_voucher "\
+                    "WHERE id_tecno LIKE '5-%'"
+                cursor.execute(consult1)
+                results = cursor.fetchall()
+                result_tryton = [result[0] for result in results]
+                consult2 = "SELECT id_tecno FROM account_multirevenue "\
+                    "WHERE id_tecno is not null"
+                cursor.execute(consult2)
+                results = cursor.fetchall()
+                condition = "sw=5"
+            if name == 'COMPROBANTES DE EGRESO':
+                consultv = "SELECT id_tecno FROM account_voucher "\
+                    "WHERE id_tecno  LIKE '6-%'"
+                cursor.execute(consultv)
+                results = cursor.fetchall()
+                condition = "sw=6"
+            if name == 'PRODUCCION':
+                consultv = "SELECT id_tecno FROM production "\
+                    "WHERE id_tecno is not null"
+                cursor.execute(consultv)
+                results = cursor.fetchall()
+                condition = "("
+                parametro = Config.get_data_parametros('177')
+                valor_parametro = parametro[0].Valor.split(',')
+                for tipo in valor_parametro:
+                    condition += "tipo=" + tipo.strip()
+                    if valor_parametro.index(tipo) != (len(valor_parametro) - 1):
+                        condition += " OR "
+                condition += ")"
+            if name == 'NOTAS DE CREDITO':
+                consultv = "SELECT id_tecno FROM account_invoice "\
+                    "WHERE id_tecno  LIKE '32-%'"
+                cursor.execute(consultv)
+                results = cursor.fetchall()
+                condition = "sw=32"
+            if name == 'NOTAS DE DEBITO':
+                consultv = "SELECT id_tecno FROM account_voucher "\
+                    "WHERE id_tecno  LIKE '31-%'"
+                cursor.execute(consultv)
+                results = cursor.fetchall()
+                condition = "sw=31"
+
+            # save the results in a list
+            if not result_tryton and results:
+                result_tryton = [result[0] for result in results]
+            elif result_tryton and results:
+                for result in results:
+                    result_tryton.append(result[0])
+
+            # If not data document condition, exit
+            if not condition:
+                return
+
+            config, = Config.search([], order=[('id', 'DESC')], limit=1)
+            connection_date = config.date.strftime('%Y-%m-%d %H:%M:%S')
+            consultc = "SET DATEFORMAT ymd "\
+                "SELECT CONCAT(sw,'-',tipo,'-',numero_documento), valor_total,"\
+                "Valor_impuesto, Impuesto_Consumo, anulado, retencion_causada FROM Documentos "\
+                f"WHERE {condition} "\
+                f"AND fecha_hora >= CAST('{connection_date}' AS datetime) "\
+                "AND exportado = 'T' "\
+                "AND tipo<>0 ORDER BY tipo,numero_documento"
+            try:
+                result_tecno = Config.get_data(consultc)
+            except Exception as error:
+                print(error)
+                return
+
+            if not result_tecno:
+                return
+
+            result_value = result_tecno
+            result_tecno = [r[0] for r in result_tecno]
+
+            if condition == "(sw=1 OR sw=2)":
+                for value in result_value:
+                    id_tecno = value[0]
+                    total_amount = Decimal(value[1]).quantize(Decimal('0.00'))
+                    tax_amount = Decimal(value[2]).quantize(Decimal('0.00'))
+                    # tax_consumption = Decimal(value[3]).quantize(Decimal('0.00'))
+                    caused_retention = Decimal(
+                        value[5]).quantize(Decimal('0.00'))
+                    invoice_value = total_amount - caused_retention
+
+                    sale = Sale.search([("id_tecno", "=", id_tecno)])
+                    if sale:
+                        tryton_value = sale[0].invoice_amount_tecno
+                        tax_amount_tryton = sale[0].tax_amount_tecno
+                        if tryton_value != invoice_value or tax_amount_tryton != tax_amount:
+                            sale[0].invoice_amount_tecno = invoice_value
+                            sale[0].tax_amount_tecno = tax_amount
+                            Sale.save(sale)
+
+            list_difference = [
+                r for r in result_tecno if r not in result_tryton]
+            list_already_values = [
+                r for r in result_tecno if r in result_tryton]
+            list_canceled = [r[0] for r in result_value if r[4] == "S"]
+
+            # Save the registry and mark the document to be imported
+            for falt in list_difference:
+                lid = falt.split('-')
+                query = "UPDATE dbo.Documentos SET exportado = 'N' "\
+                    f"WHERE sw = {lid[0]} "\
+                    f"AND tipo = {lid[1]} "\
+                    f"AND Numero_documento = {lid[2]}"
+                Config.set_data(query)
+                logs[falt] = "EL DOCUMENTO ESTABA MARCADO COMO IMPORTADO "\
+                    "(T) SIN ESTARLO."\
+                    "AHORA FUE MARACADO COMO PENDIENTE PARA IMPOTAR (N)"
+            """Update logs that was completed"""
+            for values in list_already_values:
+                id_tecno = values
+                already_log = Log.search(["id_tecno", "=", id_tecno])
+                if already_log:
+                    for log in already_log:
+                        log.state = "done"
+                        log.save()
+            """Update logs of document that was canceled in Tecno"""
+            for values in list_canceled:
+                id_tecno = values
+                already_log = Log.search(["id_tecno", "=", id_tecno])
+                if already_log:
+                    for log in already_log:
+                        log.state = "done"
+                        log.save()
         except Exception as error:
-            print(error)
-            return
-
-        if not result_tecno:
-            return
-
-        result_value = result_tecno
-        result_tecno = [r[0] for r in result_tecno]
-
-        if condition == "(sw=1 OR sw=2)":
-            for value in result_value:
-                id_tecno = value[0]
-                total_amount = Decimal(value[1]).quantize(Decimal('0.00'))
-                tax_amount = Decimal(value[2]).quantize(Decimal('0.00'))
-                #tax_consumption = Decimal(value[3]).quantize(Decimal('0.00'))
-                caused_retention = Decimal(value[5]).quantize(Decimal('0.00'))
-                invoice_value = total_amount - caused_retention
-
-                sale = Sale.search([("id_tecno", "=", id_tecno)])
-                if sale:
-                    tryton_value = sale[0].invoice_amount_tecno
-                    tax_amount_tryton = sale[0].tax_amount_tecno
-                    if tryton_value != invoice_value or tax_amount_tryton != tax_amount:
-                        sale[0].invoice_amount_tecno = invoice_value
-                        sale[0].tax_amount_tecno = tax_amount
-                        Sale.save(sale)
-
-        list_difference = [r for r in result_tecno if r not in result_tryton]
-        list_already_values = [r for r in result_tecno if r in result_tryton]
-        list_canceled = [r[0] for r in result_value if r[4] == "S"]
-
-        # Save the registry and mark the document to be imported
-        for falt in list_difference:
-            lid = falt.split('-')
-            query = "UPDATE dbo.Documentos SET exportado = 'N' "\
-                f"WHERE sw = {lid[0]} "\
-                f"AND tipo = {lid[1]} "\
-                f"AND Numero_documento = {lid[2]}"
-            Config.set_data(query)
-            logs[falt] = "EL DOCUMENTO ESTABA MARCADO COMO IMPORTADO "\
-                "(T) SIN ESTARLO."\
-                "AHORA FUE MARACADO COMO PENDIENTE PARA IMPOTAR (N)"
-        """Update logs that was completed"""
-        for values in list_already_values:
-            id_tecno = values
-            already_log = Log.search(["id_tecno", "=", id_tecno])
-            if already_log:
-                for log in already_log:
-                    log.state = "done"
-                    log.save()
-        """Update logs of document that was canceled in Tecno"""
-        for values in list_canceled:
-            id_tecno = values
-            already_log = Log.search(["id_tecno", "=", id_tecno])
-            if already_log:
-                for log in already_log:
-                    log.state = "done"
-                    log.save()
-
+            logging.error(f'Error: Error en validar documentos {error}')
+            logs[falt] = f'Excepcion en validar documentos: "{error}"'
         actualizacion, = Actualizacion.search([('name', '=', name)])
         actualizacion.add_logs(logs)
 
