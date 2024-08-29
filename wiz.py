@@ -364,37 +364,6 @@ class ForceDraftVoucher(Wizard):
         return 'end'
 
 
-class DeleteImportRecords(Wizard):
-    'Delete Import Records'
-    __name__ = 'conector.actualizacion.delete_import_records'
-    start_state = 'do_submit'
-    do_submit = StateTransition()
-
-    def transition_do_submit(self):
-        pool = Pool()
-        Warning = pool.get('res.user.warning')
-        # Actualizacion = pool.get('conector.actualizacion')
-        Log = pool.get('conector.log')
-        ids = Transaction().context['active_ids']
-        # Se agrega un nombre unico a la advertencia
-        warning_name = 'warning_delete_import_records'
-        if Warning.check(warning_name):
-            raise UserWarning(
-                warning_name,
-                "Los registros de la actualización serán eliminados.")
-        # actualizacion_id = []
-        # for actualizacion in Actualizacion.browse(ids):
-        #     if actualizacion.id not in actualizacion_id:
-        #         actualizacion_id.append(actualizacion.id)
-        if ids:
-            to_delete = Log.search([('actualizacion.id', 'in', ids)])
-            Log.delete(to_delete)
-        return 'end'
-
-    def end(self):
-        return 'reload'
-
-
 # Asistente encargado de asignarle a las lineas de los asientos, el tercero requerido
 class MoveFixParty(
         Wizard):  # ACTUALIZAR PARA SOLUCIONAR ASIENTOS DE CUALLQUIER ORIGEN

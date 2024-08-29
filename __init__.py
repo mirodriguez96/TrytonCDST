@@ -35,6 +35,7 @@ from . import contract
 from . import access
 from . import exogena
 from . import email_
+from . import conector_log
 
 
 def register():
@@ -60,7 +61,7 @@ def register():
                   conector.Actualizacion,
                   conector.Email,
                   conector.ImportedDocument,
-                  conector.ConectorLog,
+                  conector_log.ConectorLog,
                   configuration.Configuration,
                   contract.Contract,
                   currency.Cron,
@@ -158,6 +159,7 @@ def register():
                   account.PrintPartyWithholding,
                   account_dunning.DunningForceDraft,
                   conector.ImportedDocumentWizard,
+                  conector_log.DeleteImportRecords,
                   electronic_payroll_wizard.PayrollElectronicCdst,
                   invoice.UpdateInvoiceTecno,
                   invoice.UpdateNoteDate,
@@ -187,7 +189,6 @@ def register():
                   voucher.SelectMoveLines,
                   wiz.DeleteVoucherTecno,
                   wiz.VoucherMoveUnreconcile,
-                  wiz.DeleteImportRecords,
                   wiz.DeleteAccountType,
                   wiz.CheckImportedDoc,
                   wiz.MarkImportMulti,
