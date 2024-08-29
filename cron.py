@@ -87,3 +87,7 @@ class Cron(metaclass=PoolMeta):
         cls.method.selection.append(
             ('conector.actualizacion|update_exception_documents',
              "Actualizar documentos con excepcion."), )
+
+        cls.method.selection.append(
+            ('conector.log|delete_data_log',
+             "Eliminar cache del log."), )

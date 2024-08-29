@@ -1381,23 +1381,3 @@ class ImportedDocumentWizard(Wizard):
             to_save.append(baccount)
 
         BankAccount.save(to_save)
-
-
-class ConectorLog(ModelSQL, ModelView):
-    'Conector Log'
-    __name__ = 'conector.log'
-
-    actualizacion = fields.Many2One('conector.actualizacion',
-                                    'log',
-                                    'Actualizacion',
-                                    required=True)
-    event_time = fields.DateTime('Event time', required=True)
-    id_tecno = fields.Char('Id TecnoCarnes',
-                           help='For documents sw-tipo-numero',
-                           required=True)
-    message = fields.Char('Message', required=True)
-    state = fields.Selection(STATE_LOG, 'State', required=True)
-
-    @staticmethod
-    def default_state():
-        return 'pending'
