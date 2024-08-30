@@ -1,14 +1,13 @@
-from trytond.pool import Pool, PoolMeta
-from trytond.transaction import Transaction
+from trytond.wizard import (Wizard, StateTransition)
 from trytond.tools import reduce_ids, grouped_slice
-from datetime import date
-import calendar
-from trytond.wizard import (Wizard, StateView, Button, StateReport,
-                            StateTransition)
-from sql import Table
+from trytond.transaction import Transaction
 from trytond.exceptions import UserError
-# from trytond.exceptions import UserError
+from trytond.pool import Pool, PoolMeta
 from trytond.pyson import Eval
+
+from datetime import date
+from sql import Table
+import calendar
 
 
 class Loan(metaclass=PoolMeta):
@@ -53,7 +52,7 @@ class Loan(metaclass=PoolMeta):
             index = len(lines) - 1
             if difference > 0:
                 if lines[index].state == 'pending' \
-                    and (not lines[index].origin or '-1' in lines[index].origin):
+                        and (not lines[index].origin or '-1' in lines[index].origin):
                     lines[index].amount += difference
                     to_save.append(lines[index])
                 else:
@@ -75,17 +74,14 @@ class Loan(metaclass=PoolMeta):
                     })
             else:
                 if difference != 0 and lines[index].state == 'pending' \
-                    and (not lines[index].origin or '-1' in lines[index].origin):
+                        and (not lines[index].origin or '-1' in lines[index].origin):
                     lines[index].amount += difference
                     to_save.append(lines[index])
-            # if amount != loan_amount:
-            #     raise UserError('Invalid lines amount', f'must be {amount}')
             for to_pay in loan.lines_to_pay:
                 if to_pay.reconciliation and to_pay.origin \
-                    and ('-1' not in to_pay.origin) \
-                    and to_pay.origin.state != 'paid':
+                        and ('-1' not in to_pay.origin) \
+                        and to_pay.origin.state != 'paid':
                     reconciled.append(to_pay.origin.id)
-        #
         if to_save:
             Line.save(to_save)
         if to_create:
@@ -99,10 +95,56 @@ class Loan(metaclass=PoolMeta):
                 cursor.execute(*table.update(
                     columns=[table.state], values=['paid'], where=red_sql))
 
+    @classmethod
+    def _post(cls, loans):
+        """Function to post loan including refference
 
-#Forzar a borrador de Prestamos
+        Args:
+            loans (object): staff_loan model
+        """
+        pool = Pool()
+        Move = pool.get('account.move')
+        reconciled = []
+        moves = []
+
+        loans = [l for l in loans if l.type != 'external']
+        for loan in loans:
+            move = loan.get_move()
+            if move != loan.account_move:
+                loan.account_move = move
+                moves.append(move)
+            if loan.state != 'posted':
+                loan.state = 'posted'
+
+        if moves:
+            if move.lines:
+                for lines in move.lines:
+                    lines.reference = loan.number
+            Move.save(moves)
+        cls.save(loans)
+        Move.post(
+            [i.account_move for i in loans if i.account_move.state != 'posted'])
+        for loan in loans:
+            if loan.reconciled:
+                reconciled.append(loan)
+        if reconciled:
+            cls.__queue__.refresh(reconciled)
+
+
 class LoanForceDraft(Wizard):
-    'Active Force Draft'
+    """Function to Force draft Loan
+
+    Args:
+        Wizard (Inheritance): class type Wizard by tryton
+
+    Raises:
+        UserError: if loan its state paid or cancelled
+        UserError: if loan had paid state lines
+
+    Returns:
+        String: return end when the wizard is finished
+    """
+
     __name__ = 'staff.loan.force_draft'
     start_state = 'force_draft'
     force_draft = StateTransition()
@@ -143,13 +185,13 @@ class LoanForceDraft(Wizard):
                 Y NO ES POSIBLE FORZAR A BORRADOR"
 
                 continue
-            #Validacion para saber si el activo se encuentra cerrado
+            # Validacion para saber si el activo se encuentra cerrado
             if loan.state == 'paid' or loan.state == 'cancelled':
                 raise UserError(
                     'AVISO',
                     f'El prestamo {loan.number} se encuentra en estado {loan.state} y no es posible forzar su borrado'
                 )
-            #Validacion para saber si el activo ya se encuentra en borrador
+            # Validacion para saber si el activo ya se encuentra en borrador
 
             for lines in loan.lines:
                 if lines.state == 'paid' and lines.origin:
@@ -161,7 +203,7 @@ class LoanForceDraft(Wizard):
             if loan.state == 'draft':
                 return 'end'
             cursor = Transaction().connection.cursor()
-            #Consulta que le asigna el estado borrado al activo
+            # Consulta que le asigna el estado borrado al activo
             if loan.account_move:
                 to_delete.append(loan.account_move.id)
             to_draft.append(id_)
@@ -179,8 +221,8 @@ class LoanForceDraft(Wizard):
                 loanTable.state,
                 loanTable.number,
             ],
-                                             values=["draft", ''],
-                                             where=loanTable.id.in_(to_draft)))
+                values=["draft", ''],
+                where=loanTable.id.in_(to_draft)))
         if exceptions:
             actualizacion.add_logs(logs)
         return 'end'
