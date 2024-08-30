@@ -70,10 +70,15 @@ def _get_structured_json_data(json_data):
 
 class Account(metaclass=PoolMeta):
     __name__ = 'account.account'
+    analytical_management = fields.Boolean('Analytical Management')
 
-    # Funcion encargada de buscar las cuentas padres (parent) y verificar si tiene algún tipo asignado, para quitarselo
     @classmethod
     def delete_account_type(cls, accounts):
+        """Function to search parent account
+
+        Args:
+            accounts (object): object of model account_account
+        """
         pool = Pool()
         Account = pool.get('account.account')
         parents = []
@@ -148,8 +153,14 @@ class Move(ModelSQL, metaclass=PoolMeta):
         Line = pool.get('account.move.line')
         Employee = pool.get('company.employee')
         Wagetype = pool.get('staff.wage_type')
+
         account = None
         party = None
+
+        for move in moves:
+            lines = move.lines
+            if lines:
+                cls.check_analytyc_required(lines)
 
         for move in moves:
             amount = Decimal('0.0')
@@ -213,6 +224,17 @@ class Move(ModelSQL, metaclass=PoolMeta):
                                     'y creditos, no se puede contabilizar.')
         cls.save(moves)
 
+    @classmethod
+    def check_analytyc_required(cls, lines):
+        for line in lines:
+            analytic_line = line.analytic_lines
+            analytic_required = line.account.analytical_management
+            if analytic_required and len(analytic_line) == 0:
+                code = line.account.code
+                message = f"La linea con codigo de cuenta {code}"\
+                    " requiere analitica"
+                raise (UserError("ERROR", f"{message}"))
+
 
 class MoveLine(ModelSQL, metaclass=PoolMeta):
     """Account move line inheritance"""
@@ -236,8 +258,9 @@ class MoveLine(ModelSQL, metaclass=PoolMeta):
         """
         pool = Pool()
         Reconciliation = pool.get('account.move.reconciliation')
-        delegate_to = delegate_to.id if delegate_to else None
         reconciliations = []
+
+        delegate_to = delegate_to.id if delegate_to else None
         for lines in lines_list:
             for line in lines:
                 if line.reconciliation:
