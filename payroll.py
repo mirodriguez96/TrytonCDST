@@ -1,6 +1,6 @@
+from trytond.exceptions import UserError, UserWarning
 from trytond.wizard import (Wizard, StateView, Button, StateReport,
                             StateTransition)
-from trytond.exceptions import UserError, UserWarning
 from trytond.model import ModelSQL, ModelView, fields
 from trytond.modules.company import CompanyReport
 from trytond.pyson import Eval, Or, Not, If, Bool
@@ -9,6 +9,7 @@ from trytond.pool import Pool, PoolMeta
 from trytond.sendmail import sendmail
 from trytond.config import config
 from trytond.report import Report
+from trytond.i18n import gettext
 
 from .it_supplier_noova import ElectronicPayrollCdst
 from email.mime.nonmultipart import MIMENonMultipart
@@ -24,6 +25,7 @@ from sql.aggregate import Sum
 
 from dateutil.relativedelta import relativedelta
 from datetime import timedelta, date
+from operator import attrgetter
 from decimal import Decimal
 from itertools import chain
 from dateutil import tz
@@ -328,458 +330,6 @@ class WageType(metaclass=PoolMeta):
                                          not in ['Deuda', 'Libranza'])
                                     })
     department = fields.Many2One('company.department', 'Department')
-
-
-class Liquidation(metaclass=PoolMeta):
-    __name__ = "staff.liquidation"
-    sended_mail = fields.Boolean('Sended Email')
-
-    @classmethod
-    def __setup__(cls):
-        super(Liquidation, cls).__setup__()
-        cls.state.selection.append(('wait', 'Wait'))
-        cls._buttons.update({
-            'wait': {
-                'invisible': Eval('state') != 'wait',
-            },
-        })
-
-    @classmethod
-    @ModelView.button
-    def wait(cls, records):
-        for i in records:
-            i.state = 'draft'
-            i.save()
-
-    # Funcion encargada de contar los días festivos
-    def count_holidays(self, start_date, end_date, event):
-        sundays = 0
-        if event.category.wage_type.type_concept == 'holidays' and event.category.wage_type.type_concept_electronic == 'VacacionesCompensadas':
-            return sundays
-        day = timedelta(days=1)
-        # Iterar sobre todas las fechas dentro del rango
-        current_date = start_date
-        while current_date <= end_date:
-            if current_date.weekday() == 6:  # 6 representa el domingo
-                sundays += 1
-            current_date += day
-        Holiday = Pool().get('staff.holidays')
-        holidays = Holiday.search([
-            ('holiday', '>=', start_date),
-            ('holiday', '<=', end_date),
-        ],
-            count=True)
-        return sundays + holidays
-
-    def _validate_holidays_lines(self, event, start_date, end_date, days):
-        line = None
-        for l in self.lines:
-            if l.wage.type_concept == 'holidays':
-                line = l
-        if not line:
-            return
-        if event.edit_amount:
-            amount_day = event.amount
-        else:
-            amount_day = (self.contract.salary / 30)
-        # amount = amount_day * event.days_of_vacations
-        holidays = self.count_holidays(start_date, end_date, event)
-        workdays = days - holidays
-        amount_workdays = round(amount_day * workdays, 2)
-        amount_holidays = round(amount_day * holidays, 2)
-        # line, = self.lines
-        move_lines = []
-        value = 0
-        for move_line in line.move_lines:
-            value += move_line.credit
-            move_lines.append(move_line)
-            if value > amount_workdays:
-                break
-        line.move_lines = move_lines
-        if value != amount_workdays:
-            Adjustment = Pool().get('staff.liquidation.line_adjustment')
-            adjustment = amount_workdays - value
-            if adjustment < 0:
-                adjustment_account = line.wage.credit_account
-            else:
-                adjustment_account = line.wage.debit_account
-            line.adjustments = [
-                Adjustment(account=adjustment_account,
-                           amount=adjustment,
-                           description=line.description)
-            ]
-            line.amount = amount_workdays
-            line.days = workdays
-        line.save()
-        if amount_holidays > 0:
-            WageType = Pool().get('staff.wage_type')
-            wage_type = WageType.search(
-                [('non_working_days', '=', True),
-                 ('department', '=', self.employee.department)],
-                limit=1)
-            if not wage_type:
-                raise UserError('Wage Type',
-                                'missing wage_type (non_working_days)')
-            wage_type, = wage_type
-            value = {
-                'sequence':
-                wage_type.sequence,
-                'wage':
-                wage_type.id,
-                'description':
-                wage_type.name,
-                'amount':
-                amount_holidays,
-                'account':
-                wage_type.debit_account,
-                'days':
-                holidays,
-                'adjustments': [('create', [{
-                    'account':
-                    wage_type.debit_account.id,
-                    'amount':
-                    amount_holidays,
-                    'description':
-                    wage_type.debit_account.name,
-                }])]
-            }
-            self.write([self], {'lines': [('create', [value])]})
-
-    def create_move(self):
-        reconcile = True
-        pool = Pool()
-        Note = pool.get('account.move.reconcile.write_off')
-        Move = pool.get('account.move')
-        MoveLine = pool.get('account.move.line')
-        Period = pool.get('account.period')
-        if self.move:
-            return
-
-        move_lines, grouped = self.get_moves_lines()
-        if move_lines:
-            period_id = Period.find(self.company.id,
-                                    date=self.liquidation_date)
-            move, = Move.create([{
-                'journal': self.journal.id,
-                'origin': str(self),
-                'period': period_id,
-                'date': self.liquidation_date,
-                'description': self.description,
-                'lines': [('create', move_lines)],
-            }])
-            self.write([self], {'move': move.id})
-
-            if self.kind == 'contract':
-                for ml in move.lines:
-                    if (ml.account.id, ml.description,
-                            'payment') not in grouped.keys() or (
-                                ml.account.type.statement not in ('balance')):
-                        continue
-                    to_reconcile = [ml]
-
-                    if grouped[(ml.account.id, ml.description, 'payment')]:
-                        to_reconcile.extend(grouped[(ml.account.id, ml.description,
-                                                     'payment')]['lines'])
-                    if len(to_reconcile) > 1:
-                        note = Note.search([])
-                        writeoff = None
-                        if note:
-                            writeoff = note[0]
-                        MoveLine.reconcile(
-                            set(to_reconcile), writeoff=writeoff)
-            else:
-                for ml in move.lines:
-                    if (ml.account.id, ml.description,
-                            'payment') not in grouped.keys() or (
-                                ml.account.type.statement not in ('balance')):
-                        continue
-                    to_reconcile = [ml]
-
-                    if grouped[(ml.account.id, ml.description, 'payment')]:
-                        to_reconcile.extend(grouped[(ml.account.id, ml.description,
-                                                     'payment')]['lines'])
-                    if len(to_reconcile) > 1 and reconcile:
-                        reconcile = False
-                        note = Note.search([])
-                        writeoff = None
-                        if note:
-                            writeoff = note[0]
-                        MoveLine.reconcile(
-                            set(to_reconcile), writeoff=writeoff)
-            Move.post([move])
-
-    def get_moves_lines(self):
-        lines_moves = []
-        to_reconcile = []
-        grouped = {}
-        amount = []
-        validate = True
-        result = None
-
-        wages = [
-            wage_type for wage_type in self.employee.mandatory_wages
-            if wage_type.wage_type.type_concept == 'retirement'
-            and self.kind == 'holidays'
-        ]
-
-        for line in self.lines:
-            if line.move_lines:
-                for moveline in line.move_lines:
-                    to_reconcile.append(moveline)
-                    amount_line = moveline.debit - moveline.credit * -1
-                    account_id = (moveline.account.id, line.description,
-                                  line.wage.definition)
-                    if account_id not in grouped.keys():
-                        grouped[account_id] = {
-                            'amount': [],
-                            'description': line.description,
-                            'wage': line.wage,
-                            'party_to_pay': line.party_to_pay,
-                            'lines': [],
-                        }
-                    grouped[account_id]['amount'].append(amount_line)
-                    grouped[account_id]['lines'].append(moveline)
-                    amount.append(amount_line)
-            elif line.wage.definition == 'discount':
-                account_id = (line.account.id, line.description, line.amount)
-                if account_id not in grouped.keys():
-                    grouped[account_id] = {
-                        'amount': [],
-                        'description': line.description,
-                        'wage': line.wage,
-                        'party_to_pay': line.party_to_pay,
-                        'lines': [],
-                    }
-                grouped[account_id]['amount'].append(line.amount)
-                amount.append(line.amount)
-
-            for adjust in line.adjustments:
-                key = (adjust.account.id, adjust.description)
-                if key not in grouped.keys():
-                    grouped[key] = {
-                        'amount': [],
-                        'description': adjust.description,
-                        'wage': line.wage,
-                        'party_to_pay': line.party_to_pay,
-                        'lines': [],
-                    }
-                    if hasattr(adjust,
-                               'analytic_account') and adjust.analytic_account:
-                        grouped[key]['analytic'] = adjust.analytic_account
-                grouped[key]['amount'].append(adjust.amount)
-                amount.append(adjust.amount)
-
-        for account_id, values in grouped.items():
-            account_id = account_id[0]
-            party_payment = values['party_to_pay']
-            wage = values['wage']
-
-            if party_payment:
-                for wage in wages:
-                    if validate:
-                        if values['wage'].id == wage.wage_type.id:
-                            party_payment = wage.party.id
-                            validate = False
-                            result = self._prepare_line(
-                                values['description'],
-                                wages[0].wage_type.debit_account.id,
-                                debit=round(self.gross_payments * Decimal(0.12),
-                                            2),
-                                credit=_ZERO,
-                                analytic=values.get('analytic', None))
-
-                            values['amount'] = [
-                                round(self.gross_payments *
-                                      Decimal(0.16), 2) * -1
-                            ]
-
-            _amount = sum(values['amount'])
-            debit = _amount
-            credit = _ZERO
-            lines_moves.append(
-                self._prepare_line(values['description'],
-                                   account_id,
-                                   debit=debit,
-                                   credit=credit,
-                                   party_to_pay_concept=party_payment,
-                                   analytic=values.get('analytic', None)))
-
-        if result is not None:
-            lines_moves.append(result)
-
-        if lines_moves:
-            lines_moves.append(
-                self._prepare_line(
-                    self.description,
-                    self.account,
-                    credit=sum(amount),
-                    party_to_pay=self.party_to_pay,
-                ))
-        return lines_moves, grouped
-
-    def _prepare_line(self,
-                      description,
-                      account_id,
-                      debit=_ZERO,
-                      credit=_ZERO,
-                      party_to_pay=None,
-                      analytic=None,
-                      party_to_pay_concept=None):
-        if debit < _ZERO:
-            credit = debit
-            debit = _ZERO
-        elif credit < _ZERO:
-            debit = credit
-            credit = _ZERO
-
-        credit = abs(credit)
-        debit = abs(debit)
-
-        party_id = self.employee.party.id
-        if party_to_pay:
-            party_id = self.party_to_pay.id
-        if party_to_pay_concept:
-            party_id = party_to_pay_concept
-
-        res = {
-            'description': description,
-            'debit': debit,
-            'credit': credit,
-            'account': account_id,
-            'party': party_id,
-        }
-
-        if analytic:
-            res['analytic_lines'] = [('create', [{
-                'debit': res['debit'],
-                'credit': res['credit'],
-                'account': analytic.id,
-                'date': self.liquidation_date
-            }])]
-        return res
-
-    def set_liquidation_lines(self):
-        pool = Pool()
-        Payroll = pool.get('staff.payroll')
-        LiquidationMove = pool.get('staff.liquidation.line-move.line')
-        date_start, date_end = self._get_dates_liquidation()
-        payrolls = Payroll.search([('employee', '=', self.employee.id),
-                                   ('start', '>=', date_start),
-                                   ('end', '<=', date_end),
-                                   ('contract', '=', self.contract.id),
-                                   ('state', '=', 'posted')])
-        wages = {}
-        wages_target = {}
-        for payroll in payrolls:
-            mandatory_wages = [
-                i.wage_type for i in payroll.employee.mandatory_wages
-            ]
-            for l in payroll.lines:
-                if not l.wage_type.contract_finish:
-                    continue
-                if self.kind == 'contract':
-                    if l.wage_type.type_concept not in CONTRACT:
-                        continue
-                elif self.kind != l.wage_type.type_concept:
-                    continue
-
-                if l.wage_type.id not in wages_target.keys(
-                ) and l.wage_type in mandatory_wages:
-                    mlines = self.get_moves_lines_pending(
-                        payroll.employee, l.wage_type, date_end)
-                    if not mlines:
-                        continue
-                    wages_target[l.wage_type.id] = [
-                        l.wage_type.credit_account.id,
-                        mlines,
-                        l.wage_type,
-                    ]
-
-                    # wages.append(l.wage_type.id)
-                    # This looks for lines provisioned before start period
-                    # old_lines_provisioned = MoveLine.search([
-                    #     ('party', '=', self.employee.party.id),
-                    #     ('move.date', '<', date_start),
-                    #     ('reconciliation', '=', None),
-                    #     ('account', '=', account_id),
-                    # ])
-                    # lines.extend(old_lines_provisioned)
-        for (account_id, lines, wage_type) in wages_target.values():
-            values = []
-            lines_to_reconcile = []
-            for line in lines:
-                _line = LiquidationMove.search([('move_line', '=', line.id)])
-                if not _line:
-                    values.append(abs(line.debit - line.credit))
-                    lines_to_reconcile.append(line.id)
-            value = self.get_line_(wage_type,
-                                   sum(values),
-                                   self.time_contracting,
-                                   account_id,
-                                   party=self.party_to_pay)
-
-            # if lines:
-            #     liquidation = lines[0].line.liquidation
-            #     raise RecordDuplicateError(
-            #         gettext('staff_payroll_co.msg_duplicate_liquidation',
-            #                 liquidation=liquidation.id,
-            #                 state=liquidation.state))
-            value.update({
-                'move_lines': [('add', lines_to_reconcile)],
-            })
-            wages[wage_type.id] = value
-
-        self.write([self], {'lines': [('create', wages.values())]})
-        if self.kind == 'contract':
-            self.process_loans_to_pay()
-        if self.kind == 'holidays':
-            self.process_loans_to_pay_holidays()
-
-    def process_loans_to_pay_holidays(self):
-        pool = Pool()
-        MoveLine = pool.get('account.move.line')
-        LoanLine = pool.get('staff.loan.line')
-        LiquidationLine = pool.get('staff.liquidation.line')
-        dom = [
-            ('loan.wage_type', '!=', None),
-            ('loan.party', '=', self.employee.party.id),
-            ('state', 'in', ['pending', 'partial']),
-            ('loan.wage_type.pay_liqudation', '=', True),
-            ('maturity_date', '>=', self.start_period.start),
-            ('maturity_date', '<=', self.end_period.end),
-        ]
-
-        lines_loan = LoanLine.search(dom)
-        for m in lines_loan:
-
-            move_lines = MoveLine.search([
-                ('origin', 'in', ['staff.loan.line,' + str(m)]),
-            ])
-            party = m.loan.party_to_pay.id if m.loan.party_to_pay else None
-            res = self.get_line_(m.loan.wage_type,
-                                 m.amount * -1,
-                                 1,
-                                 m.loan.account_debit.id,
-                                 party=party)
-            res['move_lines'] = [('add', move_lines)]
-            res['liquidation'] = self.id
-            line_, = LiquidationLine.create([res])
-            m.amount = abs(m.amount * -1)
-            m.save()
-            LoanLine.write([m], {'state': 'paid', 'origin': line_})
-
-    @fields.depends('start_period', 'end_period', 'contract')
-    def on_change_with_time_contracting(self):
-        delta = None
-        if self.start_period and self.end_period and self.contract:
-            try:
-                date_start, date_end = self._get_dates()
-                delta = self.contract.get_time_days_contract(
-                    date_start, date_end)
-            except Exception as error:
-                raise UserError('Error', f'{self.employee.party.name} {error}')
-                delta = 0
-        return delta
 
 
 class PayrollPaymentStartBcl(ModelView):
@@ -1655,10 +1205,18 @@ class StaffEvent(metaclass=PoolMeta):
         depends=['enter_timestamp', 'access_register', 'state'],
     )
 
-    # @fields.depends('access_register')
-    # def on_change_with_time(self):
-    #     if not self.access_register:
-    #         return None
+    @classmethod
+    def __setup__(cls):
+        super(StaffEvent, cls).__setup__()
+        cls._buttons.update({
+            'create_liquidation': {
+                'invisible':
+                Or(
+                    Eval('state') != 'done',
+                    Not(Eval('is_vacations')),
+                ),
+            }
+        })
 
     # @fields.depends('employee', 'contract')
     def on_change_employee(self):
@@ -1695,19 +1253,6 @@ class StaffEvent(metaclass=PoolMeta):
         else:
             return self.amount
 
-    @classmethod
-    def __setup__(cls):
-        super(StaffEvent, cls).__setup__()
-        cls._buttons.update({
-            'create_liquidation': {
-                'invisible':
-                Or(
-                    Eval('state') != 'done',
-                    Not(Eval('is_vacations')),
-                ),
-            }
-        })
-
     def get_line_(self, wage, amount, days, account_id, party=None):
         value = {
             'sequence': wage.sequence,
@@ -1724,9 +1269,17 @@ class StaffEvent(metaclass=PoolMeta):
     @ModelView.button
     def create_liquidation(cls, records):
         pool = Pool()
+        Liquidation = pool.get('staff.liquidation')
         Period = pool.get('staff.payroll.period')
         Warning = pool.get('res.user.warning')
+
         for event in records:
+            validate_liquidation = Liquidation.search(['origin', '=', event])
+
+            if validate_liquidation:
+                raise (UserError('ERROR:', 'Ya existe una liquidacion con la '
+                                 'novedad actual.'))
+
             warning_name = 'mywarning,%s' % event
             if Warning.check(warning_name):
                 raise UserWarning(warning_name,
@@ -1796,7 +1349,6 @@ class StaffEvent(metaclass=PoolMeta):
         Liquidation = pool.get('staff.liquidation')
         Period = pool.get('staff.payroll.period')
         Staff_event_liquidation = pool.get('staff.event-staff.liquidation')
-
         liquidation = Liquidation()
         liquidation.employee = event.employee
         liquidation.contract = event.contract
@@ -1813,6 +1365,7 @@ class StaffEvent(metaclass=PoolMeta):
         liquidation.liquidation_date = liquidation_date
         liquidation.description = event.description
         liquidation.account = Configuration.liquidation_account
+        liquidation.origin = event
         liquidation.save()
         # Se procesa la liquidación
         Liquidation.compute_liquidation([liquidation])
@@ -1842,7 +1395,8 @@ class StaffEvent(metaclass=PoolMeta):
                     'amount': amount,
                     'account': concept.wage_type.credit_account,
                     'days': days,
-                    'party_to_pay': concept.party
+                    'party_to_pay': concept.party,
+                    'origin': event
                 }
 
                 if amount_workdays:
@@ -2164,6 +1718,214 @@ class Payroll(metaclass=PoolMeta):
             line, = PayrollLine.create([to_create])
             LoanLine.write([m], {'state': 'paid', 'origin': line})
 
+    def get_moves_lines(self):
+        """Function to build move lines when post payroll
+
+        Raises:
+            UserError: if error ocurred when build lines
+
+        Returns:
+            list: A list with account_move_line model registry
+        """
+
+        pool = Pool()
+        LoanLines = pool.get('staff.loan.line')
+        lines_moves = {}
+        result = []
+
+        mandatory_wages = dict([(m.wage_type.id, m.party)
+                                for m in self.employee.mandatory_wages])
+        employee_id = self.employee.party.id
+
+        Configuration = Pool().get('staff.configuration')
+        configuration = Configuration(1)
+        entity_in_line = configuration.expense_contribution_entity
+
+        debit_acc2 = None
+        attr_getter = attrgetter(
+            'amount', 'party', 'amount_60_40', 'wage_type',
+            'wage_type.definition', 'wage_type.account_60_40',
+            'wage_type.debit_account', 'wage_type.credit_account',
+            'wage_type.expense_formula'
+        )
+
+        for line in self.lines:
+            data = {
+                'origin': None,
+                'reference': None
+            }
+            if line.origin and line.origin.__name__ == LoanLines.__name__:
+                data['origin'] = line.origin
+                data['reference'] = line.origin.loan.number
+
+            amount, party, amount_60_40, wage_type, definition, account_60_40, debit_acc, credit_acc, expense_for = attr_getter(
+                line)
+            if amount <= 0 or not wage_type:
+                continue
+            party_id = party.id if party else None
+            wage_type_id = wage_type.id
+
+            if not party_id:
+                party_id = mandatory_wages[wage_type_id].id\
+                    if mandatory_wages.get(wage_type_id) else employee_id
+
+            expense = line.get_expense_amount() if expense_for else Decimal(0)
+
+            if definition == 'payment':
+                amount_debit = amount + expense
+                if amount_60_40:
+                    amount_debit = amount - amount_60_40
+                    amount_debit2 = amount_60_40
+                    debit_acc2 = account_60_40
+            else:
+                if expense:
+                    amount_debit = expense
+                elif debit_acc:
+                    amount_debit = amount
+
+            amount_credit = amount + expense
+
+            try:
+                if debit_acc and amount_debit > _ZERO:
+                    if definition == 'discount':
+                        amount_debit = amount_debit * (-1)
+                    if debit_acc.id not in lines_moves.keys():
+                        if entity_in_line:
+                            p = party_id
+                        else:
+                            p = employee_id
+
+                        lines_moves[debit_acc.id] = {
+                            employee_id: line._get_move_line(
+                                debit_acc, p,
+                                ('debit', amount_debit), data
+                            )}
+                    else:
+                        line.update_move_line(
+                            lines_moves[debit_acc.id][employee_id],
+                            {'debit': amount_debit, 'credit': _ZERO}
+                        )
+
+                if debit_acc2:
+                    if debit_acc2.id not in lines_moves.keys():
+                        lines_moves[debit_acc2.id] = {
+                            employee_id: line._get_move_line(
+                                debit_acc2, party_id,
+                                ('debit', amount_debit2), data
+                            )}
+                    else:
+
+                        line.update_move_line(
+                            lines_moves[debit_acc2.id][employee_id],
+                            {'debit': amount_debit, 'credit': _ZERO}
+                        )
+
+                if amount_credit > _ZERO:
+                    line_credit_ready = False
+                    if credit_acc:
+                        if credit_acc.id not in lines_moves.keys():
+                            lines_moves[credit_acc.id] = {
+                                party_id: line._get_move_line(
+                                    credit_acc, party_id, ('credit',
+                                                           amount_credit), data
+                                )}
+                            line_credit_ready = True
+                        else:
+                            if line.origin and line.origin.__name__ == LoanLines.__name__:
+                                new_id = f'{credit_acc.id}-{line.id}'
+                                lines_moves[new_id] = {
+                                    party_id: line._get_move_line(
+                                        credit_acc, party_id, ('credit',
+                                                               amount_credit), data
+                                    )}
+                                line_credit_ready = True
+
+                            if party_id not in lines_moves[credit_acc.id].keys():
+                                lines_moves[credit_acc.id].update({
+                                    party_id: line._get_move_line(
+                                        credit_acc, party_id, (
+                                            'credit', amount_credit), data
+                                    )
+                                })
+                                line_credit_ready = True
+
+                    if definition != 'payment':
+                        deduction_acc = wage_type.deduction_account
+                        if deduction_acc:
+                            if deduction_acc.id not in lines_moves.keys():
+                                lines_moves[deduction_acc.id] = {
+                                    employee_id: line._get_move_line(
+                                        deduction_acc, employee_id, (
+                                            'credit', -amount), data
+                                    )}
+                                line_credit_ready = True
+                            else:
+                                lines_moves[deduction_acc.id][employee_id]['credit'] -= amount
+
+                    if credit_acc and not line_credit_ready:
+                        lines_moves[credit_acc.id][party_id]['credit'] += amount_credit
+            except Exception as e:
+                error = f"{wage_type.name}: {e}"
+                raise UserError(error)
+
+        for r in lines_moves.values():
+            _line = list(r.values())
+            if _line[0]['debit'] > 0 and _line[0]['credit'] > 0:
+                new_value = _line[0]['debit'] - _line[0]['credit']
+                if new_value >= 0:
+                    _line[0]['debit'] = abs(new_value)
+                    _line[0]['credit'] = 0
+                else:
+                    _line[0]['credit'] = abs(new_value)
+                    _line[0]['debit'] = 0
+            result.extend(_line)
+        return result
+
+    def create_move(self):
+        """Function to create account_move registry and post it
+        """
+
+        pool = Pool()
+        Move = pool.get('account.move')
+        Period = pool.get('account.period')
+        LoanLines = pool.get('staff.loan.line')
+        MoveLoanLines = pool.get('account.move.line')
+        balance = 0
+
+        if self.move:
+            return
+        period_id = Period.find(self.company.id, date=self.date_effective)
+        move_lines = self.get_moves_lines()
+
+        move, = Move.create([{
+            'journal': self.journal.id,
+            'origin': str(self),
+            'period': period_id,
+            'date': self.date_effective,
+            'state': 'draft',
+            'description': self.description,
+            'lines': [('create', move_lines)],
+        }])
+        self.write([self], {'move': move.id})
+        Move.post([self.move])
+
+        for lines in self.move.lines:
+            origin = lines.origin
+            reference = lines.reference
+
+            # Validate if is loan lines to conciliate
+            if origin and reference\
+                    and origin.__name__ == LoanLines.__name__:
+
+                move_lines = MoveLoanLines.search([('origin', '=', origin),
+                                                  ('reference', '=', reference)])
+                if move_lines:
+                    for line in move_lines:
+                        balance += line.debit - line.credit
+                    if balance == 0:
+                        MoveLoanLines.reconcile(move_lines)
+        Move.save([self.move])
+
 
 class PayrollLine(metaclass=PoolMeta):
     __name__ = "staff.payroll.line"
@@ -2183,6 +1945,24 @@ class PayrollLine(metaclass=PoolMeta):
                     'credit']
 
         return move_line
+
+    def _get_move_line(self, account, party_id, amount, data=None):
+        debit = credit = _ZERO
+        if amount[0] == 'debit':
+            debit = amount[1]
+        else:
+            credit = amount[1]
+
+        res = {
+            'description': account.name,
+            'debit': debit,
+            'credit': credit,
+            'account': account.id,
+            'party': party_id,
+            'origin': data['origin'],
+            'reference': data['reference']
+        }
+        return res
 
 
 class PayrollReport(CompanyReport):
