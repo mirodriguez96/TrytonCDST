@@ -7,7 +7,6 @@ from trytond.pyson import Eval, Or, Not, If, Bool
 from trytond.transaction import Transaction
 from trytond.pool import Pool, PoolMeta
 from trytond.sendmail import sendmail
-from trytond.config import config
 from trytond.report import Report
 from trytond.i18n import gettext
 
@@ -19,6 +18,7 @@ from email.mime.multipart import MIMEMultipart
 from email.encoders import encode_base64
 from email.mime.text import MIMEText
 from email.header import Header
+from operator import attrgetter
 
 from sql.operators import Between
 from sql.aggregate import Sum
@@ -1732,6 +1732,8 @@ class Payroll(metaclass=PoolMeta):
         LoanLines = pool.get('staff.loan.line')
         lines_moves = {}
         result = []
+        pool = Pool()
+        LoanLines = pool.get('staff.loan.line')
 
         mandatory_wages = dict([(m.wage_type.id, m.party)
                                 for m in self.employee.mandatory_wages])
@@ -1740,7 +1742,6 @@ class Payroll(metaclass=PoolMeta):
         Configuration = Pool().get('staff.configuration')
         configuration = Configuration(1)
         entity_in_line = configuration.expense_contribution_entity
-
         debit_acc2 = None
         attr_getter = attrgetter(
             'amount', 'party', 'amount_60_40', 'wage_type',
@@ -1748,7 +1749,6 @@ class Payroll(metaclass=PoolMeta):
             'wage_type.debit_account', 'wage_type.credit_account',
             'wage_type.expense_formula'
         )
-
         for line in self.lines:
             data = {
                 'origin': None,
@@ -1796,7 +1796,7 @@ class Payroll(metaclass=PoolMeta):
                             p = employee_id
 
                         lines_moves[debit_acc.id] = {
-                            employee_id: line._get_move_line(
+                            employee_id: line.get_move_line(
                                 debit_acc, p,
                                 ('debit', amount_debit), data
                             )}
@@ -1809,12 +1809,11 @@ class Payroll(metaclass=PoolMeta):
                 if debit_acc2:
                     if debit_acc2.id not in lines_moves.keys():
                         lines_moves[debit_acc2.id] = {
-                            employee_id: line._get_move_line(
+                            employee_id: line.get_move_line(
                                 debit_acc2, party_id,
                                 ('debit', amount_debit2), data
                             )}
                     else:
-
                         line.update_move_line(
                             lines_moves[debit_acc2.id][employee_id],
                             {'debit': amount_debit, 'credit': _ZERO}
@@ -1825,7 +1824,7 @@ class Payroll(metaclass=PoolMeta):
                     if credit_acc:
                         if credit_acc.id not in lines_moves.keys():
                             lines_moves[credit_acc.id] = {
-                                party_id: line._get_move_line(
+                                party_id: line.get_move_line(
                                     credit_acc, party_id, ('credit',
                                                            amount_credit), data
                                 )}
@@ -1834,7 +1833,7 @@ class Payroll(metaclass=PoolMeta):
                             if line.origin and line.origin.__name__ == LoanLines.__name__:
                                 new_id = f'{credit_acc.id}-{line.id}'
                                 lines_moves[new_id] = {
-                                    party_id: line._get_move_line(
+                                    party_id: line.get_move_line(
                                         credit_acc, party_id, ('credit',
                                                                amount_credit), data
                                     )}
@@ -1842,19 +1841,18 @@ class Payroll(metaclass=PoolMeta):
 
                             if party_id not in lines_moves[credit_acc.id].keys():
                                 lines_moves[credit_acc.id].update({
-                                    party_id: line._get_move_line(
+                                    party_id: line.get_move_line(
                                         credit_acc, party_id, (
                                             'credit', amount_credit), data
                                     )
                                 })
                                 line_credit_ready = True
-
                     if definition != 'payment':
                         deduction_acc = wage_type.deduction_account
                         if deduction_acc:
                             if deduction_acc.id not in lines_moves.keys():
                                 lines_moves[deduction_acc.id] = {
-                                    employee_id: line._get_move_line(
+                                    employee_id: line.get_move_line(
                                         deduction_acc, employee_id, (
                                             'credit', -amount), data
                                     )}
@@ -1884,47 +1882,64 @@ class Payroll(metaclass=PoolMeta):
     def create_move(self):
         """Function to create account_move registry and post it
         """
+        super(Payroll, self).create_move()
+        self.concile_loan_lines()
 
+    def concile_loan_lines(self):
+        """Function to concile loan lines by liquidation
+        """
         pool = Pool()
-        Move = pool.get('account.move')
-        Period = pool.get('account.period')
         LoanLines = pool.get('staff.loan.line')
-        MoveLoanLines = pool.get('account.move.line')
-        balance = 0
-
-        if self.move:
-            return
-        period_id = Period.find(self.company.id, date=self.date_effective)
-        move_lines = self.get_moves_lines()
-
-        move, = Move.create([{
-            'journal': self.journal.id,
-            'origin': str(self),
-            'period': period_id,
-            'date': self.date_effective,
-            'state': 'draft',
-            'description': self.description,
-            'lines': [('create', move_lines)],
-        }])
-        self.write([self], {'move': move.id})
-        Move.post([self.move])
-
+        AccountMoveLine = pool.get('account.move.line')
+        conciled_lines = []
         for lines in self.move.lines:
             origin = lines.origin
             reference = lines.reference
-
+            balance = 0
             # Validate if is loan lines to conciliate
             if origin and reference\
                     and origin.__name__ == LoanLines.__name__:
-
-                move_lines = MoveLoanLines.search([('origin', '=', origin),
-                                                  ('reference', '=', reference)])
-                if move_lines:
+                move_lines = AccountMoveLine.search([('origin', '=', origin),
+                                                     ('reference', '=', reference)])
+                if len(move_lines) % 2 == 0:
                     for line in move_lines:
                         balance += line.debit - line.credit
                     if balance == 0:
-                        MoveLoanLines.reconcile(move_lines)
-        Move.save([self.move])
+                        AccountMoveLine.reconcile(move_lines)
+                else:
+                    for line in self.lines:
+                        if line.wage_type.type_concept_electronic == 'Deuda':
+                            balance = 0
+                            already_concile = False
+                            if line in conciled_lines:
+                                continue
+                            conciled_lines.append(line)
+
+                            loan_line = LoanLines.search(['origin', '=', line])
+                            if loan_line:
+                                loan_move_line = AccountMoveLine.search(
+                                    [('origin', '=', loan_line[0])])
+
+                                for lines in loan_move_line:
+                                    if lines in conciled_lines:
+                                        already_concile = True
+                                if already_concile:
+                                    break
+
+                                for lines in loan_move_line:
+                                    balance += lines.debit - lines.credit
+                                try:
+                                    if balance == 0:
+                                        lines_to_reconcile = []
+                                        lines_to_reconcile = list(
+                                            loan_move_line)
+                                        AccountMoveLine.reconcile(
+                                            lines_to_reconcile)
+                                        for line in loan_move_line:
+                                            conciled_lines.append(line)
+                                        break
+                                except Exception as error:
+                                    print(error)
 
 
 class PayrollLine(metaclass=PoolMeta):
@@ -1946,22 +1961,12 @@ class PayrollLine(metaclass=PoolMeta):
 
         return move_line
 
-    def _get_move_line(self, account, party_id, amount, data=None):
-        debit = credit = _ZERO
-        if amount[0] == 'debit':
-            debit = amount[1]
-        else:
-            credit = amount[1]
+    def get_move_line(self, account, party_id, amount, data=None):
+        res = super(PayrollLine, self).get_move_line(account, party_id, amount)
 
-        res = {
-            'description': account.name,
-            'debit': debit,
-            'credit': credit,
-            'account': account.id,
-            'party': party_id,
-            'origin': data['origin'],
-            'reference': data['reference']
-        }
+        if data and data['origin'] and data['reference']:
+            res['origin'] = data['origin']
+            res['reference'] = data['reference']
         return res
 
 
