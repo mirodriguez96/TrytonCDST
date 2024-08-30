@@ -417,18 +417,55 @@ class Liquidation(metaclass=PoolMeta):
             for lines in move.lines:
                 origin = lines.origin
                 reference = lines.reference
+                balance = 0
 
                 # Validate if is loan lines to conciliate
                 if origin and reference\
                         and origin.__name__ == LoanLines.__name__:
 
-                    to_reconcile = AccountMoveLine.search([('origin', '=', origin),
-                                                           ('reference', '=', reference)])
-                    if to_reconcile:
-                        for line in to_reconcile:
+                    move_lines = AccountMoveLine.search([('origin', '=', origin),
+                                                         ('reference', '=', reference)])
+
+                    if len(move_lines) % 2 == 0:
+                        for line in move_lines:
                             balance += line.debit - line.credit
                         if balance == 0:
-                            AccountMoveLine.reconcile(to_reconcile)
+                            AccountMoveLine.reconcile(move_lines)
+                    else:
+                        for line in self.lines:
+                            if line.wage.type_concept_electronic == 'Deuda':
+                                balance = 0
+                                already_concile = False
+                                if line in conciled_lines:
+                                    continue
+                                conciled_lines.append(line)
+
+                                loan_line = LoanLines.search(
+                                    ['origin', '=', line])
+                                if loan_line:
+                                    loan_move_line = AccountMoveLine.search(
+                                        [('origin', '=', loan_line[0])])
+
+                                    for lines in loan_move_line:
+                                        if lines in conciled_lines:
+                                            already_concile = True
+                                    if already_concile:
+                                        break
+
+                                    for lines in loan_move_line:
+                                        balance += lines.debit - lines.credit
+                                    try:
+                                        if balance == 0:
+                                            lines_to_reconcile = []
+                                            lines_to_reconcile = list(
+                                                loan_move_line)
+                                            AccountMoveLine.reconcile(
+                                                lines_to_reconcile)
+                                            for line in loan_move_line:
+                                                conciled_lines.append(line)
+                                            break
+                                    except Exception as error:
+                                        print(error)
 
     def get_moves_lines(self):
         pool = Pool()
