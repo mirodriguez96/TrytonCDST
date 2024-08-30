@@ -3,7 +3,7 @@ from trytond.model import ModelView, fields
 from trytond.pyson import Eval, Not, Bool
 from trytond.pool import Pool, PoolMeta
 
-from datetime import timedelta, datetime
+from datetime import timedelta
 from decimal import Decimal
 from dateutil import tz
 import calendar
@@ -302,15 +302,9 @@ class Liquidation(metaclass=PoolMeta):
             self.write([self], {'lines': [('create', [value])]})
 
     def create_move(self):
-        reconcile = True
         pool = Pool()
-        Note = pool.get('account.move.reconcile.write_off')
-        MoveLoanLines = pool.get('account.move.line')
-        LoanLines = pool.get('staff.loan.line')
-        MoveLine = pool.get('account.move.line')
         Period = pool.get('account.period')
         Move = pool.get('account.move')
-        balance = 0
 
         if self.move:
             return
@@ -328,47 +322,99 @@ class Liquidation(metaclass=PoolMeta):
                 'lines': [('create', move_lines)],
             }])
             self.write([self], {'move': move.id})
-
-            if self.kind == 'contract':
-                for ml in move.lines:
-                    if (ml.account.id, ml.description,
-                            'payment') not in grouped.keys() or (
-                                ml.account.type.statement not in ('balance')):
-                        continue
-                    to_reconcile = [ml]
-
-                    if grouped[(ml.account.id, ml.description, 'payment')]:
-                        to_reconcile.extend(grouped[(ml.account.id, ml.description,
-                                                     'payment')]['lines'])
-                    if len(to_reconcile) > 1:
-                        note = Note.search([])
-                        writeoff = None
-                        if note:
-                            writeoff = note[0]
-                        MoveLine.reconcile(
-                            set(to_reconcile), writeoff=writeoff)
-            else:
-                for ml in move.lines:
-                    if (ml.account.id, ml.description,
-                            'payment') not in grouped.keys() or (
-                                ml.account.type.statement not in ('balance')):
-                        continue
-                    to_reconcile = [ml]
-
-                    if grouped[(ml.account.id, ml.description, 'payment')]:
-                        to_reconcile.extend(grouped[(ml.account.id, ml.description,
-                                                     'payment')]['lines'])
-                    if len(to_reconcile) > 1 and reconcile:
-                        reconcile = False
-                        note = Note.search([])
-                        writeoff = None
-                        if note:
-                            writeoff = note[0]
-                        MoveLine.reconcile(
-                            set(to_reconcile), writeoff=writeoff)
+            self.reconcile_lines(move.lines, grouped)
+            self.reconcile_loans(move)
             Move.post([move])
+            Move.save([move])
 
-            for lines in self.move.lines:
+    def reconcile_lines(self, move_lines, grouped):
+        pool = Pool()
+        Note = pool.get('account.move.reconcile.write_off')
+        MoveLine = pool.get('account.move.line')
+        reconcile = True
+
+        if self.kind == 'contract':
+            for ml in move_lines:
+                if (ml.account.id, ml.description,
+                        'payment') not in grouped.keys() or (
+                            ml.account.type.statement not in ('balance')):
+                    continue
+                to_reconcile = [ml]
+
+                if grouped[(ml.account.id, ml.description, 'payment')]:
+                    to_reconcile.extend(grouped[(ml.account.id, ml.description,
+                                                 'payment')]['lines'])
+                if len(to_reconcile) > 1:
+                    note = Note.search([])
+                    writeoff = None
+                    if note:
+                        writeoff = note[0]
+                    MoveLine.reconcile(
+                        set(to_reconcile), writeoff=writeoff)
+        else:
+            for ml in move_lines:
+                if (ml.account.id, ml.description,
+                        'payment') not in grouped.keys() or (
+                            ml.account.type.statement not in ('balance')):
+                    continue
+                to_reconcile = [ml]
+
+                if grouped[(ml.account.id, ml.description, 'payment')]:
+                    to_reconcile.extend(grouped[(ml.account.id, ml.description,
+                                                 'payment')]['lines'])
+                if len(to_reconcile) > 1 and reconcile:
+                    reconcile = False
+                    note = Note.search([])
+                    writeoff = None
+                    if note:
+                        writeoff = note[0]
+                    MoveLine.reconcile(
+                        set(to_reconcile), writeoff=writeoff)
+
+    def reconcile_loans(self, move):
+        pool = Pool()
+        AccountMoveLine = pool.get('account.move.line')
+        LoanLines = pool.get('staff.loan.line')
+        balance = 0
+        conciled_lines = []
+        if self.kind == 'contract':
+            for line in self.lines:
+                if line.wage.type_concept_electronic == 'Deuda':
+                    loan_line = LoanLines.search(['origin', '=', line])
+                    if loan_line:
+                        loan_move_line = AccountMoveLine.search(
+                            [('origin', '=', loan_line[0])])
+                        if loan_move_line[0] in conciled_lines:
+                            break
+                        reference = loan_line[0].loan.number
+                        for move_line in move.lines:
+                            if move_line in conciled_lines:
+                                continue
+                            balance = 0
+                            try:
+                                if move_line.description == line.description:
+                                    lines_to_reconcile = []
+                                    balance += move_line.debit - move_line.credit\
+                                        + loan_move_line[0].debit - \
+                                        loan_move_line[0].credit
+                                    if balance == 0:
+                                        move_line.reference = reference
+                                        move_line.save()
+                                        lines_to_reconcile.append(
+                                            loan_move_line[0])
+                                        lines_to_reconcile.append(
+                                            move_line)
+                                        AccountMoveLine.reconcile(
+                                            lines_to_reconcile)
+                                        conciled_lines.append(
+                                            move_line)
+                                        conciled_lines.append(
+                                            loan_move_line[0])
+                                        break
+                            except Exception as error:
+                                print(error)
+        else:
+            for lines in move.lines:
                 origin = lines.origin
                 reference = lines.reference
 
@@ -376,14 +422,13 @@ class Liquidation(metaclass=PoolMeta):
                 if origin and reference\
                         and origin.__name__ == LoanLines.__name__:
 
-                    move_lines = MoveLoanLines.search([('origin', '=', origin),
-                                                       ('reference', '=', reference)])
-                    if move_lines:
-                        for line in move_lines:
+                    to_reconcile = AccountMoveLine.search([('origin', '=', origin),
+                                                           ('reference', '=', reference)])
+                    if to_reconcile:
+                        for line in to_reconcile:
                             balance += line.debit - line.credit
                         if balance == 0:
-                            MoveLoanLines.reconcile(move_lines)
-            Move.save([move])
+                            AccountMoveLine.reconcile(to_reconcile)
 
     def get_moves_lines(self):
         pool = Pool()
@@ -427,13 +472,14 @@ class Liquidation(metaclass=PoolMeta):
                             'party_to_pay': line.party_to_pay,
                             'lines': [],
                             'origin': data['origin'],
-                            'reference': data['reference'],
+                            'reference': data['reference']
                         }
                     grouped[account_id]['amount'].append(amount_line)
                     grouped[account_id]['lines'].append(moveline)
                     amount.append(amount_line)
             elif line.wage.definition == 'discount':
-                account_id = (line.account.id, line.description, line.amount)
+                account_id = (line.account.id, line,
+                              line.description, line.amount)
                 if account_id not in grouped.keys():
                     grouped[account_id] = {
                         'amount': [],
@@ -442,7 +488,7 @@ class Liquidation(metaclass=PoolMeta):
                         'party_to_pay': line.party_to_pay,
                         'lines': [],
                         'origin': data['origin'],
-                        'reference': data['reference'],
+                        'reference': data['reference']
                     }
                 grouped[account_id]['amount'].append(line.amount)
                 amount.append(line.amount)
@@ -474,6 +520,7 @@ class Liquidation(metaclass=PoolMeta):
             wage = values['wage']
             origin_ = values['origin']
             reference_ = values['reference']
+
             if party_payment:
                 for wage in wages:
                     if validate:
