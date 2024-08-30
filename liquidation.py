@@ -544,10 +544,6 @@ class Liquidation(metaclass=PoolMeta):
                         'analytic': analytic_account
                     }
 
-                    # if hasattr(adjust,
-                    #            'analytic_account') and adjust.analytic_account:
-                    #     grouped[key]['analytic'] = adjust.analytic_account
-
                 grouped[key]['amount'].append(adjust.amount)
                 amount.append(adjust.amount)
 
@@ -626,11 +622,16 @@ class Liquidation(metaclass=PoolMeta):
                         ['employee', '=', employee])
                     if mandatories:
                         for mandatory in mandatories:
-                            if mandatory.analytic_account:
+                            if mandatory.analytic_account\
+                                    and mandatory.analytic_account.type == 'normal':
                                 analytic_account.append(
                                     mandatory.analytic_account)
                                 break
                 return analytic_account[0]
+            else:
+                return None
+        else:
+            return None
 
     def _prepare_line(self,
                       description,
