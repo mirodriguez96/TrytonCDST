@@ -3,7 +3,7 @@ from trytond.model import ModelView, fields
 from trytond.pyson import Eval, Not, Bool
 from trytond.pool import Pool, PoolMeta
 
-from datetime import timedelta
+from datetime import timedelta, datetime
 from decimal import Decimal
 from dateutil import tz
 import calendar
@@ -842,63 +842,71 @@ class MoveProvisionBonusService(metaclass=PoolMeta):
                 )
 
             for contract in Contract.search(dom_contract):
-                move_lines = []
-                analytic_account = None
-                analytic_account_required = provision_wage.debit_account.analytical_management
-                salary_amount = contract.get_salary_in_date(_end_date)
-                period_in_month = 1 if period_days > 15 else 2
-                employee = contract.employee
-                base_ = salary_amount
-                for concept in contract.employee.mandatory_wages:
-                    if concept.wage_type == provision_wage and analytic_account_required:
-                        analytic_account = concept.analytic_account
-                    if concept.wage_type and concept.wage_type.salary_constitute:
-                        if concept.wage_type.type_concept == 'transport':
-                            base_ += (concept.wage_type.compute_unit_price(
-                                {'salary': 0}) * concept.wage_type.default_quantity) * 2
-                        if concept.fix_amount:
-                            base_ += concept.fix_amount
+                try:
+                    move_lines = []
+                    analytic_account = None
+                    salary_amount = contract.get_salary_in_date(_end_date)
+                    period_in_month = 1 if period_days > 15 else 2
+                    employee = contract.employee
+                    base_ = salary_amount
 
-                period_id = AccountPeriod.find(_company.id, date=_end_date)
+                    for concept in contract.employee.mandatory_wages:
+                        if concept.wage_type.debit_account:
+                            debit_account_ = provision_wage.debit_account
+                            if debit_account_.analytical_management\
+                                    and analytic_account is None\
+                                    and concept.analytic_account\
+                                    and concept.analytic_account.type == 'normal':
+                                analytic_account = concept.analytic_account
+                        if concept.wage_type and concept.wage_type.salary_constitute:
+                            if concept.wage_type.type_concept == 'transport':
+                                base_ += (concept.wage_type.compute_unit_price(
+                                    {'salary': 0}) * concept.wage_type.default_quantity) * 2
+                            if concept.fix_amount:
+                                base_ += concept.fix_amount
 
-                provision_amount = provision_wage.compute_unit_price(
-                    {'salary': (round((base_ / period_in_month), 2))}
-                )
+                    period_id = AccountPeriod.find(_company.id, date=_end_date)
 
-                base_lines = [
-                    {
-                        'debit': provision_amount,
-                        'credit': 0,
-                        'party': employee.party.id,
-                        'account': provision_wage.debit_account.id
-                    },
-                    {
-                        'debit': 0,
-                        'credit': provision_amount,
-                        'party': employee.party.id,
-                        'account': provision_wage.credit_account.id
-                    }
-                ]
+                    provision_amount = provision_wage.compute_unit_price(
+                        {'salary': (round((base_ / period_in_month), 2))}
+                    )
 
-                if analytic_account:
-                    base_lines[0]['analytic_lines'] = [('create', [{
-                        'debit': provision_amount,
-                        'credit': 0,
-                        'account': analytic_account.id,
-                        'date': date_today
-                    }])]
-                move_lines.extend(base_lines)
+                    base_lines = [
+                        {
+                            'debit': provision_amount,
+                            'credit': 0,
+                            'party': employee.party.id,
+                            'account': provision_wage.debit_account.id
+                        },
+                        {
+                            'debit': 0,
+                            'credit': provision_amount,
+                            'party': employee.party.id,
+                            'account': provision_wage.credit_account.id
+                        }
+                    ]
 
-                Move.create([{
-                    'journal': journal_id,
-                    'period': period_id,
-                    'company': _company.id,
-                    'date': _end_date,
-                    'state': 'draft',
-                    'description': self.start.description,
-                    'lines': [('create', move_lines)],
-                }])
+                    if analytic_account:
+                        base_lines[0]['analytic_lines'] = [('create', [{
+                            'debit': provision_amount,
+                            'credit': 0,
+                            'account': analytic_account,
+                            'date': date_today
+                        }])]
+                    move_lines.extend(base_lines)
+
+                    Move.create([{
+                        'journal': journal_id,
+                        'period': period_id,
+                        'company': _company.id,
+                        'date': _end_date,
+                        'state': 'draft',
+                        'description': self.start.description,
+                        'lines': [('create', move_lines)],
+                    }])
+                except Exception as error:
+                    raise UserError(f"Error: {str(error)}")
         except Exception as error:
-            raise UserError("Error:", error)
+            raise UserError(f"Error: {str(error)}")
 
         return 'end'
