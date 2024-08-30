@@ -86,11 +86,17 @@ this repository contains the full copyright notices and license terms. -->
         </record>
 
         <!-- Withholding report -->
-
         <record model="ir.ui.view" id="print_party_withholding_start_view_form">
             <field name="model">account.party_withholding.start</field>
             <field name="inherit" ref="account_col.print_party_withholding_start_view_form"/>
             <field name="name">print_party_withholding_start_form</field>
+        </record>
+
+        <!-- Configuracion de vista para agregar nuevo campo en contabilidad -->
+        <record model="ir.ui.view" id="account_view_form">
+            <field name="model">account.account</field>
+            <field name="inherit" ref="account.account_view_form"/>
+            <field name="name">account_form</field>
         </record>
     </data>
 </tryton>

@@ -1,8 +1,8 @@
 """INVOICE MODULE"""
 from trytond.wizard import Wizard, StateTransition, StateView, Button
 from trytond.exceptions import UserError, UserWarning
+from trytond.model import fields, ModelView, Workflow
 from trytond.transaction import Transaction
-from trytond.model import fields, ModelView
 from trytond.pyson import Eval, Or, And
 from trytond.pool import PoolMeta, Pool
 from trytond.i18n import gettext
@@ -200,10 +200,16 @@ class Invoice(metaclass=PoolMeta):
         Note.post([note])
         return inv
 
-    # se sobreescribe el metodo del modulo account_col
     @classmethod
     @ModelView.button
     def validate_invoice(cls, invoices, sw=None):
+        """Function that use check button in view,
+        validate invoices
+
+        Args:
+            invoices (object): object from account_invoice model
+            sw ():pending. Defaults to None.
+        """
         for inv in invoices:
             if inv.type == 'out':
                 cls.validate_tax(inv, sw=sw)

@@ -952,3 +952,7 @@ msgstr "Cuenta de perdidos y encontrados"
 msgctxt "field:staff.configuration,default_hour_biweekly:"
 msgid "Default Hour Biweekly"
 msgstr "Tiempo quincenal por defecto"
+
+msgctxt "field:account.account,analytical_management:"
+msgid "Analytical Management"
+msgstr "Requiere analitica"
