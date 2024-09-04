@@ -5,7 +5,7 @@ from trytond.transaction import Transaction
 from trytond.exceptions import UserWarning
 
 
-from datetime import datetime
+from datetime import datetime, time
 from decimal import Decimal
 from sql import Table
 from . import fixes
@@ -42,14 +42,13 @@ class ConectorLog(ModelSQL, ModelView):
 
         pool = Pool()
         ConectorLog = pool.get('conector.log')
-        date_today = datetime.now()
+        date_today = datetime.combine(datetime.now().date(), time.min)
 
         if id_logs:
             to_delete = ConectorLog.search(
                 [('actualizacion.id', 'in', id_logs)])
         else:
             to_delete = ConectorLog.search([('event_time', '<', date_today)])
-
         ConectorLog.delete(to_delete)
 
 
