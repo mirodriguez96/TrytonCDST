@@ -639,11 +639,15 @@ class Sale(metaclass=PoolMeta):
             invoice.invoice_type = 'C'
             tipo_numero = sale.number.split('-')
 
-            # Fill description with the type document from tecno
-            tbltipodocto = Config.get_tbltipodoctos(tipo_numero[0])
-            if tbltipodocto:
-                invoice.description = tbltipodocto[0].TipoDoctos.replace(
-                    '\n', ' ').replace('\r', '')
+            if sale.description:
+                invoice.description = sale.description
+            else:
+                # Fill description with the type document from tecno
+                tbltipodocto = Config.get_tbltipodoctos(tipo_numero[0])
+                if tbltipodocto:
+                    invoice.description = tbltipodocto[0].TipoDoctos.replace(
+                        '\n', ' ').replace('\r', '')
+
             invoice.save()
             if venta.sw == 2:
                 dcto_base = str(venta.Tipo_Docto_Base) + '-' + str(
@@ -1422,7 +1426,7 @@ class SaleInvoiceValueCdstReport(Report):
         pool = Pool()
         Company = pool.get('company.company')
         Sale = pool.get('sale.sale')
-        
+
         info_invoices = []
         type_document = ""
         state = ""
