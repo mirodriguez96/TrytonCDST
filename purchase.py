@@ -346,6 +346,7 @@ class Purchase(metaclass=PoolMeta):
                 for invoice in purchase.invoices:
                     invoice.number = purchase.number
                     invoice.invoice_date = fecha_date
+                    invoice.description = purchase.description
                     original_invoice = None
 
                     if compra.sw == 4:
