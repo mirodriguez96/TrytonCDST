@@ -1,16 +1,19 @@
-import datetime
-from trytond.model import fields, ModelView
-from trytond.pool import Pool, PoolMeta
-from trytond.exceptions import UserError
+from trytond.wizard import Wizard, StateView, Button, StateReport
 from trytond.transaction import Transaction
-from trytond.wizard import Wizard, StateAction, StateView, Button, StateReport
-from decimal import Decimal
-from sql import Table
-from sql.operators import Like, Between, NotIn
-from collections import OrderedDict
+from trytond.model import fields, ModelView
+from trytond.exceptions import UserError
+from trytond.pool import Pool, PoolMeta
 from trytond.report import Report
-from sql.aggregate import Sum
 from trytond.pyson import Eval, If
+
+
+from sql.operators import Like, Between
+from collections import OrderedDict
+from sql.aggregate import Sum
+from decimal import Decimal
+from datetime import date
+from sql import Table
+
 
 STATES = [("", ""), ("draft", "Borrador"), ("done", "Finalizado")]
 TYPE_DOCUMENT = [("", "")]
@@ -26,15 +29,6 @@ class Sale(metaclass=PoolMeta):
     tax_amount_tecno = fields.Numeric('Value_Tax_Tecno',
                                       digits=(16, 2),
                                       required=False)
-
-    # V6.6 en adelante
-    # def __setup__(cls):
-    #     super().__setup__()
-    #     t = cls.__table__()
-    #     from trytond.model import Index
-    #     cls._sql_indexes.update({
-    #         Index(t, (t.id_tecno, Index.Equality()))
-    #     })
 
     @classmethod
     def import_data_sale(cls):
@@ -184,8 +178,8 @@ class Sale(metaclass=PoolMeta):
                     to_exception.append(id_venta)
                     continue
 
-                date = str(venta.fecha_hora).split()[0].split('-')
-                name = f"{date[0]}-{date[1]}"
+                date_ = str(venta.fecha_hora).split()[0].split('-')
+                name = f"{date_[0]}-{date_[1]}"
                 validate_period = Period.search([('name', '=', name)])
                 if validate_period[0].state == 'close':
                     to_exception.append(id_venta)
@@ -212,8 +206,8 @@ class Sale(metaclass=PoolMeta):
 
                 # build data_sale from tecnocarnes
                 fecha = str(venta.fecha_hora).split()[0].split('-')
-                fecha_date = datetime.date(int(fecha[0]), int(fecha[1]),
-                                           int(fecha[2]))
+                fecha_date = date(int(fecha[0]), int(fecha[1]),
+                                  int(fecha[2]))
 
                 nit_cedula = venta.nit_Cedula.replace('\n', "")
                 if nit_cedula in parties['active']:
@@ -739,8 +733,8 @@ class Sale(metaclass=PoolMeta):
                 return
 
             fecha = str(pago.fecha).split()[0].split('-')
-            fecha_date = datetime.date(int(fecha[0]), int(fecha[1]),
-                                       int(fecha[2]))
+            fecha_date = date(int(fecha[0]), int(fecha[1]),
+                              int(fecha[2]))
             args_statement['date'] = fecha_date
             journal, = Journal.search([('id_tecno', '=', pago.forma_pago)])
             args_statement['journal'] = journal
@@ -1103,7 +1097,7 @@ class SaleShopDetailedCDSStart(ModelView):
                                If(
                                    Eval('start_date') & Eval('end_date'),
                                    ('end_date', '>=', Eval('start_date')), ()),
-                               (('end_date', '<=', datetime.date.today()))
+                               (('end_date', '<=', date.today()))
                            ],
                            depends=['start_date'],
                            required=True)

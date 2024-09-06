@@ -968,10 +968,11 @@ class Invoice(metaclass=PoolMeta):
     def _post(cls, invoices):
         pool = Pool()
         Move = pool.get('account.move')
+        reconciled: list = []
+        moves: list = []
+
         cls.set_number(invoices)
-        moves = []
         for invoice in invoices:
-            invoice.state = 'draft'
             move = invoice.get_move()
             if move != invoice.move:
                 invoice.move = move
@@ -979,15 +980,15 @@ class Invoice(metaclass=PoolMeta):
         if moves:
             Move.save(moves)
 
-        reconciled = []
         for invoice in invoices:
             if invoice.type == 'out':
                 cls.configure_party(invoice.move, invoice)
                 invoice.print_invoice()
-
             if invoice.reconciled:
                 reconciled.append(invoice)
-            invoice.state = 'posted'
+
+            if invoice.state != 'posted':
+                invoice.state = 'posted'
         cls.save(invoices)
         Move.post([i.move for i in invoices if i.move.state != 'posted'])
         if reconciled:
