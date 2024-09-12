@@ -956,3 +956,7 @@ msgstr "Tiempo quincenal por defecto"
 msgctxt "field:account.account,analytical_management:"
 msgid "Analytical Management"
 msgstr "Requiere analitica"
+
+msgctxt "field:stock.inventory,analitic_account:"
+msgid "Analytic Account"
+msgstr "Cuenta analitica"
