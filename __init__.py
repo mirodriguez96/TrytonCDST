@@ -166,6 +166,7 @@ def register():
                   invoice.UpdateInvoiceTecno,
                   invoice.UpdateNoteDate,
                   invoice.CreditInvoice,
+                  invoice.AdvancePayment,
                   loan.LoanForceDraft,
                   liquidation.MoveProvisionBonusService,
                   party.CheckVIES,
