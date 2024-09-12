@@ -439,8 +439,7 @@ class Actualizacion(ModelSQL, ModelView):
                         log.state = "done"
                         log.save()
         except Exception as error:
-            logging.error(f'Error: Error en validar documentos {error}')
-            logs[falt] = f'Excepcion en validar documentos: "{error}"'
+            logs["EXCEPCION"] = f'Excepcion en validar documentos: "{error}"'
         actualizacion, = Actualizacion.search([('name', '=', name)])
         actualizacion.add_logs(logs)
 
