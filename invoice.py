@@ -1321,3 +1321,174 @@ class CreditInvoice(metaclass=PoolMeta):
                 default['with_refund'] = False
 
         return default
+
+
+class AdvancePayment(metaclass=PoolMeta):
+    'Advance Payment Wizard'
+    __name__ = 'account.invoice.advance_payment'
+
+    def transition_add_link(self):
+        pool = Pool()
+        Note = pool.get('account.note')
+        Invoice = pool.get('account.invoice')
+        MoveLine = pool.get('account.move.line')
+        invoice = Invoice(Transaction().context.get('active_id'))
+        Config = pool.get('account.voucher_configuration')
+        config = Config.get_configuration()
+
+        if not self.start.lines:
+            return 'end'
+
+        if not config.default_journal_note:
+            raise UserError(
+                gettext('account_voucher.msg_missing_journal_note'))
+
+        lines_to_create = []
+        reconcile_advance = []
+        reconcile_invoice = []
+
+        # recon: reconciliation
+        do_recon_invoice = False
+        do_recon_advance = False
+
+        balance, lines_advance_recon = self.start.get_balance()
+
+        def _set_to_reconcile():
+            res = []
+            for mline in invoice.move.lines:
+                if mline.account.id == invoice.account.id:
+                    res.append(mline)
+
+            for pl in invoice.payment_lines:
+                if not pl.reconciliation:
+                    res.append(pl)
+            return res
+
+        # Find previous cross payments
+        line_advance = self.start.lines[0]
+
+        previous_discounts = self.start.get_previous_cross_moves()
+        # previous_discounts = invoice.payment_lines
+        sum_last_advances = sum([abs(l.credit - l.debit)
+                                for l in previous_discounts])
+        sum_start_advances = sum(
+            [abs(line.debit - line.credit) for line in self.start.lines]
+        )
+
+        amount_balance = sum_start_advances - sum_last_advances
+        ignore_previous_discounts = False
+        if amount_balance < 0:
+            amount_balance = sum_start_advances
+            ignore_previous_discounts = True
+        if amount_balance > invoice.amount_to_pay:
+            do_recon_invoice = True
+            credit = 0
+            debit = 0
+            if invoice.type == 'in':
+                credit = invoice.amount_to_pay
+            else:
+                debit = invoice.amount_to_pay
+            lines_to_create.append({
+                'debit': debit,
+                'credit': credit,
+                'party': line_advance.party.id,
+                'account': line_advance.account.id,
+                'description': line_advance.description,
+                'move_line': line_advance,
+            })
+            lines_to_create.append({
+                'debit': credit,
+                'credit': debit,
+                'party': line_advance.party.id,
+                'account': invoice.account.id,
+                'description': invoice.description,
+            })
+        else:
+            sum_debit = 0
+            sum_credit = 0
+            do_recon_advance = True
+
+            # Cofigure reconciliation
+            if not ignore_previous_discounts:
+                move_lines_ad = MoveLine.search([
+                    ('origin', 'in', ['account.note.line,' + str(l.id)
+                     for l in previous_discounts])
+                ])
+                reconcile_advance.extend(move_lines_ad)
+            for line in self.start.lines:
+                reconcile_advance.append(line)
+            if invoice.type == 'in':
+                sum_credit = abs(amount_balance)
+            else:
+                sum_debit = abs(amount_balance)
+
+            lines_to_create.append({
+                'debit': sum_debit,
+                'credit': sum_credit,
+                'party': line_advance.party.id,
+                'account': line_advance.account.id,
+                'description': line_advance.description,
+                'move_line': line_advance,
+            })
+
+            pending_advance = abs(sum_debit - sum_credit)
+            if pending_advance == invoice.amount_to_pay:
+                do_recon_invoice = True
+
+            lines_to_create.append({
+                'debit': sum_credit,
+                'credit': sum_debit,
+                'party': invoice.party.id,
+                'account': invoice.account.id,
+                'description': invoice.description,
+            })
+
+        if hasattr(line_advance, 'operation_center'):
+            operation_center = line_advance.operation_center.id
+            for l in lines_to_create:
+                l['operation_center'] = operation_center
+
+        if invoice.type == 'in':
+            description = f"ANTICIPO FACTURA PROVEEDOR-{invoice.reference}"
+        else:
+            description = f"ANTICIPO FACTURA CLIENTE-{invoice.reference}"
+
+        note, = Note.create([{
+            'description': description,
+            'journal': config.default_journal_note.id,
+            'date': datetime.date.today(),
+            'state': 'draft',
+            'lines': [('create', lines_to_create)],
+        }])
+        Note.post([note])
+        note.save()
+
+        payment_lines = []
+        adv_accounts_ids = [l.account.id for l in reconcile_advance]
+
+        if do_recon_invoice:
+            reconcile_invoice = _set_to_reconcile()
+
+        for nm_line in note.move.lines:
+            if do_recon_advance and nm_line.account.id in adv_accounts_ids:
+                reconcile_advance.append(nm_line)
+
+            if nm_line.account.id == invoice.account.id:
+                payment_lines.append(nm_line)
+                if do_recon_invoice:
+                    reconcile_invoice.append(nm_line)
+
+        Invoice.write([invoice], {
+            'payment_lines': [('add', payment_lines)],
+        })
+        reconcile_advance = [
+            r for r in reconcile_advance if not r.reconciliation]
+
+        if [r for r in reconcile_advance if not r.reconciliation]:
+            MoveLine.reconcile(reconcile_advance)
+
+        pending_to_pay = sum(
+            [ri.debit - ri.credit for ri in reconcile_invoice])
+        if reconcile_invoice and not pending_to_pay:
+            MoveLine.reconcile(reconcile_invoice)
+        return 'end'
