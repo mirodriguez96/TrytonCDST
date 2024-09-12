@@ -730,6 +730,7 @@ class Inventory(metaclass=PoolMeta):
 
     analitic_account = fields.Many2One('analytic_account.account',
                                        'Analytic Account',
+                                       domain=[('type', '=', "normal")],
                                        required=True)
 
 
