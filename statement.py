@@ -11,7 +11,7 @@ import datetime
 from .exceptions import (NotMoveStatementeLine)
 
 CONFIRMED_STATES = {
-    'readonly': False  #Not(Equal(Eval('statement_line'), None))
+    'readonly': False  # Not(Equal(Eval('statement_line'), None))
 }
 
 
@@ -23,6 +23,59 @@ class BankStatement(metaclass=PoolMeta):
                                  'statement',
                                  'Bank lines',
                                  states={'readonly': Eval('state') != 'draft'})
+
+    def get_bank_end_balance(self, name):
+        res = sum(l.moves_amount for l in self.lines)
+        bank_start_balance = self.bank_start_balance
+        if bank_start_balance:
+            res += bank_start_balance
+        return res
+
+    def get_remainder(self, name):
+        bank_end_balance = self.bank_end_balance
+        end_balance = self.end_balance
+        return (bank_end_balance - end_balance)
+
+    def get_total_remainder(self, name):
+        remainder = self.remainder
+        lines = self.lines_no_transaction
+        val = sum(
+            l.debit - l.credit for l in lines)
+        return (val + remainder)
+
+    def get_end_balance(self, name):
+        balance = self.start_balance or Decimal(0)
+        MoveLine = Pool().get('account.move.line')
+        period_balance = 0
+        if self.period and self.bank_account and self.bank_account.account:
+            move_lines = MoveLine.search([
+                ('period', '=', self.period.id),
+                ('account', '=', self.bank_account.account.id),
+            ])
+            period_balance = sum(l.debit - l.credit for l in move_lines)
+        res = balance + period_balance
+        return res
+
+    def get_lines_no_transaction(self, name):
+        targets = []
+        if self.period and self.bank_account and self.bank_account.account:
+            current_period = self.period
+            move_lines = self._search_related_lines()
+            targets = [
+                line.id for line in move_lines
+                if not line.bank_lines or any(bl.bank_statement_line.statement.period != current_period for bl in line.bank_lines)
+            ]
+            return targets
+        return []
+
+    def _search_related_lines(self):
+        res = []
+        MoveLine = Pool().get('account.move.line')
+        res = MoveLine.search([
+            ('period', '=', self.period.id),
+            ('account', '=', self.bank_account.account.id),
+        ])
+        return res
 
 
 class BankStatementLine(metaclass=PoolMeta):
@@ -39,11 +92,6 @@ class BankStatementLine(metaclass=PoolMeta):
             # ('statement_line', '=', None),
         ],
         depends=['statement'])
-
-    # @fields.depends('bank_line')
-    # def on_change_bank_line(self):
-    #     if self.bank_line and self.state == 'draft':
-    #         self.state = 'confirmed'
 
 
 class BankStatementLineRelation(ModelSQL):
@@ -169,7 +217,7 @@ class CreateBankLine(Wizard):
         for line in lines:
             for bank_line in bank_lines:
                 if bank_line.date == line.date and \
-                    bank_line.amount == line.moves_amount:
+                        bank_line.amount == line.moves_amount:
                     line.bank_line = bank_line
                     line.state = 'confirmed'
                     to_save.append(line)
@@ -188,11 +236,11 @@ class CreateBankLineParameters(ModelView):
                          help='File type CSV, separated by commas(;)')
 
 
-
 class StatementLine(metaclass=PoolMeta):
     __name__ = 'account.statement.line'
 
-    move_lines_source = fields.Function(fields.Many2One('account.move', 'Move'),'get_move_value')
+    move_lines_source = fields.Function(
+        fields.Many2One('account.move', 'Move'), 'get_move_value')
 
     @fields.depends('move')
     def get_move_value(self, name=None):
@@ -200,7 +248,7 @@ class StatementLine(metaclass=PoolMeta):
         if self.move:
             res = self.move.id
         return res
-    
+
 
 # Asistente de validar los asiento contable de los estados de cuenta
 class StatementMoveValidate(Wizard):
