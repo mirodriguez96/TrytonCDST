@@ -1900,12 +1900,16 @@ class Payroll(metaclass=PoolMeta):
             if origin and reference\
                     and origin.__name__ == LoanLines.__name__:
                 move_lines = AccountMoveLine.search([('origin', '=', origin),
-                                                     ('reference', '=', reference)])
-                if len(move_lines) % 2 == 0:
+                                                     ('reference', '=', reference),
+                                                     ('reconciliation',"=",None)])
+                if move_lines and len(move_lines) % 2 == 0:
                     for line in move_lines:
                         balance += line.debit - line.credit
-                    if balance == 0:
-                        AccountMoveLine.reconcile(move_lines)
+                    try:
+                        if balance == 0:
+                            AccountMoveLine.reconcile(move_lines)
+                    except Exception as error:
+                        raise(UserError(f"ERROR: {error}"))
                 else:
                     for line in self.lines:
                         if line.wage_type.type_concept_electronic == 'Deuda':
@@ -1918,7 +1922,8 @@ class Payroll(metaclass=PoolMeta):
                             loan_line = LoanLines.search(['origin', '=', line])
                             if loan_line:
                                 loan_move_line = AccountMoveLine.search(
-                                    [('origin', '=', loan_line[0])])
+                                    [('origin', '=', loan_line[0]),
+                                     ('reconciliation',"=",None)])
 
                                 for lines in loan_move_line:
                                     if lines in conciled_lines:
@@ -1939,8 +1944,7 @@ class Payroll(metaclass=PoolMeta):
                                             conciled_lines.append(line)
                                         break
                                 except Exception as error:
-                                    print(error)
-
+                                    raise(UserError(f"ERROR: {error}"))
 
 class PayrollLine(metaclass=PoolMeta):
     __name__ = "staff.payroll.line"

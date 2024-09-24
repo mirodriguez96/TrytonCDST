@@ -73,6 +73,7 @@ def register():
                   invoice.InvoiceLine,
                   invoice.UpdateInvoiceTecnoStart,
                   loan.Loan,
+                  loan.LoanLine,
                   line.Line,
                   liquidation.Liquidation,
                   liquidation.LiquidationLine,
