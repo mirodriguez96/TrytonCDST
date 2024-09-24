@@ -147,25 +147,21 @@ class Move(ModelSQL, metaclass=PoolMeta):
         cls.post_(moves)
         super(Move, cls).post(moves)
 
+
     @classmethod
     def post_(cls, moves):
+        pool = Pool()
+        Line = pool.get('account.move.line')
+        Employee = pool.get('company.employee')
+        Wagetype = pool.get('staff.wage_type')
+        account = None
+        party = None
+
         for move in moves:
             lines = move.lines
             if lines:
                 cls.check_analytyc_required(lines)
 
-        cls.validate_holidays_balance(moves)
-        cls.save(moves)
-
-    @classmethod
-    def validate_holidays_balance(cls, moves):
-        pool = Pool()
-        Line = pool.get('account.move.line')
-        Employee = pool.get('company.employee')
-        Wagetype = pool.get('staff.wage_type')
-
-        account = None
-        party = None
 
         for move in moves:
             amount = Decimal('0.0')
@@ -227,7 +223,9 @@ class Move(ModelSQL, metaclass=PoolMeta):
                 else:
                     raise UserError('ERROR', 'Hay diferencia en debitos'
                                     'y creditos, no se puede contabilizar.')
-    
+        cls.save(moves)
+
+
     @classmethod
     def check_analytyc_required(cls, lines):
         for line in lines:
