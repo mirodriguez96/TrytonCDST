@@ -1,200 +1,210 @@
 from trytond.transaction import Transaction
 from trytond.pool import Pool, PoolMeta
-
-from datetime import date, timedelta
 from .exceptions import UserError
-from trytond.i18n import gettext
+from trytond.report import Report
+from datetime import date, timedelta
 import copy
 
 
-class PortfolioStatusReport(metaclass=PoolMeta):
-    'Portfolio Status Report'
-    __name__ = 'collection.portfolio_status_report'
+class PortfolioStatusReport(Report, metaclass=PoolMeta):
+    "Portfolio Status Report"
+    __name__ = "collection.portfolio_status_report"
 
     @classmethod
     def get_domain_invoice(cls, data):
         domain = [
-            ('company', '=', data['company']),
-            ('type', '=', data['kind']),
+            ("company", "=", data["company"]),
+            ("type", "=", data["kind"]),
+            ("lines.quantity", ">", 0),
+            ("total_amount", ">", 0),
         ]
-        if data['category_party']:
-            domain.append(('party.categories', 'in', data['category_party']))
-        if data['payment_terms']:
-            domain.append(('payment_term', 'in', data['payment_terms']))
-        if data['date_to']:
+
+        if data["payment_terms"]:
+            domain.append(("payment_term", "in", data["payment_terms"]))
+
+        if data["date_to"]:
+            date_to = data["date_to"]
+            domain.append(("invoice_date", "<=", date_to))
+
             dom = [
-                'OR',
+                "OR",
                 [
-                    ('payment_lines.date', '>=', data['date_to']),
-                    ('state', '=', 'paid'),
-                ], ('state', '=', 'posted')
+                    ("payment_lines.move.date", ">", date_to),
+                    ("state", "=", "paid"),
+                ],
+                [
+                    ("payment_lines.move.date", "<=", date_to),
+                    ("state", "=", "posted"),
+                ],
+                [
+                    ("state", "=", "posted"),
+                ],
+                [
+                    ("state", "=", "paid"),
+                    ("move.lines.reconciliation.date", ">", date_to),
+                ],
+
             ]
             domain.append(dom)
-            domain.append(('invoice_date', '<=', data['date_to']))
         else:
-            domain.append(('state', '=', 'posted')),
+            domain.append(("state", "=", "posted")),
         return domain
 
     @classmethod
     def get_context(cls, records, header, data):
-        report_context = super().get_context(records, header, data)
+        report_context = Report.get_context(records, header, data)
         pool = Pool()
-        Company = pool.get('company.company')
-        Invoice = pool.get('account.invoice')
-        Line = pool.get('account.move.line')
-        company = Company(data['company'])
-        table = Line.__table_handler__('account_move_line')
+        Company = pool.get("company.company")
+        Invoice = pool.get("account.invoice")
+        Line = pool.get("account.move.line")
+        company = Company(data["company"])
+        table = Line.__table_handler__("account_move_line")
 
-        column_add = ''
-        group_by_add = ''
-        join_add = ''
-        if table.column_exist('operation_center'):
+        records = {}
+        group_by_add = ""
+        column_add = ""
+        join_add = ""
+        report_type = "CLIENTE" if data["kind"] == "out" else "PROVEEDOR"
+        detail_report = f"INFORME DE CARTERA {report_type}"
+
+        if table.column_exist("operation_center"):
             column_add = ", CONCAT(op.code, ' - ', op.name) as operation_center"
-            group_by_add = ', op.code, op.name'
-            join_add = 'LEFT JOIN company_operation_center AS op ON op.id = ml.operation_center'
+            group_by_add = ", op.code, op.name"
+            join_add = "LEFT JOIN company_operation_center AS op ON op.id = ml.operation_center"
 
         dom_invoices = cls.get_domain_invoice(data)
-        if data['procedures']:
-            accounts = []
-            Procedure = pool.get('collection.procedure')
-            procedures = Procedure.search_read(
-                [('id', 'in', data['procedures'])], fields_names=['accounts'])
-            for procedure in procedures:
-                accounts.extend(list(procedure['accounts']))
-            if not accounts:
-                raise UserError(
-                    gettext('collection.msg_missing_account_procedure'))
-            dom_invoices.append(['account', 'in', accounts])
-        order = [('party.name', 'DESC'), ('invoice_date', 'ASC')]
+        order = [("party.name", "DESC"), ("invoice_date", "ASC")]
+
         invoices = Invoice.search(dom_invoices, order=order)
-        records = {}
         today = date.today()
         deepcopy = copy.deepcopy
+
         expired_kind = {
-            'range_0': [],
-            'range_1_30': [],
-            'range_31_60': [],
-            'range_61_90': [],
-            'range_91': [],
+            "range_0": [],
+            "range_1_30": [],
+            "range_31_60": [],
+            "range_61_90": [],
+            "range_91": [],
         }
+
         expired_sums = deepcopy(expired_kind)
-        expired_sums['total'] = []
+        expired_sums["total"] = []
         move_ids = []
         append_move_ids = move_ids.append
 
         for invoice in invoices:
+
+            time_forward = 0
+            amount = 0
+
             if invoice.move:
                 append_move_ids(invoice.move.id)
-            if data['detailed']:
-                key_id = str(invoice.party.id) + '_' + str(invoice.id)
+            if data["detailed"]:
+                key_id = str(invoice.party.id) + "_" + str(invoice.id)
             else:
                 key_id = str(invoice.party.id)
 
             if key_id not in records.keys():
                 _expired_kind = deepcopy(expired_kind)
-                categories = invoice.party.categories
                 records[key_id] = {
-                    'party': invoice.party,
-                    'category': categories[0].name if categories else '',
-                    'total': [],
-                    'notes': '',
-                    'invoice': [],
-                    'expired_days': '',
+                    "party": invoice.party,
+                    "total": [],
+                    "invoice": [],
+                    "expired_days": "",
                 }
                 records[key_id].update(_expired_kind)
 
-            time_forward = 0
-            if data['date_to']:
+            if data["date_to"]:
                 maturity_date = None
                 move_lines_paid = []
                 pay_to_date = []
+                pay_append = []
                 pay_append = pay_to_date.append
-                line_append = move_lines_paid.append
-
-                for line in invoice.payment_lines:
-                    if line.move.date <= data['date_to']:
-                        pay_append(line.debit - line.credit)
-                        line_append(line.id)
-                    else:
-                        # if line.maturity_date and line.maturity_date < maturity_date or maturity_date is None: fix
-                        if line.maturity_date and (maturity_date is None
-                                                   or line.maturity_date
-                                                   < maturity_date):
-                            maturity_date = line.maturity_date
 
                 if invoice.move:
                     for line in invoice.move.lines:
-                        line_id = line.id
-                        if not line.reconciliation:
-                            continue
-                        for recline in line.reconciliation.lines:
-                            if recline.id == line_id or line_id in move_lines_paid:
+
+                        if line.reconciliation and line.account == invoice.account:
+                            line_id = line.id
+                            if line_id in move_lines_paid:
                                 continue
-                            if recline.move.date <= data['date_to']:
-                                pay_append(recline.debit - recline.credit)
-
+                            for recline in (
+                                recline
+                                for recline in line.reconciliation.lines
+                                if recline.move.date <= data["date_to"]
+                            ):
+                                if recline.id != line_id:
+                                    pay_append(abs(recline.debit - recline.credit))
+                        elif line.account == invoice.account:
+                            if invoice.payment_lines:
+                                for payment in invoice.payment_lines:
+                                    if (
+                                        payment.move.date > data["date_to"]
+                                        and invoice.state == "paid"
+                                    ) or (
+                                        payment.move.date <= data["date_to"]
+                                        and invoice.state == "posted"
+                                    ):
+                                        if payment.account == line.account:
+                                            pay_append(
+                                                abs(payment.debit - payment.credit)
+                                            )
                 amount_paid = sum(pay_to_date)
-                if not maturity_date:
-                    maturity_date = invoice.estimate_pay_date or invoice.invoice_date
 
-                time_forward = (data['date_to'] - maturity_date).days
+                if maturity_date is None:
+                    maturity_date = invoice.invoice_date
+                time_forward = (data["date_to"] - maturity_date).days
                 amount = invoice.total_amount - amount_paid
+
             else:
                 amount = invoice.amount_to_pay
                 if invoice.estimate_pay_date:
                     time_forward = (today - invoice.estimate_pay_date).days
 
             if time_forward <= 0:
-                expire_time = 'range_0'
+                expire_time = "range_0"
             elif time_forward <= 30:
-                expire_time = 'range_1_30'
+                expire_time = "range_1_30"
             elif time_forward <= 60:
-                expire_time = 'range_31_60'
+                expire_time = "range_31_60"
             elif time_forward <= 90:
-                expire_time = 'range_61_90'
+                expire_time = "range_61_90"
             else:
-                expire_time = 'range_91'
+                expire_time = "range_91"
 
-            notes = None
-            if hasattr(invoice, 'agent') and invoice.agent:
-                notes = invoice.agent.rec_name
-            if notes and not records[key_id]['notes']:
-                records[key_id]['notes'] = notes
-
-            records[key_id][expire_time].append(amount)
-            records[key_id]['invoice'].append(invoice)
-            records[key_id]['expired_days'] = time_forward
-            records[key_id]['total'].append(amount)
-            expired_sums[expire_time].append(amount)
-            expired_sums['total'].append(amount)
+            if amount > 0:
+                records[key_id][expire_time].append(amount)
+                records[key_id]["invoice"].append(invoice)
+                records[key_id]["expired_days"] = time_forward
+                records[key_id]["total"].append(amount)
+                expired_sums[expire_time].append(amount)
+                expired_sums["total"].append(amount)
+            else:
+                try:
+                    del records[key_id]
+                except:
+                    print("Registro no existente")
 
         move_lines_without_invoice = {}
-        if data['detailed']:
-            cond1 = 'where'
-            if data['category_party']:
-                cat_ids = str(tuple(data['category_party'])).replace(
-                    ',', '') if len(data['category_party']) == 1 else str(
-                        tuple(data['category_party']))
-                cond1 = f'''where pcr.category in %s and''' % (cat_ids)
 
-            cond2 = ''
+        if data["detailed"]:
+            cond1 = "where"
+
+            cond2 = ""
             if move_ids:
-                cond2 = 'and ml.id not in %s' % (str(tuple(move_ids)).replace(
-                    ',', '') if len(move_ids) == 1 else str(tuple(move_ids)))
+                cond2 = "and ml.id not in %s" % (
+                    str(tuple(move_ids)).replace(",", "")
+                    if len(move_ids) == 1
+                    else str(tuple(move_ids))
+                )
 
-            cond3 = ''
-            if data['date_to']:
-                cond3 = ' and am.date <= %s' % (
-                    data['date_to'].strftime("'%Y-%m-%d'"))
-            cond4 = ''
-            if data['procedures']:
-                cond4 = ' and ml.account in %s' % (str(
-                    tuple(accounts)).replace(',', '') if len(accounts) == 1
-                    else str(tuple(accounts)))
-            type_ = 'receivable'
-            if data['kind'] == 'in':
-                type_ = 'payable'
-
+            cond3 = ""
+            if data["date_to"]:
+                cond3 = " and am.date <= %s" % (data["date_to"].strftime("'%Y-%m-%d'"))
+            type_ = "receivable"
+            if data["kind"] == "in":
+                type_ = "payable"
+            cond4 = ""
             cursor = Transaction().connection.cursor()
             query = f"""SELECT ml.id, ml.move, pp.name, pc.name AS category {column_add}, pp.id_number, ml.description, ml.reference, am.date, am.number, ml.maturity_date, ac.code, (current_date-ml.maturity_date::date) AS expired_days, COALESCE(sum(av.amount), 0) AS payment_amount,
                 CASE WHEN (current_date-ml.maturity_date::date)<=0
@@ -226,7 +236,11 @@ class PortfolioStatusReport(metaclass=PoolMeta):
                 %s at.{type_}='t' AND ac.reconcile='t' AND ml.maturity_date is not null AND am.origin is null AND ml.reconciliation is null
                 %s %s %s
             group by ml.id, ml.move, pp.name, pc.name {group_by_add}, pp.id_number, ml.description, ml.reference, am.date, am.number, ml.maturity_date, ac.code, expired_days, ml.debit, ml.credit;""" % (
-                cond1, cond2, cond3, cond4)
+                cond1,
+                cond2,
+                cond3,
+                cond4,
+            )
             cursor.execute(query)
             columns = list(cursor.description)
             result = cursor.fetchall()
@@ -243,34 +257,34 @@ class PortfolioStatusReport(metaclass=PoolMeta):
                 move_lines_without_invoice[row[0]] = row_dict
 
         lines_without_inv = move_lines_without_invoice.values()
-        report_context['lines_without_inv'] = lines_without_inv
+        report_context["lines_without_inv"] = lines_without_inv
         report_context.update(expired_sums)
-        report_context['records'] = records.values()
-        report_context['company'] = company.party.name
+        report_context["records"] = records.values()
+        report_context["company"] = company.party.name
+        report_context["detail_report"] = detail_report
         return report_context
 
 
 class Tracking(metaclass=PoolMeta):
-    'Tracking'
-    __name__ = 'collection.tracking'
+    "Tracking"
+    __name__ = "collection.tracking"
 
     def get_state(self, name):
         pool = Pool()
-        Configuration = pool.get('collection.configuration')
-        Date = pool.get('ir.date')
+        Configuration = pool.get("collection.configuration")
+        Date = pool.get("ir.date")
         try:
             configuration = Configuration(1)
         except Exception as error:
             print(error)
-            raise UserError('ERROR', 'No hay configuracion')
+            raise UserError("ERROR", "No hay configuracion")
 
         if configuration:
-            _date = self.date + \
-                timedelta(days=configuration.tracking_days_expired)
+            _date = self.date + timedelta(days=configuration.tracking_days_expired)
             if _date > Date.today():
-                return 'active'
+                return "active"
             # validate states please
             if self.collection_amount and self.collection_amount > 0:
-                return 'done'
+                return "done"
             else:
-                return 'inactive'
+                return "inactive"
