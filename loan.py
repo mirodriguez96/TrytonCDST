@@ -5,8 +5,10 @@ from trytond.exceptions import UserError
 from trytond.pool import Pool, PoolMeta
 from trytond.pyson import Eval
 
-from datetime import date
-from sql import Table
+from decimal import Decimal
+from datetime import date, datetime
+from dateutil.relativedelta import relativedelta
+from sql import Table, Literal
 import calendar
 
 
@@ -33,67 +35,109 @@ class Loan(metaclass=PoolMeta):
     @classmethod
     def validate_loan(cls, loans):
         super(Loan, cls).validate_loan(loans)
-        Line = Pool().get('staff.loan.line')
-        to_create = []
-        to_save = []
-        reconciled = []
+        LineLiquidation = Pool().get('staff.liquidation.line')
+        LinePayroll = Pool().get('staff.payroll.line')
+
+        cls.validate_amount_loan(loans)
         for loan in loans:
-            total_lines = 0
-            next_date = loan.first_pay_date
-            lines = sorted(loan.lines, key=lambda obj: obj.maturity_date)
-            for line in lines:
-                next_date = line.maturity_date
-                if line.origin and ('-1' not in line.origin):
-                    if line.origin.amount != line.amount:
-                        line.amount = line.origin.amount
-                        to_save.append(line)
-                total_lines += line.amount
-            difference = loan.amount - total_lines
-            index = len(lines) - 1
-            if difference > 0:
-                if lines[index].state == 'pending' \
-                        and (not lines[index].origin or '-1' in lines[index].origin):
-                    lines[index].amount += difference
-                    to_save.append(lines[index])
+            for line in loan.lines:
+                if line.origin and line.state == "paid":
+                    if line.origin.__name__ == LineLiquidation.__name__:
+                        line_liquidation = LineLiquidation(line.origin)
+                        cls.calculate_loan_liquidation(
+                            line_liquidation, line)
+                    elif line.origin.__name__ == LinePayroll.__name__:
+                        line_payroll = LinePayroll(line.origin)
+                        cls.calculate_loan_payroll(
+                            line_payroll, line)
+
+
+    @classmethod
+    def validate_amount_loan(cls, loans):
+        LoanLine = Pool().get('staff.loan.line')
+        for loan in loans:
+            total_amount_loan = loan.amount
+            total_amount_lines = sum(line.amount for line in loan.lines)
+            difference = total_amount_loan - total_amount_lines
+            if difference != 0:
+                if difference > 0:
+                    new_loan_line = cls.get_new_loan_line_line(
+                        loan.lines[-1], difference)
+                    LoanLine.create(new_loan_line)
                 else:
-                    days_of_month = sorted(
-                        set(d.day_of_month for d in loan.days_of_month))
-                    month = next_date
-                    for d in days_of_month:
-                        try:
-                            next_date = date(month.year, month.month, d)
-                        except:
-                            _, last_day = calendar.monthrange(
-                                month.year, month.month)
-                            next_date = date(month.year, month.month, last_day)
-                    to_create.append({
-                        'loan': loan.id,
-                        'maturity_date': next_date,
-                        'amount': difference,
-                        'state': 'pending',
-                    })
+                    LoanLine.delete([loan.lines[-1]])
+
+    @classmethod
+    def calculate_loan_liquidation(cls, line_liquidation, loan_line):
+        LoanLine = Pool().get('staff.loan.line')
+        difference = 0
+        lines_loan = LoanLine.search(
+            [('loan', '=', loan_line.loan), ('state', '=', 'pending')])
+
+        liquidation_amount = abs(line_liquidation.amount)
+        loan_amount = abs(loan_line.amount)
+        difference = liquidation_amount - loan_amount
+
+        if difference != 0:
+            if lines_loan:
+                loan_line.amount = liquidation_amount
+                LoanLine.save([loan_line])
+                line_to_update = lines_loan[-1]
+                new_amount = line_to_update.amount - difference
+                line_to_update.amount = new_amount
+                LoanLine.save([line_to_update])
             else:
-                if difference != 0 and lines[index].state == 'pending' \
-                        and (not lines[index].origin or '-1' in lines[index].origin):
-                    lines[index].amount += difference
-                    to_save.append(lines[index])
-            for to_pay in loan.lines_to_pay:
-                if to_pay.reconciliation and to_pay.origin \
-                        and ('-1' not in to_pay.origin) \
-                        and to_pay.origin.state != 'paid':
-                    reconciled.append(to_pay.origin.id)
-        if to_save:
-            Line.save(to_save)
-        if to_create:
-            Line.create(to_create)
-        if reconciled:
-            table = Line.__table__()
-            cursor = Transaction().connection.cursor()
-            for sub_ids in grouped_slice(reconciled):
-                red_sql = reduce_ids(table.id, sub_ids)
-                # Use SQL to prevent double validate loop
-                cursor.execute(*table.update(
-                    columns=[table.state], values=['paid'], where=red_sql))
+                if difference < 0:
+                    loan_line.amount = liquidation_amount
+                    LoanLine.save([loan_line])
+                    new_loan_line = cls.get_new_loan_line_line(
+                        loan_line, abs(difference))
+                    LoanLine.create(new_loan_line)
+
+    @classmethod
+    def calculate_loan_payroll(cls, line_payroll, loan_line):
+        LoanLine = Pool().get('staff.loan.line')
+        difference = 0
+        lines_loan = LoanLine.search(
+            [('loan', '=', loan_line.loan), ('state', '=', 'pending')])
+
+        payroll_amount = abs(line_payroll.amount)
+        loan_amount = abs(loan_line.amount)
+        difference = payroll_amount - loan_amount
+
+        if difference != 0:
+            if lines_loan:
+                loan_line.amount = payroll_amount
+                LoanLine.save([loan_line])
+                line_to_update = lines_loan[-1]
+                new_amount = line_to_update.amount - difference
+                line_to_update.amount = new_amount
+                LoanLine.save([line_to_update])
+            else:
+                if difference < 0:
+                    loan_line.amount = payroll_amount
+                    LoanLine.save([loan_line])
+                    new_loan_line = cls.get_new_loan_line_line(
+                        loan_line, abs(difference))
+                    LoanLine.create(new_loan_line)
+
+    @classmethod
+    def get_new_loan_line_line(cls, loan_line, difference):
+        maturity_date = loan_line.maturity_date
+        day_loan = maturity_date.day
+        if day_loan == 15:
+            maturity_date = maturity_date + relativedelta(days=15)
+        else:
+            maturity_date = maturity_date + \
+                relativedelta(months=1) - relativedelta(days=15)
+
+        new_line = [{
+            "loan": loan_line.loan,
+            'maturity_date': maturity_date,
+            'amount': difference,
+            'state': 'pending',
+        }]
+        return new_line
 
     @classmethod
     def _post(cls, loans):
@@ -130,6 +174,55 @@ class Loan(metaclass=PoolMeta):
         if reconciled:
             cls.__queue__.refresh(reconciled)
 
+
+class LoanLine(metaclass=PoolMeta):
+    'Loan Line Readonly'
+    __name__ = 'staff.loan.line'
+
+    @classmethod
+    def __setup__(cls):
+        super(LoanLine, cls).__setup__()
+
+    @classmethod
+    def validate_line(cls, lines):
+        line = cls.__table__()
+        cursor = Transaction().connection.cursor()
+        
+        pending_lines = []
+        paid_lines = []
+        for line_ in lines:
+            if not line_.origin and line_.state == 'paid':
+                loan_paid = cls.validate_paid_line(line_)
+                if not loan_paid:
+                    pending_lines.append(line_.id)
+            elif line_.origin and line_.state in ('pending', 'partial'):
+                paid_lines.append(line_.id)
+            elif not line_.origin and line_.state in ('pending', 'partial'):
+                loan_paid = cls.validate_paid_line(line_)
+                if loan_paid:
+                    paid_lines.append(line_.id)
+
+        for move_ids, state in (
+                (pending_lines, 'pending'),
+                (paid_lines, 'paid'),
+                ):
+            if move_ids:
+                for sub_ids in grouped_slice(move_ids):
+                    red_sql = reduce_ids(line.id, sub_ids)
+                    # Use SQL to prevent double validate loop
+                    print(red_sql)
+                    cursor.execute(*line.update(
+                            columns=[line.state],
+                            values=[state],
+                            where=red_sql))
+
+    @classmethod
+    def validate_paid_line(cls, line):
+        AccountMoveLine = Pool().get('account.move.line')
+        loan_move_line = AccountMoveLine.search([('origin','=',line),
+                                                 ('reconciliation','!=',None)])
+        loan_paid = True if loan_move_line else False        
+        return loan_paid
 
 class LoanForceDraft(Wizard):
     """Function to Force draft Loan
