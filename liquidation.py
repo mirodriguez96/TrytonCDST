@@ -380,10 +380,11 @@ class Liquidation(metaclass=PoolMeta):
         if self.kind == 'contract':
             for line in self.lines:
                 if line.wage.type_concept_electronic == 'Deuda':
-                    loan_line = LoanLines.search(['origin', '=', line])
+                    loan_line = LoanLines.search([('origin', '=', line)])
                     if loan_line:
                         loan_move_line = AccountMoveLine.search(
-                            [('origin', '=', loan_line[0])])
+                            [('origin', '=', loan_line[0]),
+                             ('reconciliation', '=', None)])
                         if loan_move_line[0] in conciled_lines:
                             break
                         reference = loan_line[0].loan.number
@@ -404,13 +405,14 @@ class Liquidation(metaclass=PoolMeta):
                                             loan_move_line[0])
                                         lines_to_reconcile.append(
                                             move_line)
-                                        AccountMoveLine.reconcile(
-                                            lines_to_reconcile)
-                                        conciled_lines.append(
-                                            move_line)
-                                        conciled_lines.append(
-                                            loan_move_line[0])
-                                        break
+                                        if lines_to_reconcile:
+                                            AccountMoveLine.reconcile(
+                                                lines_to_reconcile)
+                                            conciled_lines.append(
+                                                move_line)
+                                            conciled_lines.append(
+                                                loan_move_line[0])
+                                            break
                             except Exception as error:
                                 print(error)
         else:
@@ -424,9 +426,10 @@ class Liquidation(metaclass=PoolMeta):
                         and origin.__name__ == LoanLines.__name__:
 
                     move_lines = AccountMoveLine.search([('origin', '=', origin),
-                                                         ('reference', '=', reference)])
+                                                         ('reference', '=', reference),
+                                                         ('reconciliation', '=', None)])
 
-                    if len(move_lines) % 2 == 0:
+                    if len(move_lines) % 2 == 0 and move_lines:
                         for line in move_lines:
                             balance += line.debit - line.credit
                         if balance == 0:
@@ -444,7 +447,8 @@ class Liquidation(metaclass=PoolMeta):
                                     ['origin', '=', line])
                                 if loan_line:
                                     loan_move_line = AccountMoveLine.search(
-                                        [('origin', '=', loan_line[0])])
+                                        [('origin', '=', loan_line[0]),
+                                         ('reconciliation', '=', None)])
 
                                     for lines in loan_move_line:
                                         if lines in conciled_lines:
@@ -459,11 +463,12 @@ class Liquidation(metaclass=PoolMeta):
                                             lines_to_reconcile = []
                                             lines_to_reconcile = list(
                                                 loan_move_line)
-                                            AccountMoveLine.reconcile(
-                                                lines_to_reconcile)
-                                            for line in loan_move_line:
-                                                conciled_lines.append(line)
-                                            break
+                                            if lines_to_reconcile:
+                                                AccountMoveLine.reconcile(
+                                                    lines_to_reconcile)
+                                                for line in loan_move_line:
+                                                    conciled_lines.append(line)
+                                                break
                                     except Exception as error:
                                         print(error)
 
