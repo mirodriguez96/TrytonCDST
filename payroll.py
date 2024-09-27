@@ -3244,6 +3244,9 @@ class PayrollGlobalReport(Report, metaclass=PoolMeta):
                 parties[employee_id]['analytic_account'] = None
 
             for line in payroll.lines:
+                if line.wage_type.type_concept_electronic == 'Dotacion':
+                    continue
+
                 if parties[employee_id]['account'] is None:
                     if line.wage_type.type_concept == 'salary':
                         parties[employee_id]['account'] = line.wage_type.debit_account.code
@@ -3270,6 +3273,7 @@ class PayrollGlobalReport(Report, metaclass=PoolMeta):
                         concept = 'others_deductions'
                     else:
                         concept = line.wage_type.type_concept
+                
                 if not concept:
                     raise UserError(
                         'ERROR', f'El concepto no existe {line.wage_type.name}')
