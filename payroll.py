@@ -2758,6 +2758,7 @@ class PayrollPaycheckReportExten(metaclass=PoolMeta):
         Payroll = pool.get('staff.payroll')
         PayrollLine = pool.get('staff.payroll.line')
         Company = pool.get('company.company')
+        total = 0
 
         dom_payroll = cls.get_domain_payroll(data)
         fields_payroll = [
@@ -2839,17 +2840,17 @@ class PayrollPaycheckReportExten(metaclass=PoolMeta):
         payroll_lines = PayrollLine.search_read(dom_line,
                                                 fields_names=fields_lines,
                                                 order=order)
-        total = []
-        total_append = total.append
         for line in payroll_lines:
             key = str(line['payroll.']['employee']) + '_' + \
                 str(line['payroll.']['contract'])
-            total_append(
-                cls.values_without_move(line, wage_type_default, res, key))
+            cls.values_without_move(line, wage_type_default, res, key)
 
+        total = [line['subtotal'] for line in res.values()]
+        suma = sum(total)
         report_context['records'] = res.values()
         report_context['company'] = Company(data['company'])
-        report_context['total'] = sum(total)
+        report_context['total'] = suma
+
         return report_context
 
     def values_without_move(line, wage_type_default, res, key):
@@ -2922,6 +2923,7 @@ class PayrollPaycheckReportExten(metaclass=PoolMeta):
                 total += expense_amount
             else:
                 expense_formula = 0
+
             res[key][
                 concept +
                 '_name'] = line['party.']['name'] if line['party.'] else ''
@@ -2950,9 +2952,6 @@ class PayrollPaycheckReportExten(metaclass=PoolMeta):
         elif concept == 'extras':
             res[key]['variation'] -= line['amount']
             res[key]['extras'] += line['amount']
-
-        return total
-
 
 class PayrollElectronicCDS(metaclass=PoolMeta):
     'Staff Payroll Electronic'
