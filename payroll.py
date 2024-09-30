@@ -3243,7 +3243,8 @@ class PayrollGlobalReport(Report, metaclass=PoolMeta):
                 parties[employee_id]['analytic_account'] = None
 
             for line in payroll.lines:
-                if line.wage_type.type_concept_electronic == 'Dotacion':
+                if line.wage_type.type_concept_electronic == 'Dotacion'\
+                    or line.wage_type.type_concept_electronic == 'ViaticoManuAlojNS':
                     continue
 
                 if parties[employee_id]['account'] is None:
