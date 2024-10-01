@@ -231,12 +231,24 @@ class Move(ModelSQL, metaclass=PoolMeta):
         for line in lines:
             analytic_line = line.analytic_lines
             analytic_required = line.account.analytical_management
+            if cls.validate_analytic_distribution(line):
+                return None
             if analytic_required and len(analytic_line) == 0:
                 code = line.account.code
                 message = f"La linea con codigo de cuenta {code}"\
                     " requiere analitica"
                 raise (UserError("ERROR", f"{message}"))
 
+    @classmethod
+    def validate_analytic_distribution(cls,line):
+        pool = Pool()
+        AnalyticRule = pool.get('analytic_account.rule')
+        if line.account:
+            analytic_required = line.account.analytical_management
+            analytic_rule = AnalyticRule.search(['account','=',line.account])
+            if analytic_required and analytic_rule:
+                return True
+        return False
 
 class MoveLine(ModelSQL, metaclass=PoolMeta):
     """Account move line inheritance"""
