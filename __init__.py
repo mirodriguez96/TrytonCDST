@@ -108,6 +108,7 @@ def register():
                   product.Product,
                   product.ProductCategory,
                   product.Template,
+                  product.CostPriceRevision,
                   production.Production,
                   production.ProductionDetailedStart,
                   purchase.Configuration,

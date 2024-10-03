@@ -7,21 +7,21 @@ from decimal import Decimal
 
 
 class Template(metaclass=PoolMeta):
-    __name__ = 'product.template'
+    __name__ = "product.template"
 
     @classmethod
     def write(cls, *args):
         pool = Pool()
         active = True
-        Product = pool.get('product.product')
+        Product = pool.get("product.product")
 
         product = args[0]
         id_product = product[0].id
-        domain = (['template', '=', id_product])
+        domain = ["template", "=", id_product]
         variante = Product.search(domain)
 
         if not variante:
-            domain = [('template', '=', id_product), ('active', '=', [])]
+            domain = [("template", "=", id_product), ("active", "=", [])]
             variante = Product.search(domain)
 
         super().write(*args)
@@ -34,13 +34,13 @@ class Template(metaclass=PoolMeta):
 
 
 class Product(metaclass=PoolMeta):
-    __name__ = 'product.product'
-    id_tecno = fields.Char('Id TecnoCarnes', required=False)
+    __name__ = "product.product"
+    id_tecno = fields.Char("Id TecnoCarnes", required=False)
 
     @classmethod
     def sync_code(cls, products):
         pool = Pool()
-        Template = pool.get('product.template')
+        Template = pool.get("product.template")
         active = False
         id_tecno = False
 
@@ -67,8 +67,7 @@ class Product(metaclass=PoolMeta):
                     if status and not product.active:
                         product.active = True
 
-            code = ''.join(
-                filter(None, [product.prefix_code, product.suffix_code]))
+            code = "".join(filter(None, [product.prefix_code, product.suffix_code]))
 
             if not code:
                 code = None
@@ -82,21 +81,20 @@ class Product(metaclass=PoolMeta):
     # teniendo en cuenta la ultima fecha de actualizacion y si existe o no.
     @classmethod
     def import_products_tecno(cls):
-        print('RUN PRODUCTOS')
+        print("RUN PRODUCTOS")
         pool = Pool()
-        Config = pool.get('conector.configuration')
-        Actualizacion = pool.get('conector.actualizacion')
-        actualizacion = Actualizacion.create_or_update('PRODUCTOS')
-        fecha_actualizacion = Actualizacion.get_fecha_actualizacion(
-            actualizacion)
+        Config = pool.get("conector.configuration")
+        Actualizacion = pool.get("conector.actualizacion")
+        actualizacion = Actualizacion.create_or_update("PRODUCTOS")
+        fecha_actualizacion = Actualizacion.get_fecha_actualizacion(actualizacion)
         productos_tecno = Config.get_tblproducto(fecha_actualizacion)
         if not productos_tecno:
             actualizacion.save()
-            print('FINISH PRODUCTOS')
+            print("FINISH PRODUCTOS")
             return
-        Category = pool.get('product.category')
-        Product = pool.get('product.product')
-        Template = pool.get('product.template')
+        Category = pool.get("product.category")
+        Product = pool.get("product.product")
+        Template = pool.get("product.template")
         # to_category = []
         to_product = []
         to_template = []
@@ -104,26 +102,27 @@ class Product(metaclass=PoolMeta):
         for producto in productos_tecno:
             try:
                 id_producto = str(producto.IdProducto)
-                if producto.ref_anulada == 'S':
+                if producto.ref_anulada == "S":
                     msg = f"EL PRODUCTO CON CODIGO {id_producto} ESTA MARCADO COMO ANULADO EN TECNOCARNES"
                     logs[id_producto] = msg
                     continue
-                product_inactive = Product.search([('code', '=', id_producto),
-                                                   ('active', '=', False)])
+                product_inactive = Product.search(
+                    [("code", "=", id_producto), ("active", "=", False)]
+                )
                 if product_inactive:
                     msg = f"EL PRODUCTO CON CODIGO {id_producto} TIENE UNA VARIANTE MARCADA COMO INACTIVO EN TRYTON"
                     logs[id_producto] = msg
-                existe = Product.search([('code', '=', id_producto),
-                                         ('active', '=', True)])
+                existe = Product.search(
+                    [("code", "=", id_producto), ("active", "=", True)]
+                )
                 id_categoria = producto.contable
-                categoria_contable = Category.search([('id_tecno', '=',
-                                                       id_categoria)])
+                categoria_contable = Category.search([("id_tecno", "=", id_categoria)])
                 if categoria_contable:
                     categoria_contable = categoria_contable[0]
                 else:
                     categoria = Category()
                     categoria.id_tecno = id_categoria
-                    categoria.name = str(id_categoria) + ' - sin modelo'
+                    categoria.name = str(id_categoria) + " - sin modelo"
                     categoria.accounting = True
                     categoria.save()
                     categoria_contable = categoria
@@ -137,19 +136,21 @@ class Product(metaclass=PoolMeta):
                 valor_unitario = round(valor_unitario, 2)
                 # En caso de existir el producto se procede a verificar su ultimo cambio y a modificar
                 if existe:
-                    existe, = existe
+                    (existe,) = existe
                     ultimo_cambio = producto.Ultimo_Cambio_Registro
                     create_date = None
                     write_date = None
                     # LA HORA DEL SISTEMA DE TRYTON TIENE UNA DIFERENCIA HORARIA DE 5 HORAS CON LA DE TECNO
                     if existe.write_date:
-                        write_date = (existe.write_date - timedelta(hours=5))
+                        write_date = existe.write_date - timedelta(hours=5)
                     elif existe.create_date:
-                        create_date = (existe.create_date - timedelta(hours=5))
+                        create_date = existe.create_date - timedelta(hours=5)
                     # print(ultimo_cambio, create_date, write_date)
-                    if (ultimo_cambio and write_date and ultimo_cambio
-                            > write_date) or (ultimo_cambio and not write_date
-                                              and ultimo_cambio > create_date):
+                    if (
+                        ultimo_cambio and write_date and ultimo_cambio > write_date
+                    ) or (
+                        ultimo_cambio and not write_date and ultimo_cambio > create_date
+                    ):
                         existe.template.name = nombre_producto
                         existe.template.type = tipo_producto
                         existe.template.default_uom = udm_producto
@@ -189,22 +190,24 @@ class Product(metaclass=PoolMeta):
         Template.save(to_template)
         Product.save(to_product)
         actualizacion.add_logs(logs)
-        print('FINISH PRODUCTOS')
+        print("FINISH PRODUCTOS")
 
     # FIX (REPETICION METODO)
     def get_avg_cost_price(self, name=None):
         super(Product, self).get_avg_cost_price(name)
         target_date = date.today()
-        stock_date_end = Transaction().context.get('stock_date_end')
+        stock_date_end = Transaction().context.get("stock_date_end")
         if stock_date_end:
             target_date = stock_date_end
-        AverageCost = Pool().get('product.average_cost')
-        avg_product = AverageCost.search([
-            ('product', '=', self.id),
-            ('effective_date', '<=', target_date),
-        ],
-            order=[('create_date', 'DESC')],
-            limit=1)
+        AverageCost = Pool().get("product.average_cost")
+        avg_product = AverageCost.search(
+            [
+                ("product", "=", self.id),
+                ("effective_date", "<=", target_date),
+            ],
+            order=[("create_date", "DESC")],
+            limit=1,
+        )
         if avg_product:
             return avg_product[0].cost_price
         else:
@@ -214,10 +217,10 @@ class Product(metaclass=PoolMeta):
     @classmethod
     def tipo_producto(cls, inventario):
         # equivalencia del tipo de producto (si maneja inventario o no)
-        if inventario == 'N':
-            return 'service'
+        if inventario == "N":
+            return "service"
         else:
-            return 'goods'
+            return "goods"
 
     # Función encargada de retornar la unidad de medida de un producto, al realizar la equivalencia con kg y unidades de la bd de TecnoCarnes
     @classmethod
@@ -231,10 +234,10 @@ class Product(metaclass=PoolMeta):
     # Función encargada de verificar si el producto es vendible, de acuerdo a su tipo
     @classmethod
     def vendible_producto(cls, tipo):
-        Config = Pool().get('conector.configuration')
+        Config = Pool().get("conector.configuration")
         tipoproducto = Config.get_tbltipoproducto(str(tipo))
         # Se verifica que el tipo de producto exista y el valor SI es vendible o NO
-        if tipoproducto and tipoproducto[0].ProductoParaVender == 'S':
+        if tipoproducto and tipoproducto[0].ProductoParaVender == "S":
             return True
         else:
             return False
@@ -243,10 +246,10 @@ class Product(metaclass=PoolMeta):
     def update_product_parent(cls, _products=None):
         print("RUN update_product_parent")
         pool = Pool()
-        Config = pool.get('conector.configuration')
-        Product = pool.get('product.product')
-        Revision = pool.get('product.cost_price.revision')
-        AverageCost = pool.get('product.average_cost')
+        Config = pool.get("conector.configuration")
+        Product = pool.get("product.product")
+        Revision = pool.get("product.cost_price.revision")
+        AverageCost = pool.get("product.average_cost")
         _today = date.today()
         if not _products:
             products = Product.search([])
@@ -261,8 +264,7 @@ class Product(metaclass=PoolMeta):
         revisions = []
         averages = []
         for r in result:
-            if str(r.IdProducto) in _products and \
-                    str(r.IdResponsable) in _products:
+            if str(r.IdProducto) in _products and str(r.IdResponsable) in _products:
                 product = _products[str(r.IdProducto)]
                 responsable = _products[str(r.IdResponsable)]
                 factor = Decimal(r.tiempo_del_ciclo)
@@ -292,68 +294,63 @@ class Product(metaclass=PoolMeta):
 
 # Herencia del party.contact_mechanism e insercción del campo id_tecno
 class ProductCategory(metaclass=PoolMeta):
-    __name__ = 'product.category'
-    id_tecno = fields.Char('Id TecnoCarnes', required=False)
-    account_lost_found = fields.Many2One('account.account', 'Lost and Found Account',
-                                         domain=[
-                                             ('type.id', 'in', ['92']),
-                                         ]
-                                         )
+    __name__ = "product.category"
+    id_tecno = fields.Char("Id TecnoCarnes", required=False)
+    account_lost_found = fields.Many2One(
+        "account.account",
+        "Lost and Found Account",
+        domain=[
+            ("type.id", "in", ["92"]),
+        ],
+    )
 
     @classmethod
     def import_categories_tecno(cls):
         print("RUN CATEGORIAS DE PRODUCTOS")
         pool = Pool()
-        Config = pool.get('conector.configuration')
-        Actualizacion = pool.get('conector.actualizacion')
-        actualizacion = Actualizacion.create_or_update(
-            'CATEGORIAS DE PRODUCTOS')
+        Config = pool.get("conector.configuration")
+        Actualizacion = pool.get("conector.actualizacion")
+        actualizacion = Actualizacion.create_or_update("CATEGORIAS DE PRODUCTOS")
         logs = {}
-        modelos = Config.get_data_table('vistamodelos')
+        modelos = Config.get_data_table("vistamodelos")
         if not modelos:
-            logs[
-                'vistamodelos'] = "No se encontraron valores para importar en la tabla vistamodelos"
+            logs["vistamodelos"] = (
+                "No se encontraron valores para importar en la tabla vistamodelos"
+            )
             actualizacion.add_logs(logs)
             return
         # Creación o actualización de las categorias de los productos
-        Category = pool.get('product.category')
-        Account = pool.get('account.account')
+        Category = pool.get("product.category")
+        Account = pool.get("account.account")
         to_create = []
         for modelo in modelos:
             id_tecno = modelo.IDMODELOS
             try:
-                name = str(id_tecno) + ' - ' + modelo.MODELOS.strip()
-                category = Category.search([('id_tecno', '=', id_tecno)])
+                name = str(id_tecno) + " - " + modelo.MODELOS.strip()
+                category = Category.search([("id_tecno", "=", id_tecno)])
                 if not category:
-                    category = {
-                        'id_tecno': id_tecno,
-                        'name': name,
-                        'accounting': True
-                    }
+                    category = {"id_tecno": id_tecno, "name": name, "accounting": True}
 
                     # Gastos
                     l_expense = list(modelo.CUENTA1)
                     if int(l_expense[0]) >= 5:
-                        expense = Account.search([('code', '=', modelo.CUENTA1)
-                                                  ])
+                        expense = Account.search([("code", "=", modelo.CUENTA1)])
                         if expense:
-                            category['account_expense'] = expense[0]
+                            category["account_expense"] = expense[0]
 
                     # Ingresos
                     l_revenue = list(modelo.CUENTA3)
-                    if l_revenue[0] == '4':
-                        revenue = Account.search([('code', '=', modelo.CUENTA3)
-                                                  ])
+                    if l_revenue[0] == "4":
+                        revenue = Account.search([("code", "=", modelo.CUENTA3)])
                         if revenue:
-                            category['account_revenue'] = revenue[0]
+                            category["account_revenue"] = revenue[0]
 
                     # Devolucion venta
                     l_return_sale = list(modelo.CUENTA4)
                     if int(l_return_sale[0]) >= 4:
-                        return_sale = Account.search([('code', '=',
-                                                       modelo.CUENTA4)])
+                        return_sale = Account.search([("code", "=", modelo.CUENTA4)])
                         if return_sale:
-                            category['account_return_sale'] = return_sale[0]
+                            category["account_return_sale"] = return_sale[0]
 
                     to_create.append(category)
             except Exception as e:
@@ -361,3 +358,34 @@ class ProductCategory(metaclass=PoolMeta):
         Category.create(to_create)
         actualizacion.add_logs(logs)
         print("FINISH CATEGORIAS DE PRODUCTOS")
+
+
+class CostPriceRevision(metaclass=PoolMeta):
+    "Product Cost Price Revision"
+    __name__ = "product.cost_price.revision"
+
+    @classmethod
+    def apply_up_to(cls, revisions, cost_price, date):
+        """Apply revision to cost price up to date
+        revisions list is modified"""
+
+        try:
+            minor_date = None
+            while True:
+                revision = revisions.pop(0)
+                if revision.date <= date:
+                    date_ = revision.create_date
+                    if minor_date != None:
+                        if date_ < minor_date:
+                            minor_date = date_
+                            cost_price = revision.get_cost_price(cost_price)
+                    else:
+                        if date_.date() >= date:
+                            minor_date = date_
+                            cost_price = revision.get_cost_price(cost_price)
+                else:
+                    revisions.insert(0, revision)
+                    break
+        except IndexError:
+            pass
+        return cost_price
