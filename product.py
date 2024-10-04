@@ -365,27 +365,50 @@ class CostPriceRevision(metaclass=PoolMeta):
     __name__ = "product.cost_price.revision"
 
     @classmethod
-    def apply_up_to(cls, revisions, cost_price, date):
+    def apply_up_to(cls, revisions, cost_price, date_form):
         """Apply revision to cost price up to date
         revisions list is modified"""
 
         try:
-            minor_date = None
+            last_date = cls.get_last_date(date_form, revisions)
+
             while True:
                 revision = revisions.pop(0)
-                if revision.date <= date:
+                if revision.date <= date_form:
                     date_ = revision.create_date
-                    if minor_date != None:
-                        if date_ < minor_date:
-                            minor_date = date_
-                            cost_price = revision.get_cost_price(cost_price)
-                    else:
-                        if date_.date() >= date:
-                            minor_date = date_
-                            cost_price = revision.get_cost_price(cost_price)
-                else:
-                    revisions.insert(0, revision)
-                    break
+                    if last_date is not None and date_.date() == last_date:
+                        cost_price = revision.get_cost_price(cost_price)
+                # else:
+                #     revisions.insert(0, revision)
+                #     break
         except IndexError:
             pass
         return cost_price
+
+    @classmethod
+    def get_last_date(cls, date_form, revisions):
+        major_dates = []
+        minor_last_date = None
+        major_last_date = None
+        last_date = None
+        for revision in revisions:
+            date_ = revision.create_date
+            if date_form > date_.date():
+                if minor_last_date is None:
+                    minor_last_date = date_
+                else:
+                    if date_.date() >= minor_last_date.date():
+                        minor_last_date = date_
+            else:
+                major_dates.append(date_.date())
+
+        if major_dates:
+            for date_ in major_dates:
+                if major_last_date is None:
+                    major_last_date = date_
+                else:
+                    if date_ <= major_last_date:
+                        major_last_date = date_
+
+        last_date = minor_last_date if minor_last_date is not None else major_last_date
+        return last_date
