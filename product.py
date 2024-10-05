@@ -279,6 +279,7 @@ class Product(metaclass=PoolMeta):
                 revisions.append(revision)
                 # AverageCost
                 average = {
+                    "stock_move": "producto_padre",
                     "product": product.id,
                     "effective_date": _today,
                     "cost_price": cost_price,

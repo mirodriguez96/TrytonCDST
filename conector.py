@@ -1252,6 +1252,7 @@ class ImportedDocumentWizard(Wizard):
             revisions.append(revision)
 
             average_cost = {
+                "stock_move": "plantilla",
                 "product": product.id,
                 "effective_date": date,
                 "cost_price": cost,
