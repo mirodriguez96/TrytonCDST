@@ -457,7 +457,6 @@ class ModifyCostPrice(metaclass=PoolMeta):
                     product, = template.products
                     cost = revision.get_cost_price(product.cost_price)
                     AverageCost.create([{
-                        "stock_move": "asistente",
                         "product": product.id,
                         "effective_date": self.start.date,
                         "cost_price": cost,
