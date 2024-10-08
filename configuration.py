@@ -291,7 +291,7 @@ class Configuration(ModelSQL, ModelView):
             config, = Config.search([], order=[('id', 'DESC')], limit=1)
             fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
             # query = "SELECT * FROM dbo.Documentos WHERE tipo = null AND Numero_documento = null " #TEST
-            query = "SET DATEFORMAT ymd SELECT TOP(50) * FROM dbo.Documentos "\
+            query = "SET DATEFORMAT ymd SELECT TOP(20) * FROM dbo.Documentos "\
                     f"WHERE fecha_hora >= CAST('{fecha}' AS datetime) AND "\
                     f"sw = {sw} AND exportado != 'T' AND exportado != 'E' AND exportado != 'X' "
             # Se valida si en la configuración de la base de datos, añadieron un valor en la fecha final de importación
