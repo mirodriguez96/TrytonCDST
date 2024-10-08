@@ -13,7 +13,7 @@ from sql.aggregate import Sum
 from decimal import Decimal
 from datetime import date
 from sql import Table
-
+import time
 
 STATES = [("", ""), ("draft", "Borrador"), ("done", "Finalizado")]
 TYPE_DOCUMENT = [("", "")]
@@ -43,7 +43,6 @@ class Sale(metaclass=PoolMeta):
     @classmethod
     def import_tecnocarnes(cls, swt):
         """Function to import Sales and Sale returns to tecnocarnes"""
-
         pool = Pool()
         Sale = pool.get('sale.sale')
         SaleLine = pool.get('sale.line')
@@ -61,6 +60,7 @@ class Sale(metaclass=PoolMeta):
         Config = pool.get('conector.configuration')
         configuration = Config.get_configuration()
         Actualizacion = pool.get('conector.actualizacion')
+        CompanyOperation = pool.get('company.operation_center')
 
         logs = {}
         logs_che = {}
@@ -69,26 +69,30 @@ class Sale(metaclass=PoolMeta):
         not_import = []
         venta_pos = []
 
+        print('Obteniendo info')
         data = Config.get_documentos_tecno(swt)
 
         if not configuration or not data:
+            print('No se obtuvo info')
             return
 
+        print('Leyendo info de terceros')
         actualizacion = Actualizacion.create_or_update('VENTAS')
         actualizacion_che = Actualizacion.create_or_update('SIN DOCUMENTO CHE')
-
         parties = Party._get_party_documentos(data, 'nit_Cedula')
 
+        print('Validando modulo de centro de operaciones activo')
         # validate if operation center is active
         company_operation = Module.search([('name', '=', 'company_operation'),
                                            ('state', '=', 'activated')])
+
         if company_operation:
-            CompanyOperation = pool.get('company.operation_center')
             operation_center = CompanyOperation.search([],
                                                        order=[('id', 'DESC')],
                                                        limit=1)
 
         # Save the sale types of tecnocarnes
+        print('Obteniendo el tipo de venta')
         pdevoluciones_pos = Config.get_data_parametros('10')
         if pdevoluciones_pos:
             pdevoluciones_pos = (pdevoluciones_pos[0].Valor).strip().split(',')
@@ -102,6 +106,7 @@ class Sale(metaclass=PoolMeta):
             venta_electronica = (venta_electronica[0].Valor).strip().split(',')
 
         # Build the SALE
+        print('Recorriendo las ventas')
         for venta in data:
             try:
                 analytic_account = None
@@ -114,13 +119,12 @@ class Sale(metaclass=PoolMeta):
                 numero_doc = venta.Numero_documento
                 tipo_doc = venta.tipo
                 id_venta = str(sw) + '-' + tipo_doc + '-' + str(numero_doc)
+                print(f'Venta {id_venta}')
 
                 value_total = Decimal(str(round(venta.valor_total,
                                                 2)))
                 caused_retention = Decimal(str(round(venta.retencion_causada,
                                                      2)))
-                tax_consumption = Decimal(str(round(venta.Impuesto_Consumo,
-                                                    2)))
                 invoice_amount_tecno = value_total - caused_retention
 
                 if venta.Valor_impuesto:
@@ -131,25 +135,25 @@ class Sale(metaclass=PoolMeta):
 
                 already_sale = Sale.search([('id_tecno', '=', id_venta)])
                 if already_sale:
+                    print('Venta existente')
                     if venta.anulado == 'S':
                         dat = str(venta.fecha_hora).split()[0].split('-')
                         name = f"{dat[0]}-{dat[1]}"
                         validate_period = Period.search([('name', '=', name)])
                         if validate_period[0].state == 'close':
+                            print('Periodo cerrado')
                             to_exception.append(id_venta)
                             logs[id_venta] = "EXCEPCION: EL PERIODO DEL \
                                     DOCUMENTO SE ENCUENTRA CERRADO Y NO ES \
                                     POSIBLE SU ELIMINACION O MODIFICACION"
-
                             continue
 
                         cls.delete_imported_sales(already_sale)
+                        print('Eliminando venta')
                         logs[id_venta] = "El documento fue eliminado de tryton\
                                 porque fue anulado en TecnoCarnes"
-
                         not_import.append(id_venta)
                         continue
-
                     to_created.append(id_venta)
                     continue
 
@@ -159,6 +163,7 @@ class Sale(metaclass=PoolMeta):
                     continue
 
                 if venta.sw == 2:
+                    print('Validando devolucion')
                     dcto_base = str(venta.Tipo_Docto_Base) + '-' + str(
                         venta.Numero_Docto_Base)
                     original_invoice = Sale.search([('number', '=', dcto_base)
@@ -173,6 +178,7 @@ class Sale(metaclass=PoolMeta):
                         continue
 
                 if company_operation and not operation_center:
+                    print('Sin centro de operacion')
                     msg = f"EXCEPCION {id_venta} - Falta centro de operación"
                     logs[id_venta] = msg
                     to_exception.append(id_venta)
@@ -182,6 +188,7 @@ class Sale(metaclass=PoolMeta):
                 name = f"{date_[0]}-{date_[1]}"
                 validate_period = Period.search([('name', '=', name)])
                 if validate_period[0].state == 'close':
+                    print('Periodo cerrrado')
                     to_exception.append(id_venta)
                     logs[id_venta] = "EXCEPCION: EL PERIODO DEL DOCUMENTO SE "
                     "ENCUENTRA CERRADO Y NO ES POSIBLE SU CREACION"
@@ -195,6 +202,7 @@ class Sale(metaclass=PoolMeta):
                             ('code', '=', str(tbltipodocto[0].Encabezado))
                         ])
                         if not analytic_account:
+                            print('Sin analitica')
                             msg = f'EXCEPCION {id_venta} - No se encontro \
                                 la asignacion de la cuenta analitica en \
                                 TecnoCarnes {str(tbltipodocto[0].Encabezado)}'
@@ -216,7 +224,6 @@ class Sale(metaclass=PoolMeta):
                     if nit_cedula not in parties['inactive']:
                         logs[id_venta] = f"EXCEPCION: No se encontro \
                                 el tercero {nit_cedula}"
-
                         to_exception.append(id_venta)
                     continue
 
@@ -226,7 +233,6 @@ class Sale(metaclass=PoolMeta):
                 if not bodega:
                     logs[id_venta] = f"EXCEPCION: Bodega {id_tecno_bodega} \
                             no existe"
-
                     to_exception.append(id_venta)
                     continue
                 bodega = bodega[0]
@@ -236,7 +242,6 @@ class Sale(metaclass=PoolMeta):
                 if not shop:
                     logs[id_venta] = f"EXCEPCION: Tienda (bodega) \
                             {id_tecno_bodega} no existe"
-
                     to_exception.append(id_venta)
                     continue
                 shop = shop[0]
@@ -248,7 +253,6 @@ class Sale(metaclass=PoolMeta):
                 if not plazo_pago:
                     logs[id_venta] = f"EXCEPCION: \
                             Plazo de pago {condicion} no existe"
-
                     to_exception.append(id_venta)
                     continue
                 plazo_pago = plazo_pago[0]
@@ -258,7 +262,6 @@ class Sale(metaclass=PoolMeta):
                 if not documentos_linea:
                     logs[id_venta] = "EXCEPCION: No se encontraron \
                             líneas para la venta"
-
                     to_exception.append(id_venta)
                     continue
 
@@ -330,6 +333,8 @@ class Sale(metaclass=PoolMeta):
                     sale.invoice_address = address[0].id
                     sale.shipment_address = address[0].id
                 sale.save()
+                print('Guardando venta')
+
                 """Se revisa si se aplico alguno de
                 los 3 impuestos en la venta"""
                 if venta.retencion_iva > 0:
@@ -342,12 +347,12 @@ class Sale(metaclass=PoolMeta):
                     if not retencion_iva and not retencion_ica:
                         retencion_rete = True
                     elif (venta.retencion_iva +
-                          venta.retencion_ica) != venta.retencion_causada:
+                            venta.retencion_ica) != venta.retencion_causada:
                         retencion_rete = True
 
                 for lin in documentos_linea:
+                    print('Recorriendo lineas de venta')
                     impuestos_linea = []
-
                     producto = Product.search([
                         'OR', ('id_tecno', '=', str(lin.IdProducto)),
                         ('code', '=', str(lin.IdProducto))
@@ -357,7 +362,6 @@ class Sale(metaclass=PoolMeta):
                         msg = f"EXCEPCION: No se encontro el producto \
                             {str(lin.IdProducto)} - \
                             Revisar si tiene variante o esta inactivo"
-
                         logs[id_venta] = msg
                         to_exception.append(id_venta)
                         break
@@ -365,7 +369,6 @@ class Sale(metaclass=PoolMeta):
                     if len(producto) > 1:
                         logs[id_venta] = "EXCEPCION: Hay mas de un \
                                 producto que tienen el mismo código o id_tecno"
-
                         to_exception.append(id_venta)
                         break
 
@@ -443,11 +446,11 @@ class Sale(metaclass=PoolMeta):
                             tax = Tax.search([('consumo', '=', True),
                                               ('type', '=', 'fixed'),
                                               ('amount', '=',
-                                               impuesto_consumo),
+                                             impuesto_consumo),
                                               [
-                                                  'OR',
-                                                  ('group.kind', '=', 'sale'),
-                                                  ('group.kind', '=', 'both')
+                                'OR',
+                                ('group.kind', '=', 'sale'),
+                                ('group.kind', '=', 'both')
                             ]])
                             if tax:
                                 if len(tax) > 1:
@@ -500,12 +503,14 @@ class Sale(metaclass=PoolMeta):
                         analytic_entry.account = analytic_account
                         linea.analytic_accounts = [analytic_entry]
                     linea.save()
+                    print('Guardando linea')
 
                 if id_venta in to_exception:
                     sale.number = None
                     sale.invoice_number = None
                     sale.save()
                     Sale.delete([sale])
+                    print('Eliminando venta con excepcion')
                     continue
 
                 # process created registry
@@ -514,11 +519,16 @@ class Sale(metaclass=PoolMeta):
 
                 with Transaction().set_context(context, _skip_warnings=True):
                     Sale.quote([sale])
+                    time.sleep(5)
                     Sale.confirm([sale])
+                    time.sleep(5)
                     Sale.process([sale])
+                    time.sleep(5)
                     cls.finish_shipment_process(sale, numero_doc, Config,
                                                 tipo_doc)
+                    time.sleep(5)
                     cls._post_invoices(sale, venta, logs, to_exception)
+                    time.sleep(5)
                     if id_venta in to_exception:
                         continue
                     pagos = Config.get_tipos_pago(id_venta)
@@ -553,6 +563,7 @@ class Sale(metaclass=PoolMeta):
         print('FINISH VENTAS')
 
     # Funcion encargada de finalizar el proceso de envío de la venta
+
     @classmethod
     def finish_shipment_process(cls, sale, numero_doc, Config, tipo_doc):
         pool = Pool()
