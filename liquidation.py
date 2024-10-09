@@ -871,14 +871,15 @@ class MoveProvisionBonusService(metaclass=PoolMeta):
             period_days = (self.start.period.end -
                            self.start.period.start).days + 1
 
-            dom_contract = [
-                ['AND', ['OR', [
-                    ('end_date', '>', self.start.period.start),
-                ], [
-                    ('end_date', '=', None),
-                ],
-                ]],
+            dom_contract = [('OR', [
+                ('end_date', '>', self.start.period.start),
+            ], [
+                ('end_date', '=', None),
+            ]),
+                ('employee.contracting_state', '=', 'active'),
+                ('kind', '!=', 'learning')
             ]
+
             if self.start.category:
                 dom_contract.append(
                     ('employee.category', '=', self.start.category.id)
@@ -938,13 +939,14 @@ class MoveProvisionBonusService(metaclass=PoolMeta):
                         }])]
                     move_lines.extend(base_lines)
 
+                    move_description = f'{self.start.description}-{employee.party.name}'
                     Move.create([{
                         'journal': journal_id,
                         'period': period_id,
                         'company': _company.id,
                         'date': _end_date,
                         'state': 'draft',
-                        'description': self.start.description,
+                        'description': move_description,
                         'lines': [('create', move_lines)],
                     }])
                 except Exception as error:
