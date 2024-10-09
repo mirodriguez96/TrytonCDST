@@ -77,6 +77,7 @@ def register():
                   line.Line,
                   liquidation.Liquidation,
                   liquidation.LiquidationLine,
+                  liquidation.AnalyticAccountEntry,
                   pay_mode.VoucherPayMode,
                   payment_bank.PaymentBankGroupStart,
                   payment_bank.AccountBankParty,
