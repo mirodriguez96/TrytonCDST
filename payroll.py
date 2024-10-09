@@ -1729,49 +1729,52 @@ class Payroll(metaclass=PoolMeta):
         """
 
         pool = Pool()
-        LoanLines = pool.get('staff.loan.line')
+        LoanLines = pool.get("staff.loan.line")
         lines_moves = {}
         result = []
         pool = Pool()
-        LoanLines = pool.get('staff.loan.line')
+        LoanLines = pool.get("staff.loan.line")
 
-        mandatory_wages = dict([(m.wage_type.id, m.party)
-                                for m in self.employee.mandatory_wages])
+        mandatory_wage_ = [
+            mandatory for mandatory in self.employee.mandatory_wages]
         employee_id = self.employee.party.id
 
-        Configuration = Pool().get('staff.configuration')
-        configuration = Configuration(1)
-        entity_in_line = configuration.expense_contribution_entity
         debit_acc2 = None
         attr_getter = attrgetter(
-            'amount', 'party', 'amount_60_40', 'wage_type',
-            'wage_type.definition', 'wage_type.account_60_40',
-            'wage_type.debit_account', 'wage_type.credit_account',
-            'wage_type.expense_formula'
+            "amount",
+            "party",
+            "amount_60_40",
+            "wage_type",
+            "wage_type.definition",
+            "wage_type.account_60_40",
+            "wage_type.debit_account",
+            "wage_type.credit_account",
+            "wage_type.expense_formula",
         )
-        for line in self.lines:
-            data = {
-                'origin': None,
-                'reference': None
-            }
-            if line.origin and line.origin.__name__ == LoanLines.__name__:
-                data['origin'] = line.origin
-                data['reference'] = line.origin.loan.number
 
-            amount, party, amount_60_40, wage_type, definition, account_60_40, debit_acc, credit_acc, expense_for = attr_getter(
-                line)
+        for line in self.lines:
+            data = {"origin": None, "reference": None}
+            if line.origin and line.origin.__name__ == LoanLines.__name__:
+                data["origin"] = line.origin
+                data["reference"] = line.origin.loan.number
+
+            (
+                amount,
+                amount_60_40,
+                wage_type,
+                definition,
+                account_60_40,
+                debit_acc,
+                credit_acc,
+                expense_for,
+            ) = attr_getter(line)
+
             if amount <= 0 or not wage_type:
                 continue
-            party_id = party.id if party else None
-            wage_type_id = wage_type.id
-
-            if not party_id:
-                party_id = mandatory_wages[wage_type_id].id\
-                    if mandatory_wages.get(wage_type_id) else employee_id
 
             expense = line.get_expense_amount() if expense_for else Decimal(0)
 
-            if definition == 'payment':
+            if definition == "payment":
                 amount_debit = amount + expense
                 if amount_60_40:
                     amount_debit = amount - amount_60_40
@@ -1786,37 +1789,38 @@ class Payroll(metaclass=PoolMeta):
             amount_credit = amount + expense
 
             try:
+                party_id = self.get_party_payroll_line(
+                    line, mandatory_wage_, employee_id
+                )
                 if debit_acc and amount_debit > _ZERO:
-                    if definition == 'discount':
+                    if definition == "discount":
                         amount_debit = amount_debit * (-1)
                     if debit_acc.id not in lines_moves.keys():
-                        if entity_in_line:
-                            p = party_id
-                        else:
-                            p = employee_id
 
                         lines_moves[debit_acc.id] = {
                             employee_id: line.get_move_line(
-                                debit_acc, p,
-                                ('debit', amount_debit), data
-                            )}
+                                debit_acc, party_id, ("debit",
+                                                      amount_debit), data
+                            )
+                        }
                     else:
                         line.update_move_line(
                             lines_moves[debit_acc.id][employee_id],
-                            {'debit': amount_debit, 'credit': _ZERO}
+                            {"debit": amount_debit, "credit": _ZERO},
                         )
 
                 if debit_acc2:
                     if debit_acc2.id not in lines_moves.keys():
                         lines_moves[debit_acc2.id] = {
                             employee_id: line.get_move_line(
-                                debit_acc2, party_id,
-                                ('debit', amount_debit2), data
-                            )}
+                                debit_acc2, party_id, ("debit",
+                                                       amount_debit2), data
+                            )
+                        }
                     else:
                         line.update_move_line(
                             lines_moves[debit_acc2.id][employee_id],
-                            {'debit': amount_debit, 'credit': _ZERO}
+                            {"debit": amount_debit, "credit": _ZERO},
                         )
 
                 if amount_credit > _ZERO:
@@ -1825,57 +1829,75 @@ class Payroll(metaclass=PoolMeta):
                         if credit_acc.id not in lines_moves.keys():
                             lines_moves[credit_acc.id] = {
                                 party_id: line.get_move_line(
-                                    credit_acc, party_id, ('credit',
-                                                           amount_credit), data
-                                )}
+                                    credit_acc,
+                                    party_id,
+                                    ("credit", amount_credit),
+                                    data,
+                                )
+                            }
                             line_credit_ready = True
                         else:
-                            if line.origin and line.origin.__name__ == LoanLines.__name__:
-                                new_id = f'{credit_acc.id}-{line.id}'
+                            if (
+                                line.origin
+                                and line.origin.__name__ == LoanLines.__name__
+                            ):
+                                new_id = f"{credit_acc.id}-{line.id}"
                                 lines_moves[new_id] = {
                                     party_id: line.get_move_line(
-                                        credit_acc, party_id, ('credit',
-                                                               amount_credit), data
-                                    )}
+                                        credit_acc,
+                                        party_id,
+                                        ("credit", amount_credit),
+                                        data,
+                                    )
+                                }
                                 line_credit_ready = True
 
                             if party_id not in lines_moves[credit_acc.id].keys():
-                                lines_moves[credit_acc.id].update({
-                                    party_id: line.get_move_line(
-                                        credit_acc, party_id, (
-                                            'credit', amount_credit), data
-                                    )
-                                })
+                                lines_moves[credit_acc.id].update(
+                                    {
+                                        party_id: line.get_move_line(
+                                            credit_acc,
+                                            party_id,
+                                            ("credit", amount_credit),
+                                            data,
+                                        )
+                                    }
+                                )
                                 line_credit_ready = True
-                    if definition != 'payment':
+                    if definition != "payment":
                         deduction_acc = wage_type.deduction_account
                         if deduction_acc:
                             if deduction_acc.id not in lines_moves.keys():
                                 lines_moves[deduction_acc.id] = {
                                     employee_id: line.get_move_line(
-                                        deduction_acc, employee_id, (
-                                            'credit', -amount), data
-                                    )}
+                                        deduction_acc,
+                                        employee_id,
+                                        ("credit", -amount),
+                                        data,
+                                    )
+                                }
                                 line_credit_ready = True
                             else:
-                                lines_moves[deduction_acc.id][employee_id]['credit'] -= amount
+                                lines_moves[deduction_acc.id][employee_id][
+                                    "credit"
+                                ] -= amount
 
                     if credit_acc and not line_credit_ready:
-                        lines_moves[credit_acc.id][party_id]['credit'] += amount_credit
+                        lines_moves[credit_acc.id][party_id]["credit"] += amount_credit
             except Exception as e:
                 error = f"{wage_type.name}: {e}"
                 raise UserError(error)
 
         for r in lines_moves.values():
             _line = list(r.values())
-            if _line[0]['debit'] > 0 and _line[0]['credit'] > 0:
-                new_value = _line[0]['debit'] - _line[0]['credit']
+            if _line[0]["debit"] > 0 and _line[0]["credit"] > 0:
+                new_value = _line[0]["debit"] - _line[0]["credit"]
                 if new_value >= 0:
-                    _line[0]['debit'] = abs(new_value)
-                    _line[0]['credit'] = 0
+                    _line[0]["debit"] = abs(new_value)
+                    _line[0]["credit"] = 0
                 else:
-                    _line[0]['credit'] = abs(new_value)
-                    _line[0]['debit'] = 0
+                    _line[0]["credit"] = abs(new_value)
+                    _line[0]["debit"] = 0
             result.extend(_line)
         return result
 
@@ -1901,7 +1923,7 @@ class Payroll(metaclass=PoolMeta):
                     and origin.__name__ == LoanLines.__name__:
                 move_lines = AccountMoveLine.search([('origin', '=', origin),
                                                      ('reference', '=', reference),
-                                                     ('reconciliation',"=",None)])
+                                                     ('reconciliation', "=", None)])
                 if move_lines and len(move_lines) % 2 == 0:
                     for line in move_lines:
                         balance += line.debit - line.credit
@@ -1909,7 +1931,7 @@ class Payroll(metaclass=PoolMeta):
                         if balance == 0:
                             AccountMoveLine.reconcile(move_lines)
                     except Exception as error:
-                        raise(UserError(f"ERROR: {error}"))
+                        raise (UserError(f"ERROR: {error}"))
                 else:
                     for line in self.lines:
                         if line.wage_type.type_concept_electronic == 'Deuda':
@@ -1923,7 +1945,7 @@ class Payroll(metaclass=PoolMeta):
                             if loan_line:
                                 loan_move_line = AccountMoveLine.search(
                                     [('origin', '=', loan_line[0]),
-                                     ('reconciliation',"=",None)])
+                                     ('reconciliation', "=", None)])
 
                                 for lines in loan_move_line:
                                     if lines in conciled_lines:
@@ -1944,7 +1966,8 @@ class Payroll(metaclass=PoolMeta):
                                             conciled_lines.append(line)
                                         break
                                 except Exception as error:
-                                    raise(UserError(f"ERROR: {error}"))
+                                    raise (UserError(f"ERROR: {error}"))
+
 
 class PayrollLine(metaclass=PoolMeta):
     __name__ = "staff.payroll.line"
@@ -2953,6 +2976,7 @@ class PayrollPaycheckReportExten(metaclass=PoolMeta):
             res[key]['variation'] -= line['amount']
             res[key]['extras'] += line['amount']
 
+
 class PayrollElectronicCDS(metaclass=PoolMeta):
     'Staff Payroll Electronic'
     __name__ = 'staff.payroll.electronic'
@@ -3244,7 +3268,7 @@ class PayrollGlobalReport(Report, metaclass=PoolMeta):
 
             for line in payroll.lines:
                 if line.wage_type.type_concept_electronic == 'Dotacion'\
-                    or line.wage_type.type_concept_electronic == 'ViaticoManuAlojNS':
+                        or line.wage_type.type_concept_electronic == 'ViaticoManuAlojNS':
                     continue
 
                 if parties[employee_id]['account'] is None:
@@ -3273,7 +3297,7 @@ class PayrollGlobalReport(Report, metaclass=PoolMeta):
                         concept = 'others_deductions'
                     else:
                         concept = line.wage_type.type_concept
-                
+
                 if not concept:
                     raise UserError(
                         'ERROR', f'El concepto no existe {line.wage_type.name}')
