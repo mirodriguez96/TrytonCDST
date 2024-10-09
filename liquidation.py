@@ -2,6 +2,9 @@ from trytond.exceptions import UserError
 from trytond.model import ModelView, fields
 from trytond.pyson import Eval, Not, Bool
 from trytond.pool import Pool, PoolMeta
+from trytond.pyson import Eval, If
+from trytond.modules.analytic_account import AnalyticMixin
+
 
 from datetime import timedelta, datetime
 from decimal import Decimal
@@ -9,7 +12,7 @@ from dateutil import tz
 import calendar
 
 
-from .constants import (EXTRAS)
+from .constants import EXTRAS
 
 
 def ultimo_dia_del_mes(year, month):
@@ -100,34 +103,13 @@ TYPE_CONCEPT_ELECTRONIC = [
 EXTRAS_CORE = EXTRAS
 
 EXTRAS = {
-    'HED': {
-        'code': 1,
-        'percentaje': '25.00'
-    },
-    'HEN': {
-        'code': 2,
-        'percentaje': '75.00'
-    },
-    'HRN': {
-        'code': 3,
-        'percentaje': '35.00'
-    },
-    'HEDDF': {
-        'code': 4,
-        'percentaje': '100.00'
-    },
-    'HRDDF': {
-        'code': 5,
-        'percentaje': '75.00'
-    },
-    'HENDF': {
-        'code': 6,
-        'percentaje': '150.00'
-    },
-    'HRNDF': {
-        'code': 7,
-        'percentaje': '110.00'
-    },
+    'HED': {'code': 1, 'percentaje': '25.00'},
+    'HEN': {'code': 2, 'percentaje': '75.00'},
+    'HRN': {'code': 3, 'percentaje': '35.00'},
+    'HEDDF': {'code': 4, 'percentaje': '100.00'},
+    'HRDDF': {'code': 5, 'percentaje': '75.00'},
+    'HENDF': {'code': 6, 'percentaje': '150.00'},
+    'HRNDF': {'code': 7, 'percentaje': '110.00'},
 }
 
 _ZERO = Decimal('0.0')
@@ -143,8 +125,13 @@ WEEK_DAYS = {
 }
 
 CONTRACT = [
-    'bonus_service', 'health', 'retirement', 'unemployment', 'interest',
-    'holidays', 'convencional_bonus'
+    'bonus_service',
+    'health',
+    'retirement',
+    'unemployment',
+    'interest',
+    'holidays',
+    'convencional_bonus',
 ]
 
 CONCEPT = ['health', 'retirement']
@@ -163,7 +150,7 @@ MONTH = {
     '09': 'SEPTIEMBRE',
     '10': 'OCTUBRE',
     '11': 'NOVIEMBRE',
-    '12': 'DICIEMBRE'
+    '12': 'DICIEMBRE',
 }
 
 STATE = {
@@ -172,10 +159,19 @@ STATE = {
 }
 
 
+class AnalyticAccountEntry(metaclass=PoolMeta):
+    __name__ = 'analytic.account.entry'
+
+    @classmethod
+    def _get_origin(cls):
+        origins = super(AnalyticAccountEntry, cls)._get_origin()
+        return origins + ['staff.liquidation.line']
+
+
 class Liquidation(metaclass=PoolMeta):
-    __name__ = "staff.liquidation"
+    __name__ = 'staff.liquidation'
     sended_mail = fields.Boolean('Sended Email')
-    origin = fields.Reference("Origin", selection='get_origin')
+    origin = fields.Reference('Origin', selection='get_origin')
 
     @classmethod
     def _get_origin(cls):
@@ -193,11 +189,13 @@ class Liquidation(metaclass=PoolMeta):
     def __setup__(cls):
         super(Liquidation, cls).__setup__()
         cls.state.selection.append(('wait', 'Wait'))
-        cls._buttons.update({
-            'wait': {
-                'invisible': Eval('state') != 'wait',
-            },
-        })
+        cls._buttons.update(
+            {
+                'wait': {
+                    'invisible': Eval('state') != 'wait',
+                },
+            }
+        )
 
     @classmethod
     @ModelView.button
@@ -209,7 +207,11 @@ class Liquidation(metaclass=PoolMeta):
     # Funcion encargada de contar los días festivos
     def count_holidays(self, start_date, end_date, event):
         sundays = 0
-        if event.category.wage_type.type_concept == 'holidays' and event.category.wage_type.type_concept_electronic == 'VacacionesCompensadas':
+        if (
+            event.category.wage_type.type_concept == 'holidays'
+            and event.category.wage_type.type_concept_electronic
+            == 'VacacionesCompensadas'
+        ):
             return sundays
         day = timedelta(days=1)
         # Iterar sobre todas las fechas dentro del rango
@@ -219,11 +221,13 @@ class Liquidation(metaclass=PoolMeta):
                 sundays += 1
             current_date += day
         Holiday = Pool().get('staff.holidays')
-        holidays = Holiday.search([
-            ('holiday', '>=', start_date),
-            ('holiday', '<=', end_date),
-        ],
-            count=True)
+        holidays = Holiday.search(
+            [
+                ('holiday', '>=', start_date),
+                ('holiday', '<=', end_date),
+            ],
+            count=True,
+        )
         return sundays + holidays
 
     def _validate_holidays_lines(self, event, start_date, end_date, days):
@@ -236,7 +240,7 @@ class Liquidation(metaclass=PoolMeta):
         if event.edit_amount:
             amount_day = event.amount
         else:
-            amount_day = (self.contract.salary / 30)
+            amount_day = self.contract.salary / 30
         # amount = amount_day * event.days_of_vacations
         holidays = self.count_holidays(start_date, end_date, event)
         workdays = days - holidays
@@ -259,9 +263,11 @@ class Liquidation(metaclass=PoolMeta):
             else:
                 adjustment_account = line.wage.debit_account
             line.adjustments = [
-                Adjustment(account=adjustment_account,
-                           amount=adjustment,
-                           description=line.description)
+                Adjustment(
+                    account=adjustment_account,
+                    amount=adjustment,
+                    description=line.description,
+                )
             ]
             line.amount = amount_workdays
             line.days = workdays
@@ -269,34 +275,35 @@ class Liquidation(metaclass=PoolMeta):
         if amount_holidays > 0:
             WageType = Pool().get('staff.wage_type')
             wage_type = WageType.search(
-                [('non_working_days', '=', True),
-                 ('department', '=', self.employee.department)],
-                limit=1)
+                [
+                    ('non_working_days', '=', True),
+                    ('department', '=', self.employee.department),
+                ],
+                limit=1,
+            )
             if not wage_type:
-                raise UserError('Wage Type',
-                                'missing wage_type (non_working_days)')
-            wage_type, = wage_type
+                raise UserError(
+                    'Wage Type', 'missing wage_type (non_working_days)')
+            (wage_type,) = wage_type
             value = {
-                'sequence':
-                wage_type.sequence,
-                'wage':
-                wage_type.id,
-                'description':
-                wage_type.name,
-                'amount':
-                amount_holidays,
-                'account':
-                wage_type.debit_account,
-                'days':
-                holidays,
-                'adjustments': [('create', [{
-                    'account':
-                    wage_type.debit_account.id,
-                    'amount':
-                    amount_holidays,
-                    'description':
-                    wage_type.debit_account.name,
-                }])]
+                'sequence': wage_type.sequence,
+                'wage': wage_type.id,
+                'description': wage_type.name,
+                'amount': amount_holidays,
+                'account': wage_type.debit_account,
+                'days': holidays,
+                'adjustments': [
+                    (
+                        'create',
+                        [
+                            {
+                                'account': wage_type.debit_account.id,
+                                'amount': amount_holidays,
+                                'description': wage_type.debit_account.name,
+                            }
+                        ],
+                    )
+                ],
             }
 
             self.write([self], {'lines': [('create', [value])]})
@@ -305,22 +312,26 @@ class Liquidation(metaclass=PoolMeta):
         pool = Pool()
         Period = pool.get('account.period')
         Move = pool.get('account.move')
-
         if self.move:
             return
 
         move_lines, grouped = self.get_moves_lines()
         if move_lines:
-            period_id = Period.find(self.company.id,
-                                    date=self.liquidation_date)
-            move, = Move.create([{
-                'journal': self.journal.id,
-                'origin': str(self),
-                'period': period_id,
-                'date': self.liquidation_date,
-                'description': self.description,
-                'lines': [('create', move_lines)],
-            }])
+            lines = self.lines[0].get_move_line(move_lines)
+            period_id = Period.find(
+                self.company.id, date=self.liquidation_date)
+            (move,) = Move.create(
+                [
+                    {
+                        'journal': self.journal.id,
+                        'origin': str(self),
+                        'period': period_id,
+                        'date': self.liquidation_date,
+                        'description': self.description,
+                        'lines': [('create', lines)],
+                    }
+                ]
+            )
             self.write([self], {'move': move.id})
             self.reconcile_lines(move.lines, grouped)
             self.reconcile_loans(move)
@@ -335,41 +346,43 @@ class Liquidation(metaclass=PoolMeta):
 
         if self.kind == 'contract':
             for ml in move_lines:
-                if (ml.account.id, ml.description,
-                        'payment') not in grouped.keys() or (
-                            ml.account.type.statement not in ('balance')):
+                if (ml.account.id, ml.description, 'payment') not in grouped.keys() or (
+                    ml.account.type.statement not in ('balance')
+                ):
                     continue
                 to_reconcile = [ml]
 
                 if grouped[(ml.account.id, ml.description, 'payment')]:
-                    to_reconcile.extend(grouped[(ml.account.id, ml.description,
-                                                 'payment')]['lines'])
+                    to_reconcile.extend(
+                        grouped[(ml.account.id, ml.description,
+                                 'payment')]['lines']
+                    )
                 if len(to_reconcile) > 1:
                     note = Note.search([])
                     writeoff = None
                     if note:
                         writeoff = note[0]
-                    MoveLine.reconcile(
-                        set(to_reconcile), writeoff=writeoff)
+                    MoveLine.reconcile(set(to_reconcile), writeoff=writeoff)
         else:
             for ml in move_lines:
-                if (ml.account.id, ml.description,
-                        'payment') not in grouped.keys() or (
-                            ml.account.type.statement not in ('balance')):
+                if (ml.account.id, ml.description, 'payment') not in grouped.keys() or (
+                    ml.account.type.statement not in ('balance')
+                ):
                     continue
                 to_reconcile = [ml]
 
                 if grouped[(ml.account.id, ml.description, 'payment')]:
-                    to_reconcile.extend(grouped[(ml.account.id, ml.description,
-                                                 'payment')]['lines'])
+                    to_reconcile.extend(
+                        grouped[(ml.account.id, ml.description,
+                                 'payment')]['lines']
+                    )
                 if len(to_reconcile) > 1 and reconcile:
                     reconcile = False
                     note = Note.search([])
                     writeoff = None
                     if note:
                         writeoff = note[0]
-                    MoveLine.reconcile(
-                        set(to_reconcile), writeoff=writeoff)
+                    MoveLine.reconcile(set(to_reconcile), writeoff=writeoff)
 
     def reconcile_loans(self, move):
         pool = Pool()
@@ -383,8 +396,11 @@ class Liquidation(metaclass=PoolMeta):
                     loan_line = LoanLines.search([('origin', '=', line)])
                     if loan_line:
                         loan_move_line = AccountMoveLine.search(
-                            [('origin', '=', loan_line[0]),
-                             ('reconciliation', '=', None)])
+                            [
+                                ('origin', '=', loan_line[0]),
+                                ('reconciliation', '=', None),
+                            ]
+                        )
                         if loan_move_line[0] in conciled_lines:
                             break
                         reference = loan_line[0].loan.number
@@ -395,21 +411,23 @@ class Liquidation(metaclass=PoolMeta):
                             try:
                                 if move_line.description == line.description:
                                     lines_to_reconcile = []
-                                    balance += move_line.debit - move_line.credit\
-                                        + loan_move_line[0].debit - \
-                                        loan_move_line[0].credit
+                                    balance += (
+                                        move_line.debit
+                                        - move_line.credit
+                                        + loan_move_line[0].debit
+                                        - loan_move_line[0].credit
+                                    )
                                     if balance == 0:
                                         move_line.reference = reference
                                         move_line.save()
                                         lines_to_reconcile.append(
                                             loan_move_line[0])
-                                        lines_to_reconcile.append(
-                                            move_line)
+                                        lines_to_reconcile.append(move_line)
                                         if lines_to_reconcile:
                                             AccountMoveLine.reconcile(
-                                                lines_to_reconcile)
-                                            conciled_lines.append(
-                                                move_line)
+                                                lines_to_reconcile
+                                            )
+                                            conciled_lines.append(move_line)
                                             conciled_lines.append(
                                                 loan_move_line[0])
                                             break
@@ -422,12 +440,15 @@ class Liquidation(metaclass=PoolMeta):
                 balance = 0
 
                 # Validate if is loan lines to conciliate
-                if origin and reference\
-                        and origin.__name__ == LoanLines.__name__:
+                if origin and reference and origin.__name__ == LoanLines.__name__:
 
-                    move_lines = AccountMoveLine.search([('origin', '=', origin),
-                                                         ('reference', '=', reference),
-                                                         ('reconciliation', '=', None)])
+                    move_lines = AccountMoveLine.search(
+                        [
+                            ('origin', '=', origin),
+                            ('reference', '=', reference),
+                            ('reconciliation', '=', None),
+                        ]
+                    )
 
                     if len(move_lines) % 2 == 0 and move_lines:
                         for line in move_lines:
@@ -447,8 +468,11 @@ class Liquidation(metaclass=PoolMeta):
                                     ['origin', '=', line])
                                 if loan_line:
                                     loan_move_line = AccountMoveLine.search(
-                                        [('origin', '=', loan_line[0]),
-                                         ('reconciliation', '=', None)])
+                                        [
+                                            ('origin', '=', loan_line[0]),
+                                            ('reconciliation', '=', None),
+                                        ]
+                                    )
 
                                     for lines in loan_move_line:
                                         if lines in conciled_lines:
@@ -465,7 +489,8 @@ class Liquidation(metaclass=PoolMeta):
                                                 loan_move_line)
                                             if lines_to_reconcile:
                                                 AccountMoveLine.reconcile(
-                                                    lines_to_reconcile)
+                                                    lines_to_reconcile
+                                                )
                                                 for line in loan_move_line:
                                                     conciled_lines.append(line)
                                                 break
@@ -483,17 +508,15 @@ class Liquidation(metaclass=PoolMeta):
         result = None
 
         wages = [
-            wage_type for wage_type in self.employee.mandatory_wages
+            wage_type
+            for wage_type in self.employee.mandatory_wages
             if wage_type.wage_type.type_concept == 'retirement'
             and self.kind == 'holidays'
         ]
 
         for line in self.lines:
             analytic_account = None
-            data = {
-                'origin': None,
-                'reference': None
-            }
+            data = {'origin': None, 'reference': None}
             analytic_account = self.get_wage_analytic_account(line)
 
             if line.origin and line.origin.__name__ == LoanLines.__name__:
@@ -504,8 +527,11 @@ class Liquidation(metaclass=PoolMeta):
                 for moveline in line.move_lines:
                     to_reconcile.append(moveline)
                     amount_line = moveline.debit - moveline.credit * -1
-                    account_id = (moveline.account.id, line.description,
-                                  line.wage.definition)
+                    account_id = (
+                        moveline.account.id,
+                        line.description,
+                        line.wage.definition,
+                    )
                     if account_id not in grouped.keys():
                         grouped[account_id] = {
                             'amount': [],
@@ -514,7 +540,7 @@ class Liquidation(metaclass=PoolMeta):
                             'party_to_pay': line.party_to_pay,
                             'lines': [],
                             'origin': data['origin'],
-                            'reference': data['reference']
+                            'reference': data['reference'],
                         }
                     grouped[account_id]['amount'].append(amount_line)
                     grouped[account_id]['lines'].append(moveline)
@@ -530,7 +556,7 @@ class Liquidation(metaclass=PoolMeta):
                         'party_to_pay': line.party_to_pay,
                         'lines': [],
                         'origin': data['origin'],
-                        'reference': data['reference']
+                        'reference': data['reference'],
                     }
                 grouped[account_id]['amount'].append(line.amount)
                 amount.append(line.amount)
@@ -546,7 +572,7 @@ class Liquidation(metaclass=PoolMeta):
                         'lines': [],
                         'origin': data['origin'],
                         'reference': data['reference'],
-                        'analytic': analytic_account
+                        'analytic': analytic_account,
                     }
 
                 grouped[key]['amount'].append(adjust.amount)
@@ -568,12 +594,13 @@ class Liquidation(metaclass=PoolMeta):
                             result = self._prepare_line(
                                 values['description'],
                                 wages[0].wage_type.debit_account.id,
-                                debit=round(self.gross_payments * Decimal(0.12),
-                                            2),
+                                debit=round(self.gross_payments *
+                                            Decimal(0.12), 2),
                                 credit=_ZERO,
                                 analytic=values.get('analytic', None),
                                 origin=origin_,
-                                reference=reference_)
+                                reference=reference_,
+                            )
 
                             values['amount'] = [
                                 round(self.gross_payments *
@@ -584,14 +611,17 @@ class Liquidation(metaclass=PoolMeta):
             debit = _amount
             credit = _ZERO
             lines_moves.append(
-                self._prepare_line(values['description'],
-                                   account_id,
-                                   debit=debit,
-                                   credit=credit,
-                                   party_to_pay_concept=party_payment,
-                                   analytic=values.get('analytic', None),
-                                   origin=origin_,
-                                   reference=reference_))
+                self._prepare_line(
+                    values['description'],
+                    account_id,
+                    debit=debit,
+                    credit=credit,
+                    party_to_pay_concept=party_payment,
+                    analytic=values.get('analytic', None),
+                    origin=origin_,
+                    reference=reference_,
+                )
+            )
 
         if result is not None:
             lines_moves.append(result)
@@ -603,7 +633,8 @@ class Liquidation(metaclass=PoolMeta):
                     self.account,
                     credit=sum(amount),
                     party_to_pay=self.party_to_pay,
-                ))
+                )
+            )
         return lines_moves, grouped
 
     def get_wage_analytic_account(self, line):
@@ -617,18 +648,23 @@ class Liquidation(metaclass=PoolMeta):
                 if line.liquidation.origin:
                     analytic_code = line.liquidation.origin.analytic_account
                     analytic_account = AnalyticAccount.search(
-                        ['code', '=', analytic_code])
+                        ['code', '=', analytic_code]
+                    )
 
                 else:
-                    employee = line.liquidation.employee\
-                        if line.liquidation.employee\
+                    employee = (
+                        line.liquidation.employee
+                        if line.liquidation.employee
                         else line.liquidation.contract.employee
+                    )
                     mandatories = MandatoryWage.search(
                         ['employee', '=', employee])
                     if mandatories:
                         for mandatory in mandatories:
-                            if mandatory.analytic_account\
-                                    and mandatory.analytic_account.type == 'normal':
+                            if (
+                                mandatory.analytic_account
+                                and mandatory.analytic_account.type == 'normal'
+                            ):
                                 analytic_account.append(
                                     mandatory.analytic_account)
                                 break
@@ -638,16 +674,18 @@ class Liquidation(metaclass=PoolMeta):
         else:
             return None
 
-    def _prepare_line(self,
-                      description,
-                      account_id,
-                      debit=_ZERO,
-                      credit=_ZERO,
-                      party_to_pay=None,
-                      analytic=None,
-                      party_to_pay_concept=None,
-                      origin=None,
-                      reference=None):
+    def _prepare_line(
+        self,
+        description,
+        account_id,
+        debit=_ZERO,
+        credit=_ZERO,
+        party_to_pay=None,
+        analytic=None,
+        party_to_pay_concept=None,
+        origin=None,
+        reference=None,
+    ):
         if debit < _ZERO:
             credit = debit
             debit = _ZERO
@@ -671,16 +709,23 @@ class Liquidation(metaclass=PoolMeta):
             'account': account_id,
             'party': party_id,
             'origin': origin,
-            'reference': reference
+            'reference': reference,
         }
 
         if analytic and debit > 0:
-            res['analytic_lines'] = [('create', [{
-                'debit': res['debit'],
-                'credit': res['credit'],
-                'account': analytic.id,
-                'date': self.liquidation_date
-            }])]
+            res['analytic_lines'] = [
+                (
+                    'create',
+                    [
+                        {
+                            'debit': res['debit'],
+                            'credit': res['credit'],
+                            'account': analytic.id,
+                            'date': self.liquidation_date,
+                        }
+                    ],
+                )
+            ]
         return res
 
     def set_liquidation_lines(self):
@@ -688,17 +733,20 @@ class Liquidation(metaclass=PoolMeta):
         Payroll = pool.get('staff.payroll')
         LiquidationMove = pool.get('staff.liquidation.line-move.line')
         date_start, date_end = self._get_dates_liquidation()
-        payrolls = Payroll.search([('employee', '=', self.employee.id),
-                                   ('start', '>=', date_start),
-                                   ('end', '<=', date_end),
-                                   ('contract', '=', self.contract.id),
-                                   ('state', '=', 'posted')])
+        payrolls = Payroll.search(
+            [
+                ('employee', '=', self.employee.id),
+                ('start', '>=', date_start),
+                ('end', '<=', date_end),
+                ('contract', '=', self.contract.id),
+                ('state', '=', 'posted'),
+            ]
+        )
         wages = {}
         wages_target = {}
         for payroll in payrolls:
             mandatory_wages = [
-                i.wage_type for i in payroll.employee.mandatory_wages
-            ]
+                i.wage_type for i in payroll.employee.mandatory_wages]
             for l in payroll.lines:
                 if not l.wage_type.contract_finish:
                     continue
@@ -708,10 +756,13 @@ class Liquidation(metaclass=PoolMeta):
                 elif self.kind != l.wage_type.type_concept:
                     continue
 
-                if l.wage_type.id not in wages_target.keys(
-                ) and l.wage_type in mandatory_wages:
+                if (
+                    l.wage_type.id not in wages_target.keys()
+                    and l.wage_type in mandatory_wages
+                ):
                     mlines = self.get_moves_lines_pending(
-                        payroll.employee, l.wage_type, date_end)
+                        payroll.employee, l.wage_type, date_end
+                    )
                     if not mlines:
                         continue
                     wages_target[l.wage_type.id] = [
@@ -720,7 +771,7 @@ class Liquidation(metaclass=PoolMeta):
                         l.wage_type,
                     ]
 
-        for (account_id, lines, wage_type) in wages_target.values():
+        for account_id, lines, wage_type in wages_target.values():
             values = []
             lines_to_reconcile = []
             for line in lines:
@@ -728,15 +779,19 @@ class Liquidation(metaclass=PoolMeta):
                 if not _line:
                     values.append(abs(line.debit - line.credit))
                     lines_to_reconcile.append(line.id)
-            value = self.get_line_(wage_type,
-                                   sum(values),
-                                   self.time_contracting,
-                                   account_id,
-                                   party=self.party_to_pay)
+            value = self.get_line_(
+                wage_type,
+                sum(values),
+                self.time_contracting,
+                account_id,
+                party=self.party_to_pay,
+            )
 
-            value.update({
-                'move_lines': [('add', lines_to_reconcile)],
-            })
+            value.update(
+                {
+                    'move_lines': [('add', lines_to_reconcile)],
+                }
+            )
             wages[wage_type.id] = value
 
         self.write([self], {'lines': [('create', wages.values())]})
@@ -762,19 +817,23 @@ class Liquidation(metaclass=PoolMeta):
         lines_loan = LoanLine.search(dom)
         for loan in lines_loan:
 
-            move_lines = MoveLine.search([
-                ('origin', 'in', ['staff.loan.line,' + str(loan)]),
-            ])
+            move_lines = MoveLine.search(
+                [
+                    ('origin', 'in', ['staff.loan.line,' + str(loan)]),
+                ]
+            )
             party = loan.loan.party_to_pay.id if loan.loan.party_to_pay else None
-            res = self.get_line_(loan.loan.wage_type,
-                                 loan.amount * -1,
-                                 1,
-                                 loan.loan.account_debit.id,
-                                 party=party)
+            res = self.get_line_(
+                loan.loan.wage_type,
+                loan.amount * -1,
+                1,
+                loan.loan.account_debit.id,
+                party=party,
+            )
             res['origin'] = loan
             res['move_lines'] = [('add', move_lines)]
             res['liquidation'] = self.id
-            line_, = LiquidationLine.create([res])
+            (line_,) = LiquidationLine.create([res])
             loan.amount = abs(loan.amount * -1)
             loan.save()
             LoanLine.write([loan], {'state': 'paid', 'origin': line_})
@@ -793,9 +852,24 @@ class Liquidation(metaclass=PoolMeta):
         return delta
 
 
-class LiquidationLine(metaclass=PoolMeta):
-    __name__ = "staff.liquidation.line"
-    origin = fields.Reference("Origin", selection='get_origin')
+class LiquidationLine(AnalyticMixin, metaclass=PoolMeta):
+    __name__ = 'staff.liquidation.line'
+    origin = fields.Reference('Origin', selection='get_origin')
+
+    @classmethod
+    def __setup__(cls):
+        super(LiquidationLine, cls).__setup__()
+        cls.analytic_accounts.domain = [
+            (
+                'company',
+                '=',
+                If(
+                    ~Eval('_parent_liquidation'),
+                    Eval('context', {}).get('company', -1),
+                    Eval('_parent_liquidation', {}).get('company', -1),
+                ),
+            ),
+        ]
 
     @classmethod
     def _get_origin(cls):
@@ -808,6 +882,45 @@ class LiquidationLine(metaclass=PoolMeta):
         get_name = Model.get_name
         models = cls._get_origin()
         return [(None, '')] + [(m, get_name(m)) for m in models]
+
+    def get_analytic_lines(self, account, line, date):
+        'Yield analytic lines for the accounting line and the date'
+        lines = []
+        amount = line['debit'] or line['credit']
+        for account, amount in account.distribute(amount):
+            analytic_line = {}
+            analytic_line['debit'] = amount if line['debit'] else Decimal(0)
+            analytic_line['credit'] = amount if line['credit'] else Decimal(0)
+            analytic_line['account'] = account
+            analytic_line['date'] = date
+            lines.append(analytic_line)
+        return lines
+
+    def _get_entry(self, line_move):
+        if self.analytic_accounts:
+            line_move['analytic_lines'] = []
+            to_create = []
+            for entry in self.analytic_accounts:
+                if not entry.account:
+                    continue
+                # Just debits must to create entries, credits not
+                if not entry.account or line_move['debit'] == 0:
+                    continue
+                to_create.extend(
+                    self.get_analytic_lines(
+                        entry.account, line_move, self.liquidation.liquidation_date
+                    )
+                )
+            if to_create:
+                line_move['analytic_lines'] = [('create', to_create)]
+        return line_move
+
+    def get_move_line(self, lines):
+        lines_ = []
+        for line in lines:
+            line_ = self._get_entry(line)
+            lines_.append(line_)
+        return lines_
 
 
 class LiquidationReport(metaclass=PoolMeta):
@@ -827,15 +940,22 @@ class LiquidationReport(metaclass=PoolMeta):
         for record in records:
             if record.kind == 'holidays':
                 for liq_line in record.lines:
-                    if liq_line.wage.type_concept == 'holidays' and liq_line.wage.type_concept_electronic in (
-                            'VacacionesComunes', 'VacacionesCompensadas'):
-                        event = Event.search([('staff_liquidation', '=',
-                                               liq_line.liquidation.id)])
+                    if (
+                        liq_line.wage.type_concept == 'holidays'
+                        and liq_line.wage.type_concept_electronic
+                        in ('VacacionesComunes', 'VacacionesCompensadas')
+                    ):
+                        event = Event.search(
+                            [('staff_liquidation', '=', liq_line.liquidation.id)]
+                        )
                         if event:
                             start_date = event[0].event.start_date
                             end_date = event[0].event.end_date
                         total_days_holidays += liq_line.days
-                    if liq_line.wage.type_concept == 'salary' and liq_line.wage.type_concept_electronic == 'Basico':
+                    if (
+                        liq_line.wage.type_concept == 'salary'
+                        and liq_line.wage.type_concept_electronic == 'Basico'
+                    ):
                         total_salaries += liq_line.days
                     if liq_line.wage.type_concept_electronic == 'LicenciaNR':
                         licenseNR += liq_line.days
@@ -882,8 +1002,7 @@ class MoveProvisionBonusService(metaclass=PoolMeta):
 
             if self.start.category:
                 dom_contract.append(
-                    ('employee.category', '=', self.start.category.id)
-                )
+                    ('employee.category', '=', self.start.category.id))
 
             for contract in Contract.search(dom_contract):
                 try:
@@ -897,15 +1016,20 @@ class MoveProvisionBonusService(metaclass=PoolMeta):
                     for concept in contract.employee.mandatory_wages:
                         if concept.wage_type.debit_account:
                             debit_account_ = provision_wage.debit_account
-                            if debit_account_.analytical_management\
-                                    and analytic_account is None\
-                                    and concept.analytic_account\
-                                    and concept.analytic_account.type == 'normal':
+                            if (
+                                debit_account_.analytical_management
+                                and analytic_account is None
+                                and concept.analytic_account
+                                and concept.analytic_account.type == 'normal'
+                            ):
                                 analytic_account = concept.analytic_account
                         if concept.wage_type and concept.wage_type.salary_constitute:
                             if concept.wage_type.type_concept == 'transport':
-                                base_ += (concept.wage_type.compute_unit_price(
-                                    {'salary': 0}) * concept.wage_type.default_quantity) * 2
+                                base_ += (
+                                    concept.wage_type.compute_unit_price(
+                                        {'salary': 0})
+                                    * concept.wage_type.default_quantity
+                                ) * 2
                             if concept.fix_amount:
                                 base_ += concept.fix_amount
 
@@ -920,23 +1044,30 @@ class MoveProvisionBonusService(metaclass=PoolMeta):
                             'debit': provision_amount,
                             'credit': 0,
                             'party': employee.party.id,
-                            'account': provision_wage.debit_account.id
+                            'account': provision_wage.debit_account.id,
                         },
                         {
                             'debit': 0,
                             'credit': provision_amount,
                             'party': employee.party.id,
-                            'account': provision_wage.credit_account.id
-                        }
+                            'account': provision_wage.credit_account.id,
+                        },
                     ]
 
                     if analytic_account:
-                        base_lines[0]['analytic_lines'] = [('create', [{
-                            'debit': provision_amount,
-                            'credit': 0,
-                            'account': analytic_account,
-                            'date': date_today
-                        }])]
+                        base_lines[0]['analytic_lines'] = [
+                            (
+                                'create',
+                                [
+                                    {
+                                        'debit': provision_amount,
+                                        'credit': 0,
+                                        'account': analytic_account,
+                                        'date': date_today,
+                                    }
+                                ],
+                            )
+                        ]
                     move_lines.extend(base_lines)
 
                     move_description = f'{self.start.description}-{employee.party.name}'
@@ -950,8 +1081,8 @@ class MoveProvisionBonusService(metaclass=PoolMeta):
                         'lines': [('create', move_lines)],
                     }])
                 except Exception as error:
-                    raise UserError(f"Error: {str(error)}")
+                    raise UserError(f'Error: {str(error)}')
         except Exception as error:
-            raise UserError(f"Error: {str(error)}")
+            raise UserError(f'Error: {str(error)}')
 
         return 'end'

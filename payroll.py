@@ -1,6 +1,5 @@
 from trytond.exceptions import UserError, UserWarning
-from trytond.wizard import (Wizard, StateView, Button, StateReport,
-                            StateTransition)
+from trytond.wizard import Wizard, StateView, Button, StateReport, StateTransition
 from trytond.model import ModelSQL, ModelView, fields
 from trytond.modules.company import CompanyReport
 from trytond.pyson import Eval, Or, Not, If, Bool
@@ -34,7 +33,7 @@ import calendar
 import copy
 
 
-from .constants import (FIELDS_AMOUNT,  SHEET_SUMABLES, EXTRAS)
+from .constants import FIELDS_AMOUNT, SHEET_SUMABLES, EXTRAS
 
 
 def ultimo_dia_del_mes(year, month):
@@ -125,34 +124,13 @@ TYPE_CONCEPT_ELECTRONIC = [
 EXTRAS_CORE = EXTRAS
 
 EXTRAS = {
-    'HED': {
-        'code': 1,
-        'percentaje': '25.00'
-    },
-    'HEN': {
-        'code': 2,
-        'percentaje': '75.00'
-    },
-    'HRN': {
-        'code': 3,
-        'percentaje': '35.00'
-    },
-    'HEDDF': {
-        'code': 4,
-        'percentaje': '100.00'
-    },
-    'HRDDF': {
-        'code': 5,
-        'percentaje': '75.00'
-    },
-    'HENDF': {
-        'code': 6,
-        'percentaje': '150.00'
-    },
-    'HRNDF': {
-        'code': 7,
-        'percentaje': '110.00'
-    },
+    'HED': {'code': 1, 'percentaje': '25.00'},
+    'HEN': {'code': 2, 'percentaje': '75.00'},
+    'HRN': {'code': 3, 'percentaje': '35.00'},
+    'HEDDF': {'code': 4, 'percentaje': '100.00'},
+    'HRDDF': {'code': 5, 'percentaje': '75.00'},
+    'HENDF': {'code': 6, 'percentaje': '150.00'},
+    'HRNDF': {'code': 7, 'percentaje': '110.00'},
 }
 
 _ZERO = Decimal('0.0')
@@ -168,8 +146,13 @@ WEEK_DAYS = {
 }
 
 CONTRACT = [
-    'bonus_service', 'health', 'retirement', 'unemployment', 'interest',
-    'holidays', 'convencional_bonus'
+    'bonus_service',
+    'health',
+    'retirement',
+    'unemployment',
+    'interest',
+    'holidays',
+    'convencional_bonus',
 ]
 
 CONCEPT = ['health', 'retirement']
@@ -198,7 +181,7 @@ MONTH = {
     '09': 'SEPTIEMBRE',
     '10': 'OCTUBRE',
     '11': 'NOVIEMBRE',
-    '12': 'DICIEMBRE'
+    '12': 'DICIEMBRE',
 }
 
 STATE = {
@@ -212,23 +195,31 @@ try:
 except ImportError:
     html2text = None
 
-HTML_EMAIL = """<!DOCTYPE html>
+HTML_EMAIL = '''<!DOCTYPE html>
 <html>
 <head><title>%(subject)s</title></head>
 <body>%(body)s<br/>
-<hr style="width: 2em; text-align: start; display: inline-block"/><br/>
+<hr style='width: 2em; text-align: start; display: inline-block'/><br/>
 %(signature)s</body>
-</html>"""
+</html>'''
 
 
 def _get_emails(value):
-    "Return list of email from the comma separated list"
+    'Return list of email from the comma separated list'
     return [e for n, e in getaddresses([value]) if e]
 
 
-_TYPES_PAYMENT = [('220', '220'), ('225', '225'), ('238', '238'),
-                  ('240', '240'), ('239', '239'), ('320', '320'),
-                  ('325', "325"), ('820', '820'), ('920', '920')]
+_TYPES_PAYMENT = [
+    ('220', '220'),
+    ('225', '225'),
+    ('238', '238'),
+    ('240', '240'),
+    ('239', '239'),
+    ('320', '320'),
+    ('325', '325'),
+    ('820', '820'),
+    ('920', '920'),
+]
 
 CONCEPT_ACCESS = {
     'HED': 'hedo',
@@ -241,34 +232,13 @@ CONCEPT_ACCESS = {
 }
 
 EXTRAS = {
-    'HED': {
-        'code': 1,
-        'percentaje': '25.00'
-    },
-    'HEN': {
-        'code': 2,
-        'percentaje': '75.00'
-    },
-    'HRN': {
-        'code': 3,
-        'percentaje': '35.00'
-    },
-    'HEDDF': {
-        'code': 4,
-        'percentaje': '100.00'
-    },
-    'HRDDF': {
-        'code': 5,
-        'percentaje': '75.00'
-    },
-    'HENDF': {
-        'code': 6,
-        'percentaje': '150.00'
-    },
-    'HRNDF': {
-        'code': 7,
-        'percentaje': '110.00'
-    },
+    'HED': {'code': 1, 'percentaje': '25.00'},
+    'HEN': {'code': 2, 'percentaje': '75.00'},
+    'HRN': {'code': 3, 'percentaje': '35.00'},
+    'HEDDF': {'code': 4, 'percentaje': '100.00'},
+    'HRDDF': {'code': 5, 'percentaje': '75.00'},
+    'HENDF': {'code': 6, 'percentaje': '150.00'},
+    'HRNDF': {'code': 7, 'percentaje': '110.00'},
 }
 
 _TYPE_DOCUMENT = {
@@ -291,44 +261,42 @@ _TYPE_TRANSACTION = [
 class StaffConfiguration(metaclass=PoolMeta):
     __name__ = 'staff.configuration'
 
-    default_hour_biweekly = fields.Numeric('Default Hour Biweekly',
-                                           digits=(16, 2),
-                                           required=True,
-                                           help='In hours')
+    default_hour_biweekly = fields.Numeric(
+        'Default Hour Biweekly', digits=(16, 2), required=True, help='In hours'
+    )
 
     @classmethod
     def __setup__(cls):
         super(StaffConfiguration, cls).__setup__()
-        cls.default_hour_workday = fields.Numeric('Default Hour Workday',
-                                                  digits=(16, 2),
-                                                  required=True,
-                                                  help='In hours')
+        cls.default_hour_workday = fields.Numeric(
+            'Default Hour Workday', digits=(16, 2), required=True, help='In hours'
+        )
 
 
 class Bank(metaclass=PoolMeta):
     'Bank'
     __name__ = 'bank'
     bank_code_sap = fields.Char(
-        'Bank code SAP',
-        help='bank code used for the bancolombia payment template')
+        'Bank code SAP', help='bank code used for the bancolombia payment template'
+    )
 
 
 class WageType(metaclass=PoolMeta):
     __name__ = 'staff.wage_type'
     non_working_days = fields.Boolean(
-        'Non-working days',
-        states={'invisible': (Eval('type_concept') != 'holidays')})
+        'Non-working days', states={'invisible': (Eval('type_concept') != 'holidays')}
+    )
 
     excluded_payroll_electronic = fields.Boolean(
-        'Excluded Payroll',
-        states={'invisible': (Eval('type_concept') != 'holidays')})
+        'Excluded Payroll', states={'invisible': (Eval('type_concept') != 'holidays')}
+    )
 
-    pay_liqudation = fields.Boolean('Pay Liquidation',
-                                    states={
-                                        'invisible':
-                                        (Eval('type_concept_electronic')
-                                         not in ['Deuda', 'Libranza'])
-                                    })
+    pay_liqudation = fields.Boolean(
+        'Pay Liquidation',
+        states={
+            'invisible': (Eval('type_concept_electronic') not in ['Deuda', 'Libranza'])
+        },
+    )
     department = fields.Many2One('company.department', 'Department')
 
 
@@ -336,23 +304,25 @@ class PayrollPaymentStartBcl(ModelView):
     'Payroll Payment Start'
     __name__ = 'staff.payroll_payment_bancolombia.start'
     period = fields.Many2One('staff.payroll.period', 'Period', required=True)
-    party = fields.Function(fields.Many2One('party.party', 'Party Bank'),
-                            'on_change_with_party')
+    party = fields.Function(
+        fields.Many2One('party.party', 'Party Bank'), 'on_change_with_party'
+    )
     company = fields.Many2One('company.company', 'Company', required=True)
     department = fields.Many2One('company.department', 'Department')
-    payment_type = fields.Selection(_TYPES_PAYMENT,
-                                    'Type payment',
-                                    required=True)
+    payment_type = fields.Selection(
+        _TYPES_PAYMENT, 'Type payment', required=True)
     send_sequence = fields.Char('Shipping sequence', size=1)
     reference = fields.Char('Reference', required=True, size=9)
-    type_transaction = fields.Selection(_TYPE_TRANSACTION,
-                                        'Type of transaction',
-                                        required=True)
-    bank = fields.Many2One('bank.account',
-                           'Bank Account',
-                           domain=[('owners', '=', Eval('party'))],
-                           depends=['party'],
-                           required=True)
+    type_transaction = fields.Selection(
+        _TYPE_TRANSACTION, 'Type of transaction', required=True
+    )
+    bank = fields.Many2One(
+        'bank.account',
+        'Bank Account',
+        domain=[('owners', '=', Eval('party'))],
+        depends=['party'],
+        required=True,
+    )
 
     @fields.depends('company')
     def on_change_with_party(self, name=None):
@@ -370,11 +340,14 @@ class PayrollPaymentStartBcl(ModelView):
 class PayrollPaymentBcl(Wizard):
     'Payroll Payment'
     __name__ = 'staff.payroll.payment_bancolombia'
-    start = StateView('staff.payroll_payment_bancolombia.start',
-                      'conector.payroll_payment_start_bancolombia_view_form', [
-                          Button('Cancel', 'end', 'tryton-cancel'),
-                          Button('Print', 'print_', 'tryton-ok', default=True),
-                      ])
+    start = StateView(
+        'staff.payroll_payment_bancolombia.start',
+        'conector.payroll_payment_start_bancolombia_view_form',
+        [
+            Button('Cancel', 'end', 'tryton-cancel'),
+            Button('Print', 'print_', 'tryton-ok', default=True),
+        ],
+    )
     print_ = StateReport('staff.payroll.payment_report_bancolombia')
 
     def do_print_(self, action):
@@ -401,8 +374,10 @@ class PayrollPaymentBcl(Wizard):
         for payroll in payrolls:
             accouns_bank = list(payroll.employee.party.bank_accounts)
             if accouns_bank == []:
-                nothin_accounts = nothin_accounts + \
-                    f"EL empleado {payroll.employee.party.name} no tiene una cuenta asociada  \n"
+                nothin_accounts = (
+                    nothin_accounts
+                    + f'EL empleado {payroll.employee.party.name} no tiene una cuenta asociada  \n'
+                )
                 continue
             # for ref in accouns_bank:
             #     if bank == ref.bank:
@@ -412,32 +387,36 @@ class PayrollPaymentBcl(Wizard):
             if type_document not in _TYPE_DOCUMENT:
                 raise UserError(
                     'error: type_document',
-                    f'{type_document} not found for type_document bancolombia')
+                    f'{type_document} not found for type_document bancolombia',
+                )
             values['type_document'] = _TYPE_DOCUMENT[type_document]
-            values['id_number'] = str(
-                payroll.employee.party.number_pay_payroll
-            ) + str(
-                payroll.employee.party.id_number
-            ) if type_document == '41' else payroll.employee.party.id_number
+            values['id_number'] = (
+                str(payroll.employee.party.number_pay_payroll)
+                + str(payroll.employee.party.id_number)
+                if type_document == '41'
+                else payroll.employee.party.id_number
+            )
             values['email'] = payroll.employee.party.email
             bank_code_sap = None
             if payroll.employee.party.bank_accounts:
                 bank_code_sap = payroll.employee.party.bank_accounts[
-                    0].bank.bank_code_sap
+                    0
+                ].bank.bank_code_sap
             values['bank_code_sap'] = bank_code_sap
             values['bank_account'] = payroll.employee.party.bank_account
-            type_account_payment_party = Type_bank_numbers.search([
-                ('number', '=', str(payroll.employee.party.bank_account))
-            ])
+            type_account_payment_party = Type_bank_numbers.search(
+                [('number', '=', str(payroll.employee.party.bank_account))]
+            )
             values['type_account_payment'] = _TYPES_BANK_ACCOUNT_.get(
-                type_account_payment_party[0].type_string)
+                type_account_payment_party[0].type_string
+            )
             net_payment = Decimal(round(payroll.net_payment, 0))
             values['net_payment'] = net_payment
             if values['id_number'] in id_numbers:
                 if not duplicate_employees:
                     duplicate_employees = values['employee']
                 else:
-                    duplicate_employees += ", " + values['employee']
+                    duplicate_employees += ', ' + values['employee']
             id_numbers.append(values['id_number'])
             result.append(values)
             #     break
@@ -447,23 +426,26 @@ class PayrollPaymentBcl(Wizard):
             # Se valida si se encontraron nóminas del mismo empleado en el periodo seleccionado y se muestra una alerta.
         if duplicate_employees or nothin_accounts:
             Warning = pool.get('res.user.warning')
-            warning_name = "warning_payment_report_bancolombia"
+            warning_name = 'warning_payment_report_bancolombia'
             if duplicate_employees:
-                duplicate_employees = "Existen empleados con más de 1 nómina en el mismo periodo. "\
-                    f"Revisar: {duplicate_employees}"
+                duplicate_employees = (
+                    'Existen empleados con más de 1 nómina en el mismo periodo. '
+                    f'Revisar: {duplicate_employees}'
+                )
             if Warning.check(warning_name):
                 raise UserWarning(
-                    warning_name,
-                    f"{duplicate_employees} \n {nothin_accounts}.")
+                    warning_name, f'{duplicate_employees} \n {nothin_accounts}.'
+                )
 
         # Se construye diccionario a retornar
         type_bank_account = _TYPES_BANKS.get(
-            str(self.start.bank.numbers[0].type_string))
+            str(self.start.bank.numbers[0].type_string)
+        )
         data = {
             'company': {
                 'id_number': self.start.company.party.id_number,
                 'name': self.start.company.party.name,
-                'bank_account': self.start.bank.numbers[0].number
+                'bank_account': self.start.bank.numbers[0].number,
             },
             'payment_type': self.start.payment_type,
             'send_sequence': send_sequence,
@@ -497,35 +479,39 @@ class LiquidationPaymentStartBcl(ModelView):
     'Liquidation Payment Start'
     __name__ = 'staff.payroll_liquidation_payment_bancolombia.start'
     company = fields.Many2One('company.company', 'Company', required=True)
-    party = fields.Function(fields.Many2One('party.party', 'Party Bank'),
-                            'on_change_with_party')
+    party = fields.Function(
+        fields.Many2One('party.party', 'Party Bank'), 'on_change_with_party'
+    )
     department = fields.Many2One('company.department', 'Department')
-    payment_type = fields.Selection(_TYPES_PAYMENT,
-                                    'Type payment',
-                                    required=True)
+    payment_type = fields.Selection(
+        _TYPES_PAYMENT, 'Type payment', required=True)
     send_sequence = fields.Char('Send sequence', size=1)
     # type_bank_account = fields.Selection(
     #     _TYPES_BANK_ACCOUNT, 'Type of account to be debited', required=True)
     reference = fields.Char('Reference', required=True, size=9)
-    type_transaction = fields.Selection(_TYPE_TRANSACTION,
-                                        'Type of transaction',
-                                        required=True)
-    kind = fields.Selection([
-        ('contract', 'Contract'),
-        ('bonus_service', 'Bonus Service'),
-        ('interest', 'Interest'),
-        ('unemployment', 'Unemployment'),
-        ('holidays', 'Vacation'),
-        ('convencional_bonus', 'Convencional Bonus'),
-    ],
+    type_transaction = fields.Selection(
+        _TYPE_TRANSACTION, 'Type of transaction', required=True
+    )
+    kind = fields.Selection(
+        [
+            ('contract', 'Contract'),
+            ('bonus_service', 'Bonus Service'),
+            ('interest', 'Interest'),
+            ('unemployment', 'Unemployment'),
+            ('holidays', 'Vacation'),
+            ('convencional_bonus', 'Convencional Bonus'),
+        ],
         'Kind',
-        required=True)
+        required=True,
+    )
     date = fields.Date('Date', required=True)
-    bank = fields.Many2One('bank.account',
-                           'Bank Account',
-                           domain=[('owners', '=', Eval('party'))],
-                           depends=['party'],
-                           required=True)
+    bank = fields.Many2One(
+        'bank.account',
+        'Bank Account',
+        domain=[('owners', '=', Eval('party'))],
+        depends=['party'],
+        required=True,
+    )
 
     @staticmethod
     def default_company():
@@ -549,10 +535,12 @@ class LiquidationPaymentBcl(Wizard):
     __name__ = 'staff.payroll.liquidation_payment'
     start = StateView(
         'staff.payroll_liquidation_payment_bancolombia.start',
-        'conector.payment_liquidation_start_bancolombia_view_form', [
+        'conector.payment_liquidation_start_bancolombia_view_form',
+        [
             Button('Cancel', 'end', 'tryton-cancel'),
             Button('Print', 'print_', 'tryton-ok', default=True),
-        ])
+        ],
+    )
     print_ = StateReport('staff.payroll_payment_liq_report_bancolombia')
 
     def do_print_(self, action):
@@ -616,13 +604,15 @@ class LiquidationPaymentReportBcl(Report):
             bank_code_sap = None
             if liquidation.employee.party.bank_accounts:
                 bank_code_sap = liquidation.employee.party.bank_accounts[
-                    0].bank.bank_code_sap
+                    0
+                ].bank.bank_code_sap
             values['bank_code_sap'] = bank_code_sap
-            type_account_payment_party = Type_bank_numbers.search([
-                ('number', '=', str(liquidation.employee.party.bank_account))
-            ])
+            type_account_payment_party = Type_bank_numbers.search(
+                [('number', '=', str(liquidation.employee.party.bank_account))]
+            )
             values['type_account_payment'] = _TYPES_BANK_ACCOUNT_.get(
-                type_account_payment_party[0].type_string)
+                type_account_payment_party[0].type_string
+            )
             values['bank_account'] = liquidation.employee.party.bank_account
             net_payment = Decimal(round(liquidation.net_payment, 0))
             values['net_payment'] = net_payment
@@ -646,8 +636,7 @@ class PayslipSendStart(ModelView):
     company = fields.Many2One('company.company', 'Company', required=True)
     department = fields.Many2One('company.department', 'Department')
     period = fields.Many2One('staff.payroll.period',
-                             'Start Period',
-                             required=True)
+                             'Start Period', required=True)
     subject = fields.Char('Subject', size=60, required=True)
     cc = fields.Char('Cc', help='separate emails with commas')
 
@@ -660,11 +649,14 @@ class PayslipSendStart(ModelView):
 class PayslipSend(Wizard):
     'Payslip Send'
     __name__ = 'staff.payroll.payslip_send'
-    start = StateView('staff.payroll_payslip_send.start',
-                      'conector.payroll_payslip_send_view_form', [
-                          Button('Cancel', 'end', 'tryton-cancel'),
-                          Button('Send', 'send_', 'tryton-ok', default=True),
-                      ])
+    start = StateView(
+        'staff.payroll_payslip_send.start',
+        'conector.payroll_payslip_send_view_form',
+        [
+            Button('Cancel', 'end', 'tryton-cancel'),
+            Button('Send', 'send_', 'tryton-ok', default=True),
+        ],
+    )
     send_ = StateTransition()
 
     def transition_send_(self):
@@ -673,13 +665,15 @@ class PayslipSend(Wizard):
         # Email = pool.get('ir.email')
         Payroll = pool.get(model_name)
         ActionReport = pool.get('ir.action.report')
-        report, = ActionReport.search([('report_name', '=', model_name)])
+        (report,) = ActionReport.search([('report_name', '=', model_name)])
         reports = [report.id]
         subject = self.start.subject
-        dom = [('company', '=', self.start.company.id),
-               ('period', '=', self.start.period.id),
-               ('state', 'in', ['processed', 'posted']),
-               ('sended_mail', '=', False)]
+        dom = [
+            ('company', '=', self.start.company.id),
+            ('period', '=', self.start.period.id),
+            ('state', 'in', ['processed', 'posted']),
+            ('sended_mail', '=', False),
+        ]
         if self.start.department:
             dom.append(('department', '=', self.start.department.id))
         payrolls = Payroll.search(dom)
@@ -691,22 +685,25 @@ class PayslipSend(Wizard):
                 recipients_secondary = self.start.cc
             record = [model_name, payroll.id]
             try:
-                send_mail(to=email,
-                          cc=recipients_secondary,
-                          bcc='',
-                          subject=subject,
-                          body='___',
-                          files=None,
-                          record=record,
-                          reports=reports,
-                          attachments=None)
+                send_mail(
+                    to=email,
+                    cc=recipients_secondary,
+                    bcc='',
+                    subject=subject,
+                    body='___',
+                    files=None,
+                    record=record,
+                    reports=reports,
+                    attachments=None,
+                )
 
                 Payroll.write([payroll], {'sended_mail': True})
                 Transaction().connection.commit()
             except Exception as e:
                 raise UserError(
                     f'No mail sent, check employee email {payroll.employee.rec_name}',
-                    str(e))
+                    str(e),
+                )
 
         return 'end'
 
@@ -719,16 +716,18 @@ class SettlementSendStart(ModelView):
     date = fields.Date('Date', required=True)
     subject = fields.Char('Subject', size=60, required=True)
     cc = fields.Char('Cc', help='separate emails with commas')
-    kind = fields.Selection([
-        ('contract', 'Contract'),
-        ('bonus_service', 'Bonus Service'),
-        ('interest', 'Interest'),
-        ('unemployment', 'Unemployment'),
-        ('holidays', 'Vacation'),
-        ('convencional_bonus', 'Convencional Bonus'),
-    ],
+    kind = fields.Selection(
+        [
+            ('contract', 'Contract'),
+            ('bonus_service', 'Bonus Service'),
+            ('interest', 'Interest'),
+            ('unemployment', 'Unemployment'),
+            ('holidays', 'Vacation'),
+            ('convencional_bonus', 'Convencional Bonus'),
+        ],
         'Kind',
-        required=True)
+        required=True,
+    )
 
     @staticmethod
     def default_company():
@@ -743,15 +742,12 @@ class CertificateOfIncomeAndWithholdingSendStart(ModelView):
     'Certificate Send Start'
     __name__ = 'staff.payroll_certificates_send.start'
     company = fields.Many2One('company.company', 'Company', required=True)
-    fiscalyear = fields.Many2One('account.fiscalyear',
-                                 'Fiscal Year',
-                                 required=True)
+    fiscalyear = fields.Many2One(
+        'account.fiscalyear', 'Fiscal Year', required=True)
     subject = fields.Char('Subject', size=60, required=True)
-    employees = fields.Many2Many('company.employee',
-                                 None,
-                                 None,
-                                 'Employees',
-                                 required=True)
+    employees = fields.Many2Many(
+        'company.employee', None, None, 'Employees', required=True
+    )
     cc = fields.Char('Cc', help='separate emails with commas')
 
     @staticmethod
@@ -761,18 +757,20 @@ class CertificateOfIncomeAndWithholdingSendStart(ModelView):
     @staticmethod
     def default_fiscalyear():
         FiscalYear = Pool().get('account.fiscalyear')
-        return FiscalYear.find(Transaction().context.get('company'),
-                               exception=False)
+        return FiscalYear.find(Transaction().context.get('company'), exception=False)
 
 
 class SendCertificateOfIncomeAndWithholding(Wizard):
     'Certificate Send'
     __name__ = 'staff.payroll.certificates_send'
-    start = StateView('staff.payroll_certificates_send.start',
-                      'conector.payroll_certificates_send_view_form', [
-                          Button('Cancel', 'end', 'tryton-cancel'),
-                          Button('Send', 'send_', 'tryton-ok', default=True),
-                      ])
+    start = StateView(
+        'staff.payroll_certificates_send.start',
+        'conector.payroll_certificates_send_view_form',
+        [
+            Button('Cancel', 'end', 'tryton-cancel'),
+            Button('Send', 'send_', 'tryton-ok', default=True),
+        ],
+    )
     send_ = StateTransition()
 
     def transition_send_(self):
@@ -780,9 +778,9 @@ class SendCertificateOfIncomeAndWithholding(Wizard):
         model_name = 'company.employee'
         # Email = pool.get('ir.email')
         ActionReport = pool.get('ir.action.report')
-        report, = ActionReport.search([
-            ('report_name', '=', 'staff.payroll.income_withholdings_report')
-        ])
+        (report,) = ActionReport.search(
+            [('report_name', '=', 'staff.payroll.income_withholdings_report')]
+        )
         reports = [report.id]
         nameCompany = self.start.company.party.name
         Nit = self.start.company.party.id_number
@@ -796,7 +794,7 @@ class SendCertificateOfIncomeAndWithholding(Wizard):
             recipients_secondary = self.start.cc
 
         for employe in self.start.employees:
-            body = f"""<html>
+            body = f'''<html>
             <body>
             <h2>Certificado de Ingreso y Retención</h2>
 
@@ -827,7 +825,7 @@ class SendCertificateOfIncomeAndWithholding(Wizard):
             {Nit}
             </small></p>
 
-            </html>"""
+            </html>'''
 
             dic = {
                 'ids': [],
@@ -835,42 +833,47 @@ class SendCertificateOfIncomeAndWithholding(Wizard):
                 'start_period': start_date,
                 'end_period': end_date,
                 'employees': [employe.id],
-                'action_id': reports[0]
+                'action_id': reports[0],
             }
 
             email = employe.party.email
             record = [model_name, employe]
             try:
-                send_mail_certificate(to=email,
-                                      cc=recipients_secondary,
-                                      bcc='',
-                                      subject=subject,
-                                      body=body,
-                                      files=None,
-                                      record=record,
-                                      reports=reports,
-                                      attachments=None,
-                                      dic=dic)
+                send_mail_certificate(
+                    to=email,
+                    cc=recipients_secondary,
+                    bcc='',
+                    subject=subject,
+                    body=body,
+                    files=None,
+                    record=record,
+                    reports=reports,
+                    attachments=None,
+                    dic=dic,
+                )
 
             except Exception as e:
                 raise UserError(
-                    f'No mail sent, check employee email {employe.rec_name}',
-                    str(e))
+                    f'No mail sent, check employee email {employe.rec_name}', str(
+                        e)
+                )
 
         return 'end'
 
 
 # Copia funcion 'send' del modelo 'ir.email' modificando para enviar de forma individual (no transactional) el envio de certificados de ingresos y retencion
-def send_mail_certificate(to='',
-                          cc='',
-                          bcc='',
-                          subject='',
-                          body='',
-                          files=None,
-                          record=None,
-                          reports=None,
-                          attachments=None,
-                          dic=None):
+def send_mail_certificate(
+    to='',
+    cc='',
+    bcc='',
+    subject='',
+    body='',
+    files=None,
+    record=None,
+    reports=None,
+    attachments=None,
+    dic=None,
+):
 
     pool = Pool()
     ActionReport = pool.get('ir.action.report')
@@ -881,8 +884,9 @@ def send_mail_certificate(to='',
     emails = ConfigEmail.search([])
 
     if not emails:
-        raise UserError('Error email: ',
-                        'No se encontro informacion para envio de emails')
+        raise UserError(
+            'Error email: ', 'No se encontro informacion para envio de emails'
+        )
     _email = emails[0]
 
     transaction = Transaction()
@@ -916,7 +920,7 @@ def send_mail_certificate(to='',
             files = []
         else:
             files = list(files)
-        for report_id in (reports or []):
+        for report_id in reports or []:
             report = ActionReport(report_id)
             Report = pool.get(report.report_name, type='report')
             # dic['party_index'] = seq
@@ -936,9 +940,9 @@ def send_mail_certificate(to='',
                 encode_base64(attachment)
             else:
                 attachment = MIMEApplication(data)
-            attachment.add_header('Content-Disposition',
-                                  'attachment',
-                                  filename=('utf-8', '', name))
+            attachment.add_header(
+                'Content-Disposition', 'attachment', filename=('utf-8', '', name)
+            )
             msg.attach(attachment)
     else:
         msg = content
@@ -957,24 +961,26 @@ def send_mail_certificate(to='',
         to_addrs = list(
             filter(
                 None,
-                map(str.strip,
-                    _get_emails(to) + _get_emails(cc) + _get_emails(bcc))))
+                map(str.strip, _get_emails(to) +
+                    _get_emails(cc) + _get_emails(bcc)),
+            )
+        )
         sendmail(from_, to_addrs, msg, server=None, strict=True)
-        email = Email(recipients=to,
-                      recipients_secondary=cc,
-                      recipients_hidden=bcc,
-                      addresses=[{
-                          'address': a
-                      } for a in to_addrs],
-                      subject=subject,
-                      body=body,
-                      resource=records)
+        email = Email(
+            recipients=to,
+            recipients_secondary=cc,
+            recipients_hidden=bcc,
+            addresses=[{'address': a} for a in to_addrs],
+            subject=subject,
+            body=body,
+            resource=records,
+        )
         email.save()
         with Transaction().set_context(_check_access=False):
             attachments_ = []
             for name, data in files:
-                attachments_.append(
-                    Attachment(resource=email, name=name, data=data))
+                attachments_.append(Attachment(
+                    resource=email, name=name, data=data))
             Attachment.save(attachments_)
 
         return email
@@ -986,11 +992,14 @@ def send_mail_certificate(to='',
 class SettlementSend(Wizard):
     'Settlement Send'
     __name__ = 'staff.payroll.settlement_send'
-    start = StateView('staff.payroll_settlement_send.start',
-                      'conector.payroll_settlement_send_view_form', [
-                          Button('Cancel', 'end', 'tryton-cancel'),
-                          Button('Send', 'send_', 'tryton-ok', default=True),
-                      ])
+    start = StateView(
+        'staff.payroll_settlement_send.start',
+        'conector.payroll_settlement_send_view_form',
+        [
+            Button('Cancel', 'end', 'tryton-cancel'),
+            Button('Send', 'send_', 'tryton-ok', default=True),
+        ],
+    )
     send_ = StateTransition()
 
     def transition_send_(self):
@@ -998,13 +1007,16 @@ class SettlementSend(Wizard):
         model_name = 'staff.liquidation.report'
         Liquidation = pool.get('staff.liquidation')
         ActionReport = pool.get('ir.action.report')
-        report, = ActionReport.search([('report_name', '=', model_name)])
+        (report,) = ActionReport.search([('report_name', '=', model_name)])
         reports = [report.id]
         subject = self.start.subject
         print(self.start.kind)
-        dom = [('company', '=', self.start.company.id),
-               ('liquidation_date', '=', self.start.date),
-               ('kind', '=', self.start.kind), ('sended_mail', '=', False)]
+        dom = [
+            ('company', '=', self.start.company.id),
+            ('liquidation_date', '=', self.start.date),
+            ('kind', '=', self.start.kind),
+            ('sended_mail', '=', False),
+        ]
         if self.start.department:
             dom.append(('department', '=', self.start.department.id))
         liquidations = Liquidation.search(dom)
@@ -1019,36 +1031,41 @@ class SettlementSend(Wizard):
                     recipients_secondary = self.start.cc
                 record = ['staff.liquidation', liquidation.id]
                 try:
-                    send_mail(to=email,
-                              cc=recipients_secondary,
-                              bcc='',
-                              subject=subject,
-                              body='___',
-                              files=None,
-                              record=record,
-                              reports=reports,
-                              attachments=None)
+                    send_mail(
+                        to=email,
+                        cc=recipients_secondary,
+                        bcc='',
+                        subject=subject,
+                        body='___',
+                        files=None,
+                        record=record,
+                        reports=reports,
+                        attachments=None,
+                    )
                     Liquidation.write([liquidation], {'sended_mail': True})
                     Transaction().connection.commit()
                 except Exception as e:
                     raise UserError(
                         f'No mail sent, check employee email {liquidation.employee.rec_name}',
-                        str(e))
+                        str(e),
+                    )
             else:
                 pass
         return 'end'
 
 
 # Copia funcion 'send' del modelo 'ir.email' modificando para enviar de forma individual (no transactional)
-def send_mail(to='',
-              cc='',
-              bcc='',
-              subject='',
-              body='',
-              files=None,
-              record=None,
-              reports=None,
-              attachments=None):
+def send_mail(
+    to='',
+    cc='',
+    bcc='',
+    subject='',
+    body='',
+    files=None,
+    record=None,
+    reports=None,
+    attachments=None,
+):
     pool = Pool()
     Email = pool.get('ir.email')
     User = pool.get('res.user')
@@ -1058,8 +1075,9 @@ def send_mail(to='',
     emails = ConfigEmail.search([])
 
     if not emails:
-        raise UserError('Error email: ',
-                        'No se encontro informacion para envio de emails')
+        raise UserError(
+            'Error email: ', 'No se encontro informacion para envio de emails'
+        )
     _email = emails[0]
 
     transaction = Transaction()
@@ -1093,12 +1111,15 @@ def send_mail(to='',
             files = []
         else:
             files = list(files)
-        for report_id in (reports or []):
+        for report_id in reports or []:
             report = ActionReport(report_id)
             Report = pool.get(report.report_name, type='report')
-            ext, content, _, title = Report.execute([record.id], {
-                'action_id': report.id,
-            })
+            ext, content, _, title = Report.execute(
+                [record.id],
+                {
+                    'action_id': report.id,
+                },
+            )
             name = '%s.%s' % (title, ext)
             if isinstance(content, str):
                 content = content.encode('utf-8')
@@ -1113,9 +1134,9 @@ def send_mail(to='',
                 encode_base64(attachment)
             else:
                 attachment = MIMEApplication(data)
-            attachment.add_header('Content-Disposition',
-                                  'attachment',
-                                  filename=('utf-8', '', name))
+            attachment.add_header(
+                'Content-Disposition', 'attachment', filename=('utf-8', '', name)
+            )
             msg.attach(attachment)
     else:
         msg = content
@@ -1135,24 +1156,26 @@ def send_mail(to='',
         to_addrs = list(
             filter(
                 None,
-                map(str.strip,
-                    _get_emails(to) + _get_emails(cc) + _get_emails(bcc))))
+                map(str.strip, _get_emails(to) +
+                    _get_emails(cc) + _get_emails(bcc)),
+            )
+        )
         sendmail(from_, to_addrs, msg, server=None, strict=True)
-        email = Email(recipients=to,
-                      recipients_secondary=cc,
-                      recipients_hidden=bcc,
-                      addresses=[{
-                          'address': a
-                      } for a in to_addrs],
-                      subject=subject,
-                      body=body,
-                      resource=record)
+        email = Email(
+            recipients=to,
+            recipients_secondary=cc,
+            recipients_hidden=bcc,
+            addresses=[{'address': a} for a in to_addrs],
+            subject=subject,
+            body=body,
+            resource=record,
+        )
         email.save()
         with Transaction().set_context(_check_access=False):
             attachments_ = []
             for name, data in files:
-                attachments_.append(
-                    Attachment(resource=email, name=name, data=data))
+                attachments_.append(Attachment(
+                    resource=email, name=name, data=data))
             Attachment.save(attachments_)
         return email
     except Exception as error:
@@ -1160,28 +1183,28 @@ def send_mail(to='',
 
 
 class StaffEvent(metaclass=PoolMeta):
-    __name__ = "staff.event"
+    __name__ = 'staff.event'
     analytic_account = fields.Char(
-        'Analytic account code',
-        states={'readonly': (Eval('state') != 'draft')})
+        'Analytic account code', states={'readonly': (Eval('state') != 'draft')}
+    )
 
-    edit_amount = fields.Boolean('Edit Amount',
-                                 states={
-                                     'invisible':
-                                     Not(Bool(Eval('absenteeism'))),
-                                     'readonly':
-                                     Bool(Eval('state') != 'draft'),
-                                 },
-                                 depends=['absenteeism', 'state'])
+    edit_amount = fields.Boolean(
+        'Edit Amount',
+        states={
+            'invisible': Not(Bool(Eval('absenteeism'))),
+            'readonly': Bool(Eval('state') != 'draft'),
+        },
+        depends=['absenteeism', 'state'],
+    )
 
-    access_register = fields.Boolean('Access register',
-                                     states={
-                                         'invisible':
-                                         Not(Bool(Eval('absenteeism'))),
-                                         'readonly':
-                                         Bool(Eval('state') != 'draft'),
-                                     },
-                                     depends=['absenteeism', 'state'])
+    access_register = fields.Boolean(
+        'Access register',
+        states={
+            'invisible': Not(Bool(Eval('absenteeism'))),
+            'readonly': Bool(Eval('state') != 'draft'),
+        },
+        depends=['absenteeism', 'state'],
+    )
 
     enter_timestamp = fields.DateTime(
         'Enter',
@@ -1189,7 +1212,9 @@ class StaffEvent(metaclass=PoolMeta):
         domain=[
             If(
                 Eval('exit_timestamp') & Eval('enter_timestamp'),
-                ('enter_timestamp', '<=', Eval('exit_timestamp')), ()),
+                ('enter_timestamp', '<=', Eval('exit_timestamp')),
+                (),
+            ),
         ],
         depends=['exit_timestamp', 'access_register', 'state'],
     )
@@ -1200,7 +1225,9 @@ class StaffEvent(metaclass=PoolMeta):
         domain=[
             If(
                 Eval('enter_timestamp') & Eval('exit_timestamp'),
-                ('exit_timestamp', '>=', Eval('enter_timestamp')), ()),
+                ('exit_timestamp', '>=', Eval('enter_timestamp')),
+                (),
+            ),
         ],
         depends=['enter_timestamp', 'access_register', 'state'],
     )
@@ -1208,15 +1235,16 @@ class StaffEvent(metaclass=PoolMeta):
     @classmethod
     def __setup__(cls):
         super(StaffEvent, cls).__setup__()
-        cls._buttons.update({
-            'create_liquidation': {
-                'invisible':
-                Or(
-                    Eval('state') != 'done',
-                    Not(Eval('is_vacations')),
-                ),
+        cls._buttons.update(
+            {
+                'create_liquidation': {
+                    'invisible': Or(
+                        Eval('state') != 'done',
+                        Not(Eval('is_vacations')),
+                    ),
+                }
             }
-        })
+        )
 
     # @fields.depends('employee', 'contract')
     def on_change_employee(self):
@@ -1277,13 +1305,17 @@ class StaffEvent(metaclass=PoolMeta):
             validate_liquidation = Liquidation.search(['origin', '=', event])
 
             if validate_liquidation:
-                raise (UserError('ERROR:', 'Ya existe una liquidacion con la '
-                                 'novedad actual.'))
+                raise (
+                    UserError(
+                        'ERROR:', 'Ya existe una liquidacion con la ' 'novedad actual.'
+                    )
+                )
 
             warning_name = 'mywarning,%s' % event
             if Warning.check(warning_name):
-                raise UserWarning(warning_name,
-                                  f"Se creara una liquidacion de vacaciones")
+                raise UserWarning(
+                    warning_name, f'Se creara una liquidacion de vacaciones'
+                )
             _date_start = str(event.start_date).split('-')
             _date_end = str(event.end_date).split('-')
 
@@ -1291,28 +1323,36 @@ class StaffEvent(metaclass=PoolMeta):
             end_date = f'{_date_end[0]}-{_date_end[1]}'
 
             if start_date == end_date:
-                end_period = Period.search([('start', '<=', event.start_date),
-                                            ('end', '>=', event.start_date)])
+                end_period = Period.search(
+                    [('start', '<=', event.start_date),
+                     ('end', '>=', event.start_date)]
+                )
 
-                cls.staff_liquidation_event(event=event,
-                                            end_period=end_period,
-                                            liquidation_date=event.start_date,
-                                            days=event.days,
-                                            end_date=event.end_date)
+                cls.staff_liquidation_event(
+                    event=event,
+                    end_period=end_period,
+                    liquidation_date=event.start_date,
+                    days=event.days,
+                    end_date=event.end_date,
+                )
 
             else:
 
-                get_day = ultimo_dia_del_mes(year=int(_date_start[0]),
-                                             month=int(_date_start[1]))
+                get_day = ultimo_dia_del_mes(
+                    year=int(_date_start[0]), month=int(_date_start[1])
+                )
 
-                end_period = Period.search([
-                    ('start', '<=', f'{start_date}-{get_day}'),
-                    ('end', '>=', f'{start_date}-{get_day}')
-                ])
+                end_period = Period.search(
+                    [
+                        ('start', '<=', f'{start_date}-{get_day}'),
+                        ('end', '>=', f'{start_date}-{get_day}'),
+                    ]
+                )
 
                 if not end_period:
                     raise UserError(
-                        'ERROR:', 'No se encontro periodo para la liquidacion')
+                        'ERROR:', 'No se encontro periodo para la liquidacion'
+                    )
 
                 if get_day == 31:
                     days = abs(int(_date_start[2]) - get_day)
@@ -1321,43 +1361,50 @@ class StaffEvent(metaclass=PoolMeta):
                     days = abs(int(_date_start[2]) - get_day) + 1
                     end_date_period = end_period[0].end
 
-                cls.staff_liquidation_event(event=event,
-                                            end_period=end_period,
-                                            liquidation_date=event.start_date,
-                                            days=days,
-                                            end_date=end_date_period)
+                cls.staff_liquidation_event(
+                    event=event,
+                    end_period=end_period,
+                    liquidation_date=event.start_date,
+                    days=days,
+                    end_date=end_date_period,
+                )
 
                 if get_day != 31:
-                    days = (event.days - days)
+                    days = event.days - days
                 else:
-                    days = (event.days - days - 1)
+                    days = event.days - days - 1
 
-                end_period = Period.search([('start', '<=', event.end_date),
-                                            ('end', '>=', event.end_date)])
+                end_period = Period.search(
+                    [('start', '<=', event.end_date),
+                     ('end', '>=', event.end_date)]
+                )
 
                 cls.staff_liquidation_event(
                     event=event,
                     end_period=end_period,
                     liquidation_date=end_period[0].start,
                     days=days,
-                    end_date=event.end_date)
+                    end_date=event.end_date,
+                )
 
-    def staff_liquidation_event(event, end_period, liquidation_date, days,
-                                end_date):
+    def staff_liquidation_event(event, end_period, liquidation_date, days, end_date):
         pool = Pool()
         Configuration = pool.get('staff.configuration')(1)
         Liquidation = pool.get('staff.liquidation')
         Period = pool.get('staff.payroll.period')
+        StaffEvent = pool.get('staff.event')
         Staff_event_liquidation = pool.get('staff.event-staff.liquidation')
         liquidation = Liquidation()
         liquidation.employee = event.employee
         liquidation.contract = event.contract
         liquidation.kind = 'holidays'
         liquidation.state = 'wait'
-        start_period = Period.search([
-            ('start', '>=', event.contract.start_date),
-            ('end', '<=', event.contract.start_date)
-        ])
+        start_period = Period.search(
+            [
+                ('start', '>=', event.contract.start_date),
+                ('end', '<=', event.contract.start_date),
+            ]
+        )
         if not start_period:
             start_period = Period.search([], order=[('end', 'ASC')], limit=1)
         liquidation.start_period = start_period[0]
@@ -1370,16 +1417,19 @@ class StaffEvent(metaclass=PoolMeta):
         # Se procesa la liquidación
         Liquidation.compute_liquidation([liquidation])
         wages = [
-            wage_type for wage_type in event.employee.mandatory_wages
-            if wage_type.wage_type.type_concept in CONCEPT or
-            (wage_type.wage_type.type_concept_electronic in CONCEPT_ELECTRONIC
-             and wage_type.wage_type.pay_liqudation)
+            wage_type
+            for wage_type in event.employee.mandatory_wages
+            if wage_type.wage_type.type_concept in CONCEPT
+            or (
+                wage_type.wage_type.type_concept_electronic in CONCEPT_ELECTRONIC
+                and wage_type.wage_type.pay_liqudation
+            )
         ]
         if wages:
             if event.edit_amount:
                 amount_day = event.amount
             else:
-                amount_day = (liquidation.contract.salary / 30)
+                amount_day = liquidation.contract.salary / 30
             workdays = days
             amount_workdays = round(amount_day * workdays * Decimal(0.04), 2)
             for concept in wages:
@@ -1396,30 +1446,67 @@ class StaffEvent(metaclass=PoolMeta):
                     'account': concept.wage_type.credit_account,
                     'days': days,
                     'party_to_pay': concept.party,
-                    'origin': event
+                    'origin': event,
                 }
 
                 if amount_workdays:
-                    value.update({
-                        'adjustments': [('create', [{
-                            'account':
-                            concept.wage_type.credit_account.id,
-                            'amount':
-                            amount_workdays * -1,
-                            'description':
-                            concept.wage_type.credit_account.name,
-                        }])]
-                    })
-
-                liquidation.write([liquidation],
-                                  {'lines': [('create', [value])]})
-        liquidation._validate_holidays_lines(event, liquidation_date, end_date,
-                                             days)
+                    value.update(
+                        {
+                            'adjustments': [
+                                (
+                                    'create',
+                                    [
+                                        {
+                                            'account': concept.wage_type.credit_account.id,
+                                            'amount': amount_workdays * -1,
+                                            'description': concept.wage_type.credit_account.name,
+                                        }
+                                    ],
+                                )
+                            ]
+                        }
+                    )
+                liquidation.write(
+                    [liquidation], {'lines': [('create', [value])]})
+        liquidation._validate_holidays_lines(
+            event, liquidation_date, end_date, days)
 
         staff_event_liquidation = Staff_event_liquidation()
         staff_event_liquidation.staff_liquidation = liquidation
         staff_event_liquidation.event = event
+        StaffEvent.set_preliquidation(event, liquidation)
         staff_event_liquidation.save()
+
+    def set_preliquidation(self, liquidation):
+        debit_accounts = [
+            mw.wage_type.debit_account.id
+            for mw in liquidation.employee.mandatory_wages
+            if mw.analytic_account and mw.wage_type.debit_account
+        ]
+        group_analytic = {
+            mw.wage_type.id: mw.analytic_account.id
+            for mw in liquidation.employee.mandatory_wages
+            if mw.analytic_account
+        }
+        for line in liquidation.lines:
+            if line.wage.id not in group_analytic.keys():
+                if line.account.id not in debit_accounts:
+                    continue
+
+            if (
+                line.wage.id not in group_analytic.keys()
+                and line.account.id in debit_accounts
+            ):
+                for mandatory in liquidation.employee.mandatory_wages:
+                    if mandatory.analytic_account:
+                        group_analytic[line.wage.id] = mandatory.analytic_account
+
+            for acc in line.analytic_accounts:
+                try:
+                    acc.write([acc], {'account': group_analytic[line.wage.id]})
+                except Exception as error:
+                    print(error)
+        liquidation.save()
 
     @classmethod
     def process_event(cls, events):
@@ -1431,26 +1518,41 @@ class StaffEvent(metaclass=PoolMeta):
         for event in events:
             if event.category and event.is_vacations:
                 contract = event.contract
-                Contract.write([contract],
-                               {'events_vacations': [('add', [event])]})
+                Contract.write(
+                    [contract], {'events_vacations': [('add', [event])]})
 
-            if event.category and event.access_register and event.enter_timestamp and event.exit_timestamp:
+            if (
+                event.category
+                and event.access_register
+                and event.enter_timestamp
+                and event.exit_timestamp
+            ):
                 for i in range(0, event.days):
-                    is_access = Access.search([
-                        ('enter_timestamp', '<=',
-                         event.enter_timestamp + timedelta(days=i)),
-                        ('exit_timestamp', '>=',
-                         event.exit_timestamp + timedelta(days=i)),
-                        ('employee', '=', event.employee)
-                    ])
+                    is_access = Access.search(
+                        [
+                            (
+                                'enter_timestamp',
+                                '<=',
+                                event.enter_timestamp + timedelta(days=i),
+                            ),
+                            (
+                                'exit_timestamp',
+                                '>=',
+                                event.exit_timestamp + timedelta(days=i),
+                            ),
+                            ('employee', '=', event.employee),
+                        ]
+                    )
                     if not is_access:
                         to_save = Access()
                         to_save.employee = event.employee
                         to_save.payment_method = 'extratime'
                         to_save.enter_timestamp = event.enter_timestamp + timedelta(
-                            days=i)
+                            days=i
+                        )
                         to_save.exit_timestamp = event.exit_timestamp + timedelta(
-                            days=i)
+                            days=i
+                        )
                         to_save.line_event = event
                         to_save.reco = Decimal(0.00)
                         to_save.save()
@@ -1477,40 +1579,44 @@ class StaffEvent(metaclass=PoolMeta):
             print(event)
             is_access = Access.search([('line_event', '=', event)])
             print(is_access)
-            if event.category and event.contract and event.id in event.contract.events_vacations:
+            if (
+                event.category
+                and event.contract
+                and event.id in event.contract.events_vacations
+            ):
                 contract = event.contract
-                Contract.write([contract],
-                               {'events_vacations': [('remove', [event])]})
+                Contract.write(
+                    [contract], {'events_vacations': [('remove', [event])]})
             if is_access:
                 Access.delete(is_access)
 
 
 class LineLiquidationEvent(ModelSQL):
-    "Staff Event - Staff Liquidation"
-    __name__ = "staff.event-staff.liquidation"
+    'Staff Event - Staff Liquidation'
+    __name__ = 'staff.event-staff.liquidation'
     _table = 'staff_event_staff_liquidation_rel'
-    staff_liquidation = fields.Many2One('staff.liquidation',
-                                        'Liquidation',
-                                        ondelete='RESTRICT',
-                                        select=True,
-                                        required=True)
+    staff_liquidation = fields.Many2One(
+        'staff.liquidation',
+        'Liquidation',
+        ondelete='RESTRICT',
+        select=True,
+        required=True,
+    )
 
-    event = fields.Many2One('staff.event',
-                            'Event',
-                            ondelete='CASCADE',
-                            select=True,
-                            required=True)
+    event = fields.Many2One(
+        'staff.event', 'Event', ondelete='CASCADE', select=True, required=True
+    )
 
 
 class Payroll(metaclass=PoolMeta):
-    __name__ = "staff.payroll"
+    __name__ = 'staff.payroll'
 
     @classmethod
     def __setup__(cls):
         super(Payroll, cls).__setup__()
 
     def set_preliquidation(self, extras, discounts=None):
-        """Function to add analytic accounts to liquidation"""
+        '''Function to add analytic accounts to liquidation'''
         super(Payroll, self).set_preliquidation(extras, discounts)
         PayrollLine = Pool().get('staff.payroll.line')
 
@@ -1525,22 +1631,23 @@ class Payroll(metaclass=PoolMeta):
             if line.origin.analytic_account:
                 for acc in line.analytic_accounts:
                     try:
-                        analytic_account, = AnalyticAccount.search([
-                            ('code', '=', line.origin.analytic_account)
-                        ])
+                        (analytic_account,) = AnalyticAccount.search(
+                            [('code', '=', line.origin.analytic_account)]
+                        )
                         acc.write([acc], {'account': analytic_account.id})
                     except Exception as error:
                         print(error)
                         wage = line.wage_type.rec_name
                         raise UserError(
-                            'staff_event.msg_error_on_analytic_account', wage)
+                            'staff_event.msg_error_on_analytic_account', wage
+                        )
 
         # Save staff payroll lines
         self.lines = tuple(self.lines)
         self.save()
 
     def _create_payroll_lines(self, wages, extras, discounts=None):
-        """Function to create payroll lines"""
+        '''Function to create payroll lines'''
 
         PayrollLine = Pool().get('staff.payroll.line')
         MoveLine = Pool().get('account.move.line')
@@ -1589,20 +1696,26 @@ class Payroll(metaclass=PoolMeta):
             extras = {}
 
         if extras:
-            sum_extras = sum(cant_extras
-                             for type, cant_extras in extras.items()
-                             if type == 'hedo' or type == 'heno' or
-                             type == 'hedf' or type == 'henf')
+            sum_extras = sum(
+                cant_extras
+                for type, cant_extras in extras.items()
+                if type == 'hedo' or type == 'heno' or type == 'hedf' or type == 'henf'
+            )
 
             # Validate if party have LicenciaNR to discount it from assistance
             for line in self.lines:
-                event = Event.search([
-                    ('category.wage_type.type_concept_electronic', '=',
-                     'LicenciaNR'),
-                    ('start_date', '>=', self.start_extras),
-                    ('end_date', '<=', self.end_extras),
-                    ('employee.id', '=', self.employee.id),
-                ])
+                event = Event.search(
+                    [
+                        (
+                            'category.wage_type.type_concept_electronic',
+                            '=',
+                            'LicenciaNR',
+                        ),
+                        ('start_date', '>=', self.start_extras),
+                        ('end_date', '<=', self.end_extras),
+                        ('employee.id', '=', self.employee.id),
+                    ]
+                )
                 if event not in validate_event:
                     validate_event.append(event)
                 else:
@@ -1633,8 +1746,12 @@ class Payroll(metaclass=PoolMeta):
             if difference < 0:
                 pending_value = abs(difference)
                 for type, cant_extras in extras.items():
-                    if type == 'hedo' or type == 'heno' or\
-                            type == 'hedf' or type == 'henf':
+                    if (
+                        type == 'hedo'
+                        or type == 'heno'
+                        or type == 'hedf'
+                        or type == 'henf'
+                    ):
                         if pending_value > 0:
                             if pending_value > cant_extras:
                                 pending_value -= cant_extras
@@ -1646,11 +1763,14 @@ class Payroll(metaclass=PoolMeta):
                                 pending_value = 0
             else:
                 if sum_extras > difference:
-                    pending_value = round(
-                        sum_extras - difference, 2)
+                    pending_value = round(sum_extras - difference, 2)
                     for type, cant_extras in extras.items():
-                        if type == 'hedo' or type == 'heno' or\
-                                type == 'hedf' or type == 'henf':
+                        if (
+                            type == 'hedo'
+                            or type == 'heno'
+                            or type == 'hedf'
+                            or type == 'henf'
+                        ):
                             if pending_value > 0:
                                 if pending_value > cant_extras:
                                     pending_value -= cant_extras
@@ -1676,15 +1796,15 @@ class Payroll(metaclass=PoolMeta):
                 discount = discounts.get(wage.id)
             qty = get_line_quantity_special(wage)
             if qty == 0:
-                qty = get_line_quantity(wage, self.start, self.end, extras,
-                                        discount)
+                qty = get_line_quantity(
+                    wage, self.start, self.end, extras, discount)
             line_ = get_line(wage, qty, unit_value, party)
             values_append(line_)
 
         PayrollLine.create(values)
 
     def process_loans_to_pay(self, LoanLine, PayrollLine, MoveLine):
-        """Function to process employee loans to pay"""
+        '''Function to process employee loans to pay'''
 
         dom = [
             ('loan.party', '=', self.employee.party.id),
@@ -1696,9 +1816,11 @@ class Payroll(metaclass=PoolMeta):
 
         for m, r in zip(lines_loan, range(len(lines_loan))):
             party = m.loan.party_to_pay if m.loan.party_to_pay else None
-            move_lines = MoveLine.search([
-                ('origin', 'in', ['staff.loan.line,' + str(m)]),
-            ])
+            move_lines = MoveLine.search(
+                [
+                    ('origin', 'in', ['staff.loan.line,' + str(m)]),
+                ]
+            )
             wage_type = m.loan.wage_type
             amount = m.amount
             to_create = {
@@ -1715,18 +1837,18 @@ class Payroll(metaclass=PoolMeta):
                 'sequence': wage_type.sequence,
             }
 
-            line, = PayrollLine.create([to_create])
+            (line,) = PayrollLine.create([to_create])
             LoanLine.write([m], {'state': 'paid', 'origin': line})
 
     def get_moves_lines(self):
-        """Function to build move lines when post payroll
+        '''Function to build move lines when post payroll
 
         Raises:
             UserError: if error ocurred when build lines
 
         Returns:
             list: A list with account_move_line model registry
-        """
+        '''
 
         pool = Pool()
         LoanLines = pool.get("staff.loan.line")
@@ -1885,7 +2007,7 @@ class Payroll(metaclass=PoolMeta):
                     if credit_acc and not line_credit_ready:
                         lines_moves[credit_acc.id][party_id]["credit"] += amount_credit
             except Exception as e:
-                error = f"{wage_type.name}: {e}"
+                error = f'{wage_type.name}: {e}'
                 raise UserError(error)
 
         for r in lines_moves.values():
@@ -1910,14 +2032,12 @@ class Payroll(metaclass=PoolMeta):
 
 
     def create_move(self):
-        """Function to create account_move registry and post it
-        """
+        '''Function to create account_move registry and post it'''
         super(Payroll, self).create_move()
         self.concile_loan_lines()
 
     def concile_loan_lines(self):
-        """Function to concile loan lines by liquidation
-        """
+        '''Function to concile loan lines by liquidation'''
         pool = Pool()
         LoanLines = pool.get('staff.loan.line')
         AccountMoveLine = pool.get('account.move.line')
@@ -1927,11 +2047,14 @@ class Payroll(metaclass=PoolMeta):
             reference = lines.reference
             balance = 0
             # Validate if is loan lines to conciliate
-            if origin and reference\
-                    and origin.__name__ == LoanLines.__name__:
-                move_lines = AccountMoveLine.search([('origin', '=', origin),
-                                                     ('reference', '=', reference),
-                                                     ('reconciliation', "=", None)])
+            if origin and reference and origin.__name__ == LoanLines.__name__:
+                move_lines = AccountMoveLine.search(
+                    [
+                        ('origin', '=', origin),
+                        ('reference', '=', reference),
+                        ('reconciliation', '=', None),
+                    ]
+                )
                 if move_lines and len(move_lines) % 2 == 0:
                     for line in move_lines:
                         balance += line.debit - line.credit
@@ -1952,8 +2075,11 @@ class Payroll(metaclass=PoolMeta):
                             loan_line = LoanLines.search(['origin', '=', line])
                             if loan_line:
                                 loan_move_line = AccountMoveLine.search(
-                                    [('origin', '=', loan_line[0]),
-                                     ('reconciliation', "=", None)])
+                                    [
+                                        ('origin', '=', loan_line[0]),
+                                        ('reconciliation', '=', None),
+                                    ]
+                                )
 
                                 for lines in loan_move_line:
                                     if lines in conciled_lines:
@@ -1974,25 +2100,23 @@ class Payroll(metaclass=PoolMeta):
                                             conciled_lines.append(line)
                                         break
                                 except Exception as error:
-                                    raise (UserError(f"ERROR: {error}"))
+                                    raise (UserError(f'ERROR: {error}'))
 
 
 class PayrollLine(metaclass=PoolMeta):
-    __name__ = "staff.payroll.line"
+    __name__ = 'staff.payroll.line'
 
     def update_move_line(self, move_line, values):
-        """Function to update analytic account value to create"""
+        '''Function to update analytic account value to create'''
 
         if values['debit']:
             move_line['debit'] += values['debit']
             if 'analytic_lines' in move_line:
-                move_line['analytic_lines'][0][1][0]['debit'] += values[
-                    'debit']
+                move_line['analytic_lines'][0][1][0]['debit'] += values['debit']
         if values['credit']:
             move_line['credit'] += values['credit']
             if 'analytic_lines' in move_line:
-                move_line['analytic_lines'][0][1][0]['credit'] += values[
-                    'credit']
+                move_line['analytic_lines'][0][1][0]['credit'] += values['credit']
 
         return move_line
 
@@ -2037,11 +2161,11 @@ class PayrollReport(CompanyReport):
 
 
 class PayrollExo2276(metaclass=PoolMeta):
-    __name__ = "staff.payroll_exo2276.report"
+    __name__ = 'staff.payroll_exo2276.report'
 
     @classmethod
     def get_context(cls, records, header, data):
-        """Function to build context to report"""
+        '''Function to build context to report'''
 
         report_context = Report.get_context(records, header, data)
         pool = Pool()
@@ -2110,11 +2234,11 @@ class PayrollExo2276(metaclass=PoolMeta):
                 'total_retirement': 0,
                 'total_salary': 0,
                 'latest_payment': 0,
-                'total': 0
+                'total': 0,
             }
-            new_objects[party.id] = cls._prepare_lines(payrolls,
-                                                       new_objects[party.id],
-                                                       party.id)
+            new_objects[party.id] = cls._prepare_lines(
+                payrolls, new_objects[party.id], party.id
+            )
 
             _cesanpag = 0
             _unemployment = 0
@@ -2127,24 +2251,43 @@ class PayrollExo2276(metaclass=PoolMeta):
             _salary_payments = 0
 
             lines_liquid = LiquidationLine.search_read(
-                [('liquidation.employee.party', '=', party.id),
-                 ('liquidation.liquidation_date', '>=', data['start_period']),
-                 ('liquidation.liquidation_date', '<=', data['end_period']),
-                 ('wage.type_concept', 'in', [
-                     'unemployment', 'interest', 'holidays', 'bonus_service',
-                     'health', 'retirement', 'tax', 'fsp', 'other', 'extras'
-                 ])],
+                [
+                    ('liquidation.employee.party', '=', party.id),
+                    ('liquidation.liquidation_date',
+                     '>=', data['start_period']),
+                    ('liquidation.liquidation_date', '<=', data['end_period']),
+                    (
+                        'wage.type_concept',
+                        'in',
+                        [
+                            'unemployment',
+                            'interest',
+                            'holidays',
+                            'bonus_service',
+                            'health',
+                            'retirement',
+                            'tax',
+                            'fsp',
+                            'other',
+                            'extras',
+                        ],
+                    ),
+                ],
                 fields_names=[
-                    'amount', 'wage.type_concept', 'wage.name',
-                    'liquidation.kind', 'wage.type_concept_electronic'
-                ])
+                    'amount',
+                    'wage.type_concept',
+                    'wage.name',
+                    'liquidation.kind',
+                    'wage.type_concept_electronic',
+                ],
+            )
 
             for line in lines_liquid:
-                if line['wage.']['type_concept'] in [
-                        'unemployment', 'interest'
-                ]:
-                    if line['liquidation.']['kind'] == 'unemployment' and line[
-                            'wage.']['type_concept'] == 'unemployment':
+                if line['wage.']['type_concept'] in ['unemployment', 'interest']:
+                    if (
+                        line['liquidation.']['kind'] == 'unemployment'
+                        and line['wage.']['type_concept'] == 'unemployment'
+                    ):
                         _unemployment += line['amount']
                     else:
                         _cesanpag += line['amount']
@@ -2152,15 +2295,17 @@ class PayrollExo2276(metaclass=PoolMeta):
                     _other += line['amount']
                 elif line['wage.']['type_concept'] == 'health':
                     _health += abs(line['amount'])
-                elif line['wage.']['type_concept'] == 'retirement' or line[
-                        'wage.']['type_concept'] == 'fsp':
+                elif (
+                    line['wage.']['type_concept'] == 'retirement'
+                    or line['wage.']['type_concept'] == 'fsp'
+                ):
                     _retirement += abs(line['amount'])
                 elif line['wage.']['type_concept'] == 'tax':
                     _tax += abs(line['amount'])
                 elif line['wage.']['type_concept'] == 'extras':
                     _salary_payments += line['amount']
                 elif line['wage.']['type_concept'] == 'other':
-                    if line['wage.']['name'] == "PENSIONES VOLUNTARIAS":
+                    if line['wage.']['name'] == 'PENSIONES VOLUNTARIAS':
                         _retirement_voluntary += abs(line['amount'])
                     if line['wage.']['type_concept_electronic'] == 'Indemnizacion':
                         _other += line['amount']
@@ -2177,16 +2322,15 @@ class PayrollExo2276(metaclass=PoolMeta):
             new_objects[party.id]['health'] += _health
             new_objects[party.id]['total_retirement'] += _retirement
             new_objects[party.id]['retefuente'] += _tax
-            new_objects[
-                party.id]['retirement_voluntary'] += _retirement_voluntary
+            new_objects[party.id]['retirement_voluntary'] += _retirement_voluntary
 
         employees = list(set(employees))
 
         # Set percent last six months payments
         for party_id in employees:
-            cls.get_domain_payroll_employees(party_id,
-                                             end_period=end_period,
-                                             new_objects=new_objects)
+            cls.get_domain_payroll_employees(
+                party_id, end_period=end_period, new_objects=new_objects
+            )
 
         report_context['records'] = new_objects.values()
         report_context['end_period'] = end_period
@@ -2197,14 +2341,16 @@ class PayrollExo2276(metaclass=PoolMeta):
 
     @classmethod
     def _prepare_lines(cls, payrolls, vals, party_id):
-        """Function to build data to report"""
+        '''Function to build data to report'''
 
         payroll_ids = [payroll.id for payroll in payrolls]
         Lines = Pool().get('staff.payroll.line')
-        lines = Lines.search([
-            ('payroll', 'in', payroll_ids),
-            ('payroll.employee.party', '=', party_id),
-        ])
+        lines = Lines.search(
+            [
+                ('payroll', 'in', payroll_ids),
+                ('payroll.employee.party', '=', party_id),
+            ]
+        )
         for line in lines:
             concept = line.wage_type.type_concept
             if line.wage_type.definition == 'payment':
@@ -2246,7 +2392,7 @@ class PayrollExo2276(metaclass=PoolMeta):
                 elif concept == 'risk':
                     vals['risk'] += line.amount
                 else:
-                    if concept != "sena" and concept != "icbf":
+                    if concept != 'sena' and concept != 'icbf':
                         vals['other_payments'] += line.amount
             elif line.wage_type.definition == 'deduction':
                 vals['total_deduction'] += line.amount
@@ -2259,11 +2405,11 @@ class PayrollExo2276(metaclass=PoolMeta):
                 elif concept == 'tax':
                     vals['retefuente'] += line.amount
                 elif concept == 'other':
-                    if line.wage_type.name == "PENSIONES VOLUNTARIAS":
+                    if line.wage_type.name == 'PENSIONES VOLUNTARIAS':
                         vals['retirement_voluntary'] += line.amount
-                    elif line.wage_type.name == "CUENTAS AFC":
+                    elif line.wage_type.name == 'CUENTAS AFC':
                         vals['afc_account'] += line.amount
-                    elif line.wage_type.name == "CUENTAS AVC":
+                    elif line.wage_type.name == 'CUENTAS AVC':
                         vals['avc_account'] += line.amount
                 else:
                     vals['other_deduction'] += line.amount
@@ -2277,13 +2423,15 @@ class PayrollExo2276(metaclass=PoolMeta):
 
     @classmethod
     def prepare_lines_employee(cls, payrolls):
-        """Function to build data to report"""
+        '''Function to build data to report'''
 
         payroll_ids = [payroll.id for payroll in payrolls]
         Lines = Pool().get('staff.payroll.line')
-        lines = Lines.search([
-            ('payroll', 'in', payroll_ids),
-        ])
+        lines = Lines.search(
+            [
+                ('payroll', 'in', payroll_ids),
+            ]
+        )
         payments = 0
         for line in lines:
             concept = line.wage_type.type_concept
@@ -2312,22 +2460,21 @@ class PayrollExo2276(metaclass=PoolMeta):
         return payments
 
     @classmethod
-    def get_domain_payroll_employees(cls,
-                                     party_id,
-                                     end_period=None,
-                                     new_objects=None):
-        """Last six months payments"""
+    def get_domain_payroll_employees(cls, party_id, end_period=None, new_objects=None):
+        '''Last six months payments'''
 
         Payroll = Pool().get('staff.payroll')
         LiquidationLine = Pool().get('staff.liquidation.line')
         total_payroll = 0
         vacations = 0
 
-        payrolls = Payroll.search([
-            ('date_effective', '<=', end_period),
-            ('employee.party.id', '=', party_id),
-        ],
-            order=[('date_effective', 'DESC')])
+        payrolls = Payroll.search(
+            [
+                ('date_effective', '<=', end_period),
+                ('employee.party.id', '=', party_id),
+            ],
+            order=[('date_effective', 'DESC')],
+        )
         end_date = payrolls[0].date_effective if payrolls else None
         start_date = end_date - relativedelta(months=6)
         data = {'start_period': start_date,
@@ -2338,14 +2485,18 @@ class PayrollExo2276(metaclass=PoolMeta):
         payrolls = Payroll.search([domain])
 
         lines_liquid = LiquidationLine.search_read(
-            [('liquidation.employee.party', '=', party_id),
-             ('liquidation.kind', '!=', 'contract'),
-             ('liquidation.liquidation_date', '>', start_date),
-             ('liquidation.liquidation_date', '<=', end_date),
-             ('wage.type_concept', '=', 'holidays')],
+            [
+                ('liquidation.employee.party', '=', party_id),
+                ('liquidation.kind', '!=', 'contract'),
+                ('liquidation.liquidation_date', '>', start_date),
+                ('liquidation.liquidation_date', '<=', end_date),
+                ('wage.type_concept', '=', 'holidays'),
+            ],
             fields_names=[
-                'amount', 'wage.type_concept_electronic',
-            ])
+                'amount',
+                'wage.type_concept_electronic',
+            ],
+        )
         for line in lines_liquid:
             if line['wage.']['type_concept_electronic'] == 'VacacionesComunes':
                 vacations += line['amount']
@@ -2386,24 +2537,25 @@ class PayrollElectronic(metaclass=PoolMeta):
     @classmethod
     def __setup__(cls):
         super(PayrollElectronic, cls).__setup__()
-        cls._buttons.update({
-            'submit': {
-                'invisible': True,
-            },
-            'force_response': {
-                'invisible': True,
-            },
-            'send_email': {
-                'invisible': True,
-            },
-            'submit_noova': {
-                'invisible':
-                Or(
-                    Eval('electronic_state') == 'authorized',
-                    Eval('state') != 'processed',
-                )
-            },
-        })
+        cls._buttons.update(
+            {
+                'submit': {
+                    'invisible': True,
+                },
+                'force_response': {
+                    'invisible': True,
+                },
+                'send_email': {
+                    'invisible': True,
+                },
+                'submit_noova': {
+                    'invisible': Or(
+                        Eval('electronic_state') == 'authorized',
+                        Eval('state') != 'processed',
+                    )
+                },
+            }
+        )
 
     @classmethod
     @ModelView.button
@@ -2424,65 +2576,66 @@ class PayrollIBCView(ModelView):
     __name__ = 'staff.payroll_ibc.start'
     company = fields.Many2One('company.company', 'Company', required=True)
 
-    start_period = fields.Many2One('staff.payroll.period',
-                                   'Start Period',
-                                   required=True,
-                                   domain=[('state', '!=', 'draft')],
-                                   states={
-                                       'invisible':
-                                       ~Not(Eval('accomulated_month')),
-                                       'required':
-                                       ~Bool(Eval('accomulated_month'))
-                                   },
-                                   depends=['accomulated_month'])
+    start_period = fields.Many2One(
+        'staff.payroll.period',
+        'Start Period',
+        required=True,
+        domain=[('state', '!=', 'draft')],
+        states={
+            'invisible': ~Not(Eval('accomulated_month')),
+            'required': ~Bool(Eval('accomulated_month')),
+        },
+        depends=['accomulated_month'],
+    )
 
-    end_period = fields.Many2One('staff.payroll.period',
-                                 'End Period',
-                                 required=True,
-                                 domain=[
-                                     ('state', '!=', 'draft'),
-                                 ],
-                                 states={
-                                     'invisible':
-                                     ~Not(Eval('accomulated_month')),
-                                     'required':
-                                     ~Bool(Eval('accomulated_month'))
-                                 },
-                                 depends=['accomulated_month'])
+    end_period = fields.Many2One(
+        'staff.payroll.period',
+        'End Period',
+        required=True,
+        domain=[
+            ('state', '!=', 'draft'),
+        ],
+        states={
+            'invisible': ~Not(Eval('accomulated_month')),
+            'required': ~Bool(Eval('accomulated_month')),
+        },
+        depends=['accomulated_month'],
+    )
 
     department = fields.Many2One('company.department', 'Department')
 
     accomulated_month = fields.Boolean(
         'accomulated Month',
         help='If this check is selected, it will accumulate by months',
-        on_change_with='on_change_with_accomulated_month')
+        on_change_with='on_change_with_accomulated_month',
+    )
 
     accomulated_period = fields.Boolean(
         'accomulated Period',
         help='If this check is selected, it will accumulate by period',
-        on_change_with='on_change_with_accomulated_period')
+        on_change_with='on_change_with_accomulated_period',
+    )
 
-    fiscalyear = fields.Many2One('account.fiscalyear',
-                                 'Fiscal Year',
-                                 states={
-                                     'invisible':
-                                     ~Not(Eval('accomulated_period')),
-                                     'required':
-                                     ~Bool(Eval('accomulated_period'))
-                                 },
-                                 depends=['accomulated_period'])
+    fiscalyear = fields.Many2One(
+        'account.fiscalyear',
+        'Fiscal Year',
+        states={
+            'invisible': ~Not(Eval('accomulated_period')),
+            'required': ~Bool(Eval('accomulated_period')),
+        },
+        depends=['accomulated_period'],
+    )
 
     start_period_fiscalyear = fields.Many2One(
         'account.period',
         'Start Period',
         domain=[
             ('fiscalyear', '=', Eval('fiscalyear')),
-            ('start_date', '<=', (Eval('end_period_fiscalyear'),
-                                  'start_date')),
+            ('start_date', '<=', (Eval('end_period_fiscalyear'), 'start_date')),
         ],
         states={
             'invisible': ~Not(Eval('accomulated_period')),
-            'required': ~Bool(Eval('accomulated_period'))
+            'required': ~Bool(Eval('accomulated_period')),
         },
         depends=['fiscalyear', 'end_period_fiscalyear', 'accomulated_period'],
     )
@@ -2490,16 +2643,15 @@ class PayrollIBCView(ModelView):
     end_period_fiscalyear = fields.Many2One(
         'account.period',
         'End Period',
-        domain=[('fiscalyear', '=', Eval('fiscalyear')),
-                ('start_date', '>=', (Eval('start_period_fiscalyear'),
-                                      'start_date'))],
+        domain=[
+            ('fiscalyear', '=', Eval('fiscalyear')),
+            ('start_date', '>=', (Eval('start_period_fiscalyear'), 'start_date')),
+        ],
         states={
             'invisible': ~Not(Eval('accomulated_period')),
-            'required': ~Bool(Eval('accomulated_period'))
+            'required': ~Bool(Eval('accomulated_period')),
         },
-        depends=[
-            'fiscalyear', 'start_period_fiscalyear', 'accomulated_period'
-        ],
+        depends=['fiscalyear', 'start_period_fiscalyear', 'accomulated_period'],
     )
 
     @staticmethod
@@ -2535,10 +2687,14 @@ class PayrollIBCView(ModelView):
 class PayrollIBCWizard(Wizard):
     'Payroll IBC wizard'
     __name__ = 'staff.payroll_ibc_wizard'
-    start = StateView('staff.payroll_ibc.start', 'conector.payroll_ibc_form', [
-        Button('Cancel', 'end', 'tryton-cancel'),
-        Button('Print', 'print_', 'tryton-ok', default=True),
-    ])
+    start = StateView(
+        'staff.payroll_ibc.start',
+        'conector.payroll_ibc_form',
+        [
+            Button('Cancel', 'end', 'tryton-cancel'),
+            Button('Print', 'print_', 'tryton-ok', default=True),
+        ],
+    )
 
     print_ = StateReport('staff_payroll.ibc_report')
 
@@ -2563,7 +2719,7 @@ class PayrollIBCWizard(Wizard):
             'start_period': start_period,
             'end_period': end_period,
             'department': department_id,
-            'accomulated': self.start.accomulated_month
+            'accomulated': self.start.accomulated_month,
         }
 
         return action, data
@@ -2603,8 +2759,7 @@ class PayrollIBCReport(Report):
             'id_number': party.id_number,
             'name': party.name,
             'department': department.name,
-            'amount':
-            Sum(staffPayrollLine.unit_value * staffPayrollLine.quantity),
+            'amount': Sum(staffPayrollLine.unit_value * staffPayrollLine.quantity),
             'concept': staffWage.name,
             'payroll_number': staffPayroll.number,
             'start': staffPayroll.start,
@@ -2617,8 +2772,8 @@ class PayrollIBCReport(Report):
         # Condicionales para filtrar la informacion en la consulta
         where = staffWage.type_concept.in_(
             ['extras', 'bonus', 'salary', 'commission'])
-        where &= Between(staffPayroll.start, data['start_period'],
-                         data['end_period'])
+        where &= Between(staffPayroll.start,
+                         data['start_period'], data['end_period'])
         where &= contract.state == 'active'
         where &= contract.kind != 'learning'
 
@@ -2626,37 +2781,38 @@ class PayrollIBCReport(Report):
             where &= staffPayroll.department == data['department']
 
         # Estructura de query para lanzar la consulta a la base de datos
-        select = staffPayrollLine.join(
-            staffPayroll,
-            'LEFT',
-            condition=staffPayroll.id == staffPayrollLine.payroll).join(
-                staffWage,
+        select = (
+            staffPayrollLine.join(
+                staffPayroll,
                 'LEFT',
-                condition=staffWage.id == staffPayrollLine.wage_type).join(
-                    employee,
-                    'LEFT',
-                    condition=employee.id == staffPayroll.employee).join(
-                        party, 'LEFT',
-                        condition=party.id == employee.party).join(
-                            contract,
-                            'LEFT',
-                            condition=employee.id == contract.employee).join(
-                                department,
-                                'LEFT',
-                                condition=department.id ==
-                                staffPayroll.department).select(
-                                    *columns.values(),
-                                    where=where,
-                                    group_by=[
-                                        party.id_number, party.name,
-                                        department.name, staffWage.name,
-                                        staffPayroll.number,
-                                        staffPayroll.start,
-                                        staffPayroll.date_effective,
-                                        staffWage.type_concept,
-                                        staffPayrollLine.wage_type,
-                                        staffPayroll.description
-                                    ])
+                condition=staffPayroll.id == staffPayrollLine.payroll,
+            )
+            .join(
+                staffWage, 'LEFT', condition=staffWage.id == staffPayrollLine.wage_type
+            )
+            .join(employee, 'LEFT', condition=employee.id == staffPayroll.employee)
+            .join(party, 'LEFT', condition=party.id == employee.party)
+            .join(contract, 'LEFT', condition=employee.id == contract.employee)
+            .join(
+                department, 'LEFT', condition=department.id == staffPayroll.department
+            )
+            .select(
+                *columns.values(),
+                where=where,
+                group_by=[
+                    party.id_number,
+                    party.name,
+                    department.name,
+                    staffWage.name,
+                    staffPayroll.number,
+                    staffPayroll.start,
+                    staffPayroll.date_effective,
+                    staffWage.type_concept,
+                    staffPayrollLine.wage_type,
+                    staffPayroll.description,
+                ],
+            )
+        )
 
         # Ejecucion de la consulta
         cursor.execute(*select)
@@ -2679,7 +2835,8 @@ class PayrollIBCReport(Report):
 
                     # Estraemos el mes al que pertenece dicha informacion para agruparla
                     fila_dict['month'] = MONTH.get(
-                        str(fila_dict['start']).split('-')[1])
+                        str(fila_dict['start']).split('-')[1]
+                    )
 
                     # Verificamos si el id_number no se encuentra en las estrutura de diccionario
                     # si es asi, le asigna el id_number con un diccionario interno con la data
@@ -2689,39 +2846,42 @@ class PayrollIBCReport(Report):
 
                     # Verificamos si el mes no se encuentra dentro del diccionario data interno,
                     # si es asi, lo agrega con la cabecera del mes para acomular la data
-                    if fila_dict['month'] not in items[
-                            fila_dict['id_number']]['data']:
+                    if fila_dict['month'] not in items[fila_dict['id_number']]['data']:
 
-                        items[fila_dict['id_number']]['data'][
-                            fila_dict['month']] = {
-                                'id_number': fila_dict['id_number'],
-                                'name': fila_dict['name'],
-                                'department': fila_dict['department'],
-                                'salary': 0,
-                                'extras': 0,
-                                'recargos': 0,
-                                'bonus': 0,
-                                'comision': 0,
-                                'total': 0,
+                        items[fila_dict['id_number']]['data'][fila_dict['month']] = {
+                            'id_number': fila_dict['id_number'],
+                            'name': fila_dict['name'],
+                            'department': fila_dict['department'],
+                            'salary': 0,
+                            'extras': 0,
+                            'recargos': 0,
+                            'bonus': 0,
+                            'comision': 0,
+                            'total': 0,
                         }
 
                     # Verificamos cual es el tipo de concepto para acomularlo en cada uno de ellos
                     if fila_dict['type_concept'] == 'salary':
-                        items[fila_dict['id_number']]['data'][fila_dict[
-                            'month']]['salary'] += fila_dict['amount']
+                        items[fila_dict['id_number']]['data'][fila_dict['month']][
+                            'salary'
+                        ] += fila_dict['amount']
                     elif fila_dict['type_concept'] == 'extras':
-                        items[fila_dict['id_number']]['data'][fila_dict[
-                            'month']]['extras'] += fila_dict['amount']
+                        items[fila_dict['id_number']]['data'][fila_dict['month']][
+                            'extras'
+                        ] += fila_dict['amount']
                     elif fila_dict['type_concept'] == 'bonus':
-                        items[fila_dict['id_number']]['data'][
-                            fila_dict['month']]['bonus'] += fila_dict['amount']
+                        items[fila_dict['id_number']]['data'][fila_dict['month']][
+                            'bonus'
+                        ] += fila_dict['amount']
                     elif fila_dict['type_concept'] == 'commission':
-                        items[fila_dict['id_number']]['data'][fila_dict[
-                            'month']]['comision'] += fila_dict['amount']
+                        items[fila_dict['id_number']]['data'][fila_dict['month']][
+                            'comision'
+                        ] += fila_dict['amount']
 
                     # Aqui acomulamos todos los valores para dar un total final de ese mes.
-                    items[fila_dict['id_number']]['data'][
-                        fila_dict['month']]['total'] += fila_dict['amount']
+                    items[fila_dict['id_number']]['data'][fila_dict['month']][
+                        'total'
+                    ] += fila_dict['amount']
 
                 else:  # Si el valor del bool es quincenal, entonces ingresamos en esta seccion
                     # Agregamos el numero de la nomina como indice para acomular los valores
@@ -2733,7 +2893,7 @@ class PayrollIBCReport(Report):
                             'name': fila_dict['name'],
                             'department': fila_dict['department'],
                             'description': fila_dict['description'],
-                            'values': {}
+                            'values': {},
                         }
 
                     # Tomamos la description de la nomina para acomular los valores de la data
@@ -2751,20 +2911,25 @@ class PayrollIBCReport(Report):
                     # Verificamos cual es el tipo de concepto para acomularlo en cada uno de ellos
                     if fila_dict['type_concept'] == 'salary':
                         items[index]['values'][fila_dict['description']][
-                            'salary'] += fila_dict['amount']
+                            'salary'
+                        ] += fila_dict['amount']
                     elif fila_dict['type_concept'] == 'extras':
                         items[index]['values'][fila_dict['description']][
-                            'extras'] += fila_dict['amount']
+                            'extras'
+                        ] += fila_dict['amount']
                     elif fila_dict['type_concept'] == 'bonus':
                         items[index]['values'][fila_dict['description']][
-                            'bonus'] += fila_dict['amount']
+                            'bonus'
+                        ] += fila_dict['amount']
                     elif fila_dict['type_concept'] == 'commission':
                         items[index]['values'][fila_dict['description']][
-                            'comision'] += fila_dict['amount']
+                            'comision'
+                        ] += fila_dict['amount']
 
                     # Totalisamos los valores
                     items[index]['values'][fila_dict['description']][
-                        'total'] += fila_dict['amount']
+                        'total'
+                    ] += fila_dict['amount']
 
         # Funcion para ordenas de manera accedente la informacion
         items = dict(sorted(items.items()))
@@ -2783,8 +2948,9 @@ class PayrollPaycheckReportExten(metaclass=PoolMeta):
 
     @classmethod
     def get_context(cls, records, header, data):
-        report_context = super(PayrollPaycheckReportExten,
-                               cls).get_context(records, header, data)
+        report_context = super(PayrollPaycheckReportExten, cls).get_context(
+            records, header, data
+        )
         pool = Pool()
         Payroll = pool.get('staff.payroll')
         PayrollLine = pool.get('staff.payroll.line')
@@ -2793,13 +2959,20 @@ class PayrollPaycheckReportExten(metaclass=PoolMeta):
 
         dom_payroll = cls.get_domain_payroll(data)
         fields_payroll = [
-            'id', 'employee.party.name', 'employee.party.id_number',
-            'contract.start_date', 'contract.end_date', 'date_effective',
-            'ibc', 'contract.last_salary', 'worked_days', 'employee',
-            'contract'
+            'id',
+            'employee.party.name',
+            'employee.party.id_number',
+            'contract.start_date',
+            'contract.end_date',
+            'date_effective',
+            'ibc',
+            'contract.last_salary',
+            'worked_days',
+            'employee',
+            'contract',
         ]
-        payrolls = Payroll.search_read(dom_payroll,
-                                       fields_names=fields_payroll)
+        payrolls = Payroll.search_read(
+            dom_payroll, fields_names=fields_payroll)
         today = date.today()
         res = {}
         wage_type_default = [
@@ -2843,29 +3016,43 @@ class PayrollPaycheckReportExten(metaclass=PoolMeta):
         payroll_ids = [p['id'] for p in payrolls]
 
         fields_lines = [
-            'amount', 'quantity', 'party.name', 'wage_type.type_concept',
-            'wage_type.unit_price_formula', 'wage_type.expense_formula',
-            'payroll', 'start_date', 'end_date', 'payroll.employee',
-            'payroll.contract', 'wage_type.salary_constitute', 'party.code',
+            'amount',
+            'quantity',
+            'party.name',
+            'wage_type.type_concept',
+            'wage_type.unit_price_formula',
+            'wage_type.expense_formula',
+            'payroll',
+            'start_date',
+            'end_date',
+            'payroll.employee',
+            'payroll.contract',
+            'wage_type.salary_constitute',
+            'party.code',
             'wage_type.type_concept_electronic',
-            'wage_type.excluded_payroll_electronic'
+            'wage_type.excluded_payroll_electronic',
         ]
 
-        dom_line = [('payroll', 'in', payroll_ids),
-                    [
-                        'OR',
-                        ('wage_type.type_concept', 'in', wage_type_default),
-                        ('wage_type.type_concept', 'ilike', 'incapacity%'),
-                        ('wage_type.type_concept', 'ilike', 'license%'),
-                        ('wage_type.type_concept', '=', 'extras'),
-                        ('wage_type.type_concept', '=', 'holidays'),
-                        ('wage_type.type_concept_electronic', 'in',
-                         ['LicenciaR', 'LicenciaMP', 'ConceptoS']),
-                        [
-                            'AND',
-                            ('wage_type.provision_cancellation', '!=', None),
-                        ]
-        ]]
+        dom_line = [
+            ('payroll', 'in', payroll_ids),
+            [
+                'OR',
+                ('wage_type.type_concept', 'in', wage_type_default),
+                ('wage_type.type_concept', 'ilike', 'incapacity%'),
+                ('wage_type.type_concept', 'ilike', 'license%'),
+                ('wage_type.type_concept', '=', 'extras'),
+                ('wage_type.type_concept', '=', 'holidays'),
+                (
+                    'wage_type.type_concept_electronic',
+                    'in',
+                    ['LicenciaR', 'LicenciaMP', 'ConceptoS'],
+                ),
+                [
+                    'AND',
+                    ('wage_type.provision_cancellation', '!=', None),
+                ],
+            ],
+        ]
 
         order = [('payroll.employee', 'DESC'), ('payroll', 'ASC')]
         payroll_lines = PayrollLine.search_read(dom_line,
@@ -2893,27 +3080,30 @@ class PayrollPaycheckReportExten(metaclass=PoolMeta):
         staff_lines_event = []
         concept = line['wage_type.']['type_concept']
         concept_electronic = line['wage_type.']['type_concept_electronic']
-        other_health_retirement = line['wage_type.'][
-            'excluded_payroll_electronic']
+        other_health_retirement = line['wage_type.']['excluded_payroll_electronic']
 
         if concept == 'holidays' and other_health_retirement and validate:
-            staff_line, = PayrollLine.search([('id', '=', line['id'])])
-            wages = [(wage_type.wage_type.credit_account, wage_type)
-                     for wage_type in
-                     staff_line.payroll.contract.employee.mandatory_wages
-                     if wage_type.wage_type.type_concept in CONCEPT]
+            (staff_line,) = PayrollLine.search([('id', '=', line['id'])])
+            wages = [
+                (wage_type.wage_type.credit_account, wage_type)
+                for wage_type in staff_line.payroll.contract.employee.mandatory_wages
+                if wage_type.wage_type.type_concept in CONCEPT
+            ]
 
             if staff_line.origin:
-                event = Staff_event_liquidation.search([
-                    ('event', '=', staff_line.origin.id),
-                    ('staff_liquidation.end_period', '=',
-                     staff_line.payroll.period.id)
-                ])
+                event = Staff_event_liquidation.search(
+                    [
+                        ('event', '=', staff_line.origin.id),
+                        (
+                            'staff_liquidation.end_period',
+                            '=',
+                            staff_line.payroll.period.id,
+                        ),
+                    ]
+                )
 
                 for item in event:
-                    staff_lines_event += [
-                        i for i in item.staff_liquidation.move.lines
-                    ]
+                    staff_lines_event += [i for i in item.staff_liquidation.move.lines]
 
                 for line_move in staff_lines_event:
                     for account_, wage in wages:
@@ -2924,14 +3114,11 @@ class PayrollPaycheckReportExten(metaclass=PoolMeta):
 
             if key in res.keys():
                 if 'health' in staff_lines.keys():
-                    res[key]['health_amount'] += staff_lines['health'][
-                        'amount']
+                    res[key]['health_amount'] += staff_lines['health']['amount']
                     res[key]['subtotal'] += staff_lines['health']['amount']
                 if 'retirement' in staff_lines.keys():
-                    res[key]['retirement_amount'] += staff_lines['retirement'][
-                        'amount']
-                    res[key]['subtotal'] += staff_lines['retirement'][
-                        'amount']
+                    res[key]['retirement_amount'] += staff_lines['retirement']['amount']
+                    res[key]['subtotal'] += staff_lines['retirement']['amount']
                 validate = False
 
         if concept in wage_type_default and concept != 'salary':
@@ -2939,14 +3126,16 @@ class PayrollPaycheckReportExten(metaclass=PoolMeta):
 
             if unit_formula:
                 unit_formula = Decimal(
-                    (unit_formula[unit_formula.index('*') + 1:]).strip())
+                    (unit_formula[unit_formula.index('*') + 1:]).strip()
+                )
             else:
                 unit_formula = 0
 
             expense_formula = line['wage_type.']['expense_formula']
             if expense_formula:
                 expense_formula = Decimal(
-                    (expense_formula[expense_formula.index('*') + 1:]).strip())
+                    (expense_formula[expense_formula.index('*') + 1:]).strip()
+                )
                 line_ = PayrollLine(line['id'])
                 expense_amount = line_.get_expense_amount()
                 res[key][concept + '_amount'] += expense_amount
@@ -2954,15 +3143,15 @@ class PayrollPaycheckReportExten(metaclass=PoolMeta):
                 total += expense_amount
             else:
                 expense_formula = 0
-
-            res[key][
-                concept +
-                '_name'] = line['party.']['name'] if line['party.'] else ''
-            res[key][concept + '_rate'] = unit_formula + \
-                (expense_formula if expense_formula < 1 else 0)
-            res[key][
-                concept +
-                '_code'] = line['party.']['code'] if line['party.'] else ''
+            res[key][concept + '_name'] = (
+                line['party.']['name'] if line['party.'] else ''
+            )
+            res[key][concept + '_rate'] = unit_formula + (
+                expense_formula if expense_formula < 1 else 0
+            )
+            res[key][concept + '_code'] = (
+                line['party.']['code'] if line['party.'] else ''
+            )
             res[key]['subtotal'] += line['amount']
             total += line['amount']
             res[key][concept + '_amount'] += line['amount']
@@ -2993,9 +3182,8 @@ class PayrollElectronicCDS(metaclass=PoolMeta):
         pool = Pool()
         ElectronicPayrollLine = pool.get('staff.payroll.electronic.line')
         payrolls = self._get_payrolls_month()
-        payrolls_lines = [
-            list(p.lines) for p in payrolls if hasattr(p, 'lines')
-        ]
+        payrolls_lines = [list(p.lines)
+                          for p in payrolls if hasattr(p, 'lines')]
         payrolls_lines = list(chain(*payrolls_lines))
         liquidations = self._get_liquidations_month()
         liquidations_lines = [
@@ -3004,7 +3192,8 @@ class PayrollElectronicCDS(metaclass=PoolMeta):
         liquidations_lines = list(chain(*liquidations_lines))
         wage_to_create = {}
         worked_days = sum(
-            [p.worked_days for p in payrolls if hasattr(p, 'worked_days')])
+            [p.worked_days for p in payrolls if hasattr(p, 'worked_days')]
+        )
         self.worked_days = worked_days
         self.payrolls_relationship = payrolls
         self.liquidations_relationship = liquidations
@@ -3016,11 +3205,21 @@ class PayrollElectronicCDS(metaclass=PoolMeta):
             concept_normal = line.wage_type.type_concept
             excluded = line.wage_type.excluded_payroll_electronic
             wage_exceptions = [
-                'interest', 'holidays', 'unemployment', 'bonus_service',
-                'convencional_bonus'
+                'interest',
+                'holidays',
+                'unemployment',
+                'bonus_service',
+                'convencional_bonus',
             ]
-            if concept and line.quantity > 0 and (concept_normal not in wage_exceptions
-                                                  or not line.wage_type.contract_finish) and not excluded:
+            if (
+                concept
+                and line.quantity > 0
+                and (
+                    concept_normal not in wage_exceptions
+                    or not line.wage_type.contract_finish
+                )
+                and not excluded
+            ):
                 wage_id = line.wage_type.id
                 sequence = list_concepts.index(concept)
                 if wage_id not in wage_to_create:
@@ -3034,16 +3233,22 @@ class PayrollElectronicCDS(metaclass=PoolMeta):
                         'uom': line.wage_type.uom,
                         'amount': abs(line.amount),
                         'party': line.party,
-                        'lines_payroll': [('add', [
-                            line.id,
-                        ])]
+                        'lines_payroll': [
+                            (
+                                'add',
+                                [
+                                    line.id,
+                                ],
+                            )
+                        ],
                     }
                     if concept in EXTRAS.keys():
                         field = line.wage_type.type_concept_electronic
                         # field = field[0].lower()
                         relation_extras = self._get_lines_extras(field)
                         wage_to_create[wage_id].update(
-                            {'assitants_line': [('add', relation_extras)]})
+                            {'assitants_line': [('add', relation_extras)]}
+                        )
                 else:
                     wage_to_create[wage_id]['lines_payroll'][0][1].append(
                         line.id)
@@ -3083,9 +3288,11 @@ class PayrollElectronicCDS(metaclass=PoolMeta):
         Access = pool.get('staff.access')
         payrolls = self.payrolls_relationship
         value = Decimal('0.0')
-        accesses = Access.search([
-            ('payroll', 'in', payrolls),
-        ])
+        accesses = Access.search(
+            [
+                ('payroll', 'in', payrolls),
+            ]
+        )
         for a in accesses:
             print(a, field)
             if getattr(a, field) == value:
@@ -3097,19 +3304,19 @@ class PayrollGlobalStart(metaclass=PoolMeta):
     'Consolidated Payroll View'
     __name__ = 'staff.payroll_global.start'
 
-    analytic_account = fields.Many2One('analytic_account.account',
-                                       'Analytic Account')
+    analytic_account = fields.Many2One(
+        'analytic_account.account', 'Analytic Account')
 
-    account = fields.Selection(
-        'get_wage_types', 'Account'
-    )
+    account = fields.Selection('get_wage_types', 'Account')
 
     @staticmethod
     def get_wage_types():
         pool = Pool()
         WageType = pool.get('staff.wage_type')
         wage_types = WageType.search(['type_concept', '=', 'salary'])
-        return [(str(wt.debit_account.id), wt.name) for wt in wage_types if wt.debit_account]
+        return [
+            (str(wt.debit_account.id), wt.name) for wt in wage_types if wt.debit_account
+        ]
 
 
 class PayrollGlobal(metaclass=PoolMeta):
@@ -3150,7 +3357,7 @@ class PayrollGlobalReport(Report, metaclass=PoolMeta):
 
     @classmethod
     def get_context(cls, records, header, data):
-        """Function to build report"""
+        '''Function to build report'''
 
         report_context = Report.get_context(records, header, data)
         pool = Pool()
@@ -3172,14 +3379,14 @@ class PayrollGlobalReport(Report, metaclass=PoolMeta):
         start_period = Period(data['start_period'])
         if data['end_period']:
             end_period = Period(data['end_period'])
-            dom_periods.extend([
-                ('start', '>=', start_period.start),
-                ('end', '<=', end_period.end),
-            ])
-        else:
-            dom_periods.append(
-                ('id', '=', start_period.id)
+            dom_periods.extend(
+                [
+                    ('start', '>=', start_period.start),
+                    ('end', '<=', end_period.end),
+                ]
             )
+        else:
+            dom_periods.append(('id', '=', start_period.id))
 
         periods = Period.search(dom_periods)
         dom_pay = cls.get_domain_payroll(data)
@@ -3191,50 +3398,54 @@ class PayrollGlobalReport(Report, metaclass=PoolMeta):
         )
         if data['department']:
             dom_pay.append(
-                ['AND', ['OR', [
-                    ('employee.department', '=', data['department']),
-                    ('department', '=', None),
-                ], [
-                    ('department',  '=', data['department']),
-                ],
-                ]]
+                [
+                    'AND',
+                    [
+                        'OR',
+                        [
+                            ('employee.department', '=', data['department']),
+                            ('department', '=', None),
+                        ],
+                        [
+                            ('department', '=', data['department']),
+                        ],
+                    ],
+                ]
             )
             department = Department(data['department']).name
         else:
             department = 'TODOS LOS DEPARTAMENTOS'
 
         if not data['include_finished']:
-            dom_pay.append(
-                ('contract.state', '!=', 'finished')
-            )
+            dom_pay.append(('contract.state', '!=', 'finished'))
 
         # Build domain to filter by accounts
         if data['analytic_account']:
             analytic_account_id = data['analytic_account']
             lines = PayrollLine.search(
-                [('analytic_accounts.account.id', '=', analytic_account_id),
-                 ('payroll.date_effective', '>=', start_period.start),
+                [
+                    ('analytic_accounts.account.id', '=', analytic_account_id),
+                    ('payroll.date_effective', '>=', start_period.start),
                     ('payroll.date_effective', '<=', end_period.end),
-                    ('wage_type.type_concept', '=', 'salary')])
+                    ('wage_type.type_concept', '=', 'salary'),
+                ]
+            )
             if not lines:
                 raise UserError(
                     'Error', 'No se encontro informacion asociada.')
 
             line_list = list({_line for _line in lines})
-            dom_pay.append(
-                ('lines', 'in', line_list)
-            )
+            dom_pay.append(('lines', 'in', line_list))
 
         # Define account if selected in view
         if data['account']:
             account_id = data['account']
             payroll_lines = PayrollLine.search(
-                [('wage_type.debit_account.id', '=', account_id)])
+                [('wage_type.debit_account.id', '=', account_id)]
+            )
             if payroll_lines:
                 lines = list([line.id for line in payroll_lines])
-                dom_pay.append(
-                    ('lines', 'in', lines)
-                )
+                dom_pay.append(('lines', 'in', lines))
 
         payrolls = Payroll.search(dom_pay)
         if not payrolls:
@@ -3242,11 +3453,24 @@ class PayrollGlobalReport(Report, metaclass=PoolMeta):
 
         periods_number = len(periods)
         default_vals = cls.default_values()
-        payments = ['salary', 'transport', 'extras', 'food', 'bonus', 'commission',
-                    'incapacity_less_to_2_days', 'incapacity_greater_to_2_days', 'incapacity_arl']
+        payments = [
+            'salary',
+            'transport',
+            'extras',
+            'food',
+            'bonus',
+            'commission',
+            'incapacity_less_to_2_days',
+            'incapacity_greater_to_2_days',
+            'incapacity_arl',
+        ]
         deductions = [
-            'health', 'retirement', 'tax', 'syndicate',
-            'fsp', 'acquired_product'
+            'health',
+            'retirement',
+            'tax',
+            'syndicate',
+            'fsp',
+            'acquired_product',
         ]
 
         for payroll in payrolls:
@@ -3256,21 +3480,32 @@ class PayrollGlobalReport(Report, metaclass=PoolMeta):
             employee_id = payroll.employee.id
 
             if employee_id not in parties.keys():
-                position_employee = payroll.employee.position.name if payroll.employee.position else ''
-                position_contract = payroll.contract.position.name if payroll.contract and payroll.contract.position else ''
+                position_employee = (
+                    payroll.employee.position.name if payroll.employee.position else ''
+                )
+                position_contract = (
+                    payroll.contract.position.name
+                    if payroll.contract and payroll.contract.position
+                    else ''
+                )
                 parties[employee_id] = default_vals.copy()
                 parties[employee_id]['employee_code'] = payroll.employee.code
                 parties[employee_id]['employee'] = payroll.employee.party.name
-                parties[employee_id]['employee_id_number'] = payroll.employee.party.id_number
+                parties[employee_id][
+                    'employee_id_number'
+                ] = payroll.employee.party.id_number
                 if payroll.employee.party_health:
                     party_health = payroll.employee.party_health.name
                 if payroll.employee.party_retirement:
                     party_retirement = payroll.employee.party_retirement.name
                 parties[employee_id]['party_health'] = party_health
                 parties[employee_id]['party_retirement'] = party_retirement
-                parties[employee_id]['basic_salary'] = payroll.contract.get_salary_in_date(
-                    payroll.end)
-                parties[employee_id]['employee_position'] = position_contract or position_employee or ''
+                parties[employee_id]['basic_salary'] = (
+                    payroll.contract.get_salary_in_date(payroll.end)
+                )
+                parties[employee_id]['employee_position'] = (
+                    position_contract or position_employee or ''
+                )
                 parties[employee_id]['account'] = None
                 parties[employee_id]['analytic_account'] = None
 
@@ -3281,7 +3516,9 @@ class PayrollGlobalReport(Report, metaclass=PoolMeta):
 
                 if parties[employee_id]['account'] is None:
                     if line.wage_type.type_concept == 'salary':
-                        parties[employee_id]['account'] = line.wage_type.debit_account.code
+                        parties[employee_id][
+                            'account'
+                        ] = line.wage_type.debit_account.code
 
                 if parties[employee_id]['analytic_account'] is None:
                     if line.wage_type.type_concept == 'salary':
@@ -3292,27 +3529,36 @@ class PayrollGlobalReport(Report, metaclass=PoolMeta):
                                     code = analytic.account.code
                                     name = analytic.account.name
                                     analytic_name = f'{code}-{name}'
-                                    parties[employee_id]['analytic_account'] = analytic_name
+                                    parties[employee_id][
+                                        'analytic_account'
+                                    ] = analytic_name
 
                 if line.wage_type.type_concept in (payments + deductions):
                     concept = line.wage_type.type_concept
                 else:
-                    if line.wage_type.definition == 'payment' and line.wage_type.receipt:
+                    if (
+                        line.wage_type.definition == 'payment'
+                        and line.wage_type.receipt
+                    ):
                         concept = 'others_payments'
-                    elif line.wage_type.definition == 'deduction' or \
-                        line.wage_type.definition == 'discount' and \
-                            line.wage_type.receipt:
+                    elif (
+                        line.wage_type.definition == 'deduction'
+                        or line.wage_type.definition == 'discount'
+                        and line.wage_type.receipt
+                    ):
                         concept = 'others_deductions'
                     else:
                         concept = line.wage_type.type_concept
 
                 if not concept:
                     raise UserError(
-                        'ERROR', f'El concepto no existe {line.wage_type.name}')
+                        'ERROR', f'El concepto no existe {line.wage_type.name}'
+                    )
 
                 parties[employee_id][concept] += line.amount
             parties[employee_id]['worked_days'] += Decimal(
-                payroll.worked_days_effective)
+                payroll.worked_days_effective
+            )
             parties[employee_id]['gross_payments'] += payroll.gross_payments
             parties[employee_id]['total_deductions'] += payroll.total_deductions
             parties[employee_id]['net_payment'] += payroll.net_payment
@@ -3340,19 +3586,19 @@ class PayrollSheetStart(metaclass=PoolMeta):
     'Comprehensive Payroll View'
     __name__ = 'staff.payroll.sheet.start'
 
-    analytic_account = fields.Many2One('analytic_account.account',
-                                       'Analytic Account')
+    analytic_account = fields.Many2One(
+        'analytic_account.account', 'Analytic Account')
 
-    account = fields.Selection(
-        'get_wage_types', 'Account'
-    )
+    account = fields.Selection('get_wage_types', 'Account')
 
     @staticmethod
     def get_wage_types():
         pool = Pool()
         WageType = pool.get('staff.wage_type')
         wage_types = WageType.search(['type_concept', '=', 'salary'])
-        return [(str(wt.debit_account.id), wt.name) for wt in wage_types if wt.debit_account]
+        return [
+            (str(wt.debit_account.id), wt.name) for wt in wage_types if wt.debit_account
+        ]
 
 
 class PayrollSheet(metaclass=PoolMeta):
@@ -3385,7 +3631,7 @@ class PayrollSheetReport(Report, metaclass=PoolMeta):
 
     @classmethod
     def get_context(cls, records, header, data):
-        """Function to build data to report"""
+        '''Function to build data to report'''
 
         report_context = Report.get_context(records, header, data)
         pool = Pool()
@@ -3417,41 +3663,40 @@ class PayrollSheetReport(Report, metaclass=PoolMeta):
         if data['analytic_account']:
             analytic_account_id = data['analytic_account']
             lines = PayrollLine.search(
-                [('analytic_accounts.account.id', '=', analytic_account_id),
-                 ('payroll.date_effective', '>=', list_date_periods[0]),
-                    ('wage_type.type_concept', '=', 'salary')])
+                [
+                    ('analytic_accounts.account.id', '=', analytic_account_id),
+                    ('payroll.date_effective', '>=', list_date_periods[0]),
+                    ('wage_type.type_concept', '=', 'salary'),
+                ]
+            )
             if not lines:
                 raise UserError(
                     'Error', 'No se encontro informacion asociada.')
 
             line_list = list({_line for _line in lines})
-            dom_payroll.append(
-                ('lines', 'in', line_list)
-            )
+            dom_payroll.append(('lines', 'in', line_list))
 
         # Define account if selected in view
         if data['account']:
             account_id = data['account']
             payroll_lines = PayrollLine.search(
-                [('wage_type.debit_account.id', '=', account_id)])
+                [('wage_type.debit_account.id', '=', account_id)]
+            )
             if payroll_lines:
                 lines = list([line.id for line in payroll_lines])
-                dom_payroll.append(
-                    ('lines', 'in', lines)
-                )
+                dom_payroll.append(('lines', 'in', lines))
 
-        payrolls = Payroll.search(dom_payroll,
-                                  order=[
-                                      ('employee.party.name', 'ASC'),
-                                      ('period.name', 'ASC')
-                                  ])
+        payrolls = Payroll.search(
+            dom_payroll, order=[
+                ('employee.party.name', 'ASC'), ('period.name', 'ASC')]
+        )
         if not payrolls:
             raise UserError('Error', 'No se encontro informacion asociada.')
 
         default_vals = cls.default_values()
         for payroll in payrolls:
             item += 1
-            project = ""
+            project = ''
 
             values = copy.deepcopy(default_vals)
             values['item'] = item
@@ -3463,8 +3708,9 @@ class PayrollSheetReport(Report, metaclass=PoolMeta):
             if payroll.contract and payroll.contract.position:
                 position_contract = payroll.contract.position.name
             values['position'] = position_contract or position_name
-            values['department'] = payroll.employee.department.name \
-                if payroll.employee.department else ''
+            values['department'] = (
+                payroll.employee.department.name if payroll.employee.department else ''
+            )
             values['company'] = user.company.party.name
             values['legal_salary'] = payroll.contract.get_salary_in_date(
                 payroll.end)
@@ -3473,7 +3719,8 @@ class PayrollSheetReport(Report, metaclass=PoolMeta):
                 payroll.end) / 30
             values['salary_day'] = salary_day_in_date
             values['salary_hour'] = (
-                salary_day_in_date / 8) if salary_day_in_date else 0
+                (salary_day_in_date / 8) if salary_day_in_date else 0
+            )
             values['worked_days'] = payroll.worked_days
             values['gross_payment'] = payroll.gross_payments
             values['account'] = None
@@ -3485,8 +3732,10 @@ class PayrollSheetReport(Report, metaclass=PoolMeta):
                     project = payroll.project.name
 
             if hasattr(payroll.employee, 'project_contract'):
-                if payroll.employee.project_contract and \
-                        payroll.employee.project_contract.reference:
+                if (
+                    payroll.employee.project_contract
+                    and payroll.employee.project_contract.reference
+                ):
                     project = payroll.employee.project_contract.reference
             values['project'] = project
 
@@ -3509,12 +3758,13 @@ class PayrollSheetReport(Report, metaclass=PoolMeta):
     def _prepare_lines(cls, payroll, vals):
         for line in payroll.lines:
             # Add account
-            if vals['account'] is None and\
-                    line.wage_type.type_concept == 'salary':
+            if vals['account'] is None and line.wage_type.type_concept == 'salary':
                 vals['account'] = line.wage_type.debit_account.code
 
-            if vals['analytic_account'] is None and\
-                    line.wage_type.type_concept == 'salary':
+            if (
+                vals['analytic_account'] is None
+                and line.wage_type.type_concept == 'salary'
+            ):
                 analytic_account = line.analytic_accounts
                 if analytic_account:
                     for analytic in analytic_account:
@@ -3562,32 +3812,36 @@ class PayrollSheetReport(Report, metaclass=PoolMeta):
         for key in SHEET_SUMABLES:
             vals[key] = sum(vals[key])
 
-        vals['gross_payment'] = sum([
-            vals['salary'],
-            vals['total_extras'],
-            vals['transport'],
-            vals['food'],
-            vals['bonus']
-        ])
+        vals['gross_payment'] = sum(
+            [
+                vals['salary'],
+                vals['total_extras'],
+                vals['transport'],
+                vals['food'],
+                vals['bonus'],
+            ]
+        )
 
         vals['net_payment'] = vals['gross_payment'] - vals['total_deduction']
         vals['ibc'] = vals['gross_payment']
-        vals['total_benefit'] = sum([
-            vals['unemployment'],
-            vals['interest'],
-            vals['holidays'],
-            vals['bonus_service'],
-        ])
-        vals['total_parafiscales'] = sum([
-            vals['box_family'],
-            vals['sena'],
-            vals['icbf']
-        ])
+        vals['total_benefit'] = sum(
+            [
+                vals['unemployment'],
+                vals['interest'],
+                vals['holidays'],
+                vals['bonus_service'],
+            ]
+        )
+        vals['total_parafiscales'] = sum(
+            [vals['box_family'], vals['sena'], vals['icbf']]
+        )
         vals['total_ssi'] = vals['retirement_provision'] + vals['risk']
-        vals['total_cost'] = sum([
-            vals['total_ssi'],
-            vals['box_family'],
-            vals['gross_payment'],
-            vals['total_benefit']
-        ])
+        vals['total_cost'] = sum(
+            [
+                vals['total_ssi'],
+                vals['box_family'],
+                vals['gross_payment'],
+                vals['total_benefit'],
+            ]
+        )
         return vals
