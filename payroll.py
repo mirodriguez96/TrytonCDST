@@ -1864,7 +1864,6 @@ class Payroll(metaclass=PoolMeta):
         debit_acc2 = None
         attr_getter = attrgetter(
             "amount",
-            "party",
             "amount_60_40",
             "wage_type",
             "wage_type.definition",
