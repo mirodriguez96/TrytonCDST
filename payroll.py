@@ -1901,6 +1901,14 @@ class Payroll(metaclass=PoolMeta):
             result.extend(_line)
         return result
 
+    def get_party_payroll_line(self, line, mandatories, employee_id):
+        for mandatory in mandatories:
+            if mandatory.wage_type == line.wage_type:
+                if mandatory.party:
+                    employee_id = mandatory.party
+        return employee_id
+
+
     def create_move(self):
         """Function to create account_move registry and post it
         """
