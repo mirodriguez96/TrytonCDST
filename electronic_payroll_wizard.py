@@ -1,6 +1,7 @@
-from trytond.wizard import Wizard, StateTransition
-from trytond.transaction import Transaction
 from trytond.pool import Pool
+from trytond.transaction import Transaction
+from trytond.wizard import StateTransition, Wizard
+
 from .it_supplier_noova import ElectronicPayrollCdst
 
 

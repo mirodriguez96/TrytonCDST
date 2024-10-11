@@ -1,9 +1,9 @@
-from trytond.transaction import Transaction
-from trytond.pool import Pool, PoolMeta
-from trytond.model import fields
-
-from datetime import timedelta, date
+from datetime import date, timedelta
 from decimal import Decimal
+
+from trytond.model import fields
+from trytond.pool import Pool, PoolMeta
+from trytond.transaction import Transaction
 
 
 class Template(metaclass=PoolMeta):

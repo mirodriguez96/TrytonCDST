@@ -1,10 +1,11 @@
 # This file is part of Tryton.  The COPYRIGHT file at the top level of
 # this repository contains the full copyright notices and license terms.
 
-from trytond.transaction import Transaction
-from trytond.wizard import Wizard,StateTransition
-from trytond.pool import Pool
 from trytond.exceptions import UserError
+from trytond.pool import Pool
+from trytond.transaction import Transaction
+from trytond.wizard import StateTransition, Wizard
+
 
 class DunningForceDraft(Wizard):
     'Account Dunning Force Draft'

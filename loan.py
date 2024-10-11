@@ -1,15 +1,16 @@
-from trytond.wizard import (Wizard, StateTransition)
-from trytond.tools import reduce_ids, grouped_slice
-from trytond.transaction import Transaction
+import calendar
+from datetime import date, datetime
+from decimal import Decimal
+
+from dateutil.relativedelta import relativedelta
+from sql import Literal, Table
+
 from trytond.exceptions import UserError
 from trytond.pool import Pool, PoolMeta
 from trytond.pyson import Eval
-
-from decimal import Decimal
-from datetime import date, datetime
-from dateutil.relativedelta import relativedelta
-from sql import Table, Literal
-import calendar
+from trytond.tools import grouped_slice, reduce_ids
+from trytond.transaction import Transaction
+from trytond.wizard import StateTransition, Wizard
 
 
 class Loan(metaclass=PoolMeta):

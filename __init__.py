@@ -1,41 +1,44 @@
 """--------INIT MODULE---------"""
 
 from trytond.pool import Pool
-from . import conector
-from . import party
-from . import product
-from . import sale
-from . import sale_device
-from . import configuration
-from . import voucher
-from . import pay_mode
-from . import electronic_payroll_wizard
-from . import company
-from . import payment_term
-from . import purchase
-from . import stock
-from . import invoice
-from . import tax
-from . import production
-from . import wiz
-from . import report
-from . import account
-from . import payroll
-from . import cron
-from . import statement
-from . import payment_bank
-from . import loan
-from . import liquidation
-from . import permissions
-from . import currency
-from . import account_dunning
-from . import collection
-from . import line
-from . import contract
-from . import access
-from . import exogena
-from . import email_
-from . import conector_log
+
+from . import (
+    access,
+    account,
+    account_dunning,
+    collection,
+    company,
+    conector,
+    conector_log,
+    configuration,
+    contract,
+    cron,
+    currency,
+    electronic_payroll_wizard,
+    email_,
+    exogena,
+    invoice,
+    line,
+    liquidation,
+    loan,
+    party,
+    pay_mode,
+    payment_bank,
+    payment_term,
+    payroll,
+    permissions,
+    product,
+    production,
+    purchase,
+    report,
+    sale,
+    sale_device,
+    statement,
+    stock,
+    tax,
+    voucher,
+    wiz,
+)
 
 
 def register():

@@ -1,17 +1,23 @@
-from trytond.wizard import (Wizard, StateReport, StateView, Button,
-                            StateTransition)
-from trytond.modules.company import CompanyReport
-from trytond.transaction import Transaction
-from trytond.model import fields, ModelView
-from trytond.exceptions import UserError
-from trytond.pool import Pool, PoolMeta
-from trytond.report import Report
-
+import calendar
+import datetime
 from decimal import Decimal
 from itertools import chain
+
 from sql import Table
-import datetime
-import calendar
+
+from trytond.exceptions import UserError
+from trytond.model import ModelView, fields
+from trytond.modules.company import CompanyReport
+from trytond.pool import Pool, PoolMeta
+from trytond.report import Report
+from trytond.transaction import Transaction
+from trytond.wizard import (
+    Button,
+    StateReport,
+    StateTransition,
+    StateView,
+    Wizard,
+)
 
 
 # Heredamos del modelo sale.sale para agregar el campo id_tecno

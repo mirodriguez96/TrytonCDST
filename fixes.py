@@ -1,6 +1,6 @@
+from trytond.exceptions import UserError
 from trytond.pool import Pool
 from trytond.transaction import Transaction
-from trytond.exceptions import UserError
 
 _SW = {
     '27': {

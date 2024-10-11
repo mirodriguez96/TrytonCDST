@@ -1,9 +1,10 @@
-from trytond.model import ModelSQL, ModelView, fields
-from trytond.pyson import Eval, Not, Bool
-from trytond.transaction import Transaction
-from trytond.pool import Pool
-from .exceptions import DuplicateUserPermission
 from trytond.i18n import gettext
+from trytond.model import ModelSQL, ModelView, fields
+from trytond.pool import Pool
+from trytond.pyson import Bool, Eval, Not
+from trytond.transaction import Transaction
+
+from .exceptions import DuplicateUserPermission
 
 
 class Permissions(ModelSQL, ModelView):

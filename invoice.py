@@ -1,18 +1,20 @@
 """INVOICE MODULE"""
-from trytond.wizard import Wizard, StateTransition, StateView, Button
-from trytond.exceptions import UserError, UserWarning
-from trytond.model import fields, ModelView, Workflow
-from trytond.transaction import Transaction
-from trytond.pyson import Eval, Or, And
-from trytond.pool import PoolMeta, Pool
-from trytond.i18n import gettext
-
-from sentry_sdk.integrations.trytond import TrytondWSGIIntegration
-from .it_supplier_noova import SendElectronicInvoice
-from decimal import Decimal
-from sql import Table
-import sentry_sdk
 import datetime
+from decimal import Decimal
+
+import sentry_sdk
+from sentry_sdk.integrations.trytond import TrytondWSGIIntegration
+from sql import Table
+
+from trytond.exceptions import UserError, UserWarning
+from trytond.i18n import gettext
+from trytond.model import ModelView, Workflow, fields
+from trytond.pool import Pool, PoolMeta
+from trytond.pyson import And, Eval, Or
+from trytond.transaction import Transaction
+from trytond.wizard import Button, StateTransition, StateView, Wizard
+
+from .it_supplier_noova import SendElectronicInvoice
 
 # Config Sentry
 sentry_sdk.init(

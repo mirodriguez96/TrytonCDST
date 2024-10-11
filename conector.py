@@ -1,12 +1,12 @@
-from trytond.model import ModelSQL, ModelView, fields
-from trytond.transaction import Transaction
-from trytond.pool import Pool
-from trytond.wizard import Wizard, StateTransition, StateView, Button
-from trytond.exceptions import UserError, UserWarning
-
-from decimal import Decimal
 import datetime
 import logging
+from decimal import Decimal
+
+from trytond.exceptions import UserError, UserWarning
+from trytond.model import ModelSQL, ModelView, fields
+from trytond.pool import Pool
+from trytond.transaction import Transaction
+from trytond.wizard import Button, StateTransition, StateView, Wizard
 
 TYPES_FILE = [
     ('parties', 'Parties'),

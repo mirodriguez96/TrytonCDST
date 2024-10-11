@@ -1,10 +1,10 @@
+from datetime import date
+from decimal import Decimal
+
 from trytond.exceptions import UserError
+from trytond.i18n import gettext
 from trytond.pool import Pool, PoolMeta
 from trytond.report import Report
-from trytond.i18n import gettext
-
-from decimal import Decimal
-from datetime import date
 
 _ZERO = Decimal(0)
 DEFINITIONS = {

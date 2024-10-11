@@ -1,7 +1,7 @@
-from decimal import Decimal
 #import json
 import datetime
 import os
+from decimal import Decimal
 
 EXTRAS = {
     'HED': {

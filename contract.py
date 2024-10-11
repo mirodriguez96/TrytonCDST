@@ -1,5 +1,6 @@
-from trytond.pool import PoolMeta
 import datetime
+
+from trytond.pool import PoolMeta
 
 
 class Contract(metaclass=PoolMeta):

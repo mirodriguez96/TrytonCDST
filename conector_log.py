@@ -1,13 +1,14 @@
-from trytond.model import ModelSQL, ModelView, fields
-from trytond.wizard import Wizard, StateTransition
-from trytond.pool import Pool
-from trytond.transaction import Transaction
-from trytond.exceptions import UserWarning
-
-
 from datetime import datetime, time
 from decimal import Decimal
+
 from sql import Table
+
+from trytond.exceptions import UserWarning
+from trytond.model import ModelSQL, ModelView, fields
+from trytond.pool import Pool
+from trytond.transaction import Transaction
+from trytond.wizard import StateTransition, Wizard
+
 from . import fixes
 
 STATE_LOG = [

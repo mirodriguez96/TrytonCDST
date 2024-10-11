@@ -1,8 +1,10 @@
 """CURRENCY MODULE"""
 from datetime import date
-from decimal import Decimal, ROUND_HALF_UP
-from trytond.pool import PoolMeta, Pool
+from decimal import ROUND_HALF_UP, Decimal
+
 import requests
+
+from trytond.pool import Pool, PoolMeta
 
 
 class CurrencyRate(metaclass=PoolMeta):

@@ -1,12 +1,14 @@
-from trytond.model import ModelView, ModelSQL, fields
-from trytond.transaction import Transaction
-from trytond.exceptions import UserError
-from trytond.pool import Pool, PoolMeta
-
-from decimal import Decimal
-from sql import Table, Null
-from . import fixes
 from datetime import date
+from decimal import Decimal
+
+from sql import Null, Table
+
+from trytond.exceptions import UserError
+from trytond.model import ModelSQL, ModelView, fields
+from trytond.pool import Pool, PoolMeta
+from trytond.transaction import Transaction
+
+from . import fixes
 
 _ZERO = Decimal('0.0')
 

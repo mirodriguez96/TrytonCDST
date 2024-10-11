@@ -1,14 +1,16 @@
 # This file is part of Tryton.  The COPYRIGHT file at the top level of
 # this repository contains the full copyright notices and license terms.
-from stdnum import iban, bic
-from trytond.report import Report
-from trytond.model import (ModelView, fields, ModelSQL, Unique)
-from trytond.transaction import Transaction
-from trytond.wizard import Wizard, StateView, Button, StateReport
-from trytond.pool import Pool, PoolMeta
-from trytond.model.exceptions import ValidationError
-from trytond.pyson import Eval
 from decimal import Decimal
+
+from stdnum import bic, iban
+
+from trytond.model import ModelSQL, ModelView, Unique, fields
+from trytond.model.exceptions import ValidationError
+from trytond.pool import Pool, PoolMeta
+from trytond.pyson import Eval
+from trytond.report import Report
+from trytond.transaction import Transaction
+from trytond.wizard import Button, StateReport, StateView, Wizard
 
 TYPE_TRANSACTION_GET = {
     '01': 'Cuenta por Defecto',

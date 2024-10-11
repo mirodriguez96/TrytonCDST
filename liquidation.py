@@ -1,16 +1,14 @@
+import calendar
+from datetime import datetime, timedelta
+from decimal import Decimal
+
+from dateutil import tz
+
 from trytond.exceptions import UserError
 from trytond.model import ModelView, fields
-from trytond.pyson import Eval, Not, Bool
-from trytond.pool import Pool, PoolMeta
-from trytond.pyson import Eval, If
 from trytond.modules.analytic_account import AnalyticMixin
-
-
-from datetime import timedelta, datetime
-from decimal import Decimal
-from dateutil import tz
-import calendar
-
+from trytond.pool import Pool, PoolMeta
+from trytond.pyson import Bool, Eval, If, Not
 
 from .constants import EXTRAS
 
