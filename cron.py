@@ -24,10 +24,14 @@ class Cron(metaclass=PoolMeta):
     @classmethod
     def __setup__(cls):
         super().__setup__()
+        # OK
         cls.method.selection.append(
             ('party.party|import_parties_tecno', "Importar terceros"), )
+
+        # OK
         cls.method.selection.append(('party.party|import_addresses_tecno',
                                      "Importar direcciones de terceros"), )
+
         cls.method.selection.append(
             ('sale.sale|import_data_sale', "Importar ventas"), )
         cls.method.selection.append(('product.product|update_product_parent',
