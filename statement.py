@@ -1,14 +1,14 @@
-from trytond.model import ModelView, ModelSQL, fields
-from trytond.pool import PoolMeta, Pool
-from trytond.pyson import Eval
-from trytond.model import Unique
-from trytond.wizard import Wizard, StateView, StateTransition
-from trytond.wizard import Button
-from trytond.transaction import Transaction
-from trytond.exceptions import UserError
-from decimal import Decimal
 import datetime
-from .exceptions import (NotMoveStatementeLine)
+from decimal import Decimal
+
+from trytond.exceptions import UserError
+from trytond.model import ModelSQL, ModelView, Unique, fields
+from trytond.pool import Pool, PoolMeta
+from trytond.pyson import Eval
+from trytond.transaction import Transaction
+from trytond.wizard import Button, StateTransition, StateView, Wizard
+
+from .exceptions import NotMoveStatementeLine
 
 CONFIRMED_STATES = {
     'readonly': False  # Not(Equal(Eval('statement_line'), None))

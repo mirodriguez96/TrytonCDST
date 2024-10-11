@@ -1,19 +1,19 @@
-from trytond.wizard import Wizard, StateView, Button, StateReport
-from trytond.transaction import Transaction
-from trytond.model import fields, ModelView
-from trytond.exceptions import UserError
-from trytond.pool import Pool, PoolMeta
-from trytond.report import Report
-from trytond.pyson import Eval, If
-
-
-from sql.operators import Like, Between
-from collections import OrderedDict
-from sql.aggregate import Sum
-from decimal import Decimal
-from datetime import date
-from sql import Table
 import time
+from collections import OrderedDict
+from datetime import date
+from decimal import Decimal
+
+from sql import Table
+from sql.aggregate import Sum
+from sql.operators import Between, Like
+
+from trytond.exceptions import UserError
+from trytond.model import ModelView, fields
+from trytond.pool import Pool, PoolMeta
+from trytond.pyson import Eval, If
+from trytond.report import Report
+from trytond.transaction import Transaction
+from trytond.wizard import Button, StateReport, StateView, Wizard
 
 STATES = [("", ""), ("draft", "Borrador"), ("done", "Finalizado")]
 TYPE_DOCUMENT = [("", "")]

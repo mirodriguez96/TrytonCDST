@@ -1,4 +1,4 @@
-from trytond.model import ModelView, ModelSQL, fields
+from trytond.model import ModelSQL, ModelView, fields
 from trytond.pool import Pool
 from trytond.transaction import Transaction
 

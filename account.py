@@ -1,29 +1,33 @@
-from trytond.model import ModelView, fields, Workflow, ModelSQL
-from trytond.modules.stock.exceptions import PeriodCloseError
-from trytond.modules.account.exceptions import PostError, \
-    ReconciliationError
-from trytond.wizard import Wizard, StateView, StateAction, \
-    Button, StateReport, StateTransition
-from trytond.model.exceptions import AccessError
-from trytond.pyson import Eval, If, Bool, Not
-from trytond.transaction import Transaction
-from trytond.exceptions import UserError
-from trytond.pool import Pool, PoolMeta
-from trytond.tools import grouped_slice
-from trytond.report import Report
-from trytond.i18n import gettext
-
-from timeit import default_timer as timer
-from collections import defaultdict
-from itertools import groupby
-from decimal import Decimal
-from datetime import date
 import operator
+from collections import OrderedDict, defaultdict
+from datetime import date
+from decimal import Decimal
+from itertools import groupby
+from timeit import default_timer as timer
 
-from sql.conditionals import Coalesce
-from collections import OrderedDict
-from sql.aggregate import Sum, Max
 from sql import Null
+from sql.aggregate import Max, Sum
+from sql.conditionals import Coalesce
+
+from trytond.exceptions import UserError
+from trytond.i18n import gettext
+from trytond.model import ModelSQL, ModelView, Workflow, fields
+from trytond.model.exceptions import AccessError
+from trytond.modules.account.exceptions import PostError, ReconciliationError
+from trytond.modules.stock.exceptions import PeriodCloseError
+from trytond.pool import Pool, PoolMeta
+from trytond.pyson import Bool, Eval, If, Not
+from trytond.report import Report
+from trytond.tools import grouped_slice
+from trytond.transaction import Transaction
+from trytond.wizard import (
+    Button,
+    StateAction,
+    StateReport,
+    StateTransition,
+    StateView,
+    Wizard,
+)
 
 try:
     from itertools import izip
@@ -147,7 +151,6 @@ class Move(ModelSQL, metaclass=PoolMeta):
         cls.post_(moves)
         super(Move, cls).post(moves)
 
-
     @classmethod
     def post_(cls, moves):
         pool = Pool()
@@ -161,7 +164,6 @@ class Move(ModelSQL, metaclass=PoolMeta):
             lines = move.lines
             if lines:
                 cls.check_analytyc_required(lines)
-
 
         for move in moves:
             amount = Decimal('0.0')
@@ -225,7 +227,6 @@ class Move(ModelSQL, metaclass=PoolMeta):
                                     'y creditos, no se puede contabilizar.')
         cls.save(moves)
 
-
     @classmethod
     def check_analytyc_required(cls, lines):
         for line in lines:
@@ -240,15 +241,16 @@ class Move(ModelSQL, metaclass=PoolMeta):
                 raise (UserError("ERROR", f"{message}"))
 
     @classmethod
-    def validate_analytic_distribution(cls,line):
+    def validate_analytic_distribution(cls, line):
         pool = Pool()
         AnalyticRule = pool.get('analytic_account.rule')
         if line.account:
             analytic_required = line.account.analytical_management
-            analytic_rule = AnalyticRule.search(['account','=',line.account])
+            analytic_rule = AnalyticRule.search(['account', '=', line.account])
             if analytic_required and analytic_rule:
                 return True
         return False
+
 
 class MoveLine(ModelSQL, metaclass=PoolMeta):
     """Account move line inheritance"""
@@ -533,8 +535,8 @@ class BalanceStock(Wizard):
                     cost_price = product.avg_cost_price
                     # if self.start.arbitrary_cost:
                     #     cost_price = Decimal(product.arbitrary_cost(self.start.date))
-                    balances[stock_account] += (Decimal(product.quantity) *
-                                                cost_price) or Decimal(0)
+                    balances[stock_account] += (Decimal(product.quantity)
+                                                * cost_price) or Decimal(0)
                     stock_accounts.add(stock_account.id)
             current_balances = {}
             with Transaction().set_context(self.account_balance_context()):
@@ -548,8 +550,8 @@ class BalanceStock(Wizard):
             lines = []
             for stock_account in balances.keys():
                 currency = stock_account.company.currency
-                amount = currency.round(current_balances[stock_account.id] -
-                                        balances[stock_account])
+                amount = currency.round(current_balances[stock_account.id]
+                                        - balances[stock_account])
                 if currency.is_zero(amount):
                     continue
                 line = Line()
@@ -906,8 +908,8 @@ class AuxiliaryBookCDS(Report):
                     Sum(accountLine.credit),
                     Sum(accountLine.debit),
                     Sum(
-                        Coalesce(accountLine.debit, 0) -
-                        Coalesce(accountLine.credit, 0)),
+                        Coalesce(accountLine.debit, 0)
+                        - Coalesce(accountLine.credit, 0)),
                     where=where)
 
             cursor.execute(*select2)
@@ -925,8 +927,8 @@ class AuxiliaryBookCDS(Report):
                     Sum(accountLine.credit),
                     Sum(accountLine.debit),
                     Sum(
-                        Coalesce(accountLine.debit, 0) -
-                        Coalesce(accountLine.credit, 0)),
+                        Coalesce(accountLine.debit, 0)
+                        - Coalesce(accountLine.credit, 0)),
                     where=where)
 
             cursor.execute(*query)
@@ -1012,8 +1014,8 @@ class AuxiliaryBookCDS(Report):
                     balance = accountBalance.get(start_account) or 0
                     id2end_account[start_account].credit = credit
                     id2end_account[start_account].debit = debit
-                    id2end_account[start_account].balance = ((debit - credit) +
-                                                             balance)
+                    id2end_account[start_account].balance = ((debit - credit)
+                                                             + balance)
 
         report_context['start_period_name'] = start_period_name
         report_context['end_period_name'] = end_period_name
@@ -1390,8 +1392,8 @@ class IncomeStatementReport(Report):
                     condition=accountType.id == account.type).join(
                         analyticAccount,
                         'LEFT',
-                        condition=analyticAccountLine.account ==
-                        analyticAccount.id).select(
+                        condition=analyticAccountLine.account
+                        == analyticAccount.id).select(
                             *columns.values(),
                             where=where,
                             group_by=(accountType.sequence,
@@ -2199,8 +2201,8 @@ class AuxiliaryParty(metaclass=PoolMeta):
                 accounts_id[id_][account_id]['lines'].append(line)
                 accounts_id[id_][account_id]['sum_debit'].append(line.debit)
                 accounts_id[id_][account_id]['sum_credit'].append(line.credit)
-                accounts_id[id_][account_id]['balance'].append(line.debit -
-                                                               line.credit)
+                accounts_id[id_][account_id]['balance'].append(line.debit
+                                                               - line.credit)
 
         if not data['only_reference'] and data['party']:
             grouped_party = True

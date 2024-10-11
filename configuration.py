@@ -1,12 +1,12 @@
-from trytond.model import ModelSQL, ModelView, fields
-from trytond.exceptions import UserError
-from trytond.pyson import Eval, Not
-from trytond.pool import Pool
-
-from .additional import list_to_tuple
 import datetime
 import logging
 
+from trytond.exceptions import UserError
+from trytond.model import ModelSQL, ModelView, fields
+from trytond.pool import Pool
+from trytond.pyson import Eval, Not
+
+from .additional import list_to_tuple
 
 try:
     import pyodbc

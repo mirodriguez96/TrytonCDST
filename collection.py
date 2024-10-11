@@ -1,9 +1,11 @@
-from trytond.transaction import Transaction
-from trytond.pool import Pool, PoolMeta
-from .exceptions import UserError
-from trytond.report import Report
-from datetime import date, timedelta
 import copy
+from datetime import date, timedelta
+
+from trytond.pool import Pool, PoolMeta
+from trytond.report import Report
+from trytond.transaction import Transaction
+
+from .exceptions import UserError
 
 
 class PortfolioStatusReport(Report, metaclass=PoolMeta):

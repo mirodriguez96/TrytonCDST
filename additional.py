@@ -1,8 +1,9 @@
+import math
+from decimal import Decimal
+
+from trytond.exceptions import UserError
 from trytond.pool import Pool
 from trytond.transaction import Transaction
-from trytond.exceptions import UserError
-from decimal import Decimal
-import math
 
 
 # Función encargada de convertir una lista a un string tipo tupla

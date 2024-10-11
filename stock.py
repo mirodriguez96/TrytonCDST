@@ -1,19 +1,20 @@
 """STOCK MOVEMENTS MODULE"""
 
-from operator import itemgetter
-from decimal import Decimal
+import copy
 from collections import defaultdict
 from datetime import timedelta
-import copy
+from decimal import Decimal
+from operator import itemgetter
 
-from trytond.pool import Pool, PoolMeta
-from trytond.model import fields, Workflow, ModelView
-from trytond.transaction import Transaction
-from trytond.wizard import (StateReport, StateView, Button, Wizard)
-from trytond.report import Report
 from trytond.exceptions import UserError
 from trytond.i18n import gettext
-from trytond.pyson import Eval, Bool
+from trytond.model import ModelView, Workflow, fields
+from trytond.pool import Pool, PoolMeta
+from trytond.pyson import Bool, Eval
+from trytond.report import Report
+from trytond.transaction import Transaction
+from trytond.wizard import Button, StateReport, StateView, Wizard
+
 from .additional import validate_documentos
 
 SW = 16

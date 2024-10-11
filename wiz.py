@@ -1,11 +1,13 @@
 from decimal import Decimal
-from trytond.model import ModelView, fields
-from trytond.wizard import Wizard, StateTransition, StateView, Button
-from trytond.pool import Pool
-from trytond.transaction import Transaction
-from trytond.exceptions import UserError, UserWarning
 
 from sql import Table
+
+from trytond.exceptions import UserError, UserWarning
+from trytond.model import ModelView, fields
+from trytond.pool import Pool
+from trytond.transaction import Transaction
+from trytond.wizard import Button, StateTransition, StateView, Wizard
+
 from . import fixes
 
 _EXPORTADO = [('N', '(N) SIN IMPORTAR'), ('E', '(E) EXCEPCION'),

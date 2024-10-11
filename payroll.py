@@ -1,39 +1,42 @@
-from trytond.exceptions import UserError, UserWarning
-from trytond.wizard import Wizard, StateView, Button, StateReport, StateTransition
-from trytond.model import ModelSQL, ModelView, fields
-from trytond.modules.company import CompanyReport
-from trytond.pyson import Eval, Or, Not, If, Bool
-from trytond.transaction import Transaction
-from trytond.pool import Pool, PoolMeta
-from trytond.sendmail import sendmail
-from trytond.report import Report
-from trytond.i18n import gettext
-
-from .it_supplier_noova import ElectronicPayrollCdst
-from email.mime.nonmultipart import MIMENonMultipart
-from email.mime.application import MIMEApplication
-from email.utils import formataddr, getaddresses
-from email.mime.multipart import MIMEMultipart
-from email.encoders import encode_base64
-from email.mime.text import MIMEText
-from email.header import Header
-from operator import attrgetter
-
-from sql.operators import Between
-from sql.aggregate import Sum
-
-from dateutil.relativedelta import relativedelta
-from datetime import timedelta, date
-from operator import attrgetter
-from decimal import Decimal
-from itertools import chain
-from dateutil import tz
-import mimetypes
 import calendar
 import copy
+import mimetypes
+from datetime import date, timedelta
+from decimal import Decimal
+from email.encoders import encode_base64
+from email.header import Header
+from email.mime.application import MIMEApplication
+from email.mime.multipart import MIMEMultipart
+from email.mime.nonmultipart import MIMENonMultipart
+from email.mime.text import MIMEText
+from email.utils import formataddr, getaddresses
+from itertools import chain
+from operator import attrgetter
 
+from dateutil import tz
+from dateutil.relativedelta import relativedelta
+from sql.aggregate import Sum
+from sql.operators import Between
 
-from .constants import FIELDS_AMOUNT, SHEET_SUMABLES, EXTRAS
+from trytond.exceptions import UserError, UserWarning
+from trytond.i18n import gettext
+from trytond.model import ModelSQL, ModelView, fields
+from trytond.modules.company import CompanyReport
+from trytond.pool import Pool, PoolMeta
+from trytond.pyson import Bool, Eval, If, Not, Or
+from trytond.report import Report
+from trytond.sendmail import sendmail
+from trytond.transaction import Transaction
+from trytond.wizard import (
+    Button,
+    StateReport,
+    StateTransition,
+    StateView,
+    Wizard,
+)
+
+from .constants import EXTRAS, FIELDS_AMOUNT, SHEET_SUMABLES
+from .it_supplier_noova import ElectronicPayrollCdst
 
 
 def ultimo_dia_del_mes(year, month):

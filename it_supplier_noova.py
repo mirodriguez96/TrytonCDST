@@ -1,14 +1,14 @@
 """SEND DOCUMENTS BY NOOVA"""
 #!/usr/bin/python
 #! -*- coding: utf8 -*-
-import json
 import base64
+import json
+
 import requests
 import sentry_sdk
 
 from .builder_phase import ElectronicPayroll
 from .builder_phase2 import ElectronicInvoice_2
-
 
 
 class ElectronicPayrollCdst(object):

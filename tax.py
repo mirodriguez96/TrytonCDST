@@ -1,10 +1,9 @@
-from trytond.model import ModelSQL, fields
-from trytond.pool import PoolMeta
 from decimal import Decimal
-from trytond.model import ModelSQL, fields
-from trytond.pool import Pool
+
 from trytond.exceptions import UserError
 from trytond.i18n import gettext
+from trytond.model import ModelSQL, fields
+from trytond.pool import Pool, PoolMeta
 from trytond.pyson import Eval
 
 _ZERO = Decimal('0.0')

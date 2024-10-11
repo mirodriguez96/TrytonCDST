@@ -1,6 +1,6 @@
-from trytond.pool import PoolMeta
-from trytond.pyson import Eval, Not, If, Bool
 from trytond.model import fields
+from trytond.pool import PoolMeta
+from trytond.pyson import Bool, Eval, If, Not
 
 STATE = {'invisible': Not(Bool(Eval('access_register')))}
 

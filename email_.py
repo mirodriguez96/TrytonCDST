@@ -7,11 +7,11 @@ from email.mime.nonmultipart import MIMENonMultipart
 from email.mime.text import MIMEText
 from email.utils import formataddr, getaddresses
 
-from trytond.sendmail import sendmail_transactional, SMTPDataManager
-from trytond.transaction import Transaction
+from trytond.config import config
 from trytond.exceptions import UserError
 from trytond.pool import Pool, PoolMeta
-from trytond.config import config
+from trytond.sendmail import SMTPDataManager, sendmail_transactional
+from trytond.transaction import Transaction
 
 try:
     import html2text
