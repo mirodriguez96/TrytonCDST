@@ -1,4 +1,3 @@
-import time
 from collections import OrderedDict
 from datetime import date
 from decimal import Decimal
@@ -346,8 +345,8 @@ class Sale(metaclass=PoolMeta):
                 if venta.retencion_causada > 0:
                     if not retencion_iva and not retencion_ica:
                         retencion_rete = True
-                    elif (venta.retencion_iva +
-                            venta.retencion_ica) != venta.retencion_causada:
+                    elif (venta.retencion_iva
+                            + venta.retencion_ica) != venta.retencion_causada:
                         retencion_rete = True
 
                 for lin in documentos_linea:
@@ -513,22 +512,16 @@ class Sale(metaclass=PoolMeta):
                     print('Eliminando venta con excepcion')
                     continue
 
-                # process created registry
                 with Transaction().set_user(1):
                     context = User.get_preferences()
 
                 with Transaction().set_context(context, _skip_warnings=True):
                     Sale.quote([sale])
-                    time.sleep(5)
                     Sale.confirm([sale])
-                    time.sleep(5)
                     Sale.process([sale])
-                    time.sleep(5)
                     cls.finish_shipment_process(sale, numero_doc, Config,
                                                 tipo_doc)
-                    time.sleep(5)
                     cls._post_invoices(sale, venta, logs, to_exception)
-                    time.sleep(5)
                     if id_venta in to_exception:
                         continue
                     pagos = Config.get_tipos_pago(id_venta)
@@ -547,7 +540,6 @@ class Sale(metaclass=PoolMeta):
                         continue
                 to_created.append(id_venta)
             except Exception as e:
-                # logs[id_venta] = f"EXCEPCION: ERROR AL IMPORTAR LA VENTA"
                 logs[id_venta] = f"EXCEPCION: {str(e)}"
                 to_exception.append(id_venta)
 
@@ -1057,28 +1049,56 @@ class Sale(metaclass=PoolMeta):
         for idt in ids_tecno:
             Cnxn.update_exportado(idt, cod)
 
+    def _get_authorization(self, sale):
+        """
+            Inheritance function from sale_pos module from presik
+            add validation if
+        """
+        authorization_id = None
+        if sale.untaxed_amount_cache:
+            if sale.untaxed_amount_cache >= 0:
+                if sale.invoice_type == 'P' and sale.shop.pos_authorization:
+                    authorization_id = sale.shop.pos_authorization.id
+                elif sale.invoice_type == 'M' and sale.shop.manual_authorization:
+                    authorization_id = sale.shop.manual_authorization.id
+                elif sale.invoice_type == 'C' and sale.shop.computer_authorization:
+                    authorization_id = sale.shop.computer_authorization.id
+                elif sale.invoice_type in ['1', '2', '3'] and sale.shop.electronic_authorization:
+                    authorization_id = sale.shop.electronic_authorization.id
+                elif sale.shop.debit_note_electronic_authorization and sale.invoice_type == '92':
+                    authorization_id = sale.shop.debit_note_electronic_authorization.id
+            else:
+                if sale.shop.credit_note_electronic_authorization and sale.invoice_type in ['91', 'N']:
+                    authorization_id = sale.shop.credit_note_electronic_authorization.id
+            return authorization_id
 
-class SaleLine(metaclass=PoolMeta):
-    __name__ = 'sale.line'
-
-    @classmethod
-    def __setup__(cls):
-        super(SaleLine, cls).__setup__()
-
-    # Se hereda la funcion 'compute_taxes' para posteriormente quitar el impuesto (IVA) a los terceros 'regimen_no_responsable'
-    # def compute_taxes(self, party):
-    #     taxes_id = super(SaleLine, self).compute_taxes(party)
-    #     Tax = Pool().get('account.tax')
-    #     if party.regime_tax == 'regimen_no_responsable':
-    #         taxes_result = set()
-    #         for tax_id in taxes_id:
-    #             tax = Tax(tax_id)
-    #             # El impuesto de IVA equivale al codigo 01
-    #             if tax.classification_tax_tecno == '01':
-    #                 continue
-    #             taxes_result.add(tax_id)
-    #         taxes_id = list(taxes_result)
-    #     return taxes_id
+    def get_sequence(self, sale):
+        """
+            Inheritance function from sale_pos module from presik
+            add validation if
+        """
+        sequence = None
+        if sale.untaxed_amount_cache:
+            if sale.untaxed_amount_cache >= 0:
+                if sale.invoice_type == 'C' and sale.shop.computer_authorization:
+                    sequence = sale.shop.computer_authorization.sequence
+                elif sale.invoice_type == 'P' and sale.shop.pos_authorization:
+                    sequence = sale.shop.pos_authorization.sequence
+                elif sale.invoice_type == 'M' and sale.shop.manual_authorization:
+                    sequence = sale.shop.manual_authorization.sequence
+                elif sale.invoice_type in ['1', '2', '3'] and sale.shop.electronic_authorization:
+                    sequence = sale.shop.electronic_authorization.sequence
+                elif sale.shop.invoice_sequence:
+                    sequence = sale.shop.invoice_sequence
+            else:
+                if sale.shop.credit_note_electronic_authorization and sale.invoice_type in ['91', 'N']:
+                    sequence = sale.shop.credit_note_electronic_authorization.sequence
+                elif sale.shop.debit_note_electronic_authorization and sale.invoice_type == '92':
+                    sequence = sale.shop.debit_note_electronic_authorization.sequence
+                else:
+                    if sale.shop.credit_note_sequence:
+                        sequence = sale.shop.credit_note_sequence
+            return sequence
 
 
 class Statement(metaclass=PoolMeta):
@@ -1139,14 +1159,7 @@ class SaleShopDetailedCDS(Wizard):
         party_id = None
         product_id = None
         shop_id = None
-        # if self.start.salesman:
-        #     salesman_id = self.start.salesman.id
-        # if self.start.shop:
-        #     shop_id = self.start.shop.id
-        # if self.start.party:
-        #     party_id = self.start.party.id
-        # if self.start.product:
-        #     product_id = self.start.product.id
+
         data = {
             'company': self.start.company.id,
             'start_date': self.start.start_date,
@@ -1301,8 +1314,8 @@ class SaleShopDetailedCDSReport(Report):
                         shop, 'LEFT', condition=invoice.shop == shop.id).join(
                             product_uom,
                             'LEFT',
-                            condition=invoiceLine.unit ==
-                            product_uom.id).select(
+                            condition=invoiceLine.unit
+                            == product_uom.id).select(
                                 *columnsLine.values(),
                                 where=where,
                                 group_by=[

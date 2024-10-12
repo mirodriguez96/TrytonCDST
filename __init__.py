@@ -121,7 +121,6 @@ def register():
                   report.PayrollExportStart,
                   report.CDSSaleIncomeDailyStart,
                   sale.Sale,
-                  sale.SaleLine,
                   sale.Statement,
                   sale_device.SaleDevice,
                   sale_device.Journal,
