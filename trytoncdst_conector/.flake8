@@ -1,7 +1,7 @@
 [flake8]
 max-line-length = 120
 exclude = .git,__pycache__,docs/conf.py,old,build,dist
-ignore = E123,E124,E126,E128,W503
+ignore = E123,E124,E126,E128,W503,E741
 
 #E123: Indentación incorrecta al cerrar una estructura (como paréntesis, corchetes, etc.).
 #E124: La indentación es incorrecta para una línea que está colgada en varias líneas.

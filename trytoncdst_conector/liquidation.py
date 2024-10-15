@@ -3,7 +3,6 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 
 from dateutil import tz
-
 from trytond.exceptions import UserError
 from trytond.model import ModelView, fields
 from trytond.modules.analytic_account import AnalyticMixin

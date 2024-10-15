@@ -3,7 +3,6 @@ from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 
 import requests
-
 from trytond.pool import Pool, PoolMeta
 
 

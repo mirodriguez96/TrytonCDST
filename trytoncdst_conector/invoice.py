@@ -5,7 +5,6 @@ from decimal import Decimal
 import sentry_sdk
 from sentry_sdk.integrations.trytond import TrytondWSGIIntegration
 from sql import Table
-
 from trytond.exceptions import UserError, UserWarning
 from trytond.i18n import gettext
 from trytond.model import ModelView, Workflow, fields

@@ -2,53 +2,32 @@
 
 from trytond.pool import Pool
 
-from . import (
-    access,
-    account,
-    account_dunning,
-    collection,
-    company,
-    conector,
-    conector_log,
-    configuration,
-    contract,
-    cron,
-    currency,
-    electronic_payroll_wizard,
-    email_,
-    exogena,
-    invoice,
-    line,
-    liquidation,
-    loan,
-    party,
-    pay_mode,
-    payment_bank,
-    payment_term,
-    payroll,
-    permissions,
-    product,
-    production,
-    purchase,
-    report,
-    sale,
-    sale_device,
-    statement,
-    stock,
-    tax,
-    voucher,
-    wiz,
-)
+from . import (account, account_dunning, collection, company,  # access,
+               conector, conector_log, configuration, contract, cron, currency,
+               electronic_payroll_wizard, email_, exogena, invoice, line,
+               liquidation, loan, party, pay_mode, payment_bank, payment_term,
+               payroll, permissions, product, production, purchase, report,
+               sale, sale_device, statement, stock, tax, voucher, wiz)
+
+# MODEL VIEWS
+# access.CreateAccessHolidaysView,
+# access.StaffAccessRests,
+# access.StaffAccess,
+# access.ImportBiometricRecordsParameters,
+# access.StaffAccessView,
+
+# WIZARDS
+# access.CreateAccessHolidaysWizard,
+# access.ImportBiometricRecords,
+# access.StaffAccessWizard,
+
+# REPORTS
+# access.StaffAccessReport,
 
 
 def register():
     """Function that register model view, wizard and reports with pool"""
-    Pool.register(access.CreateAccessHolidaysView,
-                  access.StaffAccessRests,
-                  access.StaffAccess,
-                  access.ImportBiometricRecordsParameters,
-                  access.StaffAccessView,
-                  account.Account,
+    Pool.register(account.Account,
                   account.Move,
                   account.MoveLine,
                   account.BalanceStockStart,
@@ -156,10 +135,7 @@ def register():
                   module='conector',
                   type_='model')
 
-    Pool.register(access.CreateAccessHolidaysWizard,
-                  access.ImportBiometricRecords,
-                  access.StaffAccessWizard,
-                  account.BalanceStock,
+    Pool.register(account.BalanceStock,
                   account.PrintAuxiliaryBookCDS,
                   account.IncomeStatementWizard,
                   account.ActiveForceDraft,
@@ -217,8 +193,7 @@ def register():
                   module='conector',
                   type_='wizard')
 
-    Pool.register(access.StaffAccessReport,
-                  account.AuxiliaryParty,
+    Pool.register(account.AuxiliaryParty,
                   account.AuxiliaryBookCDS,
                   account.IncomeStatementReport,
                   account.TrialBalanceDetailedCds,

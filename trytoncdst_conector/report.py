@@ -2,7 +2,6 @@ from datetime import date, datetime, time
 from decimal import Decimal
 
 from sql.aggregate import Sum
-
 from trytond.model import ModelView, fields
 from trytond.pool import Pool
 from trytond.report import Report

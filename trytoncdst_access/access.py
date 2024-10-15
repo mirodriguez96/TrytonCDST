@@ -5,20 +5,14 @@ from decimal import Decimal
 
 from dateutil import tz
 from sql import Table
-
 from trytond.exceptions import UserError, UserWarning
 from trytond.model import ModelSQL, ModelView, fields
 from trytond.pool import Pool, PoolMeta
 from trytond.pyson import Eval, If
 from trytond.report import Report
 from trytond.transaction import Transaction
-from trytond.wizard import (
-    Button,
-    StateReport,
-    StateTransition,
-    StateView,
-    Wizard,
-)
+from trytond.wizard import (Button, StateReport, StateTransition, StateView,
+                            Wizard)
 
 from_zone = tz.gettz('UTC')
 to_zone = tz.gettz('America/Bogota')
@@ -422,7 +416,7 @@ class ImportBiometricRecords(Wizard):
     start_state = 'parameters'
     parameters = StateView(
         'staff.access.import_biometric_records.parameters',
-        'conector.import_biometric_records_parameters_view_form', [
+        'access.import_biometric_records_parameters_view_form', [
             Button('Cancel', 'end', 'tryton-cancel'),
             Button('Import',
                    'import_biometric_records',
@@ -486,7 +480,7 @@ class StaffAccessWizard(Wizard):
     __name__ = 'staff.access_wizard'
 
     start = StateView('staff.access_view_start',
-                      'conector.staff_access_report_form', [
+                      'access.staff_access_report_form', [
                           Button('Cancel', 'end', 'tryton-cancel'),
                           Button('Print', 'print_', 'tryton-ok', default=True),
                       ])
@@ -622,7 +616,7 @@ class CreateAccessHolidaysWizard(Wizard):
 
     start = StateView(
         'staff.create_holidays_view_wizard',
-        'conector.create_holidays_access_form', [
+        'access.create_holidays_access_form', [
             Button('Cancel', 'end', 'tryton-cancel'),
             Button('Confirm', 'excecute_wizard', 'tryton-ok', default=True),
         ])
