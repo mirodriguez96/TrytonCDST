@@ -3,7 +3,6 @@
 from decimal import Decimal
 
 from stdnum import bic, iban
-
 from trytond.model import ModelSQL, ModelView, Unique, fields
 from trytond.model.exceptions import ValidationError
 from trytond.pool import Pool, PoolMeta

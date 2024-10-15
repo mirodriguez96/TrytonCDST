@@ -17,7 +17,6 @@ from dateutil import tz
 from dateutil.relativedelta import relativedelta
 from sql.aggregate import Sum
 from sql.operators import Between
-
 from trytond.exceptions import UserError, UserWarning
 from trytond.i18n import gettext
 from trytond.model import ModelSQL, ModelView, fields
@@ -27,13 +26,8 @@ from trytond.pyson import Bool, Eval, If, Not, Or
 from trytond.report import Report
 from trytond.sendmail import sendmail
 from trytond.transaction import Transaction
-from trytond.wizard import (
-    Button,
-    StateReport,
-    StateTransition,
-    StateView,
-    Wizard,
-)
+from trytond.wizard import (Button, StateReport, StateTransition, StateView,
+                            Wizard)
 
 from .constants import EXTRAS, FIELDS_AMOUNT, SHEET_SUMABLES
 from .it_supplier_noova import ElectronicPayrollCdst

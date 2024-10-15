@@ -4,7 +4,6 @@ from decimal import Decimal
 
 from dateutil.relativedelta import relativedelta
 from sql import Literal, Table
-
 from trytond.exceptions import UserError
 from trytond.pool import Pool, PoolMeta
 from trytond.pyson import Eval

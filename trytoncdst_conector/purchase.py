@@ -2,7 +2,6 @@ import datetime
 from decimal import Decimal
 
 from sql import Table
-
 from trytond.exceptions import UserError
 from trytond.model import fields
 from trytond.pool import Pool, PoolMeta

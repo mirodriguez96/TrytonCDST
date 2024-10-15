@@ -1,7 +1,6 @@
 from decimal import Decimal
 
 from sql import Table
-
 from trytond.exceptions import UserError, UserWarning
 from trytond.model import ModelView, fields
 from trytond.pool import Pool

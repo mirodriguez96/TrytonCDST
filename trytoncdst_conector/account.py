@@ -8,7 +8,6 @@ from timeit import default_timer as timer
 from sql import Null
 from sql.aggregate import Max, Sum
 from sql.conditionals import Coalesce
-
 from trytond.exceptions import UserError
 from trytond.i18n import gettext
 from trytond.model import ModelSQL, ModelView, Workflow, fields
@@ -20,14 +19,8 @@ from trytond.pyson import Bool, Eval, If, Not
 from trytond.report import Report
 from trytond.tools import grouped_slice
 from trytond.transaction import Transaction
-from trytond.wizard import (
-    Button,
-    StateAction,
-    StateReport,
-    StateTransition,
-    StateView,
-    Wizard,
-)
+from trytond.wizard import (Button, StateAction, StateReport, StateTransition,
+                            StateView, Wizard)
 
 try:
     from itertools import izip
