@@ -2,27 +2,16 @@
 import datetime
 from decimal import Decimal
 
-import sentry_sdk
-from sentry_sdk.integrations.trytond import TrytondWSGIIntegration
 from sql import Table
 from trytond.exceptions import UserError, UserWarning
 from trytond.i18n import gettext
-from trytond.model import ModelView, Workflow, fields
+from trytond.model import ModelView, fields
 from trytond.pool import Pool, PoolMeta
 from trytond.pyson import And, Eval, Or
 from trytond.transaction import Transaction
 from trytond.wizard import Button, StateTransition, StateView, Wizard
 
 from .it_supplier_noova import SendElectronicInvoice
-
-# Config Sentry
-sentry_sdk.init(
-    dsn="https://7e7c4557c2a9cbbed7aad24d58fd218f@o4506147189751808.ingest.sentry.io/4506147193028608",
-    integrations=[TrytondWSGIIntegration()],
-    environment="produccion",
-    traces_sample_rate=1.0,
-    profiles_sample_rate=1.0,
-)
 
 _ZERO = Decimal('0.0')
 
