@@ -67,7 +67,8 @@ class Product(metaclass=PoolMeta):
                     if status and not product.active:
                         product.active = True
 
-            code = "".join(filter(None, [product.prefix_code, product.suffix_code]))
+            code = "".join(
+                filter(None, [product.prefix_code, product.suffix_code]))
 
             if not code:
                 code = None
@@ -77,122 +78,134 @@ class Product(metaclass=PoolMeta):
 
         cls.save(products)
 
-    # Función encargada de crear o actualizar los productos y categorias de db TecnoCarnes,
-    # teniendo en cuenta la ultima fecha de actualizacion y si existe o no.
     @classmethod
     def import_products_tecno(cls):
+        """Function to import or update tryton products
+        when its created or updated in tecno
+        """
+
         print("RUN PRODUCTOS")
         pool = Pool()
-        Config = pool.get("conector.configuration")
         Actualizacion = pool.get("conector.actualizacion")
+        Config = pool.get("conector.configuration")
+        Category = pool.get("product.category")
+        Template = pool.get("product.template")
+        Product = pool.get("product.product")
+
         actualizacion = Actualizacion.create_or_update("PRODUCTOS")
-        fecha_actualizacion = Actualizacion.get_fecha_actualizacion(actualizacion)
-        productos_tecno = Config.get_tblproducto(fecha_actualizacion)
-        if not productos_tecno:
+        date_updating = Actualizacion.get_fecha_actualizacion(actualizacion)
+        products_tecno = Config.get_tblproducto(date_updating)
+        if not products_tecno:
             actualizacion.save()
             print("FINISH PRODUCTOS")
             return
-        Category = pool.get("product.category")
-        Product = pool.get("product.product")
-        Template = pool.get("product.template")
-        # to_category = []
-        to_product = []
-        to_template = []
-        logs = {}
-        for producto in productos_tecno:
+
+        for producto in products_tecno:
             try:
-                id_producto = str(producto.IdProducto)
+                id_product = str(producto.IdProducto)
                 if producto.ref_anulada == "S":
-                    msg = f"EL PRODUCTO CON CODIGO {id_producto} ESTA MARCADO COMO ANULADO EN TECNOCARNES"
-                    logs[id_producto] = msg
+                    log = {
+                        "EXCEPCION": f"""EL PRODUCTO CON CODIGO {id_product}
+                            ESTA MARCADO COMO ANULADO EN TECNOCARNES"""}
+                    actualizacion.add_logs(log)
                     continue
+
                 product_inactive = Product.search(
-                    [("code", "=", id_producto), ("active", "=", False)]
+                    [("code", "=", id_product), ("active", "=", False)]
                 )
                 if product_inactive:
-                    msg = f"EL PRODUCTO CON CODIGO {id_producto} TIENE UNA VARIANTE MARCADA COMO INACTIVO EN TRYTON"
-                    logs[id_producto] = msg
-                existe = Product.search(
-                    [("code", "=", id_producto), ("active", "=", True)]
-                )
-                id_categoria = producto.contable
-                categoria_contable = Category.search([("id_tecno", "=", id_categoria)])
-                if categoria_contable:
-                    categoria_contable = categoria_contable[0]
+                    log = {
+                        "EXCEPCION": f"""EL PRODUCTO CON CODIGO {id_product}
+                            TIENE UNA VARIANTE MARCADA COMO
+                            INACTIVO EN TRYTON"""}
+                    actualizacion.add_logs(log)
+                    continue
+
+                category_id = producto.contable
+                account_category = Category.search(
+                    [("id_tecno", "=", category_id)])
+                if account_category:
+                    account_category = account_category[0]
                 else:
-                    categoria = Category()
-                    categoria.id_tecno = id_categoria
-                    categoria.name = str(id_categoria) + " - sin modelo"
-                    categoria.accounting = True
-                    categoria.save()
-                    categoria_contable = categoria
-                nombre_producto = producto.Producto.strip()
-                tipo_producto = cls.tipo_producto(producto.maneja_inventario)
-                udm_producto = cls.udm_producto(producto.unidad_Inventario)
-                vendible = cls.vendible_producto(producto.TipoProducto)
-                valor_unitario = producto.valor_unitario
+                    category = Category()
+                    category.id_tecno = category_id
+                    category.name = str(category_id) + " - sin modelo"
+                    category.accounting = True
+                    category.save()
+                    account_category = category
+                product_name = producto.Producto.strip()
+                product_type = cls.tipo_producto(producto.maneja_inventario)
+                product_udm = cls.udm_producto(producto.unidad_Inventario)
+                salable = cls.vendible_producto(producto.TipoProducto)
+                unit_value = producto.valor_unitario
                 if producto.PromedioVenta > 0:
-                    valor_unitario = producto.PromedioVenta
-                valor_unitario = round(valor_unitario, 2)
-                # En caso de existir el producto se procede a verificar su ultimo cambio y a modificar
-                if existe:
-                    (existe,) = existe
-                    ultimo_cambio = producto.Ultimo_Cambio_Registro
+                    unit_value = producto.PromedioVenta
+                unit_value = round(unit_value, 2)
+
+                product = Product.search([
+                            ['OR', ('id_tecno', '=', id_product),
+                             ('code', '=', id_product)],
+                            ('active', '=', True)])
+
+                if product:
+                    product = product[0]
+                    last_change = producto.Ultimo_Cambio_Registro
                     create_date = None
                     write_date = None
-                    # LA HORA DEL SISTEMA DE TRYTON TIENE UNA DIFERENCIA HORARIA DE 5 HORAS CON LA DE TECNO
-                    if existe.write_date:
-                        write_date = existe.write_date - timedelta(hours=5)
-                    elif existe.create_date:
-                        create_date = existe.create_date - timedelta(hours=5)
-                    # print(ultimo_cambio, create_date, write_date)
-                    if (
-                        ultimo_cambio and write_date and ultimo_cambio > write_date
+
+                    # Get create and write date
+                    if product.write_date:
+                        write_date = (product.write_date
+                            - timedelta(hours=5))
+                    elif product.create_date:
+                        create_date = (product.create_date
+                            - timedelta(hours=5))
+                    if (last_change and write_date
+                        and last_change > write_date
                     ) or (
-                        ultimo_cambio and not write_date and ultimo_cambio > create_date
+                        last_change and not write_date
+                        and last_change > create_date
                     ):
-                        existe.template.name = nombre_producto
-                        existe.template.type = tipo_producto
-                        existe.template.default_uom = udm_producto
-                        existe.template.purchase_uom = udm_producto
-                        existe.template.salable = vendible
-                        if vendible:
-                            existe.template.sale_uom = udm_producto
-                        existe.template.list_price = valor_unitario
-                        existe.template.account_category = categoria_contable.id
-                        existe.template.sale_price_w_tax = valor_unitario
-                        existe.template.save()
-                        # Se realiza la asignacion de nuevo del id_tecno para que al guardar el producto detecte cambios y se actualice la fecha de ultima modificacion
-                        existe.id_tecno = id_producto
-                        existe.save()
+                        product.template.name = product_name
+                        product.template.type = product_type
+                        product.template.default_uom = product_udm
+                        product.template.purchase_uom = product_udm
+                        product.template.salable = salable
+                        if salable:
+                            product.template.sale_uom = product_udm
+                        product.template.list_price = unit_value
+                        product.template.account_category = account_category.id
+                        product.template.sale_price_w_tax = unit_value
+                        product.template.save()
+                        product.id_tecno = id_product
+                        product.save()
+                        Transaction().commit()
                 else:
                     prod = Product()
                     temp = Template()
-                    temp.code = id_producto
-                    temp.name = nombre_producto
-                    temp.type = tipo_producto
-                    temp.default_uom = udm_producto
+                    temp.code = id_product
+                    temp.name = product_name
+                    temp.type = product_type
+                    temp.default_uom = product_udm
                     temp.purchasable = True
-                    temp.purchase_uom = udm_producto
-                    temp.salable = vendible
-                    if vendible:
-                        temp.sale_uom = udm_producto
-                    temp.list_price = valor_unitario
-                    temp.account_category = categoria_contable.id
-                    temp.sale_price_w_tax = valor_unitario
-                    prod.id_tecno = id_producto
+                    temp.purchase_uom = product_udm
+                    temp.salable = salable
+                    if salable:
+                        temp.sale_uom = product_udm
+                    temp.list_price = unit_value
+                    temp.account_category = account_category.id
+                    temp.sale_price_w_tax = unit_value
+                    prod.id_tecno = id_product
                     prod.template = temp
-                    to_template.append(temp)
-                    to_product.append(prod)
-            except Exception as e:
-                logs[id_producto] = f"EXCEPCION: {str(e)}"
-        # Category.save(to_category)
-        Template.save(to_template)
-        Product.save(to_product)
-        actualizacion.add_logs(logs)
+                    Product.save([prod])
+                    Template.save([temp])
+                    Transaction().commit()
+            except Exception as error:
+                Transaction().rollback()
+                log = {id_product: f"{error}"}
+                actualizacion.add_logs(log)
         print("FINISH PRODUCTOS")
 
-    # FIX (REPETICION METODO)
     def get_avg_cost_price(self, name=None):
         super(Product, self).get_avg_cost_price(name)
         target_date = date.today()
@@ -310,10 +323,12 @@ class ProductCategory(metaclass=PoolMeta):
         pool = Pool()
         Config = pool.get("conector.configuration")
         Actualizacion = pool.get("conector.actualizacion")
-        actualizacion = Actualizacion.create_or_update("CATEGORIAS DE PRODUCTOS")
+        actualizacion = Actualizacion.create_or_update(
+            "CATEGORIAS DE PRODUCTOS")
         logs = {}
         modelos = Config.get_data_table("vistamodelos")
         if not modelos:
+            print('E3')
             logs["vistamodelos"] = (
                 "No se encontraron valores para importar en la tabla vistamodelos"
             )
@@ -329,26 +344,30 @@ class ProductCategory(metaclass=PoolMeta):
                 name = str(id_tecno) + " - " + modelo.MODELOS.strip()
                 category = Category.search([("id_tecno", "=", id_tecno)])
                 if not category:
-                    category = {"id_tecno": id_tecno, "name": name, "accounting": True}
+                    category = {"id_tecno": id_tecno,
+                        "name": name, "accounting": True}
 
                     # Gastos
                     l_expense = list(modelo.CUENTA1)
                     if int(l_expense[0]) >= 5:
-                        expense = Account.search([("code", "=", modelo.CUENTA1)])
+                        expense = Account.search(
+                            [("code", "=", modelo.CUENTA1)])
                         if expense:
                             category["account_expense"] = expense[0]
 
                     # Ingresos
                     l_revenue = list(modelo.CUENTA3)
                     if l_revenue[0] == "4":
-                        revenue = Account.search([("code", "=", modelo.CUENTA3)])
+                        revenue = Account.search(
+                            [("code", "=", modelo.CUENTA3)])
                         if revenue:
                             category["account_revenue"] = revenue[0]
 
                     # Devolucion venta
                     l_return_sale = list(modelo.CUENTA4)
                     if int(l_return_sale[0]) >= 4:
-                        return_sale = Account.search([("code", "=", modelo.CUENTA4)])
+                        return_sale = Account.search(
+                            [("code", "=", modelo.CUENTA4)])
                         if return_sale:
                             category["account_return_sale"] = return_sale[0]
 
