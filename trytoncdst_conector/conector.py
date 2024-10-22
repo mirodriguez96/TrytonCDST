@@ -66,8 +66,8 @@ class Actualizacion(ModelSQL, ModelView):
             Date = Pool().get('ir.date')
             create_date = actualizacion.create_date.date()
             if create_date != Date.today():
-                date = (actualizacion.create_date -
-                        datetime.timedelta(hours=6))
+                date = (actualizacion.create_date
+                        - datetime.timedelta(hours=6))
         return date
 
     def add_logs(self, logs):

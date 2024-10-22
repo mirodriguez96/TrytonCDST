@@ -17,7 +17,7 @@ echo "[INFO] Installing trytoncdst modules... "
 for i in ${modules}
     do
         cd $i
-        pip install -e .
+        pip install .
         cd ..
     done
 echo "[INFO] Done. "
