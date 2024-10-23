@@ -591,8 +591,8 @@ class Liquidation(metaclass=PoolMeta):
                             result = self._prepare_line(
                                 values['description'],
                                 wages[0].wage_type.debit_account.id,
-                                debit=round(self.gross_payments *
-                                            Decimal(0.12), 2),
+                                debit=round(self.gross_payments
+                                            * Decimal(0.12), 2),
                                 credit=_ZERO,
                                 analytic=values.get('analytic', None),
                                 origin=origin_,
@@ -600,8 +600,8 @@ class Liquidation(metaclass=PoolMeta):
                             )
 
                             values['amount'] = [
-                                round(self.gross_payments *
-                                      Decimal(0.16), 2) * -1
+                                round(self.gross_payments
+                                      * Decimal(0.16), 2) * -1
                             ]
 
             _amount = sum(values['amount'])
@@ -985,8 +985,8 @@ class MoveProvisionBonusService(metaclass=PoolMeta):
             _end_date = self.start.period.end
             _company = self.start.company
             provision_wage = self.start.wage_type
-            period_days = (self.start.period.end -
-                           self.start.period.start).days + 1
+            period_days = (self.start.period.end
+                           - self.start.period.start).days + 1
 
             dom_contract = [('OR', [
                 ('end_date', '>', self.start.period.start),
@@ -1066,9 +1066,10 @@ class MoveProvisionBonusService(metaclass=PoolMeta):
                             )
                         ]
                     move_lines.extend(base_lines)
-
-                    move_description = f'{self.start.description}-{employee.party.name}'
-                    Move.create([{
+                    move_lines = self.get_move_lines_distribution(
+                        move_lines)
+                    move_description = f"{self.start.description}-{employee.party.name}"
+                    move, = Move.create([{
                         'journal': journal_id,
                         'period': period_id,
                         'company': _company.id,
@@ -1077,9 +1078,56 @@ class MoveProvisionBonusService(metaclass=PoolMeta):
                         'description': move_description,
                         'lines': [('create', move_lines)],
                     }])
+                    move.save()
                 except Exception as error:
                     raise UserError(f'Error: {str(error)}')
         except Exception as error:
             raise UserError(f'Error: {str(error)}')
 
         return 'end'
+
+    def get_move_lines_distribution(self, lines):
+        lines_ = []
+        for line in lines:
+            line_ = self._get_entry(line)
+            lines_.append(line_)
+        return lines_
+
+    def get_analytic_lines(self, account, line, date):
+        'Yield analytic lines for the accounting line and the date'
+        lines = []
+        amount = line['debit'] or line['credit']
+        for account, amount in account.distribute(amount):
+            analytic_line = {}
+            analytic_line['debit'] = amount if line['debit'] else Decimal(0)
+            analytic_line['credit'] = amount if line['credit'] else Decimal(0)
+            analytic_line['account'] = account
+            analytic_line['date'] = date
+            lines.append(analytic_line)
+        return lines
+
+    def _get_entry(self, line_move):
+        pool = Pool()
+        Employee = pool.get('company.employee')
+        party = line_move['party']
+        analytic_account = None
+        if line_move['debit'] > 0:
+            if party:
+                employee = Employee.search(['party', '=', party])
+                if employee:
+                    mandatories = employee[0].mandatory_wages
+                    if mandatories:
+                        analytic_account = mandatories[0].analytic_account
+
+            if (analytic_account
+                    and analytic_account.type == "distribution"):
+                line_move['analytic_lines'] = []
+                to_create = []
+                date = datetime.now().date()
+                to_create.extend(
+                    self.get_analytic_lines(
+                        analytic_account, line_move, date)
+                )
+                if to_create:
+                    line_move['analytic_lines'] = [('create', to_create)]
+        return line_move
