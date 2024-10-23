@@ -134,12 +134,16 @@ class Configuration(ModelSQL, ModelView):
             last_record = cls.search([], order=[('id', 'DESC')], limit=1)
             if last_record:
                 record, = last_record
-                driver = 'DRIVER={ODBC Driver 17 for SQL Server};'\
-                    f'SERVER={record.server};'\
-                    f'DATABASE={record.db};'\
-                    f'UID={record.user};'\
-                    f'PWD={record.password};'\
-                    'Connection Timeout=5;'
+                driver_sql3 = "{ODBC Driver 17 for SQL Server}"
+
+                driver = f"""DRIVER={driver_sql3};
+                SERVER={record.server};
+                DATABASE={record.db};
+                UID={record.user};
+                PWD={record.password};
+                Connection Timeout=5;
+                """
+
                 with pyodbc.connect(driver) as cnxn:
                     with cnxn.cursor() as cursor:
                         cursor = cnxn.cursor()
@@ -162,8 +166,15 @@ class Configuration(ModelSQL, ModelView):
                     cursor.execute(query)
                     data = cursor.fetchall()
             return data
+        except (pyodbc.OperationalError, pyodbc.InterfaceError) as db_error:
+            logging.error(
+                f"Error de conexión con la base de datos: {db_error}")
         except Exception as error:
-            logging.error(f'Error al obtener datos: {error}')
+            logging.error(f"Error al obtener datos: {error}")
+        finally:
+            if cnxn and not cnxn.closed:
+                cnxn.close()
+                logging.info('Conexión cerrada correctamente.')
 
     @classmethod
     def set_data(cls, query):
@@ -171,8 +182,15 @@ class Configuration(ModelSQL, ModelView):
             with cls.conexion() as cnxn:
                 with cnxn.cursor() as cursor:
                     cursor.execute(query)
+        except (pyodbc.OperationalError, pyodbc.InterfaceError) as db_error:
+            logging.error(
+                f"Error de conexión con la base de datos: {db_error}")
         except Exception as error:
-            logging.error(f'Error al enviar datos: {error}')
+            logging.error(f"Error al actualizar datos: {error}")
+        finally:
+            if cnxn and not cnxn.closed:
+                cnxn.close()
+                logging.info('Conexión cerrada correctamente.')
 
     @classmethod
     def set_data_rollback(cls, queries):
@@ -192,14 +210,21 @@ class Configuration(ModelSQL, ModelView):
     # Se marca en la tabla dbo.Documentos como exportado a Tryton
     @classmethod
     def update_exportado(cls, id, e):
+        success = False
         try:
             lista = id.split('-')
             query = "UPDATE dbo.Documentos SET exportado = '" + e + "' WHERE sw =" + lista[
                 0] + " and tipo = " + lista[
                     1] + " and Numero_documento = " + lista[2]
             cls.set_data(query)
+            success = True
+        except (pyodbc.OperationalError, pyodbc.InterfaceError) as db_error:
+            logging.error(
+                f"Error de conexión con la base de datos: {db_error}")
         except Exception as error:
             logging.error(f'Error al actualizar datos: {error}')
+        finally:
+            return success
 
     @classmethod
     def update_exportado_list(cls, idt, e):
@@ -207,6 +232,9 @@ class Configuration(ModelSQL, ModelView):
             ids = list_to_tuple(idt, string=True)
             query = f"UPDATE dbo.Documentos SET exportado = '{e}' WHERE CONCAT(sw,'-',tipo,'-',Numero_Documento) IN {ids}"
             cls.set_data(query)
+        except (pyodbc.OperationalError, pyodbc.InterfaceError) as db_error:
+            logging.error(
+                f"Error de conexión con la base de datos: {db_error}")
         except Exception as error:
             logging.error(f'Error al enviar datos en lista: {error}')
 
@@ -220,6 +248,9 @@ class Configuration(ModelSQL, ModelView):
                     "' AS datetime) OR Ultimo_Cambio_Registro >= CAST('" + \
                 fecha + "' AS datetime)"
             data = cls.get_data(query)
+        except (pyodbc.OperationalError, pyodbc.InterfaceError) as db_error:
+            logging.error(
+                f"Error de conexión con la base de datos: {db_error}")
         except Exception as error:
             logging.error(f'Error al obtener datos TlbProducto: {error}')
         return data
@@ -239,6 +270,9 @@ class Configuration(ModelSQL, ModelView):
                         IdResponsable <> 0
                     """
             data = cls.get_data(query)
+        except (pyodbc.OperationalError, pyodbc.InterfaceError) as db_error:
+            logging.error(
+                f"Error de conexión con la base de datos: {db_error}")
         except Exception as error:
             logging.error(
                 f'Error al obtener datos TlbProducto parent: {error}')
@@ -254,6 +288,9 @@ class Configuration(ModelSQL, ModelView):
                     "' AS datetime) OR Ultimo_Cambio_Registro >= CAST('" + \
                 fecha + "' AS datetime)"
             data = cls.get_data(query)
+        except (pyodbc.OperationalError, pyodbc.InterfaceError) as db_error:
+            logging.error(
+                f"Error de conexión con la base de datos: {db_error}")
         except Exception as error:
             logging.error(
                 f'Error al obtener datos TblTerceros: {error}')
@@ -267,6 +304,9 @@ class Configuration(ModelSQL, ModelView):
             query = "SET DATEFORMAT ymd SELECT * FROM dbo.Terceros_Dir WHERE Ultimo_Cambio_Registro >= CAST('" + \
                 fecha + "' AS datetime)"
             data = cls.get_data(query)
+        except (pyodbc.OperationalError, pyodbc.InterfaceError) as db_error:
+            logging.error(
+                f"Error de conexión con la base de datos: {db_error}")
         except Exception as error:
             logging.error(
                 f'Error al obtener datos Terceros_Dir: {error}')
@@ -278,6 +318,9 @@ class Configuration(ModelSQL, ModelView):
         try:
             query = "SELECT * FROM dbo.Terceros_Dir WHERE nit = '" + nit + "'"
             data = cls.get_data(query)
+        except (pyodbc.OperationalError, pyodbc.InterfaceError) as db_error:
+            logging.error(
+                f"Error de conexión con la base de datos: {db_error}")
         except Exception as error:
             logging.error(
                 f'Error al obtener datos Terceros_Dir nit: {error}')
@@ -300,10 +343,14 @@ class Configuration(ModelSQL, ModelView):
                 query += f" AND fecha_hora < CAST('{end_date}' AS datetime) "
             query += "ORDER BY fecha_hora ASC"
             data = cls.get_data(query)
+        except (pyodbc.OperationalError, pyodbc.InterfaceError) as db_error:
+            logging.error(
+                f"Error de conexión con la base de datos: {db_error}")
         except Exception as error:
             logging.error(
                 f'Error al obtener datos Documentos: {error}')
-        return data
+        finally:
+            return data
 
     @classmethod
     def get_documentos_tipo(cls, sw, tipo):
@@ -326,6 +373,9 @@ class Configuration(ModelSQL, ModelView):
                 query += f" AND Fecha_Hora_Factura < CAST('{end_date}' AS datetime) "
             query += "ORDER BY Fecha_Hora_Factura ASC"
             data = cls.get_data(query)
+        except (pyodbc.OperationalError, pyodbc.InterfaceError) as db_error:
+            logging.error(
+                f"Error de conexión con la base de datos: {db_error}")
         except Exception as error:
             logging.error(
                 f'Error al obtener datos Documentos tipo: {error}')
@@ -340,6 +390,9 @@ class Configuration(ModelSQL, ModelView):
                 0] + " AND tipo = " + lista[
                     1] + " AND Numero_Documento = " + lista[2] + " order by seq"
             data = cls.get_data(query)
+        except (pyodbc.OperationalError, pyodbc.InterfaceError) as db_error:
+            logging.error(
+                f"Error de conexión con la base de datos: {db_error}")
         except Exception as error:
             logging.error(
                 f'Error al obtener datos Documentos_Lin: {error}')
@@ -356,6 +409,9 @@ class Configuration(ModelSQL, ModelView):
             query = "SELECT * FROM dbo.Documentos_Lin "\
                 f"WHERE CONCAT(sw,'-',tipo,'-',Numero_Documento) {cond} {ids} order by seq"
             data = cls.get_data(query)
+        except (pyodbc.OperationalError, pyodbc.InterfaceError) as db_error:
+            logging.error(
+                f"Error de conexión con la base de datos: {db_error}")
         except Exception as error:
             logging.error(
                 f'Error al obtener datos Documentos_Lin 2: {error}')
@@ -367,6 +423,9 @@ class Configuration(ModelSQL, ModelView):
         try:
             query = "SELECT * FROM dbo.TblParametro WHERE IdParametro = " + id
             data = cls.get_data(query)
+        except (pyodbc.OperationalError, pyodbc.InterfaceError) as db_error:
+            logging.error(
+                f"Error de conexión con la base de datos: {db_error}")
         except Exception as error:
             logging.error(
                 f'Error al obtener datos TblParametro: {error}')
@@ -378,6 +437,9 @@ class Configuration(ModelSQL, ModelView):
         try:
             query = "SELECT * FROM dbo.TblTipoDoctos WHERE idTipoDoctos = " + id
             data = cls.get_data(query)
+        except (pyodbc.OperationalError, pyodbc.InterfaceError) as db_error:
+            logging.error(
+                f"Error de conexión con la base de datos: {db_error}")
         except Exception as error:
             logging.error(
                 f'Error al obtener datos TblTipoDoctos: {error}')
@@ -389,6 +451,9 @@ class Configuration(ModelSQL, ModelView):
         try:
             query = "SELECT idTipoDoctos, Encabezado FROM dbo.TblTipoDoctos WHERE idTipoDoctos in " + ids
             data = cls.get_data(query)
+        except (pyodbc.OperationalError, pyodbc.InterfaceError) as db_error:
+            logging.error(
+                f"Error de conexión con la base de datos: {db_error}")
         except Exception as error:
             logging.error(
                 f'Error al obtener datos TblTipoDoctos encabezado: {error}')
@@ -400,6 +465,9 @@ class Configuration(ModelSQL, ModelView):
         try:
             query = "SELECT * FROM dbo.TblTipoProducto WHERE IdTipoProducto = " + id
             data = cls.get_data(query)
+        except (pyodbc.OperationalError, pyodbc.InterfaceError) as db_error:
+            logging.error(
+                f"Error de conexión con la base de datos: {db_error}")
         except Exception as error:
             logging.error(
                 f'Error al obtener datos TblTipoDoctos 2: {error}')
@@ -414,6 +482,9 @@ class Configuration(ModelSQL, ModelView):
             query = "SELECT * FROM dbo.Documentos_Cruce WHERE sw=" + lista[
                 0] + " AND tipo=" + lista[1] + " AND numero=" + lista[2]
             data = cls.get_data(query)
+        except (pyodbc.OperationalError, pyodbc.InterfaceError) as db_error:
+            logging.error(
+                f"Error de conexión con la base de datos: {db_error}")
         except Exception as error:
             logging.error(
                 f'Error al obtener datos Documentos_Cruce: {error}')
@@ -428,6 +499,9 @@ class Configuration(ModelSQL, ModelView):
             query = "SELECT * FROM dbo.Documentos_Che WHERE sw=" + lista[
                 0] + " AND tipo=" + lista[1] + " AND numero=" + lista[2]
             data = cls.get_data(query)
+        except (pyodbc.OperationalError, pyodbc.InterfaceError) as db_error:
+            logging.error(
+                f"Error de conexión con la base de datos: {db_error}")
         except Exception as error:
             logging.error(
                 f'Error al obtener datos Documentos_Che: {error}')
@@ -439,6 +513,9 @@ class Configuration(ModelSQL, ModelView):
         try:
             query = "SELECT * FROM dbo." + table
             data = cls.get_data(query)
+        except (pyodbc.OperationalError, pyodbc.InterfaceError) as db_error:
+            logging.error(
+                f"Error de conexión con la base de datos: {db_error}")
         except Exception as error:
             logging.error(
                 f'Error al obtener datos table: {error}')
@@ -459,6 +536,9 @@ class Configuration(ModelSQL, ModelView):
                 end_date = config.end_date.strftime('%Y-%m-%d %H:%M:%S')
                 query += f" AND fecha_hora < CAST('{end_date}' AS datetime) "
             data = cls.get_data(query)
+        except (pyodbc.OperationalError, pyodbc.InterfaceError) as db_error:
+            logging.error(
+                f"Error de conexión con la base de datos: {db_error}")
         except Exception as error:
             logging.error(
                 f'Error al obtener datos Documentos_Lin & Documentos: {error}')
@@ -493,6 +573,9 @@ class Configuration(ModelSQL, ModelView):
                     ON d.sw = l.sw AND d.tipo = l.tipo AND d.Numero_documento = l.Numero_Documento
                     """
             data = cls.get_data(query)
+        except (pyodbc.OperationalError, pyodbc.InterfaceError) as db_error:
+            logging.error(
+                f"Error de conexión con la base de datos: {db_error}")
         except Exception as error:
             logging.error(
                 f'Error al obtener datos Documentos traslado: {error}')
@@ -512,6 +595,9 @@ class Configuration(ModelSQL, ModelView):
                 query = "SELECT * FROM TblDatosBiometrico ORDER BY Nit_cedula, Fecha_Hora_Marcacion ASC"
             data = cls.get_data(query)
             return data
+        except (pyodbc.OperationalError, pyodbc.InterfaceError) as db_error:
+            logging.error(
+                f"Error de conexión con la base de datos: {db_error}")
         except Exception as error:
             logging.error(
                 f'Error al obtener datos TblDatosBiometrico: {error}')
