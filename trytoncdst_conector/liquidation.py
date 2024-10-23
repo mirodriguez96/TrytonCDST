@@ -597,6 +597,8 @@ class Liquidation(metaclass=PoolMeta):
                                 analytic=values.get('analytic', None),
                                 origin=origin_,
                                 reference=reference_,
+                                wage=values['wage'],
+                                wages=wages
                             )
 
                             values['amount'] = [
@@ -617,6 +619,8 @@ class Liquidation(metaclass=PoolMeta):
                     analytic=values.get('analytic', None),
                     origin=origin_,
                     reference=reference_,
+                    wage=values['wage'],
+                    wages=wages,
                 )
             )
 
@@ -630,6 +634,7 @@ class Liquidation(metaclass=PoolMeta):
                     self.account,
                     credit=sum(amount),
                     party_to_pay=self.party_to_pay,
+                    wages=wages,
                 )
             )
         return lines_moves, grouped
@@ -682,7 +687,10 @@ class Liquidation(metaclass=PoolMeta):
         party_to_pay_concept=None,
         origin=None,
         reference=None,
+        wage=None,
+        wages=None
     ):
+        party_id = None
         if debit < _ZERO:
             credit = debit
             debit = _ZERO
@@ -693,11 +701,16 @@ class Liquidation(metaclass=PoolMeta):
         credit = abs(credit)
         debit = abs(debit)
 
-        party_id = self.employee.party.id
         if party_to_pay:
             party_id = self.party_to_pay.id
         if party_to_pay_concept:
             party_id = party_to_pay_concept
+
+        if not party_id:
+            party_id = self.get_party_liquidation_line(
+                wage, wages)
+        if not party_id:
+            party_id = self.employee.party.id
 
         res = {
             'description': description,
@@ -724,6 +737,15 @@ class Liquidation(metaclass=PoolMeta):
                 )
             ]
         return res
+
+    def get_party_liquidation_line(self, wage, mandatories):
+        party = None
+        if wage and mandatories:
+            for mandatory in mandatories:
+                if mandatory.wage_type == wage:
+                    if mandatory.party:
+                        party = mandatory.party
+        return party
 
     def set_liquidation_lines(self):
         pool = Pool()
