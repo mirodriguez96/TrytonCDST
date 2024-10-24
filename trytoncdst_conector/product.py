@@ -313,7 +313,7 @@ class ProductCategory(metaclass=PoolMeta):
         "account.account",
         "Lost and Found Account",
         domain=[
-            ("type.id", "in", ["92"]),
+            ("type.sequence", "=", 30200)
         ],
     )
 
