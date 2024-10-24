@@ -160,6 +160,7 @@ class Configuration(ModelSQL, ModelView):
     @classmethod
     def get_data(cls, query):
         try:
+            cnxn = None
             data = []
             with cls.conexion() as cnxn:
                 with cnxn.cursor() as cursor:
@@ -179,6 +180,7 @@ class Configuration(ModelSQL, ModelView):
     @classmethod
     def set_data(cls, query):
         try:
+            cnxn = None
             with cls.conexion() as cnxn:
                 with cnxn.cursor() as cursor:
                     cursor.execute(query)
@@ -195,6 +197,7 @@ class Configuration(ModelSQL, ModelView):
     @classmethod
     def set_data_rollback(cls, queries):
         try:
+            cnxn = None
             with cls.conexion() as cnxn:
                 with cnxn.cursor() as cursor:
                     cnxn.autocommit = False
@@ -202,10 +205,12 @@ class Configuration(ModelSQL, ModelView):
                         cursor.execute(query)
                 cnxn.commit()
         except pyodbc.DatabaseError as err:
-            cnxn.rollback()
-            raise UserError('database error', err)
+            if cnxn and not cnxn.closed:
+                cnxn.rollback()
+                raise UserError('database error', err)
         finally:
-            cnxn.autocommit = True
+            if cnxn and not cnxn.closed:
+                cnxn.autocommit = True
 
     # Se marca en la tabla dbo.Documentos como exportado a Tryton
     @classmethod
