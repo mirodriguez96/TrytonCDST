@@ -960,3 +960,11 @@ msgstr "Requiere analitica"
 msgctxt "field:stock.inventory,analitic_account:"
 msgid "Analytic Account"
 msgstr "Cuenta analitica"
+
+msgctxt "field:stock.inventory,product_type:"
+msgid "Type Product"
+msgstr "Tipo de producto"
+
+msgctxt "field:stock.configuration,consumable_products_state:"
+msgid "Consumable products"
+msgstr "Productos consumibles"

@@ -8,7 +8,7 @@ trytoncdst_conector
 echo "[INFO] Uninstalling trytoncdst modules... "
 for i in ${modules}
     do
-        pip uninstall $i
+        pip uninstall -y $i
     done
 echo "[INFO] Done. "
 

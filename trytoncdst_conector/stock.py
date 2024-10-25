@@ -10,7 +10,7 @@ from trytond.exceptions import UserError
 from trytond.i18n import gettext
 from trytond.model import ModelView, Workflow, fields
 from trytond.pool import Pool, PoolMeta
-from trytond.pyson import Bool, Eval
+from trytond.pyson import Bool, Eval, Not
 from trytond.report import Report
 from trytond.transaction import Transaction
 from trytond.wizard import Button, StateReport, StateView, Wizard
@@ -26,6 +26,8 @@ type_shipment = {
 }
 
 STATE_SHIPMENTS = [('', ''), ('draft', 'Borrador'), ('done', 'Finalizado')]
+TYPES_PRODUCT = [('no_consumable', 'No consumible'),
+                 ('consumable', 'Consumible')]
 
 
 class Configuration(metaclass=PoolMeta):
@@ -35,6 +37,150 @@ class Configuration(metaclass=PoolMeta):
     state_shipment = fields.Selection(STATE_SHIPMENTS,
                                       'State shipment',
                                       required=True)
+
+    consumable_products_state = fields.Boolean('Consumable products')
+
+    @classmethod
+    def default_consumable_products_state(cls):
+        return False
+
+
+class Inventory(metaclass=PoolMeta):
+    'Stock Inventory'
+    __name__ = 'stock.inventory'
+
+    analitic_account = fields.Many2One(
+        'analytic_account.account', 'Analytic Account',
+        domain=[('type', '=', "normal")],
+        required=True
+    )
+
+    product_type = fields.Selection(TYPES_PRODUCT, 'Type Product')
+
+    # product_type = fields.Selection(
+    #     TYPES_PRODUCT, 'Type Product',
+    #     states={
+    #         'invisible': Eval('get_product_type_visible') is False,
+    #     },
+    #     depends=['get_product_type_visible']
+    # )
+
+    # get_product_type_visible = fields.Function(
+    #     fields.Boolean('Get Product Type Visible'),
+    #     'get_product_type_visible_'
+    # )
+
+    # @fields.depends('id')
+    # def get_product_type_visible_(self, name=None):
+    #     """Function to get config for salable products visibility"""
+    #     Configuration = Pool().get('stock.configuration')
+    #     # Consider changing this to fetch the correct configuration record
+    #     config = Configuration(1)
+    #     if config and config.consumable_products_state:
+    #         print(config.consumable_products_state)
+    #         return config.consumable_products_state
+    #     return False
+
+    # @fields.depends('id')
+    # def on_change_with_get_product_type_visible(self, name=None):
+    #     """Function to get config for salable products visibility"""
+    #     Configuration = Pool().get('stock.configuration')
+    #     # Consider changing this to fetch the correct configuration record
+    #     config = Configuration(1)
+    #     if config and config.consumable_products_state:
+    #         print(config.consumable_products_state)
+    #         return config.consumable_products_state
+    #     return False
+
+    @staticmethod
+    def default_product_type():
+        return 'no_consumable'
+
+    @classmethod
+    @ModelView.button
+    def complete_lines(cls, inventories, fill=True):
+        '''
+        Complete or update the inventories
+        '''
+        pool = Pool()
+        Line = pool.get('stock.inventory.line')
+        Configuration = pool.get('stock.configuration')
+        Product = pool.get('product.product')
+
+        config = Configuration(1)
+        products_consumables = Product.search(
+            ['template.consumable', '=', True])
+        grouping = cls.grouping()
+        to_create, to_write = [], []
+        for inventory in inventories:
+            product_consumables = False
+            if inventory.state == 'done':
+                continue
+
+            if (inventory.product_type == "consumable"
+                    and config.consumable_products_state):
+                product_consumables = True
+                if not products_consumables:
+                    msg = """No tiene productos consumibles."""
+                    raise UserError("ERROR", msg.strip())
+                product_ids = [product.id for product in products_consumables]
+            else:
+                if fill:
+                    product_ids = None
+                else:
+                    product_ids = [l.product.id for l in inventory.lines]
+
+            with Transaction().set_context(
+                    company=inventory.company.id,
+                    stock_date_end=inventory.date):
+                pbl = Product.products_by_location(
+                    [inventory.location.id],
+                    grouping=grouping,
+                    grouping_filter=(product_ids,))
+
+            # Index some data
+            product2type = {}
+            product2consumable = {}
+            for product in Product.browse({line[1] for line in pbl}):
+                product2type[product.id] = product.type
+                product2consumable[product.id] = product.consumable
+
+            # Update existing lines
+            for line in inventory.lines:
+                if line.product.type != 'goods':
+                    Line.delete([line])
+                    continue
+
+                key = (inventory.location.id,) + line.unique_key
+                if key in pbl:
+                    quantity = pbl.pop(key)
+                else:
+                    quantity = 0.0
+                values = line.update_values4complete(quantity)
+                if values:
+                    to_write.extend(([line], values))
+
+            if not fill:
+                continue
+            # Create lines if needed
+            for key, quantity in pbl.items():
+                product_id = key[grouping.index('product') + 1]
+
+                if (product2type[product_id] != 'goods'
+                        or (not product_consumables
+                            and product2consumable[product_id])):
+                    continue
+                if not quantity:
+                    continue
+
+                values = Line.create_values4complete(inventory, quantity)
+                for i, fname in enumerate(grouping, 1):
+                    values[fname] = key[i]
+                to_create.append(values)
+        if to_create:
+            Line.create(to_create)
+        if to_write:
+            Line.write(*to_write)
 
 
 class Location(metaclass=PoolMeta):
@@ -498,10 +644,10 @@ class MoveCDT(metaclass=PoolMeta):
         #         [self.product], start=self.effective_date)
         # except Exception as error:
         #     raise UserError(f"ERROR:",error)
-            # code_product = self.product.template.code
-            # name_product = self.product.template.name
-            # raise UserError(f"ERROR:",
-            #                 f"El producto con codigo [{code_product}-{name_product}] No coinice la UDM")
+        # code_product = self.product.template.code
+        # name_product = self.product.template.name
+        # raise UserError(f"ERROR:",
+        #                 f"El producto con codigo [{code_product}-{name_product}] No coinice la UDM")
 
     @classmethod
     def _get_origin(cls):
@@ -723,16 +869,6 @@ class MoveCDT(metaclass=PoolMeta):
                 account_moves.append(account_move)
         _moves = AccountMove.create(account_moves)
         AccountMove.post(_moves)
-
-
-class Inventory(metaclass=PoolMeta):
-    'Stock Inventory'
-    __name__ = 'stock.inventory'
-
-    analitic_account = fields.Many2One('analytic_account.account',
-                                       'Analytic Account',
-                                       domain=[('type', '=', "normal")],
-                                       required=True)
 
 
 class WarehouseKardexStockStartCds(ModelView):
@@ -1090,7 +1226,7 @@ class WarehouseReport(metaclass=PoolMeta):
             dom_products.append(['AND', ['OR', [
                 ('account_category', '=', data['category']),
             ], [
-                ('categories',  'in', [data['category']]),
+                ('categories', 'in', [data['category']]),
             ],
             ]])
 
@@ -1152,8 +1288,8 @@ class WarehouseReport(metaclass=PoolMeta):
                     dom_products, order=[('code', 'ASC')])
 
             if data['only_minimal_level']:
-                products = [p for p in products if p.quantity <=
-                            min_quantities[p.id]]
+                products = [p for p in products if p.quantity
+                            <= min_quantities[p.id]]
             total_amount = sum(
                 [p.amount_cost for p in products if p.amount_cost])
             suppliers = {}
