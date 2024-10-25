@@ -6,5 +6,7 @@ this repository contains the full copyright notices and license terms. -->
         expr="/form/field[@name='complete_line']" position="after">
         <label name="analitic_account"/>
         <field name="analitic_account"/>
+        <label name="product_type"/>
+        <field name="product_type"/>
     </xpath>
 </data>

@@ -3,5 +3,7 @@
     <xpath expr="/form/field[@name='inventory_sequence']" position="after">
         <label name="state_shipment"/>
         <field name="state_shipment" widget="selection"/>
+        <label name="consumable_products_state"/>
+        <field name="consumable_products_state"/>
     </xpath>
 </data>
