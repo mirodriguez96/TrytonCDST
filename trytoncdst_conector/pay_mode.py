@@ -24,12 +24,11 @@ class VoucherPayMode(ModelSQL, ModelView):
     'Voucher Pay Mode'
     __name__ = 'account.voucher.paymode'
     id_tecno = fields.Char('Id Tabla Sqlserver', required=False)
-    #Campo habilitado y necesario por módulos de psk al desactivar (electronic_invoice_co)
+    # Campo habilitado y necesario por módulos de psk al desactivar (electronic_invoice_co)
     payment_means_code = fields.Selection(PAYMENT_CODES,
                                           'Payment Means Code',
                                           required=True)
 
-    #Funcion encargada de crear o actualizar las formas de pago de TecnoCarnes
     @classmethod
     def update_paymode(cls):
         print('RUN FORMAS DE PAGO')
@@ -41,45 +40,48 @@ class VoucherPayMode(ModelSQL, ModelView):
         actualizacion = Actualizacion.create_or_update('FORMAS DE PAGO')
         formas_pago = Config.get_data_table('TblFormaPago')
         logs = {}
-        to_save = []
         for fp in formas_pago:
-            id_tecno = str(fp.IdFormaPago)
-            nombre = fp.FormaPago.strip()
-            cuenta = fp.Cuenta
-            paymode = PayMode.search([('id_tecno', '=', id_tecno)])
-            if paymode:
-                paymode, = paymode
-                old_account = paymode.account
-                cls.add_account(paymode, cuenta)
-                if paymode.name != nombre or old_account != paymode.account:
+            try:
+                id_tecno = str(fp.IdFormaPago)
+                nombre = fp.FormaPago.strip()
+                cuenta = fp.Cuenta
+                paymode = PayMode.search([('id_tecno', '=', id_tecno)])
+                if paymode:
+                    paymode, = paymode
+                    old_account = paymode.account
+                    cls.add_account(paymode, cuenta)
+                    if (paymode.name != nombre
+                            or old_account != paymode.account):
+                        paymode.name = nombre
+                        paymode.save()
+                        logs[id_tecno] = "FORMA DE PAGO ACTUALIZADA"
+                else:
+                    # Diario por defecto del plan contable
+                    journal, = Journal.search([('code', '=', 'CASH')])
+                    paymode = PayMode()
+                    paymode.id_tecno = id_tecno
                     paymode.name = nombre
-                    paymode.save()
-                    logs[id_tecno] = "SE AGREGARON CAMBIOS EN LA FORMA DE PAGO"
-            else:
-                #Diario por defecto del plan contable
-                journal, = Journal.search([('code', '=', 'CASH')])
-                paymode = PayMode()
-                paymode.id_tecno = id_tecno
-                paymode.name = nombre
-                paymode.payment_type = 'cash'
-                paymode.kind = 'both'
-                paymode.journal = journal
-                sequence_payment = cls.find_seq('Voucher Payment')
-                sequence_multipayment = cls.find_seq('Voucher Multipayment')
-                sequence_receipt = cls.find_seq('Voucher Receipt')
-                paymode.sequence_payment = sequence_payment[0]
-                paymode.sequence_multipayment = sequence_multipayment[0]
-                paymode.sequence_receipt = sequence_receipt[0]
-                cls.add_account(paymode, cuenta)
-                #Codigo clasificacion tipo de pago ('10' => 'Efectivo')
-                paymode.payment_means_code = 10
-                to_save.append(paymode)
-                #paym.save()
-        PayMode.save(to_save)
+                    paymode.payment_type = 'cash'
+                    paymode.kind = 'both'
+                    paymode.journal = journal
+                    sequence_payment = cls.find_seq('Voucher Payment')
+                    sequence_multipayment = cls.find_seq(
+                        'Voucher Multipayment')
+                    sequence_receipt = cls.find_seq('Voucher Receipt')
+                    paymode.sequence_payment = sequence_payment[0]
+                    paymode.sequence_multipayment = sequence_multipayment[0]
+                    paymode.sequence_receipt = sequence_receipt[0]
+                    cls.add_account(paymode, cuenta)
+                    # Codigo clasificacion tipo de pago ('10' => 'Efectivo')
+                    paymode.payment_means_code = 10
+                    PayMode.save([paymode])
+            except Exception as error:
+                Transaction().rollback()
+                logs[id_tecno] = f"EXCEPCION: {error}"
         actualizacion.add_logs(logs)
         print('FINISH FORMAS DE PAGO')
 
-    #Se busca la cuenta del modo de pago y se asigna en caso de existir
+    # Se busca la cuenta del modo de pago y se asigna en caso de existir
     @classmethod
     def add_account(cls, paymode, cuenta):
         Account = Pool().get('account.account')
@@ -87,7 +89,7 @@ class VoucherPayMode(ModelSQL, ModelView):
         if account:
             paymode.account = account[0]
 
-    #Función encargada de consultar la secuencia de un voucher dado
+    # Función encargada de consultar la secuencia de un voucher dado
     @classmethod
     def find_seq(cls, name):
         Sequence = Pool().get('ir.sequence')

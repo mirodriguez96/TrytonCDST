@@ -54,57 +54,61 @@ class Location(metaclass=PoolMeta):
         bodegas = Config.get_data_table('TblBodega')
         Actualizacion = pool.get('conector.actualizacion')
         actualizacion = Actualizacion.create_or_update('BODEGAS')
-        _zones = []
-        _warehouses = []
         logs = {}
         for bodega in bodegas:
-            id_tecno = bodega.IdBodega
-            nombre = bodega.Bodega.strip()
-            existe = Location.search([('id_tecno', '=', id_tecno)])
-            if existe:
-                if existe[0].name != nombre:
-                    existe[0].name = nombre
-                    _warehouses.append(existe[0])
-                    logs[
-                        id_tecno] = f'Se actualiza nombre de la bodega "{nombre}"'
-                continue
-            # zona de entrada
-            ze = Location()
-            ze.id_tecno = 'ze-' + str(id_tecno)
-            ze.name = 'ZE ' + nombre
-            ze.type = 'storage'
-            _zones.append(ze)
-            # zona de salida
-            zs = Location()
-            zs.id_tecno = 'zs-' + str(id_tecno)
-            zs.name = 'ZS ' + nombre
-            zs.type = 'storage'
-            _zones.append(zs)
-            # zona de almacenamiento
-            za = Location()
-            za.id_tecno = 'za-' + str(id_tecno)
-            za.name = 'ZA ' + nombre
-            za.type = 'storage'
-            _zones.append(za)
-            # zona de producción
-            prod = Location()
-            prod.id_tecno = 'prod-' + str(id_tecno)
-            prod.name = 'PROD ' + nombre
-            prod.type = 'production'
-            _zones.append(prod)
-            # Bodega
-            almacen = Location()
-            almacen.id_tecno = id_tecno
-            almacen.name = nombre
-            almacen.type = 'warehouse'
-            almacen.input_location = ze
-            almacen.output_location = zs
-            almacen.storage_location = za
-            almacen.production_location = prod
-            _warehouses.append(almacen)
-        # Se crean todas las bódegas y ubicaciones
-        Location.save(_zones)
-        Location.save(_warehouses)
+            try:
+                id_tecno = bodega.IdBodega
+                nombre = bodega.Bodega.strip()
+                existe = Location.search([('id_tecno', '=', id_tecno)])
+                if existe:
+                    if existe[0].name != nombre:
+                        existe[0].name = nombre
+                        Location.save([existe[0]])
+                        msg = f"""Se actualiza nombre de la bodega "{nombre}"""
+                        logs[id_tecno] = msg
+                    continue
+                # zona de entrada
+                ze = Location()
+                ze.id_tecno = 'ze-' + str(id_tecno)
+                ze.name = 'ZE ' + nombre
+                ze.type = 'storage'
+                Location.save([ze])
+
+                # zona de salida
+                zs = Location()
+                zs.id_tecno = 'zs-' + str(id_tecno)
+                zs.name = 'ZS ' + nombre
+                zs.type = 'storage'
+                Location.save([zs])
+
+                # zona de almacenamiento
+                za = Location()
+                za.id_tecno = 'za-' + str(id_tecno)
+                za.name = 'ZA ' + nombre
+                za.type = 'storage'
+                Location.save([za])
+
+                # zona de producción
+                prod = Location()
+                prod.id_tecno = 'prod-' + str(id_tecno)
+                prod.name = 'PROD ' + nombre
+                prod.type = 'production'
+                Location.save([prod])
+
+                # Bodega
+                almacen = Location()
+                almacen.id_tecno = id_tecno
+                almacen.name = nombre
+                almacen.type = 'warehouse'
+                almacen.input_location = ze
+                almacen.output_location = zs
+                almacen.storage_location = za
+                almacen.production_location = prod
+                Location.save([almacen])
+            except Exception as error:
+                Transaction().rollback()
+                logs[id_tecno] = f'EXCEPCION:{error}'
+
         actualizacion.add_logs(logs)
         print('FINISH BODEGAS')
 
@@ -297,6 +301,7 @@ class ShipmentInternal(metaclass=PoolMeta):
                     cls.done([shipment])
 
         except Exception as e:
+            Transaction().rollback()
             result["logs"]["try_except"] = str(e)
             actualizacion.add_logs(result["logs"])
             return
@@ -498,10 +503,10 @@ class MoveCDT(metaclass=PoolMeta):
         #         [self.product], start=self.effective_date)
         # except Exception as error:
         #     raise UserError(f"ERROR:",error)
-            # code_product = self.product.template.code
-            # name_product = self.product.template.name
-            # raise UserError(f"ERROR:",
-            #                 f"El producto con codigo [{code_product}-{name_product}] No coinice la UDM")
+        # code_product = self.product.template.code
+        # name_product = self.product.template.name
+        # raise UserError(f"ERROR:",
+        #                 f"El producto con codigo [{code_product}-{name_product}] No coinice la UDM")
 
     @classmethod
     def _get_origin(cls):
@@ -1090,7 +1095,7 @@ class WarehouseReport(metaclass=PoolMeta):
             dom_products.append(['AND', ['OR', [
                 ('account_category', '=', data['category']),
             ], [
-                ('categories',  'in', [data['category']]),
+                ('categories', 'in', [data['category']]),
             ],
             ]])
 
@@ -1152,8 +1157,8 @@ class WarehouseReport(metaclass=PoolMeta):
                     dom_products, order=[('code', 'ASC')])
 
             if data['only_minimal_level']:
-                products = [p for p in products if p.quantity <=
-                            min_quantities[p.id]]
+                products = [p for p in products if p.quantity
+                            <= min_quantities[p.id]]
             total_amount = sum(
                 [p.amount_cost for p in products if p.amount_cost])
             suppliers = {}

@@ -367,11 +367,11 @@ class Production(metaclass=PoolMeta):
                                                                 data_products)])
                         Product.recompute_cost_price(products_to_recalcule,
                                                      start=_today)
-                except Exception as e:
-                    logs[id_tecno] = f"EXCEPCION: {str(e)}"
+                except Exception as error:
+                    Transaction().rollback()
+                    logs[id_tecno] = f"EXCEPCION: {error}"
                     to_exception.append(id_tecno)
 
-            actualizacion.add_logs(logs)
             for idt in not_import:
                 Config.update_exportado(idt, 'X')
             for idt in to_exception:
@@ -379,7 +379,9 @@ class Production(metaclass=PoolMeta):
             for idt in to_created:
                 Config.update_exportado(idt, 'T')
         except Exception as error:
-            print(f'ERROR PRODUCCIONES: {error}')
+            Transaction().rollback()
+            logs["EXCEPCION"] = error
+        actualizacion.add_logs(logs)
         print('FINISH PRODUCTION')
 
     # Función que recibe una producción y de acuerdo a esa información crea un asiento contable
@@ -615,7 +617,7 @@ class ProductionDetailedReport(Report):
                 production_data[production]['totals']['margin'] = margin
 
             if total_input_amount != 0:
-                performance = (total_output_amount/total_input_amount)
+                performance = (total_output_amount / total_input_amount)
                 production_data[production]['totals']['performance'] = performance
 
         report_context['records'] = production_data
