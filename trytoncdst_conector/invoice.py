@@ -503,8 +503,8 @@ class Invoice(metaclass=PoolMeta):
                     if doc.retencion_causada > 0:
                         if doc.retencion_iva == 0 and doc.retencion_ica == 0:
                             retencion_rete = True
-                        elif (doc.retencion_iva +
-                              doc.retencion_ica) != doc.retencion_causada:
+                        elif (doc.retencion_iva
+                              + doc.retencion_ica) != doc.retencion_causada:
                             retencion_rete = True
                     invoice = {
                         'number': f"{doc.tipo}-{doc.Numero_documento}",
@@ -559,8 +559,8 @@ class Invoice(metaclass=PoolMeta):
                         if linea.Porcentaje_Descuento_1 > 0:
                             descuento = (linea.Valor_Unitario * Decimal(
                                 linea.Porcentaje_Descuento_1)) / 100
-                            line['discount'] = Decimal(linea.Valor_Unitario -
-                                                       descuento)
+                            line['discount'] = Decimal(linea.Valor_Unitario
+                                                       - descuento)
                         if linea.Impuesto_Consumo > 0:
                             line['impuesto_consumo'] = impuesto_consumo[
                                 linea.Impuesto_Consumo]
@@ -711,7 +711,9 @@ class Invoice(metaclass=PoolMeta):
                         Config.update_exportado(idt, exportado)
                 actualizacion.add_logs(data['logs'])
             except Exception as error:
-                print(f"ERROR NOTA: {error}")
+                Transaction().rollback()
+                log = {"EXCEPCION": error}
+                actualizacion.add_logs(log)
         print(f"FINISH {_SW[sw]['name']}")
 
     # Metodo encargado de validar el total de la factura en Tryton y TecnoCarnes
@@ -847,43 +849,45 @@ class Invoice(metaclass=PoolMeta):
             origin_invoices = Invoice.search([('number', 'in', numbers),
                                               ('state', 'in', ['posted', 'paid'])])
             logs = {}
-            to_save = []
             for origin in origin_invoices:
-                if origin.state == 'paid':
-                    msg = f"LA FACTURA CON ID {origin} YA SE ENCUENTRA EN ESTADO PAGADA "\
-                        f"PERO LA(S) FACTURA(S) CRUCE CON ID {cross[origin.number]} "\
-                        "SE ENCUENTRAN AUN EN ESTADO CONTABILIZADO"
-                    logs[origin.number] = msg
-                    continue
-                lines_to_pay = []
-                for inv in cross[origin.number]:
-                    lines_to_pay += list(inv.lines_to_pay)
-                payment_lines = list(origin.payment_lines)
-                for line in lines_to_pay:
-                    if line not in payment_lines:
-                        payment_lines.append(line)
-                if len(payment_lines) > len(origin.payment_lines):
-                    all_lines = list(origin.lines_to_pay) + payment_lines
-                    reconciliations = []
-                    amount = _ZERO
-                    for line in all_lines:
-                        if line.reconciliation:
-                            reconciliations.append(line.reconciliation)
-                        if origin.type == 'out':
-                            amount += line.debit - line.credit
-                        elif origin.type == 'in':
-                            amount += line.credit - line.debit
-                    if amount >= _ZERO:
-                        origin.payment_lines = payment_lines
-                        to_save.append(origin)
-                        if amount == _ZERO:
-                            Reconciliation.delete(reconciliations)
-                            MoveLine.reconcile(all_lines)
-                    else:
-                        msg = f"LA FACTURA CON ID {origin} TIENE UN PAGO MAYOR "\
-                            f"POR LA(S) FACTURA(S) CRUCE {cross[origin.number]}"
+                try:
+                    if origin.state == 'paid':
+                        msg = f"LA FACTURA CON ID {origin} YA SE ENCUENTRA EN ESTADO PAGADA "\
+                            f"PERO LA(S) FACTURA(S) CRUCE CON ID {cross[origin.number]} "\
+                            "SE ENCUENTRAN AUN EN ESTADO CONTABILIZADO"
                         logs[origin.number] = msg
-            Invoice.save(to_save)
+                        continue
+                    lines_to_pay = []
+                    for inv in cross[origin.number]:
+                        lines_to_pay += list(inv.lines_to_pay)
+                    payment_lines = list(origin.payment_lines)
+                    for line in lines_to_pay:
+                        if line not in payment_lines:
+                            payment_lines.append(line)
+                    if len(payment_lines) > len(origin.payment_lines):
+                        all_lines = list(origin.lines_to_pay) + payment_lines
+                        reconciliations = []
+                        amount = _ZERO
+                        for line in all_lines:
+                            if line.reconciliation:
+                                reconciliations.append(line.reconciliation)
+                            if origin.type == 'out':
+                                amount += line.debit - line.credit
+                            elif origin.type == 'in':
+                                amount += line.credit - line.debit
+                        if amount >= _ZERO:
+                            origin.payment_lines = payment_lines
+                            Invoice.save([origin])
+                            if amount == _ZERO:
+                                Reconciliation.delete(reconciliations)
+                                MoveLine.reconcile(all_lines)
+                        else:
+                            msg = f"LA FACTURA CON ID {origin} TIENE UN PAGO MAYOR "\
+                                f"POR LA(S) FACTURA(S) CRUCE {cross[origin.number]}"
+                            logs[origin.number] = msg
+                except Exception as error:
+                    Transaction().rollback()
+                    logs[origin.number] = f'EXCEPCION: {error}'
             actualizacion.add_logs(logs)
             print('FINISH validar cruce de facturas')
         except Exception as error:

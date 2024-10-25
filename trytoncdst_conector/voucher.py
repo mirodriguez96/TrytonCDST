@@ -182,8 +182,9 @@ class Voucher(ModelSQL, ModelView):
                         Voucher.post([voucher])
                     voucher.save()
                 created.append(id_tecno)
-            except Exception as e:
-                logs[id_tecno] = f"EXCEPCION: {str(e)}"
+            except Exception as error:
+                Transaction().rollback()
+                logs[id_tecno] = f"EXCEPCION: {error}"
                 exceptions.append(id_tecno)
         actualizacion.add_logs(logs)
         for idt in exceptions:
@@ -371,11 +372,11 @@ class Voucher(ModelSQL, ModelView):
                                                          account_type)
                             if move_line:
                                 valor_pagado = Decimal(factura.valor +
-                                                       factura.descuento +
-                                                       factura.retencion +
-                                                       (factura.ajuste * -1) +
-                                                       factura.retencion_iva +
-                                                       factura.retencion_ica)
+                                                       factura.descuento
+                                                       + factura.retencion
+                                                       + (factura.ajuste * -1)
+                                                       + factura.retencion_iva
+                                                       + factura.retencion_ica)
                                 if valor_pagado and valor_pagado > 0:
                                     line = MultiRevenueLine()
                                     line.move_line = move_line
@@ -453,6 +454,7 @@ class Voucher(ModelSQL, ModelView):
                             voucher.on_change_lines()
                         else:
                             exceptions.append(id_tecno)
+                            logs[id_tecno] = "No se encontro lineas para el voucher"
                             continue
                         voucher.save()
                         # Se verifica que el comprobante tenga lineas para ser procesado y contabilizado (doble verificación por error)
@@ -492,13 +494,15 @@ class Voucher(ModelSQL, ModelView):
                         logs[
                             id_tecno] = "EXCEPCION: NO ENCONTRO FORMA DE PAGO EN TECNOCARNES"
                         continue
-                except Exception as e:
-                    print(f'error {e}')
-                    msg = f"EXCEPCION RECIBO {id_tecno} : {str(e)}"
-                    logs[id_tecno] = msg
+                except Exception as error:
+                    Transaction().rollback()
                     exceptions.append(id_tecno)
+                    logs[id_tecno] = f"EXCEPCION: {error}"
+
             actualizacion.add_logs(logs)
 
+            for idt in exceptions:
+                Config.update_exportado(idt, 'E')
             for idt in created:
                 Config.update_exportado(idt, 'T')
             for idt in not_import:
@@ -897,7 +901,7 @@ class Voucher(ModelSQL, ModelView):
                                  ('account.type.payable', '=', True)
         ]])
         """
-        funcion encargada de obtener en las líneas del asiento 
+        funcion encargada de obtener en las líneas del asiento
         la perteneciente la línea del comprobante
         """
 
@@ -925,39 +929,41 @@ class Voucher(ModelSQL, ModelView):
             ('state', '=', 'posted'),
         ])
 
-        to_save = []
         for invoice in invoices:
-            lines_to_pay = invoice.lines_to_pay
-            # Se añade a las líneas del comprobante la línea de asienton de la factura
-            lines = lines_invoice[invoice.number]['lines']
-            Line.write(lines, {'move_line': lines_to_pay[0].id})
-            # Se procede a agregar las líneas del comprobante junto con las líneas de pago de la factura
-            move_lines = lines_invoice[invoice.number]['move_lines']
-            payment_lines = list(invoice.payment_lines)
-            for line in move_lines:
-                if line and line not in payment_lines:
-                    payment_lines.append(line)
-            if len(payment_lines) > len(invoice.payment_lines):
-                all_lines = list(lines_to_pay) + payment_lines
-                # print(invoice, payment_lines)
-                reconciliations = []
-                amount = _ZERO
-                for line in all_lines:
-                    if line.reconciliation:
-                        reconciliations.append(line.reconciliation)
-                    amount += line.debit - line.credit
-                # Se procede a validar si el total a pagar de la factura es valido
-                if amount >= _ZERO:
-                    invoice.payment_lines = payment_lines
-                    to_save.append(invoice)
-                    if amount == _ZERO:
-                        Reconciliation.delete(reconciliations)
-                        MoveLine.reconcile(all_lines)
-                else:
-                    msg = f"LA FACTURA CON ID {invoice} TIENE UN PAGO MAYOR "\
-                        f"AL INTENTAR AGREGAR LA(S) LINEA(S) CRUCE {move_lines}"
-                    logs[invoice.number] = msg
-        Invoice.save(to_save)
+            try:
+                lines_to_pay = invoice.lines_to_pay
+                # Se añade a las líneas del comprobante la línea de asienton de la factura
+                lines = lines_invoice[invoice.number]['lines']
+                Line.write(lines, {'move_line': lines_to_pay[0].id})
+                # Se procede a agregar las líneas del comprobante junto con las líneas de pago de la factura
+                move_lines = lines_invoice[invoice.number]['move_lines']
+                payment_lines = list(invoice.payment_lines)
+                for line in move_lines:
+                    if line and line not in payment_lines:
+                        payment_lines.append(line)
+                if len(payment_lines) > len(invoice.payment_lines):
+                    all_lines = list(lines_to_pay) + payment_lines
+                    # print(invoice, payment_lines)
+                    reconciliations = []
+                    amount = _ZERO
+                    for line in all_lines:
+                        if line.reconciliation:
+                            reconciliations.append(line.reconciliation)
+                        amount += line.debit - line.credit
+                    # Se procede a validar si el total a pagar de la factura es valido
+                    if amount >= _ZERO:
+                        invoice.payment_lines = payment_lines
+                        Invoice.save([invoice])
+                        if amount == _ZERO:
+                            Reconciliation.delete(reconciliations)
+                            MoveLine.reconcile(all_lines)
+                    else:
+                        msg = f"LA FACTURA CON ID {invoice} TIENE UN PAGO MAYOR "\
+                            f"AL INTENTAR AGREGAR LA(S) LINEA(S) CRUCE {move_lines}"
+                        logs[invoice.number] = msg
+            except Exception as error:
+                Transaction().rollback()
+                logs[invoice.number] = f"EXCEPCION: {error}"
         actualizacion.add_logs(logs)
         print('FINISH validar cruce de comprobantes')
 

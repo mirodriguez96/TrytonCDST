@@ -337,7 +337,6 @@ class ProductCategory(metaclass=PoolMeta):
         # Creación o actualización de las categorias de los productos
         Category = pool.get("product.category")
         Account = pool.get("account.account")
-        to_create = []
         for modelo in modelos:
             id_tecno = modelo.IDMODELOS
             try:
@@ -371,10 +370,10 @@ class ProductCategory(metaclass=PoolMeta):
                         if return_sale:
                             category["account_return_sale"] = return_sale[0]
 
-                    to_create.append(category)
+                    Category.create([category])
             except Exception as e:
+                Transaction().rollback()
                 logs[id_tecno] = f"EXCEPCION: {str(e)}"
-        Category.create(to_create)
         actualizacion.add_logs(logs)
         print("FINISH CATEGORIAS DE PRODUCTOS")
 

@@ -418,10 +418,15 @@ class Actualizacion(ModelSQL, ModelView):
                     f"WHERE sw = {lid[0]} "\
                     f"AND tipo = {lid[1]} "\
                     f"AND Numero_documento = {lid[2]}"
-                Config.set_data(query)
+                try:
+                    Config.set_data(query)
+                except Exception as error:
+                    print(
+                        f'ERROR ACTUALIZANDO EN DOCUMENTOS FALTANTES {error}')
                 logs[falt] = "EL DOCUMENTO ESTABA MARCADO COMO IMPORTADO "\
                     "(T) SIN ESTARLO."\
                     "AHORA FUE MARACADO COMO PENDIENTE PARA IMPOTAR (N)"
+
             """Update logs that was completed"""
             for values in list_already_values:
                 id_tecno = values
@@ -430,6 +435,7 @@ class Actualizacion(ModelSQL, ModelView):
                     for log in already_log:
                         log.state = "done"
                         log.save()
+
             """Update logs of document that was canceled in Tecno"""
             for values in list_canceled:
                 id_tecno = values

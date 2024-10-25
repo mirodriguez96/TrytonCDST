@@ -204,8 +204,8 @@ class Purchase(metaclass=PoolMeta):
                 if compra.retencion_causada and compra.retencion_causada > 0:
                     if not retencion_iva and not retencion_ica:
                         retencion_rete = True
-                    elif (compra.retencion_iva +
-                          compra.retencion_ica) != compra.retencion_causada:
+                    elif (compra.retencion_iva
+                          + compra.retencion_ica) != compra.retencion_causada:
                         retencion_rete = True
 
                 for lin in lineas_tecno:
@@ -391,6 +391,7 @@ class Purchase(metaclass=PoolMeta):
                             Invoice.process([original_invoice])
                 to_created.append(id_compra)
             except Exception as e:
+                Transaction().rollback()
                 logs[id_compra] = f"EXCEPCION: {str(e)}"
                 to_exception.append(id_compra)
                 continue

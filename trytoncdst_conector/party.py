@@ -268,6 +268,7 @@ class Party(metaclass=PoolMeta):
                     Party.create([party])
                     print('Tercero creado')
             except Exception as error:
+                Transaction().rollback()
                 values['logs'][nit_cedula] = f"EXCEPCION: {str(error)}"
         actualizacion.add_logs(values['logs'])
         print("FINISH TERCEROS")
@@ -364,6 +365,7 @@ class Party(metaclass=PoolMeta):
                     Address.create([addressn])
                     print('Direccion creada')
             except Exception as e:
+                Transaction().rollback()
                 values['logs'][id_tecno] = f"EXCEPCION: {str(e)}"
         actualizacion.add_logs(values['logs'])
         print("FINISH DIRECCION TERCEROS")
