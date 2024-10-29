@@ -51,7 +51,6 @@ class Sale(metaclass=PoolMeta):
         Config = pool.get('conector.configuration')
         Module = pool.get('ir.module')
         Sale = pool.get('sale.sale')
-        User = pool.get('res.user')
 
         Actualizacion = pool.get('conector.actualizacion')
         actualizacion = Actualizacion.create_or_update('VENTAS')
@@ -172,7 +171,7 @@ class Sale(metaclass=PoolMeta):
                     break
                 log = {id_venta: f"""EXCEPCION: {str(error)}"""}
                 cls.update_logs_from_imports(
-                    actualizacion, actualizacion_che, logs_che=log)
+                    actualizacion, actualizacion_che, logs=log)
         print('FINISH VENTAS')
 
     @classmethod
