@@ -117,58 +117,60 @@ class Sale(metaclass=PoolMeta):
                 with Transaction().set_user(1):
                     User.shop = shop
                     context = User.get_preferences()
-                with Transaction().set_context(context,
-                                               shop=shop.id,
-                                               _skip_warnings=True):
+                    with Transaction().set_context(context,
+                                                shop=shop.id,
+                                                _skip_warnings=True):
 
-                    sale = cls.build_sale_from_tecno_data(actualizacion, actualizacion_che,
-                                                        venta=venta, shop=shop,
-                                                        fecha_date=date_tecno, party=party,
-                                                        bodega=bodega, plazo_pago=plazo_pago,
-                                                        venta_electronica=venta_electronica,
-                                                        venta_pos=venta_pos, sale_device=sale_device,
-                                                        documentos_linea=documentos_linea,
-                                                        analytic_account=analytic_account,
-                                                        operation_center=operation_center,
-                                                        sale_in_exception=sale_in_exception
-                                                        )
-                    if sale:
-                        if id_venta in sale_in_exception:
-                            continue
-                        Sale.quote([sale])
-                        Sale.confirm([sale])
-                        Sale.process([sale])
-                        cls.finish_shipment_process(sale, numero_doc, Config,
-                                                    tipo_doc)
-                        cls._post_invoices(
-                            actualizacion, actualizacion_che, sale, venta)
+                        sale = cls.build_sale_from_tecno_data(actualizacion, actualizacion_che,
+                                                            venta=venta, shop=shop,
+                                                            fecha_date=date_tecno, party=party,
+                                                            bodega=bodega, plazo_pago=plazo_pago,
+                                                            venta_electronica=venta_electronica,
+                                                            venta_pos=venta_pos, sale_device=sale_device,
+                                                            documentos_linea=documentos_linea,
+                                                            analytic_account=analytic_account,
+                                                            operation_center=operation_center,
+                                                            sale_in_exception=sale_in_exception
+                                                            )
+                        if sale:
+                            if id_venta in sale_in_exception:
+                                continue
+                            Sale.quote([sale])
+                            Sale.confirm([sale])
+                            Sale.process([sale])
+                            cls.finish_shipment_process(sale, numero_doc, Config,
+                                                        tipo_doc)
+                            cls._post_invoices(
+                                actualizacion, actualizacion_che, sale, venta)
 
-                        pagos = Config.get_tipos_pago(id_venta)
-                        if pagos:
-                            args_statement = {
-                                'device': sale_device,
-                                'usuario': venta.usuario,
-                            }
-                            cls.set_payment_pos(
-                                actualizacion, actualizacion_che,
-                                pagos, sale, args_statement)
+                            pagos = Config.get_tipos_pago(id_venta)
+                            if pagos:
+                                args_statement = {
+                                    'device': sale_device,
+                                    'usuario': venta.usuario,
+                                }
+                                cls.set_payment_pos(
+                                    actualizacion, actualizacion_che,
+                                    pagos, sale, args_statement)
 
-                            Sale.update_state([sale])
-                        elif sale.payment_term.id_tecno == '0':
-                            log = {
-                                id_venta: """No se encontraron pagos
-                                asociados en tecnocarnes (documentos_che)"""}
-                            cls.update_logs_from_imports(
-                                actualizacion, actualizacion_che, logs_che=log)
-                            cls.delete_imported_sales([sale], cod='E')
-                            continue
-                        success = cls.update_exportado_tecno(
-                            id_tecno=id_venta, exportado="T")
-                        if not success:
-                            break
-                        Sale.process([sale])
-                        Transaction().commit()
-                        print('Venta guardada')
+                                Sale.update_state([sale])
+                            elif sale.payment_term.id_tecno == '0':
+                                msg = (
+                                    """No se encontraron pagos
+                                    asociados en tecnocarnes (documentos_che)
+                                    """).replace("\n", " ").strip()
+                                log = {id_venta: msg}
+                                cls.update_logs_from_imports(
+                                    actualizacion, actualizacion_che, logs_che=log)
+                                cls.delete_imported_sales([sale], cod='E')
+                                continue
+                            success = cls.update_exportado_tecno(
+                                id_tecno=id_venta, exportado="T")
+                            if not success:
+                                break
+                            Sale.process([sale])
+                            Transaction().commit()
+                            print('Venta guardada')
             except Exception as error:
                 Transaction().rollback()
                 if id_venta in sale_in_exception and sale:
@@ -177,7 +179,9 @@ class Sale(metaclass=PoolMeta):
                     id_tecno=id_venta, exportado="E")
                 if not success:
                     break
-                log = {id_venta: f"""EXCEPCION: {str(error)}"""}
+                error = str(error).replace("\n", " ").strip()
+                msg = f"""EXCEPCION: {error}"""
+                log = {id_venta: msg}
                 cls.update_logs_from_imports(
                     actualizacion, actualizacion_che, logs=log)
         print('FINISH VENTAS')
@@ -251,9 +255,7 @@ class Sale(metaclass=PoolMeta):
             if venta.anulado == 'S':
                 print(f'Venta anulada en tecno - ({id_venta})')
                 cls.update_exportado_tecno(id_tecno=id_venta, exportado="X")
-                log = {
-                    id_venta: """Documento anulado en TecnoCarnes"""
-                }
+                log = {id_venta: """Documento anulado en TecnoCarnes"""}
                 cls.update_logs_from_imports(
                     actualizacion, actualizacion_che, logs=log)
                 exception = True
@@ -269,11 +271,11 @@ class Sale(metaclass=PoolMeta):
                     print(f'No se encontro devolucion - ({id_venta})')
                     cls.update_exportado_tecno(
                         id_tecno=id_venta, exportado="E")
-                    log = {
-                        id_venta: f"""La devolucion {id_venta}
+
+                    msg = (f"""La devolucion {id_venta}
                         no encuentra la referencia {dcto_base}
-                        para ser cruzado"""
-                    }
+                        para ser cruzado""").replace("\n", " ").strip()
+                    log = {id_venta: msg}
                     cls.update_logs_from_imports(
                         actualizacion, actualizacion_che, logs=log)
                     exception = True
@@ -285,8 +287,9 @@ class Sale(metaclass=PoolMeta):
                 print(f'Periodo cerrrado - ({id_venta})')
                 exception = True
                 cls.update_exportado_tecno(id_tecno=id_venta, exportado="E")
-                log = {id_venta: """El periodo del documento se encuentra cerrado,
-                        no es posible la creacion"""}
+                msg = ("""El periodo se encuentra cerrado,no
+                        es posible la creacion""").replace("\n", " ").strip()
+                log = {id_venta: msg}
                 cls.update_logs_from_imports(
                     actualizacion, actualizacion_che, logs=log)
                 break
@@ -302,9 +305,11 @@ class Sale(metaclass=PoolMeta):
                         exception = True
                         cls.update_exportado_tecno(
                             id_tecno=id_venta, exportado="E")
-                        log = {id_venta: f"""No se encontrola asignacion
+                        msg = (f"""No se encontrola asignacion
                                 de la cuenta analitica en TecnoCarnes
-                                {str(tbltipodocto[0].Encabezado)}"""}
+                                {str(tbltipodocto[0].Encabezado)}
+                                """).replace("\n", " ").strip()
+                        log = {id_venta: msg}
                         cls.update_logs_from_imports(
                             actualizacion, actualizacion_che, logs=log)
                         break
@@ -319,7 +324,8 @@ class Sale(metaclass=PoolMeta):
                     exception = True
                     cls.update_exportado_tecno(
                         id_tecno=id_venta, exportado="E")
-                    log = {id_venta: f"""No se encontro el tercero {nit_cedula}"""}
+                    msg = f"""No se encontro el tercero {nit_cedula}"""
+                    log = {id_venta: msg}
                     cls.update_logs_from_imports(
                         actualizacion, actualizacion_che, logs=log)
                     break
@@ -343,8 +349,8 @@ class Sale(metaclass=PoolMeta):
                 print(f'Bodega no existe - ({id_venta})')
                 exception = True
                 cls.update_exportado_tecno(id_tecno=id_venta, exportado="E")
-                log = {
-                    id_venta: f"""Tienda (bodega) {id_tecno_bodega} no existe"""}
+                msg = f"""Tienda (bodega) {id_tecno_bodega} no existe"""
+                log = {id_venta: msg}
                 cls.update_logs_from_imports(
                     actualizacion, actualizacion_che, logs=log)
                 break
@@ -388,7 +394,8 @@ class Sale(metaclass=PoolMeta):
                 print(f'Terminal de venta no existe - ({id_venta})')
                 exception = True
                 cls.update_exportado_tecno(id_tecno=id_venta, exportado="E")
-                log = {id_venta: f"""Terminal de venta {id_tecno_device} no existe"""}
+                msg = f"""Terminal de venta {id_tecno_device} no existe"""
+                log = {id_venta: msg}
                 cls.update_logs_from_imports(
                     actualizacion, actualizacion_che, logs=log)
                 break
@@ -397,8 +404,10 @@ class Sale(metaclass=PoolMeta):
                 print(f'Terminal repetida - ({id_venta})')
                 exception = True
                 cls.update_exportado_tecno(id_tecno=id_venta, exportado="E")
-                log = {id_venta: """Hay mas de una terminal que concuerdan
-                        con el mismo equipo de venta y bodega"""}
+                msg = ("""Hay mas de una terminal que concuerdan
+                        con el mismo equipo de venta 
+                       y bodega""").replace("\n", " ").strip()
+                log = {id_venta: msg}
                 cls.update_logs_from_imports(
                     actualizacion, actualizacion_che, logs=log)
                 break
@@ -520,8 +529,10 @@ class Sale(metaclass=PoolMeta):
 
             if not producto:
                 cls.update_exportado_tecno(id_tecno=id_venta, exportado="E")
-                log = {id_venta: f"""No se encontro el producto {str(lin.IdProducto)}-
-                            Revisar si tiene variante o esta inactivo"""}
+                msg = (f"""No se encontro el producto {str(lin.IdProducto)}-
+                            Revisar si tiene variante o esta
+                        inactivo""").replace("\n", " ").strip()
+                log = {id_venta: msg}
                 cls.update_logs_from_imports(
                     actualizacion, actualizacion_che, logs=log)
                 sale_in_exception.append(id_venta)
@@ -529,8 +540,10 @@ class Sale(metaclass=PoolMeta):
 
             if len(producto) > 1:
                 cls.update_exportado_tecno(id_tecno=id_venta, exportado="E")
-                log = {id_venta: """Hay mas de un producto que tienen
-                            el mismo código o id_tecno"""}
+                msg = ("""Hay mas de un producto que tienen
+                            el mismo código o id_tecno
+                       """).replace("\n", " ").strip()
+                log = {id_venta: msg}
                 cls.update_logs_from_imports(
                     actualizacion, actualizacion_che, logs=log)
                 sale_in_exception.append(id_venta)
@@ -540,8 +553,10 @@ class Sale(metaclass=PoolMeta):
             """Validate if product is not salable"""
             if not producto.template.salable:
                 cls.update_exportado_tecno(id_tecno=id_venta, exportado="E")
-                log = {id_venta: f"""El producto {str(lin.IdProducto)}
-                            no esta marcado como vendible"""}
+                msg = (f"""El producto {str(lin.IdProducto)}
+                            no esta marcado como vendible
+                       """).replace("\n", " ").strip()
+                log = {id_venta: msg}
                 cls.update_logs_from_imports(
                     actualizacion, actualizacion_che, logs=log)
                 sale_in_exception.append(id_venta)
@@ -619,9 +634,12 @@ class Sale(metaclass=PoolMeta):
                         if len(tax) > 1:
                             cls.update_exportado_tecno(
                                 id_tecno=id_venta, exportado="E")
-                            log = {id_venta: f"""Se encontro mas de un impuesto de tipo consumo
-                                        con el importe igual a {impuesto_consumo} del grupo venta,
-                                        recuerde que se debe manejar un unico impuesto con esta configuracion"""}
+                            msg = (f"""Se encontro mas de un impuesto de
+                                    tipo consumo con el importe igual a
+                                    {impuesto_consumo} del grupo venta,recuerde
+                                     que se debe manejar un unico impuesto con 
+                                     esta configuracion""")
+                            log = {id_venta: msg}
                             cls.update_logs_from_imports(
                                 actualizacion, actualizacion_che, logs=log)
                             sale_in_exception.append(id_venta)
@@ -631,8 +649,10 @@ class Sale(metaclass=PoolMeta):
                     else:
                         cls.update_exportado_tecno(
                             id_tecno=id_venta, exportado="E")
-                        log = {id_venta: f"""No se encontró el impuesto al consumo con el
-                                    importe igual a {impuesto_consumo}"""}
+                        msg = (f"""No se encontró el impuesto al consumo con el
+                                    importe igual a {impuesto_consumo}
+                                """).replace("\n", " ").strip()
+                        log = {id_venta: msg}
                         cls.update_logs_from_imports(
                             actualizacion, actualizacion_che, logs=log)
                         sale_in_exception.append(id_venta)
@@ -751,12 +771,11 @@ class Sale(metaclass=PoolMeta):
             if validate_period[0].state == 'close':
                 print('Periodo cerrado')
                 cls.update_exportado_tecno(id_sale_tecno, exportado="E")
-                log = {
-                    id_sale_tecno: """EXCEPCION: EL PERIODO DEL
+                msg = ("""EXCEPCION: EL PERIODO DEL
                     DOCUMENTO SE ENCUENTRA CERRADO Y NO ES
                     POSIBLE SU ELIMINACION O MODIFICACION
-                    """
-                }
+                    """).replace("\n", " ").strip()
+                log = {id_sale_tecno: msg}
                 cls.update_logs_from_imports(
                     actualizacion, actualizacion_che, logs=log)
                 return True
@@ -764,9 +783,10 @@ class Sale(metaclass=PoolMeta):
             # Delete sale from tryton if was deleted from tecno
             print('Eliminando venta que fue anulada ({id_sale_tecno})')
             cls.delete_imported_sales(sale_tryton, cod="X")
-            log = {id_sale_tecno: """El documento fue eliminado de tryton
-                            porque fue anulado en TecnoCarnes"""
-                   }
+            msg = ("""El documento fue eliminado de tryton
+                            porque fue anulado en TecnoCarnes
+                   """).replace("\n", " ").strip()
+            log = {id_sale_tecno: msg}
             cls.update_logs_from_imports(
                 actualizacion, actualizacion_che, logs=log)
             return True
@@ -881,8 +901,10 @@ class Sale(metaclass=PoolMeta):
                 if original_invoice:
                     invoice.original_invoice = original_invoice[0]
                 else:
-                    log = {id_tecno_: f"""NO SE ENCONTRO LA FACTURA {dcto_base}
-                        PARA CRUZAR CON LA DEVOLUCION {invoice.number}"""}
+                    msg = (f"""NO SE ENCONTRO LA FACTURA {dcto_base}
+                        PARA CRUZAR CON LA DEVOLUCION {invoice.number}
+                        """).replace("\n", " ").strip()
+                    log = {id_tecno_: msg}
                     cls.update_logs_from_imports(
                         actualizacion, actualizacion_che, logs=log)
                     cls.update_exportado_tecno(
@@ -892,9 +914,11 @@ class Sale(metaclass=PoolMeta):
             Invoice.validate_invoice([invoice], sw=venta.sw)
             result = cls._validate_total(invoice.total_amount, venta)
             if not result['value']:
-                log = {id_tecno_: f"""El total de Tryton {invoice.total_amount} es diferente
-                       al total de TecnoCarnes {result['total_tecno']}.
-                       La diferencia es de {result['diferencia']}"""}
+                msg = (f"""El total de Tryton {invoice.total_amount} es
+                        diferente al total de TecnoCarnes
+                        {result['total_tecno']}. La diferencia es de
+                        {result['diferencia']}""").replace("\n", " ").strip()
+                log = {id_tecno_: msg}
                 cls.update_logs_from_imports(
                     actualizacion, actualizacion_che, logs=log)
                 cls.update_exportado_tecno(id_tecno=id_tecno_, exportado="E")
@@ -914,7 +938,7 @@ class Sale(metaclass=PoolMeta):
                         ],
                         values=["validated"],
                         where=account_invoice.id == invoice.id))
-
+                error = error.replace("\n", " ").strip()
                 log = {id_tecno_: f"""ERROR: {error}"""}
                 cls.update_logs_from_imports(
                     actualizacion, actualizacion_che, logs=log)
@@ -960,8 +984,8 @@ class Sale(metaclass=PoolMeta):
             valor = pago.valor
             id_tecno_ = sale.id_tecno
             if valor == 0:
-                log = {
-                    id_tecno_: f"""Revisar el valor del pago, su valor es de {valor}"""}
+                msg = f"""Revisar el valor del pago, su valor es de {valor}"""
+                log = {id_tecno_: msg}
                 cls.update_logs_from_imports(
                     actualizacion, actualizacion_che, logs=log)
                 cls.update_exportado_tecno(id_tecno=id_tecno_, exportado="E")
@@ -988,8 +1012,9 @@ class Sale(metaclass=PoolMeta):
             result_payment = cls.multipayment_invoices_statement(
                 actualizacion, actualizacion_che, data_payment)
             if result_payment != 'ok':
-                log = {
-                    id_tecno_: f"""ERROR AL PROCESAR EL PAGO DE LA VENTA POS {sale.number}"""}
+                msg = (f"""ERROR AL PROCESAR EL PAGO DE LA VENTA POS
+                        {sale.number}""").replace("\n", " ").strip()
+                log = {id_tecno_: msg}
                 cls.update_logs_from_imports(
                     actualizacion, actualizacion_che, logs=log)
                 # cls.update_exportado_tecno(id_tecno=id_tecno_, exportado="E")
@@ -1060,8 +1085,10 @@ class Sale(metaclass=PoolMeta):
                     if total_paid == sale.total_amount:
                         Sale.do_reconcile([sale])
                     else:
-                        log = {id_tecno_: f"""Venta pos con un total pagado ({total_paid})
-                               mayor al total de la venta ({sale.total_amount})"""}
+                        msg = (f"""Venta pos con un total pagado ({total_paid})
+                               mayor al total de la venta ({sale.total_amount})
+                               """).replace("\n", " ").strip()
+                        log = {id_tecno_: msg}
                         cls.update_logs_from_imports(
                             actualizacion, actualizacion_che, logs=log)
                         # cls.update_exportado_tecno(id_tecno=id_tecno_, exportado="E")
@@ -1091,8 +1118,8 @@ class Sale(metaclass=PoolMeta):
                 else:
                     cls.update_exportado_tecno(
                         id_tecno=id_tecno_, exportado="E")
-                    log = {
-                        id_tecno_: """sale_pos.msg_party_without_account_receivable"""}
+                    msg = """sale_pos.msg_party_without_account_receivable"""
+                    log = {id_tecno_: msg}
                     cls.update_logs_from_imports(
                         actualizacion, actualizacion_che, logs=log)
                     continue
