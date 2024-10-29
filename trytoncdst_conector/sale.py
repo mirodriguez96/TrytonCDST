@@ -51,6 +51,7 @@ class Sale(metaclass=PoolMeta):
         Config = pool.get('conector.configuration')
         Module = pool.get('ir.module')
         Sale = pool.get('sale.sale')
+        User = pool.get('res.user')
 
         Actualizacion = pool.get('conector.actualizacion')
         actualizacion = Actualizacion.create_or_update('VENTAS')
@@ -113,54 +114,61 @@ class Sale(metaclass=PoolMeta):
                 if exception_:
                     continue
 
-                sale = cls.build_sale_from_tecno_data(actualizacion, actualizacion_che,
-                                                      venta=venta, shop=shop,
-                                                      fecha_date=date_tecno, party=party,
-                                                      bodega=bodega, plazo_pago=plazo_pago,
-                                                      venta_electronica=venta_electronica,
-                                                      venta_pos=venta_pos, sale_device=sale_device,
-                                                      documentos_linea=documentos_linea,
-                                                      analytic_account=analytic_account,
-                                                      operation_center=operation_center,
-                                                      sale_in_exception=sale_in_exception
-                                                      )
-                if sale:
-                    if id_venta in sale_in_exception:
-                        continue
-                    Sale.quote([sale])
-                    Sale.confirm([sale])
-                    Sale.process([sale])
-                    cls.finish_shipment_process(sale, numero_doc, Config,
-                                                tipo_doc)
-                    cls._post_invoices(
-                        actualizacion, actualizacion_che, sale, venta)
+                with Transaction().set_user(1):
+                    User.shop = shop
+                    context = User.get_preferences()
+                with Transaction().set_context(context,
+                                               shop=shop.id,
+                                               _skip_warnings=True):
 
-                    pagos = Config.get_tipos_pago(id_venta)
-                    if pagos:
-                        args_statement = {
-                            'device': sale_device,
-                            'usuario': venta.usuario,
-                        }
-                        cls.set_payment_pos(
-                            actualizacion, actualizacion_che,
-                            pagos, sale, args_statement)
+                    sale = cls.build_sale_from_tecno_data(actualizacion, actualizacion_che,
+                                                        venta=venta, shop=shop,
+                                                        fecha_date=date_tecno, party=party,
+                                                        bodega=bodega, plazo_pago=plazo_pago,
+                                                        venta_electronica=venta_electronica,
+                                                        venta_pos=venta_pos, sale_device=sale_device,
+                                                        documentos_linea=documentos_linea,
+                                                        analytic_account=analytic_account,
+                                                        operation_center=operation_center,
+                                                        sale_in_exception=sale_in_exception
+                                                        )
+                    if sale:
+                        if id_venta in sale_in_exception:
+                            continue
+                        Sale.quote([sale])
+                        Sale.confirm([sale])
+                        Sale.process([sale])
+                        cls.finish_shipment_process(sale, numero_doc, Config,
+                                                    tipo_doc)
+                        cls._post_invoices(
+                            actualizacion, actualizacion_che, sale, venta)
 
-                        Sale.update_state([sale])
-                    elif sale.payment_term.id_tecno == '0':
-                        log = {
-                            id_venta: """No se encontraron pagos
-                            asociados en tecnocarnes (documentos_che)"""}
-                        cls.update_logs_from_imports(
-                            actualizacion, actualizacion_che, logs_che=log)
-                        cls.delete_imported_sales([sale], cod='E')
-                        continue
-                    success = cls.update_exportado_tecno(
-                        id_tecno=id_venta, exportado="T")
-                    if not success:
-                        break
-                    Sale.process([sale])
-                    Transaction().commit()
-                    print('Venta guardada')
+                        pagos = Config.get_tipos_pago(id_venta)
+                        if pagos:
+                            args_statement = {
+                                'device': sale_device,
+                                'usuario': venta.usuario,
+                            }
+                            cls.set_payment_pos(
+                                actualizacion, actualizacion_che,
+                                pagos, sale, args_statement)
+
+                            Sale.update_state([sale])
+                        elif sale.payment_term.id_tecno == '0':
+                            log = {
+                                id_venta: """No se encontraron pagos
+                                asociados en tecnocarnes (documentos_che)"""}
+                            cls.update_logs_from_imports(
+                                actualizacion, actualizacion_che, logs_che=log)
+                            cls.delete_imported_sales([sale], cod='E')
+                            continue
+                        success = cls.update_exportado_tecno(
+                            id_tecno=id_venta, exportado="T")
+                        if not success:
+                            break
+                        Sale.process([sale])
+                        Transaction().commit()
+                        print('Venta guardada')
             except Exception as error:
                 Transaction().rollback()
                 if id_venta in sale_in_exception and sale:
