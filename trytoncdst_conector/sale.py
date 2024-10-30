@@ -30,16 +30,20 @@ class Sale(metaclass=PoolMeta):
 
     @classmethod
     def import_data_sale(cls):
-        print('RUN VENTAS')
-        cls.import_sales_tecnocarnes('1')
+        import_name = "VENTAS"
+        print(f"---------------RUN {import_name}---------------")
+        cls.import_sales_tecnocarnes('1', import_name)
+        print(f"---------------FINISH {import_name}---------------")
 
     @classmethod
     def import_data_sale_return(cls):
-        print('RUN DEVOLUCIONES DE VENTAS')
-        cls.import_sales_tecnocarnes('2')
+        import_name = "DEVOLUCIONES DE VENTAS"
+        print(f"---------------RUN {import_name}---------------")
+        cls.import_sales_tecnocarnes('2', import_name)
+        print(f"---------------FINISH {import_name}---------------")
 
     @classmethod
-    def import_sales_tecnocarnes(cls, swt):
+    def import_sales_tecnocarnes(cls, swt, import_name):
         """Function to import sales from tecno
         and create it in Tryton
 
@@ -67,7 +71,7 @@ class Sale(metaclass=PoolMeta):
                                            ('state', '=', 'activated')])
 
         if not configuration or not data:
-            print('No se obtuvo info')
+            print(f"---------------FINISH {import_name}---------------")
             return
 
         if not company_operation:
@@ -173,6 +177,7 @@ class Sale(metaclass=PoolMeta):
                             print('Venta guardada')
             except Exception as error:
                 Transaction().rollback()
+                print(f"ROLLBACK-{import_name}: {error}")
                 if id_venta in sale_in_exception and sale:
                     cls.delete_tryton_sale(sale)
                 success = cls.update_exportado_tecno(
@@ -184,7 +189,7 @@ class Sale(metaclass=PoolMeta):
                 log = {id_venta: msg}
                 cls.update_logs_from_imports(
                     actualizacion, actualizacion_che, logs=log)
-        print('FINISH VENTAS')
+        print(f"---------------FINISH {import_name}---------------")
 
     @classmethod
     def validate_sale_from_tecno(cls, actualizacion, actualizacion_che,

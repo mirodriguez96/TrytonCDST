@@ -178,7 +178,6 @@ class Production(metaclass=PoolMeta):
     # Función encargada de importar las producciones de TecnoCarnes a Tryton
     @classmethod
     def import_data_production(cls):
-        print('RUN PRODUCTION')
         try:
             pool = Pool()
             Config = pool.get('conector.configuration')
@@ -194,6 +193,9 @@ class Production(metaclass=PoolMeta):
             to_exception = []
             not_import = []
             data = []
+
+            import_name = "PRODUCTION"
+            print(f"---------------RUN {import_name}---------------")
             _today = datetime.date.today()
             actualizacion = Actualizacion.create_or_update('PRODUCCION')
             parametro = Config.get_data_parametros('177')
@@ -205,7 +207,7 @@ class Production(metaclass=PoolMeta):
 
             if not data:
                 actualizacion.save()
-                print("FINISH PRODUCTION")
+                print(f"---------------FINISH {import_name}---------------")
                 return
 
             for transformacion in data:
@@ -370,6 +372,7 @@ class Production(metaclass=PoolMeta):
                 except Exception as error:
                     Transaction().rollback()
                     logs[id_tecno] = f"EXCEPCION: {error}"
+                    print(f"ROLLBACK-{import_name}: {error}")
                     to_exception.append(id_tecno)
 
             for idt in not_import:
@@ -381,8 +384,9 @@ class Production(metaclass=PoolMeta):
         except Exception as error:
             Transaction().rollback()
             logs["EXCEPCION"] = error
+            print(f"ROLLBACK-{import_name}: {error}")
         actualizacion.add_logs(logs)
-        print('FINISH PRODUCTION')
+        print(f"---------------FINISH {import_name}---------------")
 
     # Función que recibe una producción y de acuerdo a esa información crea un asiento contable
     @classmethod
