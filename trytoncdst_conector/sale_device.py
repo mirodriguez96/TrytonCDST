@@ -11,22 +11,26 @@ class SaleDevice(metaclass=PoolMeta):
 
     @classmethod
     def import_data_pos(cls):
-        print("RUN CONFIG POS")
         # Se requiere previamente haber creado el diario para ventas POS con código VM
         # Posterior a la importación. revisar las configuraciones
         pool = Pool()
         Actualizacion = pool.get('conector.actualizacion')
-        actualizacion = Actualizacion.create_or_update("CONFIG_POS")
         logs = {}
+
+        import_name = "CONFIG POS"
+        print(f"---------------RUN {import_name}---------------")
+        actualizacion = Actualizacion.create_or_update("CONFIG_POS")
+
         try:
             cls.import_sale_shop(logs)
             cls.import_sale_device(logs)
             cls.import_statement_sale(logs)
-        except Exception as e:
+        except Exception as error:
             Transaction().rollback()
-            logs['CONFIG_POS'] = f"EXCEPCION: {str(e)}"
+            logs['CONFIG_POS'] = f"EXCEPCION: {str(error)}"
+            print(f"ROLLBACK-{import_name}: {error}")
         actualizacion.add_logs(logs)
-        print("FINISH CONFIG POS")
+        print(f"---------------FINISH {import_name}---------------")
 
     # Se importan las tiendas que seran utilizadas para las ventas POS
     @classmethod
@@ -36,6 +40,8 @@ class SaleDevice(metaclass=PoolMeta):
         Shop = pool.get('sale.shop')
         Location = pool.get('stock.location')
         payment_term = pool.get('account.invoice.payment_term')
+
+        import_name = "CONFIG POS"
         payment_term, = payment_term.search([],
                                             order=[('id', 'DESC')],
                                             limit=1)
@@ -70,6 +76,7 @@ class SaleDevice(metaclass=PoolMeta):
             except Exception as error:
                 Transaction().rollback()
                 logs[id_tecno] = f"EXCEPCION:{error}"
+                print(f"ROLLBACK-{import_name}: {error}")
 
     # Se crea una lista de precios para las tiendas a importar
     @classmethod
@@ -136,6 +143,7 @@ class SaleDevice(metaclass=PoolMeta):
         bodegas = Config.get_data_table('TblBodega')
 
         devices = []
+        import_name = "CONFIG POS"
         for equipo in equipos:
             for bodega in bodegas:
                 try:
@@ -176,6 +184,7 @@ class SaleDevice(metaclass=PoolMeta):
                 except Exception as error:
                     Transaction().rollback()
                     logs[id_tecno] = f'EXCEPCION: {error}'
+                    print(f"ROLLBACK-{import_name}: {error}")
         for device in devices:
             if not device.journals and journals:
                 device.journals = journals
@@ -189,6 +198,8 @@ class SaleDevice(metaclass=PoolMeta):
         StatementJournal = pool.get('account.statement.journal')
         PayMode = pool.get('account.voucher.paymode')
         forma_pago = Config.get_data_table('TblFormaPago')
+
+        import_name = "CONFIG POS"
         for fp in forma_pago:
             try:
                 id_tecno = str(fp.IdFormaPago)
@@ -211,6 +222,7 @@ class SaleDevice(metaclass=PoolMeta):
                     StatementJournal.create([statement_journal])
             except Exception as error:
                 Transaction().rollback()
+                print(f"ROLLBACK-{import_name}: {error}")
                 logs[id_tecno] = f"EXCEPCION: {error}"
 
 

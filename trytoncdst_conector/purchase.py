@@ -44,16 +44,20 @@ class Purchase(metaclass=PoolMeta):
 
     @classmethod
     def import_data_purchase(cls):
-        print('RUN COMPRAS')
-        cls.import_tecnocarnes('3')
+        import_name = "COMPRAS"
+        print(f"---------------RUN {import_name}---------------")
+        cls.import_tecnocarnes('3', import_name)
+        print(f"---------------FINISH {import_name}---------------")
 
     @classmethod
     def import_data_purchase_return(cls):
-        print('RUN DEVOLUCIONES DE COMPRAS')
-        cls.import_tecnocarnes('4')
+        import_name = "DEVOLUCIONES DE COMPRAS"
+        print(f"---------------RUN {import_name}---------------")
+        cls.import_tecnocarnes('4', import_name)
+        print(f"---------------FINISH {import_name}---------------")
 
     @classmethod
-    def import_tecnocarnes(cls, swt):
+    def import_tecnocarnes(cls, swt, import_name):
         """Function to import purchases data from tecnocarnes"""
 
         pool = Pool()
@@ -86,7 +90,7 @@ class Purchase(metaclass=PoolMeta):
         actualizacion = Actualizacion.create_or_update('COMPRAS')
         if not data:
             actualizacion.save()
-            print('FINISH COMPRAS - NO DATA')
+            print(f"---------------FINISH {import_name}---------------")
             return
 
         company_operation = Module.search([('name', '=', 'company_operation'),
@@ -390,9 +394,10 @@ class Purchase(metaclass=PoolMeta):
                             paymentline.save()
                             Invoice.process([original_invoice])
                 to_created.append(id_compra)
-            except Exception as e:
+            except Exception as error:
                 Transaction().rollback()
-                logs[id_compra] = f"EXCEPCION: {str(e)}"
+                logs[id_compra] = f"EXCEPCION: {str(error)}"
+                print(f"ROLLBACK-{import_name}: {error}")
                 to_exception.append(id_compra)
                 continue
 
@@ -403,7 +408,7 @@ class Purchase(metaclass=PoolMeta):
             Config.update_exportado(idt, 'E')
         for idt in not_import:
             Config.update_exportado(idt, 'X')
-        print('FINISH COMPRAS - DATA PROCESSED')
+        print(f"---------------FINISH {import_name}---------------")
 
     # Se elimina vía base de datos las compras y pagos relacionados
     @classmethod

@@ -687,17 +687,19 @@ class Invoice(metaclass=PoolMeta):
 
     @classmethod
     def _import_notas_tecno(cls, sw):
-        print(f"RUN {_SW[sw]['name']}")
+
         pool = Pool()
         Config = pool.get('conector.configuration')
         configuration = Config.get_configuration()
+        import_name = _SW[sw]['name']
+        print(f"---------------RUN {import_name}---------------")
         if not configuration:
             return
         Actualizacion = pool.get('conector.actualizacion')
         actualizacion = Actualizacion.create_or_update(_SW[sw]['name'])
         documentos = Config.get_documentos_tecno(sw)
         if not documentos:
-            print(f"FINISH {_SW[sw]['name']}")
+            print(f"---------------FINISH {import_name}---------------")
             return
         for document in documentos:
             try:
@@ -713,8 +715,10 @@ class Invoice(metaclass=PoolMeta):
             except Exception as error:
                 Transaction().rollback()
                 log = {"EXCEPCION": error}
+                print(f"ROLLBACK-{import_name}: {error}")
                 actualizacion.add_logs(log)
-        print(f"FINISH {_SW[sw]['name']}")
+
+        print(f"---------------FINISH {import_name}---------------")
 
     # Metodo encargado de validar el total de la factura en Tryton y TecnoCarnes
     @classmethod
@@ -815,15 +819,17 @@ class Invoice(metaclass=PoolMeta):
 
     @staticmethod
     def _check_cross_invoices(invoices=None):
-        print('RUN validar cruce de facturas')
+        pool = Pool()
+        Invoice = pool.get('account.invoice')
+        MoveLine = pool.get('account.move.line')
+        Reconciliation = pool.get('account.move.reconciliation')
+        Actualizacion = pool.get('conector.actualizacion')
+
+        import_name = "CRUCE DE FACTURAS"
         try:
-            pool = Pool()
-            Invoice = pool.get('account.invoice')
-            MoveLine = pool.get('account.move.line')
-            Reconciliation = pool.get('account.move.reconciliation')
-            Actualizacion = pool.get('conector.actualizacion')
             actualizacion = Actualizacion.create_or_update(
-                f'CRUCE DE FACTURAS')
+                'CRUCE DE FACTURAS')
+            print(f'---------------RUN {import_name}---------------')
             if not invoices:
                 cursor = Transaction().connection.cursor()
                 # (FIX) CONSULTA SOLO PARA NOTAS CREDITO
@@ -888,10 +894,13 @@ class Invoice(metaclass=PoolMeta):
                 except Exception as error:
                     Transaction().rollback()
                     logs[origin.number] = f'EXCEPCION: {error}'
+                    print(f"ROLLBACK-{import_name}: {error}")
             actualizacion.add_logs(logs)
-            print('FINISH validar cruce de facturas')
+            print(f'---------------FINISH {import_name}---------------')
         except Exception as error:
-            print(f'ERROR CRUCE DE FACTURAS: {error}')
+            Transaction().rollback()
+            print(f"ROLLBACK-{import_name}: {error}")
+            logs["EXCEPCION"] = error
     # Función encargada de obtener los ids de los registros a eliminar
 
     @classmethod

@@ -90,16 +90,21 @@ class Party(metaclass=PoolMeta):
                 value = RECEIVABLE_PAYABLE_TECNO[self.id_number]['payable']
         return value
 
-    # Función encargada de crear o actualizar los terceros de db TecnoCarnes teniendo en cuenta la ultima fecha de actualizacion y si existe.
     @classmethod
     def import_parties_tecno(cls):
-        print("RUN TERCEROS")
+        """Function to import or update parties from
+        TecnoCarnes
+        """
         pool = Pool()
-        Config = pool.get('conector.configuration')
-        Actualizacion = pool.get('conector.actualizacion')
         Party = pool.get('party.party')
+        Config = pool.get('conector.configuration')
         Mcontact = Pool().get('party.contact_mechanism')
+        Actualizacion = pool.get('conector.actualizacion')
         actualizacion = Actualizacion.create_or_update("TERCEROS")
+
+        import_name = "TERCEROS"
+        print(f"---------------RUN {import_name}---------------")
+
         # Se trae los terceros que cumplan con la fecha establecida
         fecha_actualizacion = Actualizacion.get_fecha_actualizacion(
             actualizacion)
@@ -153,11 +158,11 @@ class Party(metaclass=PoolMeta):
                     write_date = None
                     # LA HORA DEL SISTEMA DE TRYTON TIENE UNA DIFERENCIA HORARIA DE 5 HORAS CON LA DE TECNO
                     if party.write_date:
-                        write_date = (party.write_date -
-                                      datetime.timedelta(hours=5))
+                        write_date = (party.write_date
+                                      - datetime.timedelta(hours=5))
                     else:
-                        create_date = (party.create_date -
-                                       datetime.timedelta(hours=5))
+                        create_date = (party.create_date
+                                       - datetime.timedelta(hours=5))
                     # Ahora vamos a verificar si el cambio más reciente fue hecho en la bd sqlserver para actualizarlo
 
                     if (write_date and ultimo_cambio > write_date) or (
@@ -270,12 +275,12 @@ class Party(metaclass=PoolMeta):
             except Exception as error:
                 Transaction().rollback()
                 values['logs'][nit_cedula] = f"EXCEPCION: {str(error)}"
+                print(f"ROLLBACK-{import_name}: {error}")
         actualizacion.add_logs(values['logs'])
-        print("FINISH TERCEROS")
+        print(f"---------------FINISH {import_name}---------------")
 
     @classmethod
     def import_addresses_tecno(cls):
-        print("RUN DIRECCION TERCEROS")
         pool = Pool()
         Actualizacion = pool.get('conector.actualizacion')
         Department = pool.get('party.department_code')
@@ -284,6 +289,9 @@ class Party(metaclass=PoolMeta):
         Address = pool.get('party.address')
         City = pool.get('party.city_code')
         Party = pool.get('party.party')
+
+        import_name = "DIRECCION TERCEROS"
+        print(f"---------------RUN {import_name}---------------")
 
         actualizacion = Actualizacion.create_or_update("DIRECCION TERCEROS")
 
@@ -323,11 +331,11 @@ class Party(metaclass=PoolMeta):
                     create_date = None
                     write_date = None
                     if address.write_date:
-                        write_date = (address.write_date -
-                                      datetime.timedelta(hours=5))
+                        write_date = (address.write_date
+                                      - datetime.timedelta(hours=5))
                     elif address.create_date:
-                        create_date = (address.create_date -
-                                       datetime.timedelta(hours=5))
+                        create_date = (address.create_date
+                                       - datetime.timedelta(hours=5))
                     if (ultimo_cambiod and write_date and ultimo_cambiod > write_date) or \
                             (ultimo_cambiod and not write_date and ultimo_cambiod > create_date):
                         print("Actualizando direccion con cambios nuevos")
@@ -364,11 +372,12 @@ class Party(metaclass=PoolMeta):
                     addressn['party'] = party[0].id
                     Address.create([addressn])
                     print('Direccion creada')
-            except Exception as e:
+            except Exception as error:
                 Transaction().rollback()
-                values['logs'][id_tecno] = f"EXCEPCION: {str(e)}"
+                values['logs'][id_tecno] = f"EXCEPCION: {str(error)}"
+                print(f"ROLLBACK-{import_name}: {error}")
         actualizacion.add_logs(values['logs'])
-        print("FINISH DIRECCION TERCEROS")
+        print(f"---------------FINISH {import_name}---------------")
 
     @classmethod
     def create_address_new(cls, party, data):

@@ -31,15 +31,19 @@ class VoucherPayMode(ModelSQL, ModelView):
 
     @classmethod
     def update_paymode(cls):
-        print('RUN FORMAS DE PAGO')
         pool = Pool()
-        Config = pool.get('conector.configuration')
-        Actualizacion = pool.get('conector.actualizacion')
-        PayMode = pool.get('account.voucher.paymode')
         Journal = pool.get('account.journal')
+        Config = pool.get('conector.configuration')
+        PayMode = pool.get('account.voucher.paymode')
+        Actualizacion = pool.get('conector.actualizacion')
+
         actualizacion = Actualizacion.create_or_update('FORMAS DE PAGO')
         formas_pago = Config.get_data_table('TblFormaPago')
         logs = {}
+
+        import_name = "FORMAS DE PAGO"
+        print(f'---------------RUN {import_name}---------------')
+
         for fp in formas_pago:
             try:
                 id_tecno = str(fp.IdFormaPago)
@@ -78,8 +82,9 @@ class VoucherPayMode(ModelSQL, ModelView):
             except Exception as error:
                 Transaction().rollback()
                 logs[id_tecno] = f"EXCEPCION: {error}"
+                print(f"ROLLBACK-{import_name}: {error}")
         actualizacion.add_logs(logs)
-        print('FINISH FORMAS DE PAGO')
+        print(f'---------------FINISH {import_name}---------------')
 
     # Se busca la cuenta del modo de pago y se asigna en caso de existir
     @classmethod

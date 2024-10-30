@@ -193,7 +193,6 @@ class Location(metaclass=PoolMeta):
     def import_warehouse(cls):
         """Function to import werehouses from tecnocarnes"""
 
-        print('RUN BODEGAS')
         pool = Pool()
         Config = pool.get('conector.configuration')
         Location = pool.get('stock.location')
@@ -201,6 +200,9 @@ class Location(metaclass=PoolMeta):
         Actualizacion = pool.get('conector.actualizacion')
         actualizacion = Actualizacion.create_or_update('BODEGAS')
         logs = {}
+
+        import_name = "BODEGAS"
+        print(f"---------------RUN {import_name}---------------")
         for bodega in bodegas:
             try:
                 id_tecno = bodega.IdBodega
@@ -253,10 +255,11 @@ class Location(metaclass=PoolMeta):
                 Location.save([almacen])
             except Exception as error:
                 Transaction().rollback()
+                print(f"ROLLBACK-{import_name}: {error}")
                 logs[id_tecno] = f'EXCEPCION:{error}'
 
         actualizacion.add_logs(logs)
-        print('FINISH BODEGAS')
+        print(f"---------------FINISH {import_name}---------------")
 
 
 class ShipmentDetailedReport(metaclass=PoolMeta):
@@ -419,12 +422,13 @@ class ShipmentInternal(metaclass=PoolMeta):
     def import_tecnocarnes(cls):
         """Function to import internal shipments from tecnocarnes"""
 
-        print('RUN TRASLADOS INTERNOS')
         pool = Pool()
         Config = pool.get('conector.configuration')
         Actualizacion = pool.get('conector.actualizacion')
         ConfigShipment = pool.get('stock.configuration')
 
+        import_name = "TRASLADOS INTERNOS"
+        print(f"---------------RUN {import_name}---------------")
         configuration = Config.get_configuration()
         config_shipment = ConfigShipment.search([])
         state_shipment = config_shipment[0].state_shipment
@@ -446,9 +450,10 @@ class ShipmentInternal(metaclass=PoolMeta):
                     cls.assign([shipment])
                     cls.done([shipment])
 
-        except Exception as e:
+        except Exception as error:
             Transaction().rollback()
-            result["logs"]["try_except"] = str(e)
+            print(f"ROLLBACK-{import_name}: {error}")
+            result["logs"]["try_except"] = str(error)
             actualizacion.add_logs(result["logs"])
             return
         actualizacion.add_logs(result["logs"])
@@ -456,7 +461,7 @@ class ShipmentInternal(metaclass=PoolMeta):
             if idt:
                 if exportado != 'E':
                     Config.update_exportado_list(idt, exportado)
-        print('FINISH import_tecnocarnes')
+        print(f"---------------FINISH {import_name}---------------")
 
     @classmethod
     def create_account_move(cls, shipments):

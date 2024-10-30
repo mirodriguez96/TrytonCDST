@@ -32,6 +32,10 @@ class PaymentTerm(metaclass=PoolMeta):
         Line = Pool().get('account.invoice.payment_term.line')
         Delta = Pool().get('account.invoice.payment_term.line.delta')
         Actualizacion = pool.get('conector.actualizacion')
+
+        import_name = "PLAZOS DE PAGO"
+        print(f"---------------RUN {import_name}---------------")
+
         actualizacion = Actualizacion.create_or_update('PLAZOS DE PAGO')
         condiciones_pago = Config.get_data_table('TblCondiciones_pago')
         logs = {}
@@ -74,4 +78,7 @@ class PaymentTerm(metaclass=PoolMeta):
             except Exception as error:
                 Transaction().rollback()
                 logs[id_tecno] = f"EXCEPCION: {error}"
+                print(f"ROLLBACK-{import_name}: {error}")
+
+        print(f"---------------FINISH {import_name}---------------")
         actualizacion.add_logs(logs)

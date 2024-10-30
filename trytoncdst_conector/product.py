@@ -84,7 +84,6 @@ class Product(metaclass=PoolMeta):
         when its created or updated in tecno
         """
 
-        print("RUN PRODUCTOS")
         pool = Pool()
         Actualizacion = pool.get("conector.actualizacion")
         Config = pool.get("conector.configuration")
@@ -92,12 +91,14 @@ class Product(metaclass=PoolMeta):
         Template = pool.get("product.template")
         Product = pool.get("product.product")
 
+        import_name = "PRODUCTOS"
+        print(f"---------------RUN {import_name}---------------")
         actualizacion = Actualizacion.create_or_update("PRODUCTOS")
         date_updating = Actualizacion.get_fecha_actualizacion(actualizacion)
         products_tecno = Config.get_tblproducto(date_updating)
         if not products_tecno:
             actualizacion.save()
-            print("FINISH PRODUCTOS")
+            print(f"---------------FINISH {import_name}---------------")
             return
 
         for producto in products_tecno:
@@ -203,8 +204,9 @@ class Product(metaclass=PoolMeta):
             except Exception as error:
                 Transaction().rollback()
                 log = {id_product: f"{error}"}
+                print(f"ROLLBACK-{import_name}: {error}")
                 actualizacion.add_logs(log)
-        print("FINISH PRODUCTOS")
+        print(f"---------------FINISH {import_name}---------------")
 
     def get_avg_cost_price(self, name=None):
         super(Product, self).get_avg_cost_price(name)
@@ -319,16 +321,17 @@ class ProductCategory(metaclass=PoolMeta):
 
     @classmethod
     def import_categories_tecno(cls):
-        print("RUN CATEGORIAS DE PRODUCTOS")
         pool = Pool()
         Config = pool.get("conector.configuration")
         Actualizacion = pool.get("conector.actualizacion")
         actualizacion = Actualizacion.create_or_update(
             "CATEGORIAS DE PRODUCTOS")
         logs = {}
+
+        import_name = "CATEGORIAS DE PRODUCTOS"
+        print(f"---------------RUN {import_name}---------------")
         modelos = Config.get_data_table("vistamodelos")
         if not modelos:
-            print('E3')
             logs["vistamodelos"] = (
                 "No se encontraron valores para importar en la tabla vistamodelos"
             )
@@ -371,11 +374,12 @@ class ProductCategory(metaclass=PoolMeta):
                             category["account_return_sale"] = return_sale[0]
 
                     Category.create([category])
-            except Exception as e:
+            except Exception as error:
                 Transaction().rollback()
-                logs[id_tecno] = f"EXCEPCION: {str(e)}"
+                logs[id_tecno] = f"EXCEPCION: {str(error)}"
+                print(f"ROLLBACK-{import_name}: {error}")
         actualizacion.add_logs(logs)
-        print("FINISH CATEGORIAS DE PRODUCTOS")
+        print(f"---------------FINISH {import_name}---------------")
 
 
 class CostPriceRevision(metaclass=PoolMeta):

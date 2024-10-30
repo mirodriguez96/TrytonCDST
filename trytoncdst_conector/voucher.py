@@ -30,20 +30,25 @@ class Voucher(ModelSQL, ModelView):
     #             return False
     #     return True
 
-    # Función encargada de importar los recibos (comprobantes) de egreso
     @classmethod
     def import_voucher_payment(cls):
-        print("RUN COMPROBANTES DE EGRESO")
+        """Function to import 'Comprobantes de egreso'
+        """
         pool = Pool()
+        Party = pool.get('party.party')
+        Voucher = pool.get('account.voucher')
+        Line = pool.get('account.voucher.line')
         Config = pool.get('conector.configuration')
+        PayMode = pool.get('account.voucher.paymode')
+        Actualizacion = pool.get('conector.actualizacion')
+
+        import_name = "COMPROBANTES DE EGRESO"
+        print(f"---------------RUN {import_name}---------------")
+
         configuration = Config.get_configuration()
         if not configuration:
             return
-        Actualizacion = pool.get('conector.actualizacion')
-        Voucher = pool.get('account.voucher')
-        Line = pool.get('account.voucher.line')
-        Party = pool.get('party.party')
-        PayMode = pool.get('account.voucher.paymode')
+
         actualizacion = Actualizacion.create_or_update(
             'COMPROBANTES DE EGRESO')
         logs = {}
@@ -184,6 +189,7 @@ class Voucher(ModelSQL, ModelView):
                 created.append(id_tecno)
             except Exception as error:
                 Transaction().rollback()
+                print(f"ROLLBACK-{import_name}: {error}")
                 logs[id_tecno] = f"EXCEPCION: {error}"
                 exceptions.append(id_tecno)
         actualizacion.add_logs(logs)
@@ -193,12 +199,12 @@ class Voucher(ModelSQL, ModelView):
             Config.update_exportado(idt, 'T')
         for idt in not_import:
             Config.update_exportado(idt, 'X')
-        print("FINISH COMPROBANTES DE EGRESO")
+        print(f"---------------FINISH {import_name}---------------")
 
-    # Funcion encargada de importar los recibos (comprobantes) de ingreso
     @classmethod
     def import_voucher(cls):
-        print("RUN COMPROBANTES DE INGRESO")
+        """Function to import 'Comprobantes de Ingreso'
+        """
         pool = Pool()
         BankStatementLines = pool.get('bank_statement.line-account.move.line')
         OthersConcepts = pool.get('account.multirevenue.others_concepts')
@@ -218,6 +224,8 @@ class Voucher(ModelSQL, ModelView):
         exceptions = []
         not_import = []
 
+        import_name = "COMPROBANTES DE INGRESO"
+        print(f"---------------RUN {import_name}---------------")
         configuration = Config.get_configuration()
         if not configuration:
             return
@@ -496,6 +504,7 @@ class Voucher(ModelSQL, ModelView):
                         continue
                 except Exception as error:
                     Transaction().rollback()
+                    print(f"ROLLBACK-{import_name}: {error}")
                     exceptions.append(id_tecno)
                     logs[id_tecno] = f"EXCEPCION: {error}"
 
@@ -507,7 +516,7 @@ class Voucher(ModelSQL, ModelView):
                 Config.update_exportado(idt, 'T')
             for idt in not_import:
                 Config.update_exportado(idt, 'X')
-        print("FINISH COMPROBANTES DE INGRESO")
+        print(f"---------------FINISH {import_name}---------------")
 
     # Se obtiene las lineas de la factura que se desea pagar
     @classmethod
@@ -880,15 +889,17 @@ class Voucher(ModelSQL, ModelView):
 
     @staticmethod
     def _check_cross_vouchers():
-        print('RUN validar cruce de comprobantes')
         pool = Pool()
         Line = pool.get('account.voucher.line')
         Invoice = pool.get('account.invoice')
         MoveLine = pool.get('account.move.line')
         Reconciliation = pool.get('account.move.reconciliation')
         Actualizacion = pool.get('conector.actualizacion')
-        actualizacion = Actualizacion.create_or_update(
-            f'CRUCE DE COMPROBANTES')
+
+        import_name = "CRUCE DE COMPROBANTES"
+        print(f"---------------RUN {import_name}---------------")
+
+        actualizacion = Actualizacion.create_or_update('CRUCE DE COMPROBANTES')
         """
         Se realiza la búsqueda de las líneas de comprobantes que no tengan
         factura (línea de asiento) asociada para asignarse y luego conciliar
@@ -963,9 +974,10 @@ class Voucher(ModelSQL, ModelView):
                         logs[invoice.number] = msg
             except Exception as error:
                 Transaction().rollback()
+                print(f"ROLLBACK-{import_name}: {error}")
                 logs[invoice.number] = f"EXCEPCION: {error}"
         actualizacion.add_logs(logs)
-        print('FINISH validar cruce de comprobantes')
+        print(f"---------------FINISH {import_name}---------------")
 
     # def _reconcile_lines(self, to_reconcile):
     #     if self.voucher_type == 'multipayment' and\
