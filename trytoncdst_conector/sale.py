@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 
 from sql import Table
@@ -31,16 +31,22 @@ class Sale(metaclass=PoolMeta):
     @classmethod
     def import_data_sale(cls):
         import_name = "VENTAS"
-        print(f"---------------RUN {import_name}---------------")
+        date_now = datetime.now()
+        print(f"---------------RUN {import_name} ({date_now})---------------")
         cls.import_sales_tecnocarnes('1', import_name)
-        print(f"---------------FINISH {import_name}---------------")
+        date_now = datetime.now()
+        print(
+            f"---------------FINISH {import_name} ({date_now})---------------")
 
     @classmethod
     def import_data_sale_return(cls):
         import_name = "DEVOLUCIONES DE VENTAS"
-        print(f"---------------RUN {import_name}---------------")
+        date_now = datetime.now()
+        print(f"---------------RUN {import_name} ({date_now})---------------")
         cls.import_sales_tecnocarnes('2', import_name)
-        print(f"---------------FINISH {import_name}---------------")
+        date_now = datetime.now()
+        print(
+            f"---------------FINISH {import_name} ({date_now})---------------")
 
     @classmethod
     def import_sales_tecnocarnes(cls, swt, import_name):
@@ -64,14 +70,13 @@ class Sale(metaclass=PoolMeta):
         sale_in_exception = []
         venta_pos = []
 
-        print('Obteniendo info')
         data = Config.get_documentos_tecno(swt)
         configuration = Config.get_configuration()
         company_operation = Module.search([('name', '=', 'company_operation'),
                                            ('state', '=', 'activated')])
 
         if not configuration or not data:
-            print(f"---------------FINISH {import_name}---------------")
+            print('No se obtuvo informacion')
             return
 
         if not company_operation:
@@ -103,7 +108,8 @@ class Sale(metaclass=PoolMeta):
                 sw = venta.sw
                 id_venta = cls.build_id_tecno(
                     sw=sw, type_doc=tipo_doc, number_doc=numero_doc)
-                print(f'Venta {id_venta}')
+                date_now = datetime.now()
+                print(f'Venta {id_venta} ({date_now})')
                 # build date_sale from tecnocarnes
                 date_ = str(venta.fecha_hora).split()[0].split('-')
                 date_tecno = date(int(date_[0]), int(date_[1]),
@@ -174,7 +180,8 @@ class Sale(metaclass=PoolMeta):
                                 break
                             Sale.process([sale])
                             Transaction().commit()
-                            print('Venta guardada')
+                            date_now = datetime.now()
+                            print(f'Venta guardada {id_venta} ({date_now})')
             except Exception as error:
                 Transaction().rollback()
                 print(f"ROLLBACK-{import_name}: {error}")
@@ -189,7 +196,6 @@ class Sale(metaclass=PoolMeta):
                 log = {id_venta: msg}
                 cls.update_logs_from_imports(
                     actualizacion, actualizacion_che, logs=log)
-        print(f"---------------FINISH {import_name}---------------")
 
     @classmethod
     def validate_sale_from_tecno(cls, actualizacion, actualizacion_che,

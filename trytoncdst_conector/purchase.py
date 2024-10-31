@@ -408,7 +408,6 @@ class Purchase(metaclass=PoolMeta):
             Config.update_exportado(idt, 'E')
         for idt in not_import:
             Config.update_exportado(idt, 'X')
-        print(f"---------------FINISH {import_name}---------------")
 
     # Se elimina vía base de datos las compras y pagos relacionados
     @classmethod
