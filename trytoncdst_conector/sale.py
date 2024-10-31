@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 
 from sql import Table
@@ -31,20 +31,20 @@ class Sale(metaclass=PoolMeta):
     @classmethod
     def import_data_sale(cls):
         import_name = "VENTAS"
-        date_now = datetime.now()
+        date_now = datetime.now() - timedelta(hours=5)
         print(f"---------------RUN {import_name} ({date_now})---------------")
         cls.import_sales_tecnocarnes('1', import_name)
-        date_now = datetime.now()
+        date_now = datetime.now() - timedelta(hours=5)
         print(
             f"---------------FINISH {import_name} ({date_now})---------------")
 
     @classmethod
     def import_data_sale_return(cls):
         import_name = "DEVOLUCIONES DE VENTAS"
-        date_now = datetime.now()
+        date_now = datetime.now() - timedelta(hours=5)
         print(f"---------------RUN {import_name} ({date_now})---------------")
         cls.import_sales_tecnocarnes('2', import_name)
-        date_now = datetime.now()
+        date_now = datetime.now() - timedelta(hours=5)
         print(
             f"---------------FINISH {import_name} ({date_now})---------------")
 
@@ -108,7 +108,7 @@ class Sale(metaclass=PoolMeta):
                 sw = venta.sw
                 id_venta = cls.build_id_tecno(
                     sw=sw, type_doc=tipo_doc, number_doc=numero_doc)
-                date_now = datetime.now()
+                date_now = datetime.now() - timedelta(hours=5)
                 print(f'Venta {id_venta} ({date_now})')
                 # build date_sale from tecnocarnes
                 date_ = str(venta.fecha_hora).split()[0].split('-')
@@ -180,7 +180,7 @@ class Sale(metaclass=PoolMeta):
                                 break
                             Sale.process([sale])
                             Transaction().commit()
-                            date_now = datetime.now()
+                            date_now = datetime.now() - timedelta(hours=5)
                             print(f'Venta guardada {id_venta} ({date_now})')
             except Exception as error:
                 Transaction().rollback()
