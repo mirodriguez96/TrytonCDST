@@ -19,13 +19,6 @@ this repository contains the full copyright notices and license terms. -->
             <field name="name">staff_event_form</field>
         </record>
 
-        <!--interfaz para el campo nuevo del banco-->
-        <record model="ir.ui.view" id="bank_view_form">
-            <field name="model">bank</field>
-            <field name="inherit" ref="bank.bank_view_form"/>
-            <field name="name">bank_form</field>
-        </record>
-
         <!-- herencia de la vista form para los tipos de pago -->
         <record model="ir.ui.view" id="wage_type_view_form">
             <field name="model">staff.wage_type</field>

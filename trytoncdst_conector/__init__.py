@@ -2,27 +2,12 @@
 
 from trytond.pool import Pool
 
-from . import (account, account_dunning, collection, company,  # access,
+from . import (account, account_dunning, collection, company,
                conector, conector_log, configuration, contract, cron, currency,
                electronic_payroll_wizard, email_, exogena, invoice, line,
                liquidation, loan, party, pay_mode, payment_bank, payment_term,
                payroll, permissions, product, production, purchase, report,
-               sale, sale_device, statement, stock, tax, voucher, wiz)
-
-# MODEL VIEWS
-# access.CreateAccessHolidaysView,
-# access.StaffAccessRests,
-# access.StaffAccess,
-# access.ImportBiometricRecordsParameters,
-# access.StaffAccessView,
-
-# WIZARDS
-# access.CreateAccessHolidaysWizard,
-# access.ImportBiometricRecords,
-# access.StaffAccessWizard,
-
-# REPORTS
-# access.StaffAccessReport,
+               sale, sale_device, stock, tax, voucher, wiz)
 
 
 def register():
@@ -65,7 +50,6 @@ def register():
                   payment_bank.AccountBankParty,
                   payment_bank.BankPayment,
                   payment_term.PaymentTerm,
-                  payroll.Bank,
                   payroll.StaffConfiguration,
                   payroll.PayrollSheetStart,
                   payroll.PayrollGlobalStart,
@@ -105,12 +89,6 @@ def register():
                   sale_device.Journal,
                   sale.SaleShopDetailedCDSStart,
                   sale.SaleInvoiceValueCdstStart,
-                  statement.BankStatement,
-                  statement.BankStatementLine,
-                  statement.BankStatementBankLine,
-                  statement.BankStatementLineRelation,
-                  statement.CreateBankLineParameters,
-                  statement.StatementLine,
                   stock.Configuration,
                   stock.Location,
                   stock.ShipmentInternal,
@@ -168,8 +146,6 @@ def register():
                   sale.SaleInvoiceValueCdst,
                   stock.ModifyCostPrice,
                   stock.WarehouseKardexStockCds,
-                  statement.StatementMoveValidate,
-                  statement.CreateBankLine,
                   tax.TaxesConsolidation,
                   voucher.SelectMoveLines,
                   wiz.DeleteVoucherTecno,

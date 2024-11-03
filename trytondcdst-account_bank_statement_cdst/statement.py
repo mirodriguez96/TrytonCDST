@@ -2,20 +2,19 @@ import datetime
 from decimal import Decimal
 
 from trytond.exceptions import UserError
-from trytond.model import ModelSQL, ModelView, Unique, fields
+from trytond.model import Workflow, ModelView, ModelSQL, fields, Unique
 from trytond.pool import Pool, PoolMeta
 from trytond.pyson import Eval
 from trytond.transaction import Transaction
 from trytond.wizard import Button, StateTransition, StateView, Wizard
 
-from .exceptions import NotMoveStatementeLine
 
 CONFIRMED_STATES = {
     'readonly': False  # Not(Equal(Eval('statement_line'), None))
 }
 
 
-class BankStatement(metaclass=PoolMeta):
+class BankStatement(Workflow, ModelSQL, ModelView, metaclass=PoolMeta):
     'Bank Statement'
     __name__ = 'account.bank_statement'
 
@@ -25,18 +24,36 @@ class BankStatement(metaclass=PoolMeta):
                                  states={'readonly': Eval('state') != 'draft'})
 
     def get_bank_end_balance(self, name):
-        res = sum(l.moves_amount for l in self.lines)
+        """
+        Calculate the end balance of the bank statement.
+
+        :param name: The name of the field.
+        :return: The end balance of the bank statement.
+        """
+        end_balance = sum(l.moves_amount for l in self.lines)
         bank_start_balance = self.bank_start_balance
         if bank_start_balance:
-            res += bank_start_balance
-        return res
+            end_balance += bank_start_balance
+        return end_balance
 
     def get_remainder(self, name):
+        """
+        Calculate the remainder of the bank statement.
+
+        :param name: The name of the field.
+        :return: The remainder of the bank statement.
+        """
         bank_end_balance = self.bank_end_balance
         end_balance = self.end_balance
         return (bank_end_balance - end_balance)
 
     def get_total_remainder(self, name):
+        """
+        Calculate the total remainder of the bank statement.
+
+        :param name: The name of the field.
+        :return: The total remainder of the bank statement.
+        """
         remainder = self.remainder
         lines = self.lines_no_transaction
         val = sum(
@@ -44,6 +61,12 @@ class BankStatement(metaclass=PoolMeta):
         return (val + remainder)
 
     def get_end_balance(self, name):
+        """
+        Calculate the end balance of the bank statement.
+
+        :param name: The name of the field.
+        :return: The end balance of the bank statement.
+        """
         balance = self.start_balance or Decimal(0)
         MoveLine = Pool().get('account.move.line')
         period_balance = 0
@@ -57,6 +80,12 @@ class BankStatement(metaclass=PoolMeta):
         return res
 
     def get_lines_no_transaction(self, name):
+        """
+        Get lines with no transaction for the current period.
+
+        :param name: The name of the field.
+        :return: List of line IDs with no transaction.
+        """
         targets = []
         if self.period and self.bank_account and self.bank_account.account:
             current_period = self.period
@@ -65,20 +94,23 @@ class BankStatement(metaclass=PoolMeta):
                 line.id for line in move_lines
                 if not line.bank_lines or any(bl.bank_statement_line.statement.period != current_period for bl in line.bank_lines)
             ]
-            return targets
-        return []
+        return targets
 
     def _search_related_lines(self):
-        res = []
+        """
+        Search for related lines based on the current period and bank account.
+
+        :return: List of related move lines.
+        """
         MoveLine = Pool().get('account.move.line')
-        res = MoveLine.search([
+        move_lines = MoveLine.search([
             ('period', '=', self.period.id),
             ('account', '=', self.bank_account.account.id),
         ])
-        return res
+        return move_lines
 
 
-class BankStatementLine(metaclass=PoolMeta):
+class BankStatementLine(Workflow, ModelSQL, ModelView, metaclass=PoolMeta):
     'Bank Statement Line'
     __name__ = 'account.bank_statement.line'
 
@@ -160,7 +192,7 @@ class CreateBankLine(Wizard):
     start_state = 'parameters'
     parameters = StateView(
         'account.bank_statement.create_bank_line.parameters',
-        'conector.create_bank_line_parameters_view_form', [
+        'account_bank_statement_cdst.create_bank_line_parameters_view_form', [
             Button('Cancel', 'end', 'tryton-cancel'),
             Button(
                 'Create', 'create_bank_line', 'tryton-go-next', default=True)
@@ -236,7 +268,7 @@ class CreateBankLineParameters(ModelView):
                          help='File type CSV, separated by commas(;)')
 
 
-class StatementLine(metaclass=PoolMeta):
+class StatementLine(Workflow, ModelSQL, ModelView, metaclass=PoolMeta):
     __name__ = 'account.statement.line'
 
     move_lines_source = fields.Function(
@@ -273,7 +305,7 @@ class StatementMoveValidate(Wizard):
                 not_moves = [i.sale.number for i in lines if not i.move]
 
                 print(not_moves)
-            raise NotMoveStatementeLine(
+            raise UserError(
                 'Sin asiento contable',
                 f'Del estado de cuenta numero: {statement.name} \t\t \
                 fecha: {statement.date} \t\t \
