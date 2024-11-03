@@ -18,7 +18,6 @@ from dateutil.relativedelta import relativedelta
 from sql.aggregate import Sum
 from sql.operators import Between
 from trytond.exceptions import UserError, UserWarning
-from trytond.i18n import gettext
 from trytond.model import ModelSQL, ModelView, fields
 from trytond.modules.company import CompanyReport
 from trytond.pool import Pool, PoolMeta
@@ -268,14 +267,6 @@ class StaffConfiguration(metaclass=PoolMeta):
         cls.default_hour_workday = fields.Numeric(
             'Default Hour Workday', digits=(16, 2), required=True, help='In hours'
         )
-
-
-class Bank(metaclass=PoolMeta):
-    'Bank'
-    __name__ = 'bank'
-    bank_code_sap = fields.Char(
-        'Bank code SAP', help='bank code used for the bancolombia payment template'
-    )
 
 
 class WageType(metaclass=PoolMeta):
@@ -2025,7 +2016,6 @@ class Payroll(metaclass=PoolMeta):
                 if mandatory.party:
                     employee_id = mandatory.party
         return employee_id
-
 
     def create_move(self):
         '''Function to create account_move registry and post it'''
