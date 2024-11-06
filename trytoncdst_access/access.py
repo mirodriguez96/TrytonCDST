@@ -59,7 +59,7 @@ class StaffAccessRests(ModelSQL, ModelView):
         return res
 
 
-class StaffAccess(ModelSQL, metaclass=PoolMeta):
+class StaffAccess(metaclass=PoolMeta):
     __name__ = 'staff.access'
     rests = fields.One2Many('staff.access.rests', 'access', 'Rests')
     line_event = fields.Reference('Origin',
@@ -244,7 +244,6 @@ class StaffAccess(ModelSQL, metaclass=PoolMeta):
                 raise UserError(
                     'ERROR', 'Debe configurar las horas reglamentadas')
             workday = work_day_hours
-
         ttt = het = hedo = heno = reco = recf = dom = hedf = henf = _ZERO
 
         if date_change:
@@ -308,8 +307,8 @@ class StaffAccess(ModelSQL, metaclass=PoolMeta):
                 if start_rest and end_rest:
                     if contador == start_rest:
                         pass
-                    elif (int(contador) -
-                          1) == int(start_rest) and not rest_moment:
+                    elif (int(contador)
+                          - 1) == int(start_rest) and not rest_moment:
                         # Ajusta sumador por empezar descanso
                         rest_moment = True
                         sumador = start_rest - (contador - 1)
@@ -384,13 +383,13 @@ class StaffAccess(ModelSQL, metaclass=PoolMeta):
             dom = ttt
 
         return {
-            'ttt': ttt,
+            'ttt': round(ttt),
             'het': round(het, 2),
             'hedo': round(het - heno, 2) if dom == 0 else hedo,
             'heno': round(heno, 2),
-            'reco': reco,
-            'recf': recf,
-            'dom': dom,
+            'reco': round(reco),
+            'recf': round(recf),
+            'dom': round(dom),
             'hedf': round(het - henf, 2) if dom != 0 else hedf,
             'henf': round(henf, 2)
         }
@@ -652,8 +651,8 @@ class CreateAccessHolidaysWizard(Wizard):
             date, datetime.max.time()) + timedelta(hours=5)
         enter_timestamp = datetime.combine(date, self.start.time_in)
         exit_timestamp = datetime.combine(date, self.start.time_out)
-        hour_difference = (exit_timestamp -
-                           enter_timestamp).total_seconds() / 3600
+        hour_difference = (exit_timestamp
+                           - enter_timestamp).total_seconds() / 3600
 
         employees = Employee.search([('active', '=', 'active')])
         holiday = Holidays.search([('holiday', '=', date)])
