@@ -98,38 +98,38 @@ class Sale(metaclass=PoolMeta):
         venta_electronica = Config.get_data_parametros('9')
         if venta_electronica:
             venta_electronica = (venta_electronica[0].Valor).strip().split(',')
+        with Transaction().set_user(1):
+            # Build the SALE
+            print('Recorriendo las ventas')
+            for venta in data:
+                try:
+                    transaction = None
+                    numero_doc = venta.Numero_documento
+                    tipo_doc = venta.tipo
+                    sw = venta.sw
+                    id_venta = cls.build_id_tecno(
+                        sw=sw, type_doc=tipo_doc, number_doc=numero_doc)
+                    date_now = datetime.now() - timedelta(hours=5)
+                    print(f'Venta {id_venta} ({date_now})')
+                    # build date_sale from tecnocarnes
+                    date_ = str(venta.fecha_hora).split()[0].split('-')
+                    date_tecno = date(int(date_[0]), int(date_[1]),
+                                    int(date_[2]))
 
-        # Build the SALE
-        print('Recorriendo las ventas')
-        for venta in data:
-            try:
-                numero_doc = venta.Numero_documento
-                tipo_doc = venta.tipo
-                sw = venta.sw
-                id_venta = cls.build_id_tecno(
-                    sw=sw, type_doc=tipo_doc, number_doc=numero_doc)
-                date_now = datetime.now() - timedelta(hours=5)
-                print(f'Venta {id_venta} ({date_now})')
-                # build date_sale from tecnocarnes
-                date_ = str(venta.fecha_hora).split()[0].split('-')
-                date_tecno = date(int(date_[0]), int(date_[1]),
-                                  int(date_[2]))
+                    (shop, party, bodega,
+                    plazo_pago, sale_device,
+                    documentos_linea, analytic_account,
+                    operation_center, exception_) = cls.validate_sale_from_tecno(actualizacion, actualizacion_che,
+                                                                                data=data, venta=venta
+                                                                                )
+                    if exception_:
+                        continue
 
-                (shop, party, bodega,
-                 plazo_pago, sale_device,
-                 documentos_linea, analytic_account,
-                 operation_center, exception_) = cls.validate_sale_from_tecno(actualizacion, actualizacion_che,
-                                                                              data=data, venta=venta
-                                                                              )
-                if exception_:
-                    continue
-
-                with Transaction().set_user(1):
                     User.shop = shop
                     context = User.get_preferences()
                     with Transaction().set_context(context,
                                                 shop=shop.id,
-                                                _skip_warnings=True):
+                                                _skip_warnings=True) as transaction:
 
                         sale = cls.build_sale_from_tecno_data(actualizacion, actualizacion_che,
                                                             venta=venta, shop=shop,
@@ -179,23 +179,25 @@ class Sale(metaclass=PoolMeta):
                             if not success:
                                 break
                             Sale.process([sale])
-                            Transaction().commit()
+                            transaction.commit()
                             date_now = datetime.now() - timedelta(hours=5)
-                            print(f'Venta guardada {id_venta} ({date_now})')
-            except Exception as error:
-                Transaction().rollback()
-                print(f"ROLLBACK-{import_name}: {error}")
-                if id_venta in sale_in_exception and sale:
-                    cls.delete_tryton_sale(sale)
-                success = cls.update_exportado_tecno(
-                    id_tecno=id_venta, exportado="E")
-                if not success:
-                    break
-                error = str(error).replace("\n", " ").strip()
-                msg = f"""EXCEPCION: {error}"""
-                log = {id_venta: msg}
-                cls.update_logs_from_imports(
-                    actualizacion, actualizacion_che, logs=log)
+                            print(
+                                f'Venta guardada {id_venta} ({date_now})')
+                except Exception as error:
+                    if transaction:
+                        transaction.rollback()
+
+                    print(f"ROLLBACK-{import_name}: {error}")
+                    if id_venta in sale_in_exception and sale:
+                        cls.delete_tryton_sale(sale)
+                    success = cls.update_exportado_tecno(
+                        id_tecno=id_venta, exportado="E")
+                    if not success:
+                        break
+                    msg = f"""ERROR: {error}"""
+                    log = {id_venta: msg}
+                    cls.update_logs_from_imports(
+                        actualizacion, actualizacion_che, logs=log)
 
     @classmethod
     def validate_sale_from_tecno(cls, actualizacion, actualizacion_che,
@@ -726,8 +728,7 @@ class Sale(metaclass=PoolMeta):
 
     @classmethod
     def build_id_tecno(cls, sw=None, type_doc=None, number_doc=None):
-        id_tecno = str(sw) + '-' + type_doc + '-' + str(number_doc)
-        return id_tecno
+        return f"{sw}-{type_doc}-{number_doc}"
 
     @classmethod
     def update_exportado_tecno(cls, id_tecno, exportado):
@@ -735,12 +736,11 @@ class Sale(metaclass=PoolMeta):
 
         Args:
             id_tecno (String): data from tryton
-            exportado (String): Value to udate ('E','X','N')
+            exportado (String): Value to update ('E','X','N')
         """
         pool = Pool()
         Config = pool.get('conector.configuration')
-        success = Config.update_exportado(id_tecno, exportado)
-        return success
+        return Config.update_exportado(id_tecno, exportado)
 
     @classmethod
     def update_logs_from_imports(cls, actualizacion, actualizacion_che, logs=None, logs_che=None):
@@ -750,7 +750,6 @@ class Sale(metaclass=PoolMeta):
             logs (dict): Contain id_tecno key and log message. Defaults to None.
             logs_che (dict): Contain id_tecno key and log message. Defaults to None.
         """
-
         if logs:
             actualizacion.add_logs(logs)
         if logs_che:
@@ -774,29 +773,29 @@ class Sale(metaclass=PoolMeta):
 
         pool = Pool()
         Period = pool.get('account.period')
+
         if sale_tecno.anulado == 'S':
-            dat = str(sale_tecno.fecha_hora).split()[0].split('-')
-            name = f"{dat[0]}-{dat[1]}"
-            validate_period = Period.search([('name', '=', name)])
-            # Validate if period close and continue
-            if validate_period[0].state == 'close':
+            date_str = sale_tecno.fecha_hora.split()[0]
+            period_name = date_str[:7]  # Extract YYYY-MM
+
+            validate_period = Period.search(
+                [('name', '=', period_name)], limit=1)
+            if validate_period and validate_period[0].state == 'close':
                 print('Periodo cerrado')
                 cls.update_exportado_tecno(id_sale_tecno, exportado="E")
-                msg = ("""EXCEPCION: EL PERIODO DEL
-                    DOCUMENTO SE ENCUENTRA CERRADO Y NO ES
-                    POSIBLE SU ELIMINACION O MODIFICACION
-                    """).replace("\n", " ").strip()
+                msg = ("EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA"
+                       " CERRADO Y NO ES POSIBLE SU ELIMINACION O "
+                       "MODIFICACION").replace("\n", " ").strip()
                 log = {id_sale_tecno: msg}
                 cls.update_logs_from_imports(
                     actualizacion, actualizacion_che, logs=log)
                 return True
 
-            # Delete sale from tryton if was deleted from tecno
-            print('Eliminando venta que fue anulada ({id_sale_tecno})')
+            print(f'Eliminando venta que fue anulada ({id_sale_tecno})')
             cls.delete_imported_sales(sale_tryton, cod="X")
-            msg = ("""El documento fue eliminado de tryton
-                            porque fue anulado en TecnoCarnes
-                   """).replace("\n", " ").strip()
+            msg = ("El documento fue eliminado de tryton porque fue anulado "
+                   "en TecnoCarnes").replace(
+                "\n", " ").strip()
             log = {id_sale_tecno: msg}
             cls.update_logs_from_imports(
                 actualizacion, actualizacion_che, logs=log)
@@ -949,7 +948,6 @@ class Sale(metaclass=PoolMeta):
                         ],
                         values=["validated"],
                         where=account_invoice.id == invoice.id))
-                error = error.replace("\n", " ").strip()
                 log = {id_tecno_: f"""ERROR: {error}"""}
                 cls.update_logs_from_imports(
                     actualizacion, actualizacion_che, logs=log)
