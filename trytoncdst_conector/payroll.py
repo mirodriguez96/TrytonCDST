@@ -1847,7 +1847,6 @@ class Payroll(metaclass=PoolMeta):
 
         mandatory_wage_ = [
             mandatory for mandatory in self.employee.mandatory_wages]
-        employee_id = self.employee.party.id
 
         debit_acc2 = None
         attr_getter = attrgetter(
@@ -1860,6 +1859,8 @@ class Payroll(metaclass=PoolMeta):
             "wage_type.credit_account",
             "wage_type.expense_formula",
         )
+
+        employee_id = self.employee.party.id
 
         for line in self.lines:
             data = {"origin": None, "reference": None}
@@ -1898,9 +1899,14 @@ class Payroll(metaclass=PoolMeta):
             amount_credit = amount + expense
 
             try:
-                party_id = self.get_party_payroll_line(
-                    line, mandatory_wage_, employee_id
-                )
+
+                if line.party:
+                    party_id = line.party
+                else:
+                    party_id = self.get_party_payroll_line(
+                        line, mandatory_wage_, employee_id
+                    )
+
                 if debit_acc and amount_debit > _ZERO:
                     if definition == "discount":
                         amount_debit = amount_debit * (-1)
