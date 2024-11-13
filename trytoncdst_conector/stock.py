@@ -1,6 +1,7 @@
 """STOCK MOVEMENTS MODULE"""
 
 import copy
+import logging
 from collections import defaultdict
 from datetime import timedelta
 from decimal import Decimal
@@ -441,26 +442,40 @@ class ShipmentInternal(metaclass=PoolMeta):
         actualizacion = Actualizacion.create_or_update('TRASLADOS')
         result = validate_documentos(data)
 
-        try:
-            shipments = cls.create(result["tryton"].values())
-            for shipment in shipments:
-                cls.save([shipment])
-                if state_shipment and state_shipment == 'done':
-                    cls.wait([shipment])
-                    cls.assign([shipment])
-                    cls.done([shipment])
+        shipments = []
+        for value in result["tryton"].values():
+            try:
+                shipment = cls.create([value])
+                shipments.append(shipment)
+            except Exception as error:
+                # Transaction().rollback()
+                logging.error(f"ROLLBACK-{import_name}: {error}")
+                result["logs"][value['id_tecno']] = str(error)
+                result["exportado"][shipment.id_tecno] = "E"
 
-        except Exception as error:
-            Transaction().rollback()
-            print(f"ROLLBACK-{import_name}: {error}")
-            result["logs"]["try_except"] = str(error)
-            actualizacion.add_logs(result["logs"])
-            return
-        actualizacion.add_logs(result["logs"])
+        for shipment in shipments:
+            try:
+                cls.save(shipment)
+                if state_shipment and state_shipment == 'done':
+                    cls.wait(shipment)
+                    cls.assign(shipment)
+                    cls.done(shipment)
+                result["exportado"][shipment.id_tecno] = "T"
+            except Exception as error:
+                Transaction().rollback()
+                logging.error(f"ROLLBACK-{import_name}: {error}")
+                result["logs"][shipment.id_tecno] = str(error)
+                result["exportado"][shipment.id_tecno] = "E"
+
         for exportado, idt in result["exportado"].items():
             if idt:
                 if exportado != 'E':
-                    Config.update_exportado_list(idt, exportado)
+                    try:
+                        Config.update_exportado_list(idt, exportado)
+                    except Exception as error:
+                        result["logs"]["try_except"] = str(error)
+
+        actualizacion.add_logs(result["logs"])
         print(f"---------------FINISH {import_name}---------------")
 
     @classmethod
