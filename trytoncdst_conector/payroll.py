@@ -949,8 +949,8 @@ def send_mail_certificate(
         to_addrs = list(
             filter(
                 None,
-                map(str.strip, _get_emails(to) +
-                    _get_emails(cc) + _get_emails(bcc)),
+                map(str.strip, _get_emails(to)
+                    + _get_emails(cc) + _get_emails(bcc)),
             )
         )
         sendmail(from_, to_addrs, msg, server=None, strict=True)
@@ -1144,8 +1144,8 @@ def send_mail(
         to_addrs = list(
             filter(
                 None,
-                map(str.strip, _get_emails(to) +
-                    _get_emails(cc) + _get_emails(bcc)),
+                map(str.strip, _get_emails(to)
+                    + _get_emails(cc) + _get_emails(bcc)),
             )
         )
         sendmail(from_, to_addrs, msg, server=None, strict=True)
@@ -2048,6 +2048,7 @@ class Payroll(metaclass=PoolMeta):
                         if balance == 0:
                             AccountMoveLine.reconcile(move_lines)
                     except Exception as error:
+                        print('aqui')
                         raise (UserError(f"ERROR: {error}"))
                 else:
                     for line in self.lines:
@@ -2075,16 +2076,18 @@ class Payroll(metaclass=PoolMeta):
 
                                 for lines in loan_move_line:
                                     balance += lines.debit - lines.credit
+                                
                                 try:
-                                    if balance == 0:
+                                    if balance == 0 and loan_move_line:
                                         lines_to_reconcile = []
                                         lines_to_reconcile = list(
                                             loan_move_line)
-                                        AccountMoveLine.reconcile(
-                                            lines_to_reconcile)
-                                        for line in loan_move_line:
-                                            conciled_lines.append(line)
-                                        break
+                                        if lines_to_reconcile:
+                                            AccountMoveLine.reconcile(
+                                                lines_to_reconcile)
+                                            for line in loan_move_line:
+                                                conciled_lines.append(line)
+                                            break
                                 except Exception as error:
                                     raise (UserError(f'ERROR: {error}'))
 
