@@ -208,7 +208,7 @@ class Voucher(ModelSQL, ModelView):
         pool = Pool()
         BankStatementLines = pool.get('bank_statement.line-account.move.line')
         OthersConcepts = pool.get('account.multirevenue.others_concepts')
-        Transaction = pool.get('account.multirevenue.transaction')
+        MultirenevueTransaction = pool.get('account.multirevenue.transaction')
         MultiRevenueLine = pool.get('account.multirevenue.line')
         Actualizacion = pool.get('conector.actualizacion')
         MultiRevenue = pool.get('account.multirevenue')
@@ -303,7 +303,7 @@ class Voucher(ModelSQL, ModelView):
                                 for line in comprobante.lines:
                                     OthersConcepts.delete(line.others_concepts)
                                 MultiRevenueLine.delete(comprobante.lines)
-                                Transaction.delete(comprobante.transactions)
+                                MultirenevueTransaction.delete(comprobante.transactions)
                                 MultiRevenue.delete([comprobante])
                             logs[
                                 id_tecno] = "El documento fue eliminado de tryton porque fue anulado en TecnoCarnes"
@@ -362,7 +362,7 @@ class Voucher(ModelSQL, ModelView):
                                 break
                             amount_ = Decimal(str(round(pago.valor, 2)))
                             fecha_date = cls.convert_fecha_tecno(pago.fecha)
-                            transaction = Transaction()
+                            transaction = MultirenevueTransaction()
                             transaction.description = 'IMPORTACION TECNO'
                             transaction.amount = amount_
                             transaction.date = fecha_date
