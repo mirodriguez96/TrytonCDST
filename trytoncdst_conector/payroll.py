@@ -2082,7 +2082,7 @@ class Payroll(metaclass=PoolMeta):
 
                                 for lines in loan_move_line:
                                     balance += lines.debit - lines.credit
-                                
+
                                 try:
                                     if balance == 0 and loan_move_line:
                                         lines_to_reconcile = []
@@ -3840,3 +3840,15 @@ class PayrollSheetReport(Report, metaclass=PoolMeta):
             ]
         )
         return vals
+
+
+class PayrollGroupStart(metaclass=PoolMeta):
+    'Payroll Group Start'
+    __name__ = 'staff.payroll_group.start'
+
+    @fields.depends('period', 'description')
+    def on_change_period(self):
+        if not self.period:
+            return
+        if self.period.description:
+            self.description = self.period.description
