@@ -66,6 +66,7 @@ def register():
                   payroll.PayrollIBCView,
                   payroll.PayrollElectronicCDS,
                   payroll.LineLiquidationEvent,
+                  payroll.PayrollGroupStart,
                   party.CheckVIESResult,
                   party.Party,
                   party.PartyAddress,
