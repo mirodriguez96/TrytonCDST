@@ -54,8 +54,9 @@ class SaleDevice(metaclass=PoolMeta):
                 id_tecno = bodega.IdBodega
                 location = Location.search([('id_tecno', '=', id_tecno)])
                 if not location:
-                    msg = f"LA BODEGA DE TECNOCARNES CON ID {id_tecno} NO EXISTE"
+                    msg = f"LA BODEGA DE TECNOCARNES CON ID TECNO {id_tecno} NO EXISTE"
                     logs[id_tecno] = msg
+                    continue
                 nombre = bodega.Bodega
                 location = location[0]
                 existe = Shop.search([('warehouse', '=', location)])
@@ -185,10 +186,11 @@ class SaleDevice(metaclass=PoolMeta):
                     Transaction().rollback()
                     logs[id_tecno] = f'EXCEPCION: {error}'
                     print(f"ROLLBACK-{import_name}: {error}")
+
         for device in devices:
-            if not device.journals and journals:
-                device.journals = journals
-                device.save()
+            if not device[0].journals and journals:
+                device[0].journals = journals
+                device[0].save()
 
     # Libro de Ventas Pos
     @classmethod
@@ -211,6 +213,12 @@ class SaleDevice(metaclass=PoolMeta):
                         logs[id_tecno] = msg
                         continue
                     paymode, = paymode
+
+                    if not paymode.journal or not paymode.account:
+                        msg = f"EL MODO DE PAGO {paymode} NO TIENE DIARIO O CUENTA ASOCIADA"
+                        logs[id_tecno] = msg
+                        continue
+
                     statement_journal = {
                         'id_tecno': id_tecno,
                         'name': fp.FormaPago,
