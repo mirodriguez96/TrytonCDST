@@ -952,11 +952,11 @@ class LiquidationReport(metaclass=PoolMeta):
         Event = pool.get('staff.event-staff.liquidation')
         total_days_holidays = 0
         total_salaries = 0
-        end_date = ''
-        start_date = ''
         licenseNR = 0
 
         for record in records:
+            start_date = record.start_period.name
+            end_date = record.end_period.name
             if record.kind == 'holidays':
                 for liq_line in record.lines:
                     if (
