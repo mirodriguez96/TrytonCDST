@@ -445,7 +445,7 @@ class ShipmentInternal(metaclass=PoolMeta):
         shipments = []
         for value in result["tryton"].values():
             try:
-                shipment = cls.create([value])
+                shipment, = cls.create([value])
                 shipments.append(shipment)
             except Exception as error:
                 # Transaction().rollback()
@@ -455,17 +455,14 @@ class ShipmentInternal(metaclass=PoolMeta):
 
         for shipment in shipments:
             try:
-                cls.save(shipment)
                 if state_shipment and state_shipment == 'done':
-                    cls.wait(shipment)
-                    cls.assign(shipment)
-                    cls.done(shipment)
-                result["exportado"][shipment.id_tecno] = "T"
+                    cls.wait([shipment])
+                    cls.assign([shipment])
+                    cls.done([shipment])
             except Exception as error:
                 Transaction().rollback()
                 logging.error(f"ROLLBACK-{import_name}: {error}")
-                result["logs"][shipment.id_tecno] = str(error)
-                result["exportado"][shipment.id_tecno] = "E"
+                result["logs"]["EXCEPCION"] = str(error)
 
         for exportado, idt in result["exportado"].items():
             if idt:
