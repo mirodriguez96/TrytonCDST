@@ -129,6 +129,7 @@ def register():
                   invoice.AdvancePayment,
                   loan.LoanForceDraft,
                   liquidation.MoveProvisionBonusService,
+                  liquidation.LiquidationGroup,
                   party.CheckVIES,
                   payment_bank.PaymentBankGroup,
                   payroll.PayrollSheet,

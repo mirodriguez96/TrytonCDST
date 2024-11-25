@@ -763,6 +763,7 @@ class Liquidation(metaclass=PoolMeta):
         )
         wages = {}
         wages_target = {}
+
         for payroll in payrolls:
             mandatory_wages = [
                 i.wage_type for i in payroll.employee.mandatory_wages]
@@ -780,8 +781,7 @@ class Liquidation(metaclass=PoolMeta):
                     and l.wage_type in mandatory_wages
                 ):
                     mlines = self.get_moves_lines_pending(
-                        payroll.employee, l.wage_type, date_end
-                    )
+                        payroll.employee, l.wage_type, date_end)
                     if not mlines:
                         continue
                     wages_target[l.wage_type.id] = [
@@ -789,6 +789,24 @@ class Liquidation(metaclass=PoolMeta):
                         mlines,
                         l.wage_type,
                     ]
+
+        if not payrolls:
+            if self.kind == 'bonus_service':
+                wages_ = [
+                    mw for mw in self.employee.mandatory_wages
+                    if mw.wage_type.type_concept == 'bonus_service'
+                ]
+                if wages_:
+                    wage = wages_[0]
+                    lines = self.get_moves_lines_pending(
+                        self.employee, wage.wage_type, self.end,
+                    )
+                    if lines: 
+                        wages_target[wage.wage_type.id] = [
+                            wage.wage_type.credit_account.id,
+                            lines,
+                            wage.wage_type,
+                        ]
 
         for account_id, lines, wage_type in wages_target.values():
             values = []
@@ -1153,3 +1171,99 @@ class MoveProvisionBonusService(metaclass=PoolMeta):
                 if to_create:
                     line_move['analytic_lines'] = [('create', to_create)]
         return line_move
+
+
+class LiquidationGroup(metaclass=PoolMeta):
+    "Liquidation Group"
+    __name__ = 'staff.liquidation_group'
+
+    def transition_open_(self):
+        pool = Pool()
+        Liquidation = pool.get('staff.liquidation')
+        Contract = pool.get('staff.contract')
+        Employee = pool.get('company.employee')
+        Period = pool.get('staff.payroll.period')
+        to_liquidation = []
+
+        start_period = self.start.start_period.id
+        end_period = self.start.end_period.id
+        kind = self.start.kind
+        liquidation_date = self.start.liquidation_date
+        company_id = self.start.company.id
+        description = self.start.description
+        currency_id = self.start.company.currency.id
+        account_id = self.start.account.id
+
+        start_date = self.start.start_period.start
+        end_date = self.start.end_period.end
+
+        periods = Period.search([
+                ('start', '>=', start_date),
+                ('start', '<=', end_date),
+                ])
+
+        dom_contracts = [('kind', '=', kind)]
+        if self.start.employees:
+            employees = self.start.employees
+            employee_ids = [e.id for e in employees]
+            dom_contracts.append(('employee', 'in', employee_ids))
+        else:
+            employees = Employee.search([('contract', '!=', None)])
+
+        if periods:
+            periods_ids = [p.id for p in periods]
+            dom_contracts.append(('start_period', 'in', periods_ids))
+            dom_contracts.append(('end_period', 'in', periods_ids))
+
+        contracts = Liquidation.search_read(
+            dom_contracts, fields_names=['contract'],
+        )
+        contract_ids = [i['contract'] for i in contracts]
+        for employee in employees:
+            contracts = Contract.search([
+                ('employee', '=', employee.id),
+                ('id', 'not in', contract_ids),
+                ('state', '=', 'active'),
+                ('kind', '!=', 'learning'),
+            ])
+            if not contracts:
+                continue
+
+            contract = contracts[0]
+
+            if kind == 'unemployment':
+                wages = [
+                    mw for mw in employee.mandatory_wages
+                    if mw.wage_type.type_concept == 'unemployment'
+                ]
+                if not wages:
+                    continue
+                wage = wages[0]
+                lines = Liquidation.get_moves_lines_pending(
+                    employee, wage.wage_type, self.start.end_period.end,
+                )
+                if not lines:
+                    continue
+
+            lqt_create = {
+                'start_period': start_period,
+                'end_period': end_period,
+                'employee': employee.id,
+                'contract': contract.id,
+                'kind': kind,
+                'liquidation_date': liquidation_date,
+                'time_contracting': None,
+                'state': 'draft',
+                'company': company_id,
+                'description': description,
+                'currency': currency_id,
+                'account': account_id,
+                'party_to_pay': self.start.party_to_pay.id if self.start.party_to_pay else None,
+            }
+            liq, = Liquidation.create([lqt_create])
+            liq.time_contracting = liq.on_change_with_time_contracting()
+            liq.save()
+            to_liquidation.append(liq)
+
+        Liquidation.compute_liquidation(to_liquidation)
+        return 'end'
