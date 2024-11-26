@@ -98,39 +98,37 @@ class Sale(metaclass=PoolMeta):
         venta_electronica = Config.get_data_parametros('9')
         if venta_electronica:
             venta_electronica = (venta_electronica[0].Valor).strip().split(',')
-        with Transaction().set_user(1):
-            # Build the SALE
-            print('Recorriendo las ventas')
-            for venta in data:
-                try:
-                    transaction = None
-                    numero_doc = venta.Numero_documento
-                    tipo_doc = venta.tipo
-                    sw = venta.sw
-                    id_venta = cls.build_id_tecno(
-                        sw=sw, type_doc=tipo_doc, number_doc=numero_doc)
-                    date_now = datetime.now() - timedelta(hours=5)
-                    print(f'Venta {id_venta} ({date_now})')
-                    # build date_sale from tecnocarnes
-                    date_ = str(venta.fecha_hora).split()[0].split('-')
-                    date_tecno = date(int(date_[0]), int(date_[1]),
-                                    int(date_[2]))
 
-                    (shop, party, bodega,
-                    plazo_pago, sale_device,
-                    documentos_linea, analytic_account,
-                    operation_center, exception_) = cls.validate_sale_from_tecno(actualizacion, actualizacion_che,
-                                                                                data=data, venta=venta
-                                                                                )
-                    if exception_:
-                        continue
+        for venta in data:
+            try:
+                numero_doc = venta.Numero_documento
+                tipo_doc = venta.tipo
+                sw = venta.sw
+                id_venta = cls.build_id_tecno(
+                    sw=sw, type_doc=tipo_doc, number_doc=numero_doc)
+                date_now = datetime.now() - timedelta(hours=5)
+                print(f'Venta {id_venta} ({date_now})')
+                # build date_sale from tecnocarnes
+                date_ = str(venta.fecha_hora).split()[0].split('-')
+                date_tecno = date(int(date_[0]), int(date_[1]),
+                                int(date_[2]))
 
-                    User.shop = shop
+                (shop, party, bodega,
+                plazo_pago, sale_device,
+                documentos_linea, analytic_account,
+                operation_center, exception_) = cls.validate_sale_from_tecno(actualizacion, actualizacion_che,
+                                                                            data=data, venta=venta
+                                                                            )
+                if exception_:
+                    continue
+
+                with Transaction().set_user(1):
+                    # Aqui yace enterrado el origen del famoso error IN_MAX
+                    # que ha atormentado por generaciones a la empresa
+                    # casa de software tecno
+                    # ---->>>>>> User.shop = shop <<<<<<<------
                     context = User.get_preferences()
-                    with Transaction().set_context(context,
-                                                shop=shop.id,
-                                                _skip_warnings=True) as transaction:
-
+                    with Transaction().set_context(context, shop=shop.id):
                         sale = cls.build_sale_from_tecno_data(actualizacion, actualizacion_che,
                                                             venta=venta, shop=shop,
                                                             fecha_date=date_tecno, party=party,
@@ -163,6 +161,7 @@ class Sale(metaclass=PoolMeta):
                                     actualizacion, actualizacion_che,
                                     pagos, sale, args_statement)
 
+                                # Validar el comentar este codigo
                                 Sale.update_state([sale])
                             elif sale.payment_term.id_tecno == '0':
                                 msg = (
@@ -178,26 +177,24 @@ class Sale(metaclass=PoolMeta):
                                 id_tecno=id_venta, exportado="T")
                             if not success:
                                 break
-                            Sale.process([sale])
-                            transaction.commit()
+                            # Sale.process([sale])
+                            # Transaction().commit()
                             date_now = datetime.now() - timedelta(hours=5)
                             print(
                                 f'Venta guardada {id_venta} ({date_now})')
-                except Exception as error:
-                    if transaction:
-                        transaction.rollback()
-
-                    print(f"ROLLBACK-{import_name}: {error}")
-                    if id_venta in sale_in_exception and sale:
-                        cls.delete_tryton_sale(sale)
-                    success = cls.update_exportado_tecno(
-                        id_tecno=id_venta, exportado="E")
-                    if not success:
-                        break
-                    msg = f"""ERROR: {error}"""
-                    log = {id_venta: msg}
-                    cls.update_logs_from_imports(
-                        actualizacion, actualizacion_che, logs=log)
+            except Exception as error:
+                Transaction().rollback()
+                print(f"ROLLBACK-{import_name}: {error}")
+                if id_venta in sale_in_exception and sale:
+                    cls.delete_tryton_sale(sale)
+                success = cls.update_exportado_tecno(
+                    id_tecno=id_venta, exportado="E")
+                if not success:
+                    break
+                msg = f"""ERROR: {error}"""
+                log = {id_venta: msg}
+                cls.update_logs_from_imports(
+                    actualizacion, actualizacion_che, logs=log)
 
     @classmethod
     def validate_sale_from_tecno(cls, actualizacion, actualizacion_che,
@@ -242,7 +239,6 @@ class Sale(metaclass=PoolMeta):
         operation_center = CompanyOperation.search([],
                                                    order=[('id', 'DESC')],
                                                    limit=1)
-        print('llega')
         while True:
             log = {}
             # Validate that operation center exist
@@ -451,7 +447,6 @@ class Sale(metaclass=PoolMeta):
         SaleLine = pool.get('sale.line')
         Tax = pool.get('account.tax')
         Sale = pool.get('sale.sale')
-        User = pool.get('res.user')
         sale_in_exception = []
         retencion_iva = False
         retencion_ica = False
@@ -473,15 +468,7 @@ class Sale(metaclass=PoolMeta):
         else:
             tax_amount_tecno = Decimal(0)
 
-        # with Transaction().set_user(1):
-        #     User.shop = shop
-        #     context = User.get_preferences()
-        # sale = Sale()
-        # with Transaction().set_context(context,
-        #                                shop=shop.id,
-        #                                _skip_warnings=True):
-
-        sale = Sale()
+        sale = Sale(shop=shop)
         sale.number = tipo_doc + '-' + str(numero_doc)
         sale.reference = tipo_doc + '-' + str(numero_doc)
         sale.id_tecno = id_venta
@@ -500,7 +487,7 @@ class Sale(metaclass=PoolMeta):
         sale.invoice_amount_tecno = Decimal(
             str(round(invoice_amount_tecno, 2)))
         sale.tax_amount_tecno = Decimal(str(round(tax_amount_tecno,
-                                                  2)))
+                                                2)))
         """ Se revisa si la venta es clasificada como electronica o
                 pos y se cambia el tipo"""
         if tipo_doc in venta_electronica:
@@ -541,7 +528,8 @@ class Sale(metaclass=PoolMeta):
             ])
 
             if not producto:
-                cls.update_exportado_tecno(id_tecno=id_venta, exportado="E")
+                cls.update_exportado_tecno(
+                    id_tecno=id_venta, exportado="E")
                 msg = (f"""No se encontro el producto {str(lin.IdProducto)}-
                             Revisar si tiene variante o esta
                         inactivo""").replace("\n", " ").strip()
@@ -552,10 +540,11 @@ class Sale(metaclass=PoolMeta):
                 break
 
             if len(producto) > 1:
-                cls.update_exportado_tecno(id_tecno=id_venta, exportado="E")
+                cls.update_exportado_tecno(
+                    id_tecno=id_venta, exportado="E")
                 msg = ("""Hay mas de un producto que tienen
                             el mismo código o id_tecno
-                       """).replace("\n", " ").strip()
+                    """).replace("\n", " ").strip()
                 log = {id_venta: msg}
                 cls.update_logs_from_imports(
                     actualizacion, actualizacion_che, logs=log)
@@ -565,17 +554,18 @@ class Sale(metaclass=PoolMeta):
             producto, = producto
             """Validate if product is not salable"""
             if not producto.template.salable:
-                cls.update_exportado_tecno(id_tecno=id_venta, exportado="E")
+                cls.update_exportado_tecno(
+                    id_tecno=id_venta, exportado="E")
                 msg = (f"""El producto {str(lin.IdProducto)}
                             no esta marcado como vendible
-                       """).replace("\n", " ").strip()
+                    """).replace("\n", " ").strip()
                 log = {id_venta: msg}
                 cls.update_logs_from_imports(
                     actualizacion, actualizacion_che, logs=log)
                 sale_in_exception.append(id_venta)
                 break
             cantidad_facturada = round(float(lin.Cantidad_Facturada),
-                                       3)
+                                    3)
 
             if producto.template.default_uom.id == 1:
                 cantidad_facturada = int(cantidad_facturada)
@@ -588,7 +578,7 @@ class Sale(metaclass=PoolMeta):
                         cant = (cantidad_facturada * -1)
                     if line.product == producto and line_quantity > 0:
                         total_quantity = round((line.quantity + cant),
-                                               3)
+                                            3)
                         line.quantity = total_quantity
                         line.save()
                         break
@@ -635,10 +625,10 @@ class Sale(metaclass=PoolMeta):
                 elif impuestol.consumo and impuesto_consumo > 0:
                     # validate tax consumption for apply
                     tax = Tax.search([('consumo', '=', True),
-                                      ('type', '=', 'fixed'),
-                                      ('amount', '=',
-                                     impuesto_consumo),
-                                      [
+                                    ('type', '=', 'fixed'),
+                                    ('amount', '=',
+                                    impuesto_consumo),
+                                    [
                         'OR',
                         ('group.kind', '=', 'sale'),
                         ('group.kind', '=', 'both')
@@ -650,8 +640,8 @@ class Sale(metaclass=PoolMeta):
                             msg = (f"""Se encontro mas de un impuesto de
                                     tipo consumo con el importe igual a
                                     {impuesto_consumo} del grupo venta,recuerde
-                                     que se debe manejar un unico impuesto con 
-                                     esta configuracion""")
+                                    que se debe manejar un unico impuesto con 
+                                    esta configuracion""")
                             log = {id_venta: msg}
                             cls.update_logs_from_imports(
                                 actualizacion, actualizacion_che, logs=log)
@@ -703,9 +693,9 @@ class Sale(metaclass=PoolMeta):
         if id_venta in sale_in_exception:
             print('Eliminando venta con excepcion')
             cls.delete_tryton_sale(sale)
-            Transaction().commit()
+            # Transaction().commit()
             return None
-        Transaction().commit()
+        # Transaction().commit()
         return sale
 
     @classmethod
