@@ -997,6 +997,23 @@ class Invoice(metaclass=PoolMeta):
         if reconciled:
             cls.__queue__.process(reconciled)
 
+        for invoice in invoices:
+            if invoice.type == 'in':
+                cls.process_pruchases(invoice)
+
+    @classmethod
+    def process_pruchases(cls, invoice):
+        """ Function to process purchase from invoice type in
+            after post it invoice
+        """
+        pool = Pool()
+        Purchase = pool.get('purchase.purchase')
+        for line in invoice.lines:
+            origin = line.origin if line.origin else None
+            if origin:
+                purchases = [origin.purchase]
+                Purchase.process(purchases)
+
     @classmethod
     def configure_party(cls, move, invoice):
         """Function to change party if invoice type out
