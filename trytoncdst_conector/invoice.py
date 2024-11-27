@@ -998,7 +998,7 @@ class Invoice(metaclass=PoolMeta):
             cls.__queue__.process(reconciled)
 
         for invoice in invoices:
-            if invoice.type == 'in':
+            if invoice.type == 'in' and invoice.state != 'posted':
                 cls.process_pruchases(invoice)
 
     @classmethod
