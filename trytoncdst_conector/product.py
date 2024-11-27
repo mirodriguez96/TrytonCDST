@@ -42,22 +42,10 @@ class Product(metaclass=PoolMeta):
         pool = Pool()
         Template = pool.get("product.template")
         active = False
-        id_tecno = False
 
         if "active" in products:
             products = products["variante"]
             active = True
-
-        for product in products:
-            if product.id_tecno:
-                products = [product]
-
-        if not id_tecno:
-            if len(products) >= 2:
-                products = [products[-1]]
-            else:
-                if products:
-                    products = [products[0]]
 
         for product in products:
             if active:
@@ -69,7 +57,6 @@ class Product(metaclass=PoolMeta):
 
             code = "".join(
                 filter(None, [product.prefix_code, product.suffix_code]))
-
             if not code:
                 code = None
 
