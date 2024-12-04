@@ -883,7 +883,24 @@ class MoveCDT(metaclass=PoolMeta):
     def do(cls, moves):
         pool = Pool()
         AccountMove = pool.get('account.move')
+        ProductRevision = pool.get('product.cost_price.revision')
         super(MoveCDT, cls).do(moves)
+        for move in moves:
+            cost_price_move = move.cost_price
+            if move.origin.__name__ == 'stock.inventory.line':
+                date_inventory = move.origin.inventory.date
+                if move.product and move.product.template:
+                    cost_revision, = ProductRevision.search(
+                        [('template', '=', move.product.template),
+                            ('date', '<=', date_inventory)],
+                        order=[('id', 'DESC')],
+                        limit=1
+                    )
+                if (cost_revision
+                        and cost_revision.cost_price != cost_price_move):
+                    cost_price = cost_revision.cost_price
+                    move.cost_price = cost_price
+                    move.save()
         account_moves = []
         for move in moves:
             account_move = move._get_account_stock_move()
