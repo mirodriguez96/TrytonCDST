@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<!-- This file is part of Tryton.  The COPYRIGHT file at the top level of
+this repository contains the full copyright notices and license terms. -->
+<tryton>
+    <data>
+        <!-- ############################ -->
+        <!-- # Create vacation report   # -->
+        <!-- ############################ -->
+        <record model="ir.action.wizard" id="act_create_vacation_report">
+            <field name="name">Export Vacations</field>
+            <field name="wiz_name">staff.contract.export_avaliable_vacation</field>
+        </record>
+        <record model="ir.action.keyword" id="act_create_vacation_report_keyword">
+            <field name="keyword">form_action</field>
+            <field name="model">staff.contract,-1</field>
+            <field name="action" ref="act_create_vacation_report"/>
+        </record>
+        <record model="ir.action.report" id="report_avaliable_vacations">
+            <field name="name">Report Avaliable Vacations</field>
+            <field name="model">staff.contract</field>
+            <field name="report_name">contract.export_avaliable_vacation</field>
+            <field name="report">conector/avaliable_vacations.fods</field>
+            <field name="template_extension">ods</field>
+            <field name="translatable">False</field>
+        </record>
+
+    </data>
+</tryton>
