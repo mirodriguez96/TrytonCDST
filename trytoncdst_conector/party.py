@@ -106,8 +106,7 @@ class Party(metaclass=PoolMeta):
         print(f"---------------RUN {import_name}---------------")
 
         # Se trae los terceros que cumplan con la fecha establecida
-        fecha_actualizacion = Actualizacion.get_fecha_actualizacion(
-            actualizacion)
+        fecha_actualizacion = datetime.date(1, 1, 1)
         terceros_db = Config.get_tblterceros(fecha_actualizacion)
         if not terceros_db:
             return
@@ -123,7 +122,7 @@ class Party(metaclass=PoolMeta):
         for tercero in terceros_db:
             try:
                 nit_cedula = tercero.nit_cedula.replace('\n', "")
-                print(f'Obteniendo datos {nit_cedula}')
+                # print(f'Obteniendo datos {nit_cedula}')
                 tipo_identificacion = cls.id_type(
                     tercero.tipo_identificacion)
                 nombre = cls.delete_caracter(
@@ -150,7 +149,7 @@ class Party(metaclass=PoolMeta):
                     continue
                 # Ahora verificamos si el tercero existe en tryton
                 if party:
-                    print('Tercero existe en tryton')
+                    # print('Tercero existe en tryton')
                     ultimo_cambio = tercero.Ultimo_Cambio_Registro
                     if not ultimo_cambio:
                         continue
@@ -167,7 +166,7 @@ class Party(metaclass=PoolMeta):
 
                     if (write_date and ultimo_cambio > write_date) or (
                             not write_date and ultimo_cambio > create_date):
-                        print('Se actualiza el tercero con info nueva')
+                        # print('Se actualiza el tercero con info nueva')
                         if not party.validate_dian:
                             party.name = nombre
                             party.first_name = PrimerNombre
@@ -218,9 +217,9 @@ class Party(metaclass=PoolMeta):
                                 contact_tel.value = '+57' + telefono
                             contact_tel.save()
                         party.save()
-                        print('Tercero actualizado')
+                        # print('Tercero actualizado')
                 else:
-                    print('Creando tercero')
+                    # print('Creando tercero')
                     party = {
                         'type_document': tipo_identificacion,
                         'id_number': nit_cedula,
@@ -271,7 +270,7 @@ class Party(metaclass=PoolMeta):
                         party['contact_mechanisms'] = [
                             ('create', contacts)]
                     Party.create([party])
-                    print('Tercero creado')
+                    # print('Tercero creado')
             except Exception as error:
                 Transaction().rollback()
                 values['logs'][nit_cedula] = f"EXCEPCION: {str(error)}"
