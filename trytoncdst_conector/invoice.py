@@ -892,8 +892,8 @@ class Invoice(metaclass=PoolMeta):
                                 f"POR LA(S) FACTURA(S) CRUCE {cross[origin.number]}"
                             logs[origin.number] = msg
                 except Exception as error:
+                    logs[cross[origin.number][0].number] = f'EXCEPCION: {error}'
                     Transaction().rollback()
-                    logs[origin.number] = f'EXCEPCION: {error}'
                     print(f"ROLLBACK-{import_name}: {error}")
             actualizacion.add_logs(logs)
             print(f'---------------FINISH {import_name}---------------')
@@ -982,16 +982,15 @@ class Invoice(metaclass=PoolMeta):
                 moves.append(move)
         if moves:
             Move.save(moves)
-
         for invoice in invoices:
             if invoice.type == 'out':
                 cls.configure_party(invoice.move, invoice)
                 invoice.print_invoice()
             if invoice.reconciled:
                 reconciled.append(invoice)
-
             if invoice.state != 'posted':
                 invoice.state = 'posted'
+
         cls.save(invoices)
         Move.post([i.move for i in invoices if i.move.state != 'posted'])
         if reconciled:
@@ -1023,6 +1022,9 @@ class Invoice(metaclass=PoolMeta):
             move (object): account_move model
             invoice (object): account_invoice model
         """
+        pool = Pool()
+        AccountMoveLine = pool.get('account.move.line')
+        lines_to_change = []
         for lines in invoice.lines:
             if hasattr(lines, 'account') and hasattr(lines, 'product'):
                 product = lines.product
@@ -1034,11 +1036,13 @@ class Invoice(metaclass=PoolMeta):
                     if account_cogs_used and account_stock_in_used:
                         if move.state == "draft":
                             for lines in move.lines:
+                                print(lines.move)
                                 if lines.account.code != account_code:
                                     if lines.account.code == account_cogs_used or\
                                             lines.account.code == account_stock_in_used:
                                         lines.party = move.company.party
-                                        lines.save()
+                                        lines_to_change.append(lines)
+        AccountMoveLine.save(lines_to_change)
 
 
 class InvoiceLine(metaclass=PoolMeta):
