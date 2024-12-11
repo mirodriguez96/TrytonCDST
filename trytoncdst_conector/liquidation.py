@@ -1,5 +1,5 @@
 import calendar
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from decimal import Decimal
 
 from dateutil import tz
@@ -801,26 +801,36 @@ class Liquidation(metaclass=PoolMeta):
                     lines = self.get_moves_lines_pending(
                         self.employee, wage.wage_type, self.end,
                     )
-                    if lines: 
+                    if lines:
                         wages_target[wage.wage_type.id] = [
                             wage.wage_type.credit_account.id,
                             lines,
                             wage.wage_type,
                         ]
 
+        # Get days by current liquidation period
+        date_start, date_end = self._get_dates()
+
         for account_id, lines, wage_type in wages_target.values():
             values = []
             lines_to_reconcile = []
+            days = self.time_contracting
+            if self.kind == 'contract':
+                days = self.get_liquidation_days_lines(
+                    date_start, date_end, self.contract, wage_type)
+                if days == 0:
+                    days = self.contract.get_time_days_contract(
+                        date_start, date_end)
             for line in lines:
                 _line = LiquidationMove.search([('move_line', '=', line.id)])
                 if not _line:
                     values.append(abs(line.debit - line.credit))
                     lines_to_reconcile.append(line.id)
             value = self.get_line_(
-                wage_type,
-                sum(values),
-                self.time_contracting,
-                account_id,
+                wage=wage_type,
+                amount=sum(values),
+                days=days,
+                account_id=account_id,
                 party=self.party_to_pay,
             )
 
@@ -875,18 +885,99 @@ class Liquidation(metaclass=PoolMeta):
             loan.save()
             LoanLine.write([loan], {'state': 'paid', 'origin': line_})
 
-    @fields.depends('start_period', 'end_period', 'contract')
+    @fields.depends('start_period', 'end_period', 'contract', 'kind')
     def on_change_with_time_contracting(self):
         delta = None
+
         if self.start_period and self.end_period and self.contract:
             try:
                 date_start, date_end = self._get_dates()
+                if self.kind == 'contract':
+                    date_start = self.contract.start_date
                 delta = self.contract.get_time_days_contract(
                     date_start, date_end)
             except Exception as error:
                 raise UserError('Error', f'{self.employee.party.name} {error}')
-                delta = 0
         return delta
+
+    @classmethod
+    def create_withholding(cls, liquidation):
+        rec = liquidation
+        pool = Pool()
+        UvtWithholding = pool.get('staff.payroll.uvt_withholding')
+        WageType = pool.get('staff.wage_type')
+        fields_names = [
+            'unit_price_formula', 'concepts_salary', 'salary_constitute',
+            'name', 'sequence', 'definition', 'unit_price_formula',
+            'expense_formula', 'uom', 'default_quantity', 'type_concept',
+            'salary_constitute', 'receipt', 'concepts_salary',
+            'contract_finish', 'limit_days', 'month_application',
+            'minimal_amount', 'adjust_days_worked', 'round_amounts',
+            'debit_account.name', 'credit_account.name',
+            'deduction_account.name', 'account_60_40.name',
+        ]
+        wage_tax = WageType.search_read([('type_concept', '=', 'tax')],
+            fields_names=fields_names)
+        if not wage_tax:
+            return
+
+        wage_tax = wage_tax[0]
+        deductions_month = sum([
+            ln.amount for ln in rec.lines if ln.wage.definition != 'payment'
+        ])
+        salary_full = rec.net_payment
+        payrolls = {p.end: p for p in rec.payrolls}
+        if not payrolls:
+            return
+        max_date = max(payrolls.keys())
+        if rec.liquidation_date.month == max_date.month:
+            payroll = payrolls[max_date]
+            line_tax = None
+            for line in payroll.lines:
+                if line.wage_type.type_concept == 'tax' and line.amount:
+                    line_tax = line
+            if not line_tax:
+                deductions_month += payroll.get_deductions_month()
+                salary_args = payroll.get_salary_full_(wage_tax)
+                salary_full += salary_args['salary']
+
+        base_salary_withholding = salary_full - deductions_month
+        amount_tax = UvtWithholding.compute_withholding(
+            base_salary_withholding)
+        amount_tax = rec.currency.round(Decimal(amount_tax))
+
+        date_start, date_end = rec._get_dates()
+        delta = rec.contract.get_time_days_contract(
+                    date_start, date_end)
+        if amount_tax:
+            create_tax = {
+                'sequence': wage_tax['sequence'],
+                'wage': wage_tax['id'],
+                'description': wage_tax['name'],
+                'amount': amount_tax * -1,
+                'days': delta,
+                'account': wage_tax['credit_account.']['id'],
+            }
+            cls.write([rec], {
+                'lines': [('create', [create_tax])],
+            })
+
+    def get_liquidation_days_lines(self, date_start, date_end, contract,
+                                   wage_type):
+        current_year = date.today().year
+        first_of_july = date(current_year, 7, 1)
+        days = 0
+        if wage_type.type_concept_electronic == 'VacacionesComunes':
+            days = round((Decimal(15 / 360) * contract.time_worked)
+                         - contract.days_enjoy, 2)
+        elif wage_type.type_concept_electronic == 'PrimasS':
+            if date_end > first_of_july:
+                if contract.start_date > first_of_july:
+                    date_start = contract.start_date
+                else:
+                    date_start = first_of_july
+                days = contract.get_time_days_contract(date_start, date_end)
+        return days
 
 
 class LiquidationLine(AnalyticMixin, metaclass=PoolMeta):

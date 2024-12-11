@@ -2097,6 +2097,22 @@ class Payroll(metaclass=PoolMeta):
                                 except Exception as error:
                                     raise (UserError(f'ERROR: {error}'))
 
+    def compute_salary_full_(self, wage):
+        if wage['concepts_salary']:
+            salary_full = sum(
+                line.amount for line in self.lines if line.wage_type.id in wage['concepts_salary'])
+        else:
+            salary_full = self.contract.get_salary_in_date(self.end) or 0
+        return salary_full
+
+    def get_salary_full_(self, wage):
+        """
+        Return a dict with sum of total amount of all wages defined
+            as salary on context of wage
+        """
+        salary_full = self.compute_salary_full_(wage)
+        return {'salary': salary_full}
+
 
 class PayrollLine(metaclass=PoolMeta):
     __name__ = 'staff.payroll.line'
