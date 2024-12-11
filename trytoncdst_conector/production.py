@@ -68,7 +68,6 @@ class Production(metaclass=PoolMeta):
             AverageCost.create(done_cost)
 
         if to_update:
-
             # Se actualiza el costo para los productos (relacioandos) hijos
             Product = Pool().get('product.product')
             Product.update_product_parent(to_update)

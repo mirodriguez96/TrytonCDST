@@ -252,7 +252,14 @@ class Product(metaclass=PoolMeta):
         Product = pool.get("product.product")
         Revision = pool.get("product.cost_price.revision")
         AverageCost = pool.get("product.average_cost")
+
+        revisions = []
+        averages = []
+        products = None
+
         _today = date.today()
+        result = Config.get_tblproducto_parent()
+
         if not _products:
             products = Product.search([])
             if not products:
@@ -260,11 +267,10 @@ class Product(metaclass=PoolMeta):
             _products = {}
             for pr in products:
                 _products[pr.code] = pr
-        result = Config.get_tblproducto_parent()
+
         if not result:
             return
-        revisions = []
-        averages = []
+
         for r in result:
             if str(r.IdProducto) in _products and str(r.IdResponsable) in _products:
                 product = _products[str(r.IdProducto)]
@@ -286,7 +292,8 @@ class Product(metaclass=PoolMeta):
                     "cost_price": cost_price,
                 }
                 averages.append(average)
-        if revisions:
+
+        if revisions and products:
             Revision.create(revisions)
             Product.recompute_cost_price(products, start=_today)
         if averages:

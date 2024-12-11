@@ -1190,7 +1190,7 @@ class Sale(metaclass=PoolMeta):
                     to_delete['invoice'].append(invoice.id)
                     line_statement = LineStatement.search([("invoice", "=",
                                                             invoice.id)])
-                    if line_statement:
+                    if line_statement and line_statement[0].move:
                         account_moves = AccountMove.search([
                             ("id", "=", line_statement[0].move.id)
                         ])

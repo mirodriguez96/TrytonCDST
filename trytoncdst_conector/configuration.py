@@ -175,7 +175,7 @@ class Configuration(ModelSQL, ModelView):
         finally:
             if cnxn and not cnxn.closed:
                 cnxn.close()
-                logging.info('Conexión cerrada correctamente - get_data.')
+                # logging.info('Conexión cerrada correctamente - get_data.')
 
     @classmethod
     def set_data(cls, query):
@@ -192,7 +192,7 @@ class Configuration(ModelSQL, ModelView):
         finally:
             if cnxn and not cnxn.closed:
                 cnxn.close()
-                logging.info('Conexión cerrada correctamente - set_data.')
+                # logging.info('Conexión cerrada correctamente - set_data.')
 
     @classmethod
     def set_data_rollback(cls, queries):
