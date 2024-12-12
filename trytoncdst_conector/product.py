@@ -87,25 +87,21 @@ class Product(metaclass=PoolMeta):
             actualizacion.save()
             print(f"---------------FINISH {import_name}---------------")
             return
-
         for producto in products_tecno:
             try:
                 id_product = str(producto.IdProducto)
                 if producto.ref_anulada == "S":
-                    log = {
-                        "EXCEPCION": f"""EL PRODUCTO CON CODIGO {id_product}
-                            ESTA MARCADO COMO ANULADO EN TECNOCARNES"""}
+                    msg = f"EL PRODUCTO {id_product} ESTA MARCADO COMO ANULADO EN TECNOCARNES"
+                    log = {"EXCEPCION": msg}
                     actualizacion.add_logs(log)
                     continue
 
                 product_inactive = Product.search(
                     [("code", "=", id_product), ("active", "=", False)]
                 )
-                if product_inactive:
-                    log = {
-                        "EXCEPCION": f"""EL PRODUCTO CON CODIGO {id_product}
-                            TIENE UNA VARIANTE MARCADA COMO
-                            INACTIVO EN TRYTON"""}
+                if product_inactive and producto.ref_anulada == "S":
+                    msg = "EL PRODUCTO ESTA ANULADO EN TRYTON Y TECNOCARNES"
+                    log = {"EXCEPCION": msg}
                     actualizacion.add_logs(log)
                     continue
 
@@ -131,16 +127,16 @@ class Product(metaclass=PoolMeta):
                 unit_value = round(unit_value, 2)
 
                 product = Product.search([
-                            ['OR', ('id_tecno', '=', id_product),
-                             ('code', '=', id_product)],
-                            ('active', '=', True)])
+                        ['OR', ('id_tecno', '=', id_product),
+                         ('code', '=', id_product)]],
+                         order=[('active', 'DESC')])
 
                 if product:
+                    print('actualizando producto')
                     product = product[0]
                     last_change = producto.Ultimo_Cambio_Registro
                     create_date = None
                     write_date = None
-
                     # Get create and write date
                     if product.write_date:
                         write_date = (product.write_date
@@ -154,6 +150,7 @@ class Product(metaclass=PoolMeta):
                         last_change and not write_date
                         and last_change > create_date
                     ):
+
                         product.template.name = product_name
                         product.template.type = product_type
                         product.template.default_uom = product_udm
@@ -166,8 +163,11 @@ class Product(metaclass=PoolMeta):
                         product.template.sale_price_w_tax = unit_value
                         product.template.save()
                         product.id_tecno = id_product
+                        product.active = True
+                        product.template.active = True
                         product.save()
                         Transaction().commit()
+                        print('producto actualizado')
                 else:
                     prod = Product()
                     temp = Template()
