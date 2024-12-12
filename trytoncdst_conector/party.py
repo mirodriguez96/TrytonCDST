@@ -217,6 +217,7 @@ class Party(metaclass=PoolMeta):
                                 contact_tel.value = '+57' + telefono
                             contact_tel.save()
                         party.save()
+                        Transaction().commit()
                         # print('Tercero actualizado')
                 else:
                     # print('Creando tercero')
@@ -271,6 +272,7 @@ class Party(metaclass=PoolMeta):
                             ('create', contacts)]
                     Party.create([party])
                     # print('Tercero creado')
+                    Transaction().commit()
             except Exception as error:
                 Transaction().rollback()
                 values['logs'][nit_cedula] = f"EXCEPCION: {str(error)}"
