@@ -1029,10 +1029,10 @@ class ImportedDocumentWizard(Wizard):
             if linea[0] == 'code':
                 continue
 
-            if len(linea) != 5:
+            if len(linea) != 6:
                 raise UserError(
-                    'Error plantilla',
-                    'account | name | type | reconcile | party_required')
+                    'Error plantilla', 'account | name | type | reconcile | '
+                    'party_required | analytic_required')
 
             if firts:
                 firts = False
@@ -1046,6 +1046,7 @@ class ImportedDocumentWizard(Wizard):
             if account:
                 continue
 
+            print(linea)
             name = linea[1].strip().upper()
             type = linea[2].strip()
             reconcile = linea[3].strip().upper()
@@ -1055,6 +1056,9 @@ class ImportedDocumentWizard(Wizard):
                 reconcile = False
 
             party_required = linea[4].strip().upper()
+            analytic_required = True if linea[5].strip(
+            ).upper() == 'TRUE' else False
+
             if party_required and party_required == 'TRUE':
                 party_required = True
             else:
@@ -1065,6 +1069,7 @@ class ImportedDocumentWizard(Wizard):
                 'name': name,
                 'reconcile': reconcile,
                 'party_required': party_required,
+                'analytical_management': analytic_required,
                 'type': None
             }
             if type:
@@ -1098,7 +1103,8 @@ class ImportedDocumentWizard(Wizard):
         dict_account = {}
         item = []
         firts = True
-        columns = ['account', 'name', 'type', 'reconcile', 'party_required']
+        columns = ['account', 'name', 'type', 'reconcile',
+            'party_required', 'analytic_required']
 
         for linea in lineas:
             if firts:
@@ -1110,10 +1116,10 @@ class ImportedDocumentWizard(Wizard):
             if item == ['']:
                 continue
 
-            if len(item) != 5:
+            if len(item) != 6:
                 raise UserError(
                     'Error plantilla',
-                    'account | name | type | reconcile | party_required')
+                    'account | name | type | reconcile | party_required | analytic_required')
 
             if not firts:
                 dict_account = dict(zip(columns, item))
@@ -1144,6 +1150,10 @@ class ImportedDocumentWizard(Wizard):
                     account.party_required = True
                 if party_required == 'FALSE':
                     account.party_required = False
+
+            analytic_required = True if dict_account['analytic_required'].upper(
+            ) == 'TRUE' else False
+            account.analytical_management = analytic_required
 
             type = dict_account['type']
             if type:
