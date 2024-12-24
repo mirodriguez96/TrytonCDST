@@ -968,3 +968,7 @@ msgstr "Tipo de producto"
 msgctxt "field:stock.configuration,consumable_products_state:"
 msgid "Consumable products"
 msgstr "Productos consumibles"
+
+msgctxt "field:product.category,account_credit_note:"
+msgid "Account Credit Note"
+msgstr "Cuenta Nota de Crédito"

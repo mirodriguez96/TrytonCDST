@@ -1,9 +1,10 @@
 from datetime import date, timedelta
 from decimal import Decimal
 
-from trytond.model import fields
-from trytond.pool import Pool, PoolMeta
 from trytond.transaction import Transaction
+from trytond.pool import Pool, PoolMeta
+from trytond.model import fields
+from trytond.pyson import Eval
 
 
 class Template(metaclass=PoolMeta):
@@ -301,9 +302,8 @@ class Product(metaclass=PoolMeta):
         print("FINISH update_product_parent")
 
 
-# Herencia del party.contact_mechanism e insercción del campo id_tecno
 class ProductCategory(metaclass=PoolMeta):
-    __name__ = "product.category"
+    __name__ = 'product.category'
     id_tecno = fields.Char("Id TecnoCarnes", required=False)
     account_lost_found = fields.Many2One(
         "account.account",
@@ -312,6 +312,22 @@ class ProductCategory(metaclass=PoolMeta):
             ("type.sequence", "=", 30200)
         ],
     )
+
+    account_credit_note = fields.Many2One('account.account',
+        'Account Credit Note', domain=[
+            [
+                'OR',
+                ('type.statement', '=', 'income'),
+                ('type.debt', '=', True)
+            ],
+            ('company', '=', Eval('context', {}).get('company', -1)),
+            ],
+        states={
+            'invisible': (~Eval('context', {}).get('company')
+                | Eval('account_parent')
+                | ~Eval('accounting', False)),
+            },
+        depends=['account_parent', 'accounting'])
 
     @classmethod
     def import_categories_tecno(cls):
@@ -374,6 +390,27 @@ class ProductCategory(metaclass=PoolMeta):
                 print(f"ROLLBACK-{import_name}: {error}")
         actualizacion.add_logs(logs)
         print(f"---------------FINISH {import_name}---------------")
+
+
+class CategoryAccount(metaclass=PoolMeta):
+    "Category Account"
+    __name__ = 'product.category.account'
+
+    account_credit_note = fields.Many2One('account.account',
+        'Account Return Sale', domain=[
+            [
+                'OR',
+                ('type.revenue', '=', True),
+                ('type.debt', '=', True),
+            ],
+            ('company', '=', Eval('context', {}).get('company', -1)),
+            ],
+        states={
+            'invisible': (~Eval('context', {}).get('company')
+                | Eval('account_parent')
+                | ~Eval('accounting', False)),
+            },
+        depends=['account_parent', 'accounting'])
 
 
 class CostPriceRevision(metaclass=PoolMeta):
