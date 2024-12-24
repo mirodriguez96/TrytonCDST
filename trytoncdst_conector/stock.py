@@ -269,10 +269,12 @@ class ShipmentDetailedReport(metaclass=PoolMeta):
 
     @classmethod
     def get_context(cls, records, header, data):
-        report_context = super().get_context(records, header, data)
+        report_context = Report.get_context(records, header, data)
 
         pool = Pool()
         company = Transaction().context.get('company.rec_name')
+        ProductRevision = pool.get('product.cost_price.revision')
+
         type_shipment_ = data['type_shipment']
         model = 'stock.shipment.' + type_shipment_
         ModelShipment = pool.get(model)
@@ -281,11 +283,15 @@ class ShipmentDetailedReport(metaclass=PoolMeta):
         dom_shipment = [('company', '=', data['company']),
                         ('effective_date', '>=', data['start_date']),
                         ('effective_date', '<=', data['end_date'])]
+
+        # if type_shipment_ != 'out' and type_shipment_ != 'in':
         if data['from_locations']:
             dom_shipment.append(
                 ('from_location', 'in', data['from_locations']))
+
         if data['to_locations']:
-            dom_shipment.append(('to_location', 'in', data['to_locations']))
+            dom_shipment.append(
+                ('to_location', 'in', data['to_locations']))
 
         fields_names = ['id']
         shipments = ModelShipment.search_read(dom_shipment,
@@ -297,7 +303,7 @@ class ShipmentDetailedReport(metaclass=PoolMeta):
             'product.account_category.name', 'product.name',
             'product.cost_price', 'quantity', 'to_location.name',
             'from_location.name', 'shipment.reference', 'effective_date',
-            'shipment.number', 'unit_price'
+            'shipment.number', 'unit_price', 'planned_date'
         ]
         fields = ModelShipment.fields_get(fields_names=[
             'operation_center', 'customer', 'supplier', 'incoming_moves'
@@ -318,6 +324,9 @@ class ShipmentDetailedReport(metaclass=PoolMeta):
         dgetter = itemgetter('product.', 'quantity')
         product_browse = Product.browse
         for m in moves:
+            code = None
+            uom_name = None
+
             product, quantity = dgetter(m)
             product_, = product_browse([product['id']])
             try:
@@ -341,10 +350,28 @@ class ShipmentDetailedReport(metaclass=PoolMeta):
             if product_.categories:
                 category_ad = product_.categories[0].name
 
+            if product_.template.default_uom:
+                uom_name = product_.template.default_uom.name
+
+            if product_.code:
+                code = product_.code
+
+            cost_revision = ProductRevision.search(
+                        [('template', '=', product_.template),
+                            ('date', '<=', m['planned_date'])],
+                        order=[('id', 'DESC')],
+                        limit=1
+                    )
+            if (cost_revision
+                    and cost_revision[0].cost_price != cost_price):
+                cost_price = cost_revision[0].cost_price
+
             value = {
                 'party': party,
                 'oc': oc,
+                'codigo': code,
                 'product': product['name'],
+                'uom': uom_name,
                 'cost_price': cost_price,
                 'category': category,
                 'category_ad': category_ad,
@@ -352,9 +379,9 @@ class ShipmentDetailedReport(metaclass=PoolMeta):
                 Decimal(str(round(float(cost_price) * quantity, 2))),
             }
             try:
-                value['cost_unit_w_tax'] = float(product_.cost_price_taxed)
+                value['cost_unit_w_tax'] = float(product_.cost_price)
                 value['cost_w_tax'] = float(
-                    product_.cost_price_taxed) * quantity
+                    product_.cost_price) * quantity
                 value['last_cost'] = product_.last_cost
             except:
                 value['cost_w_tax'] = 0
