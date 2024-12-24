@@ -687,6 +687,7 @@ class Sale(metaclass=PoolMeta):
                 analytic_entry.root = root
                 analytic_entry.account = analytic_account
                 linea.analytic_accounts = [analytic_entry]
+
             linea.save()
             print(f'Guardando linea {linea}')
 
@@ -882,6 +883,14 @@ class Sale(metaclass=PoolMeta):
             invoice.invoice_date = sale.sale_date
             invoice.invoice_type = 'C'
             tipo_numero = sale.number.split('-')
+
+            for line in invoice.lines:
+                category = line.product.account_category
+                if category:
+                    if id_tecno_.split('-')[0] in ['2']:
+                        if category.account_return_sale:
+                            line.account = category.account_return_sale
+                            line.save()
 
             if sale.description:
                 invoice.description = sale.description

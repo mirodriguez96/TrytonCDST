@@ -622,12 +622,25 @@ class Invoice(metaclass=PoolMeta):
                 elif not tax.consumo:
                     taxes.append(tax)
             line.taxes = taxes
+
             if 'discount' in linea:
                 line.unit_price = linea['discount']
                 line.on_change_product()
                 line.gross_unit_price = linea['unit_price']
+
             if _type == 'in':
                 line.account = line.product.account_category.account_expense
+
+            if _type == 'out':
+                category = line.product.account_category
+                id_tecno = line.invoice.id_tecno
+                if category:
+                    if id_tecno.split('-')[0] in ['32']:
+                        if category.account_credit_note:
+                            line.account = category.account_credit_note
+                        elif category.account_return_sale:
+                            line.account = category.account_return_sale
+
             if 'analytic_account' in linea:
                 line.analytic_account = linea['analytic_account']
                 line.on_change_analytic_account()
@@ -661,6 +674,7 @@ class Invoice(metaclass=PoolMeta):
                 invoice.lines = cls._create_lines_tecno(data, invoice)
                 invoice.on_change_lines()
                 to_save.append(invoice)
+
             with Transaction().set_context(_skip_warnings=True):
                 Invoice.save(to_save)
                 Invoice.validate_invoice(to_save)
@@ -892,7 +906,8 @@ class Invoice(metaclass=PoolMeta):
                                 f"POR LA(S) FACTURA(S) CRUCE {cross[origin.number]}"
                             logs[origin.number] = msg
                 except Exception as error:
-                    logs[cross[origin.number][0].number] = f'EXCEPCION: {error}'
+                    logs[cross[origin.number]
+                        [0].number] = f'EXCEPCION: {error}'
                     Transaction().rollback()
                     print(f"ROLLBACK-{import_name}: {error}")
             actualizacion.add_logs(logs)
@@ -1062,10 +1077,10 @@ class InvoiceLine(metaclass=PoolMeta):
                 return []
         return result
 
-    # Sobreescribir metodo creado en el módulo account_col
     @classmethod
     def trigger_create(cls, records):
-        print("trigger_create (CONECTOR)")
+        """Inheritance function from account_col"""
+
         for line in records:
             try:
                 if line.type != 'line':
@@ -1079,11 +1094,8 @@ class InvoiceLine(metaclass=PoolMeta):
                         solamente a los productos de tipo servicio
                         """
                         if category.account_return_purchase and line.product.type == 'service':
-                            print(line.product, line.product.type)
                             account_id = category.account_return_purchase.id
-                    else:
-                        if category.account_return_sale:
-                            account_id = category.account_return_sale.id
+
                     if not account_id:
                         continue
                     line.write([line], {'account': account_id})

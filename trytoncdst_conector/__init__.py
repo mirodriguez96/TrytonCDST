@@ -75,6 +75,7 @@ def register():
                   permissions.LinePermissions,
                   product.Product,
                   product.ProductCategory,
+                  product.CategoryAccount,
                   product.Template,
                   product.CostPriceRevision,
                   production.Production,

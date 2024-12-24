@@ -4,4 +4,9 @@
         <label name="account_lost_found"/>
         <field name="account_lost_found"/>
     </xpath>
+
+    <xpath expr="/form/notebook/page[@id='accounting']/field[@name='account_lost_found']" position="after">
+        <label name="account_credit_note"/>
+        <field name="account_credit_note"/>
+    </xpath>
 </data>
