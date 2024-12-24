@@ -133,18 +133,17 @@ class Product(metaclass=PoolMeta):
                          order=[('active', 'DESC')])
 
                 if product:
-                    print('actualizando producto')
                     product = product[0]
                     last_change = producto.Ultimo_Cambio_Registro
                     create_date = None
                     write_date = None
-                    # Get create and write date
                     if product.write_date:
                         write_date = (product.write_date
                             - timedelta(hours=5))
                     elif product.create_date:
                         create_date = (product.create_date
                             - timedelta(hours=5))
+
                     if (last_change and write_date
                         and last_change > write_date
                     ) or (
@@ -167,8 +166,6 @@ class Product(metaclass=PoolMeta):
                         product.active = True
                         product.template.active = True
                         product.save()
-                        Transaction().commit()
-                        print('producto actualizado')
                 else:
                     prod = Product()
                     temp = Template()
@@ -188,12 +185,13 @@ class Product(metaclass=PoolMeta):
                     prod.template = temp
                     Product.save([prod])
                     Template.save([temp])
-                    Transaction().commit()
+                Transaction().commit()
             except Exception as error:
                 Transaction().rollback()
                 log = {id_product: f"{error}"}
                 print(f"ROLLBACK-{import_name}: {error}")
                 actualizacion.add_logs(log)
+                Transaction().commit()
         print(f"---------------FINISH {import_name}---------------")
 
     def get_avg_cost_price(self, name=None):
