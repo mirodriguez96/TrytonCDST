@@ -48,6 +48,15 @@ _SW = {
 }
 
 
+class AnalyticAccountEntry(metaclass=PoolMeta):
+    __name__ = 'analytic.account.entry'
+
+    @classmethod
+    def _get_origin(cls):
+        origins = super(AnalyticAccountEntry, cls)._get_origin()
+        return origins + ['account.invoice.line', 'account.invoice']
+
+
 class Invoice(metaclass=PoolMeta):
     'Account Invoice'
     __name__ = 'account.invoice'
@@ -56,6 +65,31 @@ class Invoice(metaclass=PoolMeta):
     note_adjustment_account = ''
     note_date = ''
     note_invoice_type = ''
+
+    @classmethod
+    def __setup__(cls):
+        super(Invoice, cls).__setup__()
+        cls._buttons.update(
+            {
+                'submit': {
+                    'invisible': True
+                },
+                'send_email': {
+                    'invisible': True
+                },
+                'send_support_document': {
+                    'invisible':
+                    Or(
+                        And(
+                            Eval('type') != 'out',
+                            ~Eval('equivalent_invoice')),
+                        Eval('electronic_state') == 'authorized',
+                        Eval('number', None) == None,
+                        Eval('authorization', None) == None,
+                        Eval('state') != 'validated',
+                    )
+                }
+            }, )
 
     @staticmethod
     def default_electronic_state():
@@ -772,31 +806,6 @@ class Invoice(metaclass=PoolMeta):
         cls._import_notas_tecno('27')
 
     @classmethod
-    def __setup__(cls):
-        super(Invoice, cls).__setup__()
-        cls._buttons.update(
-            {
-                'submit': {
-                    'invisible': True
-                },
-                'send_email': {
-                    'invisible': True
-                },
-                'send_support_document': {
-                    'invisible':
-                    Or(
-                        And(
-                            Eval('type') != 'out',
-                            ~Eval('equivalent_invoice')),
-                        Eval('electronic_state') == 'authorized',
-                        Eval('number', None) == None,
-                        Eval('authorization', None) == None,
-                        Eval('state') != 'validated',
-                    )
-                }
-            }, )
-
-    @classmethod
     def check_duplicated_reference(cls, invoice):
         if invoice.total_amount < 0:
             return
@@ -1101,6 +1110,36 @@ class InvoiceLine(metaclass=PoolMeta):
                     line.write([line], {'account': account_id})
             except Exception as error:
                 print(f'ERROR TRIGGER CREATE: {error}')
+
+    def get_move_lines(self):
+        """Inheritance function to add analytic lines to move lines"""
+        lines = super(InvoiceLine, self).get_move_lines()
+        analytic_account = None
+        for line in lines:
+            if hasattr(line, 'analytic_lines'):
+                analytic_account = line.analytic_lines[0].account
+                break
+
+        if analytic_account:
+            for line in lines:
+                analytic_required = line.account.analytical_management
+                if analytic_required and not hasattr(line, 'analytic_lines'):
+                    line = self.build_analytic_lines(line, analytic_account)
+        return lines
+
+    def build_analytic_lines(self, line, analytic_account):
+        '''
+        Build the analytic lines for account move line
+        '''
+        pool = Pool()
+        AnalyticLines = pool.get('analytic_account.line')
+        analytic_line = AnalyticLines()
+        analytic_line.debit = Decimal(line.debit)
+        analytic_line.credit = Decimal(line.credit)
+        analytic_line.account = analytic_account
+        analytic_line.date = self.invoice.invoice_date
+        line.analytic_lines = [analytic_line]
+        return line
 
 
 class UpdateInvoiceTecnoStart(ModelView):
