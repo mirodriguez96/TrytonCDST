@@ -39,7 +39,6 @@ def register():
                   invoice.Invoice,
                   invoice.InvoiceLine,
                   invoice.UpdateInvoiceTecnoStart,
-                  invoice.AnalyticAccountEntry,
                   loan.Loan,
                   loan.LoanLine,
                   line.Line,

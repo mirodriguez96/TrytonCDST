@@ -177,11 +177,12 @@ class Sale(metaclass=PoolMeta):
                                 id_tecno=id_venta, exportado="T")
                             if not success:
                                 break
-                            Transaction().commit()
+                            # Sale.process([sale])
+                            # Transaction().commit()
                             date_now = datetime.now() - timedelta(hours=5)
                             print(
                                 f'Venta guardada {id_venta} ({date_now})')
-            except (UserError, Exception) as error:
+            except Exception as error:
                 Transaction().rollback()
                 print(f"ROLLBACK-{import_name}: {error}")
                 if id_venta in sale_in_exception and sale:
@@ -190,11 +191,10 @@ class Sale(metaclass=PoolMeta):
                     id_tecno=id_venta, exportado="E")
                 if not success:
                     break
-                msg = f"""{error}"""
+                msg = f"""ERROR: {error}"""
                 log = {id_venta: msg}
                 cls.update_logs_from_imports(
                     actualizacion, actualizacion_che, logs=log)
-                Transaction().commit()
 
     @classmethod
     def validate_sale_from_tecno(cls, actualizacion, actualizacion_che,
@@ -694,7 +694,9 @@ class Sale(metaclass=PoolMeta):
         if id_venta in sale_in_exception:
             print('Eliminando venta con excepcion')
             cls.delete_tryton_sale(sale)
+            # Transaction().commit()
             return None
+        # Transaction().commit()
         return sale
 
     @classmethod
@@ -872,7 +874,7 @@ class Sale(metaclass=PoolMeta):
             cls.update_logs_from_imports(
                 actualizacion, actualizacion_che, logs=log)
             cls.update_exportado_tecno(id_tecno=id_tecno_, exportado="E")
-            raise Exception("""REVISAR: VENTA SIN FACTURA""")
+            return
 
         for invoice in sale.invoices:
             id_tecno_ = sale.id_tecno
@@ -916,7 +918,6 @@ class Sale(metaclass=PoolMeta):
                         actualizacion, actualizacion_che, logs=log)
                     cls.update_exportado_tecno(
                         id_tecno=id_tecno_, exportado="E")
-                    raise Exception(msg)
                     # Validar porque continua aqui?
 
             Invoice.validate_invoice([invoice], sw=venta.sw)
@@ -930,12 +931,12 @@ class Sale(metaclass=PoolMeta):
                 cls.update_logs_from_imports(
                     actualizacion, actualizacion_che, logs=log)
                 cls.update_exportado_tecno(id_tecno=id_tecno_, exportado="E")
-                raise Exception(msg)
+                continue
 
             try:
                 Invoice.post_batch([invoice])
                 Invoice.post([invoice])
-            except (Exception, UserError) as error:
+            except Exception as error:
                 if invoice.state == 'posted':
                     # Revert invoice state to validated
                     account_invoice = Table('account_invoice')
@@ -950,8 +951,7 @@ class Sale(metaclass=PoolMeta):
                 cls.update_logs_from_imports(
                     actualizacion, actualizacion_che, logs=log)
                 cls.update_exportado_tecno(id_tecno=id_tecno_, exportado="E")
-                raise Exception(error)
-
+                continue
             if invoice.original_invoice:
                 paymentline = PaymentLine()
                 paymentline.invoice = invoice.original_invoice
