@@ -156,9 +156,7 @@ class Move(ModelSQL, metaclass=PoolMeta):
         for move in moves:
             lines = move.lines
             if lines:
-                analytic_error, message = cls.check_analytyc_required(lines)
-                if analytic_error:
-                    raise UserError('ERROR', message)
+                cls.check_analytyc_required(lines)
 
         for move in moves:
             amount = Decimal('0.0')
@@ -224,21 +222,16 @@ class Move(ModelSQL, metaclass=PoolMeta):
 
     @classmethod
     def check_analytyc_required(cls, lines):
-        message = ""
-        error_ = False
         for line in lines:
             analytic_line = line.analytic_lines
             analytic_required = line.account.analytical_management
             if cls.validate_analytic_distribution(line):
-                continue
+                return None
             if analytic_required and len(analytic_line) == 0:
                 code = line.account.code
                 message = f"La linea con codigo de cuenta {code}"\
                     " requiere analitica"
-                error_ = True
-                return error_, message
-
-        return error_, message
+                raise (UserError("ERROR", f"{message}"))
 
     @classmethod
     def validate_analytic_distribution(cls, line):
