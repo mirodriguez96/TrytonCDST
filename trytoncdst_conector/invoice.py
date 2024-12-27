@@ -1117,8 +1117,9 @@ class InvoiceLine(metaclass=PoolMeta):
         analytic_account = None
         for line in lines:
             if hasattr(line, 'analytic_lines'):
-                analytic_account = line.analytic_lines[0].account
-                break
+                if line.analytic_lines:
+                    analytic_account = line.analytic_lines[0].account
+                    break
 
         if analytic_account:
             for line in lines:
