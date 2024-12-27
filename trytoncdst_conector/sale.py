@@ -148,8 +148,11 @@ class Sale(metaclass=PoolMeta):
                             Sale.process([sale])
                             cls.finish_shipment_process(sale, numero_doc, Config,
                                                         tipo_doc)
-                            cls._post_invoices(
+                            check_post = cls._post_invoices(
                                 actualizacion, actualizacion_che, sale, venta)
+
+                            if not check_post:
+                                continue
 
                             pagos = Config.get_tipos_pago(id_venta)
                             if pagos:
@@ -195,6 +198,7 @@ class Sale(metaclass=PoolMeta):
                 cls.update_logs_from_imports(
                     actualizacion, actualizacion_che, logs=log)
                 Transaction().commit()
+        Transaction().commit()
 
     @classmethod
     def validate_sale_from_tecno(cls, actualizacion, actualizacion_che,
@@ -930,7 +934,7 @@ class Sale(metaclass=PoolMeta):
                 cls.update_logs_from_imports(
                     actualizacion, actualizacion_che, logs=log)
                 cls.update_exportado_tecno(id_tecno=id_tecno_, exportado="E")
-                raise Exception(msg)
+                return False
 
             try:
                 Invoice.post_batch([invoice])
@@ -960,6 +964,7 @@ class Sale(metaclass=PoolMeta):
                 paymentline.line = invoice.lines_to_pay[0]
                 paymentline.save()
                 Invoice.reconcile_invoice(invoice)
+        return True
 
     @ classmethod
     def _validate_total(cls, total_tryton, venta):
