@@ -1,18 +1,20 @@
 """ Staff Access module"""
+from trytond.wizard import (Button, StateReport, StateTransition, StateView,
+                            Wizard)
 
-from datetime import datetime, timedelta
-from decimal import Decimal
-
-from dateutil import tz
-from sql import Table
 from trytond.exceptions import UserError, UserWarning
 from trytond.model import ModelSQL, ModelView, fields
+from trytond.transaction import Transaction
 from trytond.pool import Pool, PoolMeta
 from trytond.pyson import Eval, If
 from trytond.report import Report
-from trytond.transaction import Transaction
-from trytond.wizard import (Button, StateReport, StateTransition, StateView,
-                            Wizard)
+from trytond.i18n import gettext
+
+from datetime import datetime, timedelta
+from decimal import Decimal
+from dateutil import tz
+from sql import Table
+
 
 from_zone = tz.gettz('UTC')
 to_zone = tz.gettz('America/Bogota')
@@ -406,6 +408,16 @@ class StaffAccess(metaclass=PoolMeta):
                     rest_moment = False
                     index_rest += 1
         return sumador, rest_moment, index_rest
+
+    def check_exit_timestamp(self):
+        """ Function inheritance from trytonpsk_staff_access module"""
+        if self.exit_timestamp:
+            if self.exit_timestamp < self.enter_timestamp:
+                raise UserError(
+                    gettext('staff_access.msg_error_exit_timestamp',
+                        enter_timestamp=str(self.enter_timestamp),
+                        exit_timestamp=str(self.exit_timestamp),
+                        employee=self.employee.party.name))
 
 
 class ImportBiometricRecords(Wizard):
