@@ -385,13 +385,13 @@ class StaffAccess(metaclass=PoolMeta):
             dom = ttt
 
         return {
-            'ttt': round(ttt),
+            'ttt': round(ttt, 2),
             'het': round(het, 2),
             'hedo': round(het - heno, 2) if dom == 0 else hedo,
             'heno': round(heno, 2),
-            'reco': round(reco),
-            'recf': round(recf),
-            'dom': round(dom),
+            'reco': round(reco, 2),
+            'recf': round(recf, 2),
+            'dom': round(dom, 2),
             'hedf': round(het - henf, 2) if dom != 0 else hedf,
             'henf': round(henf, 2)
         }
