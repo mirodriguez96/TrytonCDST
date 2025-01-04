@@ -1,6 +1,7 @@
 import datetime
 import logging
 from decimal import Decimal
+import re
 
 from trytond.exceptions import UserError, UserWarning
 from trytond.model import ModelSQL, ModelView, fields
@@ -79,10 +80,12 @@ class Actualizacion(ModelSQL, ModelView):
                 self.write([self], {'write_date': date_today})
                 return
             for id_tecno, message in logs.items():
+                # Elimina saltos de linea en el mensaje
+                clean_msg = re.sub(r'\s+', ' ', message).strip()
                 create = {
                     'event_time': date_today,
                     'id_tecno': id_tecno,
-                    'message': message,
+                    'message': clean_msg,
                     'state': 'pending'
                 }
                 to_create.append(create)

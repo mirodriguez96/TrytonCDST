@@ -170,7 +170,7 @@ class Sale(metaclass=PoolMeta):
                                 msg = (
                                     """No se encontraron pagos
                                     asociados en tecnocarnes (documentos_che)
-                                    """).replace("\n", " ").strip()
+                                    """)
                                 log = {id_venta: msg}
                                 cls.update_logs_from_imports(
                                     actualizacion, actualizacion_che, logs_che=log)
@@ -180,10 +180,10 @@ class Sale(metaclass=PoolMeta):
                                 id_tecno=id_venta, exportado="T")
                             if not success:
                                 break
-                            Transaction().commit()
                             date_now = datetime.now() - timedelta(hours=5)
                             print(
                                 f'Venta guardada {id_venta} ({date_now})')
+                Transaction().commit()
             except (UserError, Exception) as error:
                 Transaction().rollback()
                 print(f"ROLLBACK-{import_name}: {error}")
