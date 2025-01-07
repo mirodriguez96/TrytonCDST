@@ -964,8 +964,8 @@ class Liquidation(metaclass=PoolMeta):
 
     def get_liquidation_days_lines(self, date_start, date_end, contract,
                                    wage_type):
-        current_year = date.today().year
-        first_of_july = date(current_year, 7, 1)
+        date_end_year = date_end.year
+        first_of_july = date(date_end_year, 7, 1)
         days = 0
         if wage_type.type_concept_electronic == 'VacacionesComunes':
             days = round((Decimal(15 / 360) * contract.time_worked)
