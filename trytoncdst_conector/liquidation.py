@@ -398,7 +398,8 @@ class Liquidation(metaclass=PoolMeta):
                                 ('reconciliation', '=', None),
                             ]
                         )
-                        if loan_move_line[0] in conciled_lines:
+                        if (loan_move_line and loan_move_line[0]
+                                in conciled_lines):
                             break
                         reference = loan_line[0].loan.number
                         for move_line in move.lines:
