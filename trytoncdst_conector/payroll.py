@@ -3868,3 +3868,55 @@ class PayrollGroupStart(metaclass=PoolMeta):
             return
         if self.period.description:
             self.description = self.period.description
+
+
+class PayrollGroup(metaclass=PoolMeta):
+    'Payroll Group'
+    __name__ = 'staff.payroll_group'
+
+    def transition_open_(self):
+        pool = Pool()
+        Employee = pool.get('company.employee')
+        Payroll = pool.get('staff.payroll')
+
+        payrolls_period = Payroll.search([
+            ('period', '=', self.start.period.id),
+        ])
+
+        employee_w_payroll = [p.employee.id for p in payrolls_period]
+        dom_employees = self.get_employees_dom(employee_w_payroll)
+        payroll_to_create = []
+        employees = Employee.search(dom_employees, limit=400)
+        get_values = self.get_values
+        search_contract_on_period = Payroll.search_contract_on_period
+        period = self.start.period
+        start = period.start
+        end = period.end
+        for employee in employees:
+            if employee.id in employee_w_payroll:
+                continue
+
+            contract = search_contract_on_period(employee, period)
+            if not contract:
+                continue
+
+            values = get_values(contract, start, end)
+            payroll_to_create.append(values)
+
+        wages = [
+            (wage_type, None, None) for wage_type in self.start.wage_types
+        ]
+        PayrollCreate = Payroll.create
+        if payroll_to_create:
+            for payroll in payroll_to_create:
+                try:
+                    payroll_, = PayrollCreate([payroll])
+                    payroll_.set_preliquidation({}, None)
+                    if wages:
+                        payroll_._create_payroll_lines(wages, None, {})
+                    Transaction().commit()
+                except Exception as error:
+                    print('Fallo al crear nomina : ',
+                        payroll_.employee.party.name)
+                    print(error)
+        return 'end'

@@ -137,6 +137,7 @@ def register():
                   payment_bank.PaymentBankGroup,
                   payroll.PayrollSheet,
                   payroll.PayrollGlobal,
+                  payroll.PayrollGroup,
                   payroll.PayrollPaymentBcl,
                   payroll.PayslipSend,
                   payroll.LiquidationPaymentBcl,
