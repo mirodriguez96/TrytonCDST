@@ -1027,7 +1027,6 @@ class LiquidationLine(AnalyticMixin, metaclass=PoolMeta):
 
     def _get_entry(self, line_move):
         if self.analytic_accounts:
-            line_move['analytic_lines'] = []
             to_create = []
             for entry in self.analytic_accounts:
                 if not entry.account:
@@ -1253,7 +1252,6 @@ class MoveProvisionBonusService(metaclass=PoolMeta):
 
             if (analytic_account
                     and analytic_account.type == "distribution"):
-                line_move['analytic_lines'] = []
                 to_create = []
                 date = datetime.now().date()
                 to_create.extend(
