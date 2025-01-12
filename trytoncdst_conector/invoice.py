@@ -1048,25 +1048,27 @@ class Invoice(metaclass=PoolMeta):
         """
         pool = Pool()
         AccountMoveLine = pool.get('account.move.line')
-        lines_to_change = []
+
         for lines in invoice.lines:
+            lines_to_change = []
             if hasattr(lines, 'account') and hasattr(lines, 'product'):
                 product = lines.product
                 account_code = lines.account.code
                 if product.account_cogs_used and product.account_stock_in_used:
                     account_cogs_used = product.account_cogs_used.code
                     account_stock_in_used = product.account_stock_in_used.code
-
+                    
                     if account_cogs_used and account_stock_in_used:
                         if move.state == "draft":
                             for lines in move.lines:
-                                print(lines.move)
                                 if lines.account.code != account_code:
                                     if lines.account.code == account_cogs_used or\
                                             lines.account.code == account_stock_in_used:
                                         lines.party = move.company.party
                                         lines_to_change.append(lines)
-        AccountMoveLine.save(lines_to_change)
+        if lines_to_change:
+            AccountMoveLine.save(lines_to_change)
+            Transaction().commit()
 
 
 class InvoiceLine(metaclass=PoolMeta):
@@ -1207,7 +1209,9 @@ class UpdateInvoiceTecno(Wizard):
             to_delete_sales = []
             to_delete_purchases = []
             to_delete_note = []
+            print('Eliminando y reimportando')
             for invoice in Invoice.browse(ids):
+
                 id_tecno = invoice.id_tecno or invoice.reference
 
                 if invoice.move:
@@ -1262,6 +1266,7 @@ class UpdateInvoiceTecno(Wizard):
                     raise UserError(
                         "Revisa el número de la factura (tipo-numero): ",
                         rec_party)
+            print('llegamos aqui')
             if to_delete_sales:
                 Sale.delete_imported_sales(to_delete_sales)
                 log_delete_sale = [i.number for i in to_delete_sales]
@@ -1271,7 +1276,7 @@ class UpdateInvoiceTecno(Wizard):
             if to_delete_note:
                 Invoice.delete_imported_notes(to_delete_note)
                 log_delete_note = [i.number for i in to_delete_note]
-
+            print('llegamos aqui2')
             if exceptions:
                 actualizacion.add_logs(logs)
                 return 'end'
@@ -1282,15 +1287,19 @@ class UpdateInvoiceTecno(Wizard):
             ventas:{log_delete_sale},\
             compras:{log_delete_purchase},\
             notas:{log_delete_note}"
-
+            print('llegamos aqui2.1')
             actualizacion.add_logs(logs)
+            print('llegamos aqui2.2')
             return 'end'
 
+        print('llegamos aqui3')
         logs[self.start.user.name] = f"El usuario {self.start.user.name}, \
         intento ejecutar el asistente de eliminar y reimportar facturas \
         para el cual, no cuenta con los permisos requeridos"
 
+        print('llegamos aqui4')
         actualizacion.add_logs(logs)
+        print('llegamos aqui5')
         raise UserError(
             f"EL usuario {self.start.user.name}, no cuenta con los permisos para realizar esta accion"
         )
