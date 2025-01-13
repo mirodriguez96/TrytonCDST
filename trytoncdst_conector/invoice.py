@@ -1048,9 +1048,8 @@ class Invoice(metaclass=PoolMeta):
         """
         pool = Pool()
         AccountMoveLine = pool.get('account.move.line')
-
+        lines_to_change = []
         for lines in invoice.lines:
-            lines_to_change = []
             if hasattr(lines, 'account') and hasattr(lines, 'product'):
                 product = lines.product
                 account_code = lines.account.code
@@ -1065,10 +1064,11 @@ class Invoice(metaclass=PoolMeta):
                                     if lines.account.code == account_cogs_used or\
                                             lines.account.code == account_stock_in_used:
                                         lines.party = move.company.party
-                                        lines_to_change.append(lines)
-        if lines_to_change:
-            AccountMoveLine.save(lines_to_change)
-            Transaction().commit()
+                                        lines.save()
+                                        # lines_to_change.append(lines)
+        # if lines_to_change:
+        #     AccountMoveLine.save(lines_to_change)
+        #     Transaction().commit()
 
 
 class InvoiceLine(metaclass=PoolMeta):
