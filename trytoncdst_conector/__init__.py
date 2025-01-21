@@ -95,6 +95,7 @@ def register():
                   stock.Configuration,
                   stock.Location,
                   stock.ShipmentInternal,
+                  stock.ShipmentDetailedStart,
                   stock.WarehouseKardexStockStartCds,
                   stock.MoveCDT,
                   stock.Inventory,

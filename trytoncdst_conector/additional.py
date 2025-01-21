@@ -141,6 +141,7 @@ def validate_documentos(data):
     for value, d in enumerate(data):
         tipo = str(d.tipo)
         reference = f"{tipo}-{d.Numero_Documento}"
+        reference_ = f"{d.notas}"
         id_tecno = f"{d.sw}-{reference}"
 
         if id_tecno in exists:
@@ -151,7 +152,7 @@ def validate_documentos(data):
         if id_tecno not in result["tryton"]:
             shipment = {
                 "id_tecno": id_tecno,
-                "reference": reference,
+                "reference": reference_,
                 "number": reference,
                 "planned_date": fecha_documento,
                 "effective_date": fecha_documento,
@@ -223,7 +224,8 @@ def validate_documentos(data):
         analytic_types = get_analytic_types(tipos_doctos)
     for id_tecno, shipment in result["tryton"].items():
         if analytic_types:
-            tipo = shipment["reference"].split("-")[0]
+            # tipo = shipment["reference"].split("-")[0]
+            tipo = shipment["number"].split("-")[0]
             if tipo in analytic_types:
                 shipment["analytic_account"] = analytic_types[tipo].id
             else:
@@ -267,7 +269,7 @@ def validate_documentos(data):
         if not products_exist:
             result["exportado"]["E"].append(id_tecno)
             continue
-        result["exportado"]["T"].append(id_tecno)
+        # result["exportado"]["T"].append(id_tecno)
     for to_delete in result["exportado"]["E"]:
         if to_delete in result["tryton"]:
             del (result["tryton"][to_delete])

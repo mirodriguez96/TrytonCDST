@@ -41,6 +41,12 @@ class Configuration(metaclass=PoolMeta):
 
     consumable_products_state = fields.Boolean('Consumable products')
 
+    to_location = fields.Many2One('stock.location', "Output inventory location",
+                                  domain=[
+                                      ('type', 'in', ['customer']),
+                                  ],
+                                  help="Where the stock is moved to.")
+
     @classmethod
     def default_consumable_products_state(cls):
         return False
@@ -57,41 +63,6 @@ class Inventory(metaclass=PoolMeta):
     )
 
     product_type = fields.Selection(TYPES_PRODUCT, 'Type Product')
-
-    # product_type = fields.Selection(
-    #     TYPES_PRODUCT, 'Type Product',
-    #     states={
-    #         'invisible': Eval('get_product_type_visible') is False,
-    #     },
-    #     depends=['get_product_type_visible']
-    # )
-
-    # get_product_type_visible = fields.Function(
-    #     fields.Boolean('Get Product Type Visible'),
-    #     'get_product_type_visible_'
-    # )
-
-    # @fields.depends('id')
-    # def get_product_type_visible_(self, name=None):
-    #     """Function to get config for salable products visibility"""
-    #     Configuration = Pool().get('stock.configuration')
-    #     # Consider changing this to fetch the correct configuration record
-    #     config = Configuration(1)
-    #     if config and config.consumable_products_state:
-    #         print(config.consumable_products_state)
-    #         return config.consumable_products_state
-    #     return False
-
-    # @fields.depends('id')
-    # def on_change_with_get_product_type_visible(self, name=None):
-    #     """Function to get config for salable products visibility"""
-    #     Configuration = Pool().get('stock.configuration')
-    #     # Consider changing this to fetch the correct configuration record
-    #     config = Configuration(1)
-    #     if config and config.consumable_products_state:
-    #         print(config.consumable_products_state)
-    #         return config.consumable_products_state
-    #     return False
 
     @staticmethod
     def default_product_type():
@@ -443,80 +414,120 @@ class ShipmentInternal(metaclass=PoolMeta):
         cls.from_location.domain = [('type', 'in', ['storage', 'lost_found']),
                                     ('active', '=', True)]
 
-        cls.to_location.domain = [('type', 'in', ['storage', 'lost_found']),
+        cls.to_location.domain = [('type', 'in', ['storage', 'lost_found', 'customer']),
                                   ('active', '=', True)]
 
     @classmethod
-    def import_tecnocarnes(cls):
+    def get_documentos_traslado(cls):
+        import_name = "TRASLADOS"
+        cls.import_tecnocarnes(sw='16', import_name=import_name)
+
+    @classmethod
+    def get_documentos_traslado_(cls):
+        import_name = "TRASLADOS - SALIDAS INVENTARIO"
+        cls.import_tecnocarnes(sw='11', import_name=import_name)
+
+    @classmethod
+    def import_tecnocarnes(cls, sw, import_name):
         """Function to import internal shipments from tecnocarnes"""
 
         pool = Pool()
         Config = pool.get('conector.configuration')
+        Product = pool.get('product.product')
         Actualizacion = pool.get('conector.actualizacion')
         ConfigShipment = pool.get('stock.configuration')
 
-        import_name = "TRASLADOS INTERNOS"
         print(f"---------------RUN {import_name}---------------")
         configuration = Config.get_configuration()
         config_shipment = ConfigShipment.search([])
         state_shipment = config_shipment[0].state_shipment
+        output_location = config_shipment[0].to_location
         if not configuration:
             return
-        data = Config.get_documentos_traslados()
+
+        data = Config.get_documentos_traslados(sw)
         if not data:
             return
-
-        actualizacion = Actualizacion.create_or_update('TRASLADOS')
+        actualizacion = Actualizacion.create_or_update(import_name)
         result = validate_documentos(data)
-
         shipments = []
         for value in result["tryton"].values():
             try:
+                if sw == '11':
+                    if not output_location:
+                        msg = """Debe configuracion una ubicacion
+                                        de salida por defecto"""
+                        result["logs"][value['id_tecno']] = str(msg)
+                        result["exportado"]["E"].append(value['id_tecno'])
+                        break
+                    value['to_location'] = output_location.id
+
+                    for moves in value['moves']:
+                        for move in moves[1]:
+                            product = Product(move['product'])
+                            move['to_location'] = output_location.id
+                            move['unit_price'] = product.cost_price
                 shipment, = cls.create([value])
                 shipments.append(shipment)
             except Exception as error:
-                # Transaction().rollback()
                 logging.error(f"ROLLBACK-{import_name}: {error}")
                 result["logs"][value['id_tecno']] = str(error)
-                result["exportado"][shipment.id_tecno] = "E"
+                result["exportado"]["E"].append(value['id_tecno'])
 
-        for shipment in shipments:
-            try:
-                if state_shipment and state_shipment == 'done':
-                    cls.wait([shipment])
-                    cls.assign([shipment])
-                    cls.done([shipment])
-            except Exception as error:
-                Transaction().rollback()
-                logging.error(f"ROLLBACK-{import_name}: {error}")
-                result["logs"]["EXCEPCION"] = str(error)
+        if shipments:
+            for shipment in shipments:
+                try:
+                    if ((sw == '11')
+                    or (state_shipment and state_shipment == 'done')):
+                        cls.process_shipment(shipment)
+                    result["exportado"]["T"].append(value['id_tecno'])
+                except Exception as error:
+                    Transaction().rollback()
+                    logging.error(f"ROLLBACK-{import_name}: {error}")
+                    result["logs"]["EXCEPCION"] = str(error)
 
         for exportado, idt in result["exportado"].items():
             if idt:
-                if exportado != 'E':
-                    try:
-                        Config.update_exportado_list(idt, exportado)
-                    except Exception as error:
-                        result["logs"]["try_except"] = str(error)
+                try:
+                    Config.update_exportado_list(idt, exportado)
+                except Exception as error:
+                    result["logs"]["try_except"] = str(error)
 
         actualizacion.add_logs(result["logs"])
         print(f"---------------FINISH {import_name}---------------")
 
     @classmethod
+    def process_shipment(cls, shipment):
+        cls.wait([shipment])
+        shipment = cls.set_origin(shipment)
+        cls.assign([shipment])
+        cls.done([shipment])
+
+    @classmethod
     def create_account_move(cls, shipments):
         result = []
         for shipment in shipments:
-            if not shipment.id_tecno:
-                result.append(shipment)
+            if shipment.id_tecno:
+                id_tecno_split = shipment.id_tecno.split('-')
+                sw = id_tecno_split[0]
+                if ((not shipment.id_tecno) or (sw == '11')):
+                    result.append(shipment)
         # Se valida que solo procese los que no se han importado de TecnoCarnes
         super(ShipmentInternal, cls).create_account_move(result)
+
+    @classmethod
+    def set_origin(cls, shipment):
+        for moves in shipment.assign_moves:
+            moves.origin = shipment
+        return shipment
 
     @classmethod
     def get_account_move(cls, shipment):
         pool = Pool()
         Uom = pool.get('product.uom')
-        Configuration = pool.get('account.configuration')
         Period = pool.get('account.period')
+        ProductCategory = pool.get('product.category')
+        Configuration = pool.get('account.configuration')
 
         configuration = Configuration(1)
         if not configuration.stock_journal:
@@ -532,14 +543,32 @@ class ShipmentInternal(metaclass=PoolMeta):
         moves_error = []
         for move in shipment.moves:
             try:
-                account_debit = move.product.account_expense_used
+                sw = None
+                account_debit = account_credit = None
+                product = move.product
+
+                account_debit = product.account_expense_used
+                account_credit = product.account_stock_used
+
+                if shipment.id_tecno:
+                    id_tecno_split = shipment.id_tecno.split('-')
+                    sw = id_tecno_split[0]
+                    code = id_tecno_split[1]
+                    product_category = ProductCategory.search(
+                        [('name', 'like', f'{code}-%'),
+                         ('parent', '=', product.account_category)])
+
+                if sw is not None and sw == '11' and product_category:
+                    account_debit, account_credit = cls.get_accounts_shipment(
+                        product_category[0], account_debit, account_credit)
+
                 if account_debit.party_required:
                     party = shipment.company.party.id
                 else:
                     party = None
 
-                cost_price = Uom.compute_price(move.product.default_uom,
-                                               move.product.cost_price,
+                cost_price = Uom.compute_price(product.default_uom,
+                                               product.cost_price,
                                                move.uom)
                 amount = shipment.company.currency.round(
                     Decimal(str(move.quantity)) * cost_price)
@@ -548,7 +577,7 @@ class ShipmentInternal(metaclass=PoolMeta):
                     'party': party,
                     'debit': amount,
                     'credit': Decimal(0),
-                    'description': move.product.name,
+                    'description': product.name,
                 }
                 op = True if hasattr(shipment, 'operation_center') else False
                 if op:
@@ -565,8 +594,6 @@ class ShipmentInternal(metaclass=PoolMeta):
                                                     ]
                 lines_to_create.append(line_debit)
 
-                account_credit = move.product.account_stock_used
-
                 if account_credit.party_required:
                     party = shipment.company.party.id
                 else:
@@ -577,16 +604,25 @@ class ShipmentInternal(metaclass=PoolMeta):
                     'party': party,
                     'debit': Decimal(0),
                     'credit': amount,
-                    'description': move.product.name,
+                    'description': product.name,
                 }
+                if (shipment.analytic_account
+                        and account_credit.analytical_management):
+                    line_analytic = {
+                        'account': shipment.analytic_account,
+                        'debit': Decimal(0),
+                        'credit': amount
+                    }
+                    line_credit['analytic_lines'] = [('create', [line_analytic])
+                                                    ]
                 lines_to_create.append(line_credit)
             except Exception as e:
                 print(e)
                 moves_error.append(
-                    ['error:', move.product.name, shipment.number])
+                    ['error:', product.name, shipment.number])
                 raise UserError(
                     gettext('account_stock_latin.msg_missing_account_stock',
-                            product=move.product.name))
+                            product=product.name))
         if moves_error:
             return None
         account_move = {
@@ -595,9 +631,19 @@ class ShipmentInternal(metaclass=PoolMeta):
             'origin': shipment,
             'company': shipment.company,
             'period': period_id,
+            'description': shipment.reference,
             'lines': [('create', lines_to_create)]
         }
         return account_move
+
+    @classmethod
+    def get_accounts_shipment(cls, product_category, debit_account,
+                              credit_account):
+        if product_category.account_stock_out_used:
+            credit_account = product_category.account_stock_out_used
+        if product_category.account_cogs_used.code:
+            debit_account = product_category.account_cogs_used
+        return credit_account, debit_account
 
 
 class ModifyCostPrice(metaclass=PoolMeta):
@@ -688,19 +734,11 @@ class MoveCDT(metaclass=PoolMeta):
         }
         Revision.create([revision])
         AverageCost.create([data])
-        # try:
-        #     Product.recompute_cost_price(
-        #         [self.product], start=self.effective_date)
-        # except Exception as error:
-        #     raise UserError(f"ERROR:",error)
-        # code_product = self.product.template.code
-        # name_product = self.product.template.name
-        # raise UserError(f"ERROR:",
-        #                 f"El producto con codigo [{code_product}-{name_product}] No coinice la UDM")
 
     @classmethod
     def _get_origin(cls):
-        return super(MoveCDT, cls)._get_origin() + ['production']
+        add_origin = ['production', 'stock.shipment.internal']
+        return super(MoveCDT, cls)._get_origin() + add_origin
 
     def _get_account_stock_move_lines(self, type_):
         '''
@@ -866,6 +904,7 @@ class MoveCDT(metaclass=PoolMeta):
         type_ = self._get_account_stock_move_type()
         if not type_:
             return
+
         with Transaction().set_context(company=self.company.id, date=date):
             if type_ == 'supplier_customer':
                 account_move_lines = self._get_account_stock_move_lines(
@@ -1399,3 +1438,15 @@ class WarehouseReport(metaclass=PoolMeta):
         report_context['stock_date_end'] = data['to_date']
         report_context['company'] = Company(data['company'])
         return report_context
+
+
+class ShipmentDetailedStart(metaclass=PoolMeta):
+    'Shipment Detailed Start'
+    __name__ = 'stock.shipment.shipment_detailed.start'
+
+    @classmethod
+    def __setup__(cls):
+        super(ShipmentDetailedStart, cls).__setup__()
+        cls.from_locations.domain = [('active', '=', True)]
+
+        cls.to_locations.domain = [('active', '=', True)]

@@ -550,16 +550,21 @@ class Configuration(ModelSQL, ModelView):
         return data
 
     @classmethod
-    def get_documentos_traslados(cls):
+    def get_documentos_traslados(cls, sw):
         data = None
         try:
             Config = Pool().get('conector.configuration')
             config, = Config.search([], order=[('id', 'DESC')], limit=1)
             fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
             # Consulta T-SQL mejorada
-            subquery = f"""SELECT TOP 50 sw, tipo, Numero_documento, bodega 
+
+            sql_query = """
+            SELECT idTipoDoctos FROM dbo.TblTipoDoctos
+            WHERE PasaATryton='S'
+            """
+            subquery = f"""SELECT TOP 50 sw, tipo, Numero_documento, bodega, notas
                         FROM dbo.Documentos
-                        WHERE sw = 16
+                        WHERE sw = {sw}
                         AND Fecha_Hora_Factura >= CAST('{fecha}' AS datetime)
                         AND anulado != 'S'
                         AND exportado NOT IN ('T', 'E', 'X')
@@ -570,12 +575,16 @@ class Configuration(ModelSQL, ModelView):
             subquery += "ORDER BY Fecha_Hora_Factura ASC"
             query = f"""
                     SET DATEFORMAT ymd
-                    SELECT d.bodega from_location, l.*
+                    SELECT d.bodega from_location, l.*, notas
                     FROM dbo.Documentos_Lin AS l
                     INNER JOIN (
-                    {subquery}
+                        {subquery}
                     ) AS d
-                    ON d.sw = l.sw AND d.tipo = l.tipo AND d.Numero_documento = l.Numero_Documento
+                        ON d.sw = l.sw AND d.tipo = l.tipo AND d.Numero_documento = l.Numero_Documento
+                    INNER JOIN (
+                        {sql_query}
+                    ) AS type_docs
+                        ON type_docs.idTipoDoctos = d.tipo
                     """
             data = cls.get_data(query)
         except (pyodbc.OperationalError, pyodbc.InterfaceError) as db_error:

@@ -131,8 +131,13 @@ class Cron(metaclass=PoolMeta):
 
         # PDTE POR REESTRUCTURAR / OK
         cls.method.selection.append(
-            ('stock.shipment.internal|import_tecnocarnes',
+            ('stock.shipment.internal|get_documentos_traslado',
              'Importar traslados'), )
+
+        # PDTE POR REESTRUCTURAR / OK
+        cls.method.selection.append(
+            ('stock.shipment.internal|get_documentos_traslado_',
+             'Importar traslados - degustaciones'), )
 
         # OK / OK
         cls.method.selection.append(
