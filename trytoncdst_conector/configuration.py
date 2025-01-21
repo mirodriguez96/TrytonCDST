@@ -559,7 +559,7 @@ class Configuration(ModelSQL, ModelView):
             # Consulta T-SQL mejorada
 
             sql_query = """
-            SELECT idTipoDoctos FROM dbo.TblTipoDoctos
+            SELECT idTipoDoctos FROM dbo.TblTipoDoctos_Tryton
             WHERE PasaATryton='S'
             """
             subquery = f"""SELECT TOP 50 sw, tipo, Numero_documento, bodega, notas
