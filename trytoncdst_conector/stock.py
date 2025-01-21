@@ -489,7 +489,8 @@ class ShipmentInternal(metaclass=PoolMeta):
         for exportado, idt in result["exportado"].items():
             if idt:
                 try:
-                    Config.update_exportado_list(idt, exportado)
+                    for id in idt:
+                        Config.update_exportado(id, exportado)
                 except Exception as error:
                     result["logs"]["try_except"] = str(error)
 
