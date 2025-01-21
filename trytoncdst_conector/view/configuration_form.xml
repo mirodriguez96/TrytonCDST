@@ -5,5 +5,7 @@
         <field name="state_shipment" widget="selection"/>
         <label name="consumable_products_state"/>
         <field name="consumable_products_state"/>
+        <label name="to_location"/>
+        <field name="to_location"/>
     </xpath>
 </data>
