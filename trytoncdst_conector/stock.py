@@ -505,14 +505,15 @@ class ShipmentInternal(metaclass=PoolMeta):
 
     @classmethod
     def create_account_move(cls, shipments):
+        """Inherith function to create account move
+        And validate TecnoCarnes shipments"""
         result = []
         for shipment in shipments:
-            if shipment.id_tecno:
-                id_tecno_split = shipment.id_tecno.split('-')
-                sw = id_tecno_split[0]
-                if ((not shipment.id_tecno) or (sw == '11')):
-                    result.append(shipment)
-        # Se valida que solo procese los que no se han importado de TecnoCarnes
+            id_tecno_split = shipment.id_tecno.split(
+                '-') if shipment.id_tecno else []
+            sw = id_tecno_split[0] if id_tecno_split else None
+            if ((not shipment.id_tecno) or (sw == '11')):
+                result.append(shipment)
         super(ShipmentInternal, cls).create_account_move(result)
 
     @classmethod
@@ -606,15 +607,6 @@ class ShipmentInternal(metaclass=PoolMeta):
                     'credit': amount,
                     'description': product.name,
                 }
-                if (shipment.analytic_account
-                        and account_credit.analytical_management):
-                    line_analytic = {
-                        'account': shipment.analytic_account,
-                        'debit': Decimal(0),
-                        'credit': amount
-                    }
-                    line_credit['analytic_lines'] = [('create', [line_analytic])
-                                                    ]
                 lines_to_create.append(line_credit)
             except Exception as e:
                 print(e)
