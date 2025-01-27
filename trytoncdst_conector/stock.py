@@ -1439,7 +1439,6 @@ class ShipmentDetailedStart(metaclass=PoolMeta):
 
     @classmethod
     def __setup__(cls):
-        super(ShipmentDetailedStart, cls).__setup__()
+        super().__setup__()
         cls.from_locations.domain = [('active', '=', True)]
-
         cls.to_locations.domain = [('active', '=', True)]
