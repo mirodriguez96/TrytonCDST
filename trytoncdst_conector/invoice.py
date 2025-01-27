@@ -807,24 +807,31 @@ class Invoice(metaclass=PoolMeta):
 
     @classmethod
     def check_duplicated_reference(cls, invoice):
-        if invoice.total_amount < 0:
+        pool = Pool()
+        Purchase = pool.get('purchase.purchase')
+        exception = False
+        if (invoice.total_amount < 0
+                or not invoice.reference or invoice.number):
             return
-        if invoice.id_tecno:
-            sw = invoice.id_tecno.split('-')[0]
-            if sw in ['27', '28', '31', '32']:
-                return
-        today = datetime.date.today()
-        target_date = today - datetime.timedelta(days=90)
-        if invoice.reference:
-            duplicates = cls.search_read([
-                ('reference', '=', invoice.reference),
-                ('party', '=', invoice.party.id),
-                ('invoice_date', '>=', target_date),
-            ],
-                fields_names=['reference'])
-            if len(duplicates) >= 2:
-                raise UserError(
-                    gettext('account_col.msg_duplicated_reference_invoice'))
+
+        purchase = Purchase.search([('reference', '=', invoice.reference),
+                                    ('number', '=', invoice.number)])
+        if not purchase:
+            return
+        if len(purchase) > 1:
+            exception = True
+
+        id_tecno = purchase.id_tecno.split('-')
+        sw = id_tecno[0]
+        if sw in ['27', '28', '31', '32']:
+            return
+
+        if (sw == '3' or not sw):
+            exception = True
+
+        if exception:
+            raise UserError(
+                gettext('account_col.msg_duplicated_reference_invoice'))
 
     # Boton (función) que sirve para enviar los documentos soporte al proveedor tecnologico
     @classmethod
@@ -1056,7 +1063,7 @@ class Invoice(metaclass=PoolMeta):
                 if product.account_cogs_used and product.account_stock_in_used:
                     account_cogs_used = product.account_cogs_used.code
                     account_stock_in_used = product.account_stock_in_used.code
-                    
+
                     if account_cogs_used and account_stock_in_used:
                         if move.state == "draft":
                             for lines in move.lines:

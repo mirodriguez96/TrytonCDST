@@ -112,6 +112,7 @@ class Purchase(metaclass=PoolMeta):
             try:
                 existe = Purchase.search([('id_tecno', '=', id_compra)])
                 if existe:
+                    msg = """Documento ya existe en Tryton"""
                     if compra.anulado == 'S':
                         dat = str(compra.fecha_hora).split()[0].split('-')
                         name = f"{dat[0]}-{dat[1]}"
@@ -128,6 +129,7 @@ class Purchase(metaclass=PoolMeta):
                         cls.delete_imported_purchases(existe)
                         not_import.append(id_compra)
                         continue
+                    logs[id_compra] = msg
                     to_created.append(id_compra)
                     continue
                 if compra.anulado == 'S':
