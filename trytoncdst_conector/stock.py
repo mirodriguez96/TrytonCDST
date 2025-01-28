@@ -470,7 +470,7 @@ class ShipmentInternal(metaclass=PoolMeta):
                 shipment, = cls.create([value])
                 shipments.append(shipment)
             except Exception as error:
-                logging.error(f"ROLLBACK-{import_name}: {error}")
+                logging.error(f"ROLLBACK1-{import_name}: {error}")
                 result["logs"][value['id_tecno']] = str(error)
                 result["exportado"]["E"].append(value['id_tecno'])
 
@@ -480,11 +480,12 @@ class ShipmentInternal(metaclass=PoolMeta):
                     if ((sw == '11')
                     or (state_shipment and state_shipment == 'done')):
                         cls.process_shipment(shipment)
-                    result["exportado"]["T"].append(value['id_tecno'])
+                    result["exportado"]["T"].append(shipment.id_tecno)
                 except Exception as error:
                     Transaction().rollback()
-                    logging.error(f"ROLLBACK-{import_name}: {error}")
-                    result["logs"]["EXCEPCION"] = str(error)
+                    logging.error(
+                        f"ROLLBACK-{shipment.id_tecno}-{import_name}: {error}")
+                    result["logs"][shipment.id] = str(error)
 
         for exportado, idt in result["exportado"].items():
             if idt:
@@ -586,7 +587,8 @@ class ShipmentInternal(metaclass=PoolMeta):
                     line_debit.update(
                         {'operation_center': shipment.operation_center})
 
-                if shipment.analytic_account and account_debit.type.statement != 'balance':
+                if (shipment.analytic_account
+                        and account_debit.analytical_management):
                     line_analytic = {
                         'account': shipment.analytic_account,
                         'debit': amount,
@@ -608,6 +610,16 @@ class ShipmentInternal(metaclass=PoolMeta):
                     'credit': amount,
                     'description': product.name,
                 }
+
+                if (shipment.analytic_account
+                        and account_credit.analytical_management):
+                    line_analytic = {
+                        'account': shipment.analytic_account,
+                        'debit': Decimal(0),
+                        'credit': amount
+                    }
+                    line_credit['analytic_lines'] = [('create', [line_analytic])
+                                                    ]
                 lines_to_create.append(line_credit)
             except Exception as e:
                 print(e)
