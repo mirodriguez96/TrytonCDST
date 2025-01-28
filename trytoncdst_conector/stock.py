@@ -562,7 +562,7 @@ class ShipmentInternal(metaclass=PoolMeta):
                          ('parent', '=', product.account_category)])
 
                 if sw is not None and sw == '11' and product_category:
-                    account_debit, account_credit = cls.get_accounts_shipment(
+                    account_credit, account_debit = cls.get_accounts_shipment(
                         product_category[0], account_debit, account_credit)
 
                 if account_debit.party_required:
