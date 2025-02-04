@@ -973,6 +973,10 @@ msgctxt "field:product.category,account_credit_note:"
 msgid "Account Credit Note"
 msgstr "Cuenta Nota de Crédito"
 
+msgctxt "field:staff.liquidation,payment_liquidation_date:"
+msgid "Payment liquidation date"
+msgstr "Fecha de pago de liquidacion"
+
 msgctxt "field:stock.configuration,to_location:"
 msgid "Output inventory location"
 msgstr "Ubicación Salida de inventario"
