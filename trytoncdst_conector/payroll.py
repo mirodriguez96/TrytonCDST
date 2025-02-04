@@ -18,7 +18,7 @@ from dateutil.relativedelta import relativedelta
 from sql.aggregate import Sum
 from sql.operators import Between
 from trytond.exceptions import UserError, UserWarning
-from trytond.model import ModelSQL, ModelView, fields
+from trytond.model import ModelSQL, ModelView, fields, Workflow
 from trytond.modules.company import CompanyReport
 from trytond.pool import Pool, PoolMeta
 from trytond.pyson import Bool, Eval, If, Not, Or
@@ -27,6 +27,7 @@ from trytond.sendmail import sendmail
 from trytond.transaction import Transaction
 from trytond.wizard import (Button, StateReport, StateTransition, StateView,
                             Wizard)
+
 
 from .constants import EXTRAS, FIELDS_AMOUNT, SHEET_SUMABLES
 from .it_supplier_noova import ElectronicPayrollCdst
@@ -2023,10 +2024,41 @@ class Payroll(metaclass=PoolMeta):
                     employee_id = mandatory.party
         return employee_id
 
-    def create_move(self):
+    @classmethod
+    @ModelView.button
+    @Workflow.transition('posted')
+    def post(cls, records):
+        cls.create_move(records)
+
+    @classmethod
+    def create_move(cls, payrolls):
         '''Function to create account_move registry and post it'''
-        super(Payroll, self).create_move()
-        self.concile_loan_lines()
+        pool = Pool()
+        Move = pool.get('account.move')
+        Period = pool.get('account.period')
+        move_post = []
+        for payroll in payrolls:
+            if payroll.move:
+                return
+
+            period_id = Period.find(
+                payroll.company.id, date=payroll.date_effective)
+            move_lines = payroll.get_moves_lines()
+            move, = Move.create([{
+                'journal': payroll.journal.id,
+                'origin': str(payroll),
+                'period': period_id,
+                'date': payroll.date_effective,
+                'state': 'draft',
+                'description': payroll.description,
+                'lines': [('create', move_lines)],
+            }])
+            payroll.write([payroll], {'move': move.id})
+            move_post.append(payroll.move)
+        if move_post:
+            Move.post(move_post)
+        for payroll in payrolls:
+            payroll.concile_loan_lines()
 
     def concile_loan_lines(self):
         '''Function to concile loan lines by liquidation'''
