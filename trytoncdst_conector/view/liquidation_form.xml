@@ -11,4 +11,9 @@ this repository contains the full copyright notices and license terms. -->
         <button name="wait" string="Wait"
             icon="tryton-ok"/>
     </xpath>
+
+    <xpath expr="/form/field[@name='account']" position="after">
+        <label name="payment_liquidation_date"/>
+        <field name="payment_liquidation_date" widget="date"/>
+    </xpath>
 </data>

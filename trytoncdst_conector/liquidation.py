@@ -1,6 +1,7 @@
 import calendar
 from datetime import datetime, timedelta, date
 from decimal import Decimal
+import re
 
 from dateutil import tz
 from trytond.exceptions import UserError
@@ -168,6 +169,7 @@ class AnalyticAccountEntry(metaclass=PoolMeta):
 class Liquidation(metaclass=PoolMeta):
     __name__ = 'staff.liquidation'
     sended_mail = fields.Boolean('Sended Email')
+    payment_liquidation_date = fields.Date('Payment liquidation date')
     origin = fields.Reference('Origin', selection='get_origin')
 
     @classmethod
@@ -671,7 +673,7 @@ class Liquidation(metaclass=PoolMeta):
                                 analytic_account.append(
                                     mandatory.analytic_account)
                                 break
-                return analytic_account[0]
+                return analytic_account[0] if analytic_account else None
             else:
                 return None
         else:
@@ -752,6 +754,12 @@ class Liquidation(metaclass=PoolMeta):
         pool = Pool()
         Payroll = pool.get('staff.payroll')
         LiquidationMove = pool.get('staff.liquidation.line-move.line')
+
+        if not self.contract:
+            message = ("""Debe seleccionar el contrato""")
+            clean_message = re.sub(r'\s+', ' ', message).strip()
+            raise UserError('Error', clean_message)
+
         date_start, date_end = self._get_dates_liquidation()
         payrolls = Payroll.search(
             [
@@ -817,7 +825,7 @@ class Liquidation(metaclass=PoolMeta):
             lines_to_reconcile = []
             days = self.time_contracting
             if self.kind == 'contract':
-                days = self.get_liquidation_days_lines(
+                days = self.get_days_line_liquidation(
                     date_start, date_end, self.contract, wage_type)
                 if days == 0:
                     days = self.contract.get_time_days_contract(
@@ -843,10 +851,264 @@ class Liquidation(metaclass=PoolMeta):
             wages[wage_type.id] = value
 
         self.write([self], {'lines': [('create', wages.values())]})
+        self.lines = self.validate_liquidation_line_values(
+            self.lines, self.contract, self.kind)
+        self.save()
         if self.kind == 'contract':
             self.process_loans_to_pay()
         if self.kind == 'holidays':
             self.process_loans_to_pay_holidays()
+
+    def validate_liquidation_line_values(self, lines, contract, kind):
+        pool = Pool()
+        WageType = pool.get('staff.wage_type')
+        Adjustment = Pool().get('staff.liquidation.line_adjustment')
+        for line in lines:
+            wage = WageType(line.wage)
+            concept_electronic = wage.type_concept_electronic
+            concept = wage.type_concept
+            if ((concept_electronic == 'Cesantias'
+                or concept_electronic == 'PrimasS'
+                or concept_electronic == 'IntCesantias')
+                    or (kind != 'holidays' and concept == 'holidays')):
+                line_amount = self.get_salary_prom(contract, line, kind)
+
+                if line.amount != line_amount:
+                    add_amount = round(line_amount - line.amount, 2)
+                    line.adjustments = [Adjustment(
+                            account=wage.debit_account.id,
+                            amount=add_amount,
+                            description=f"AJUSTE {line.description}")]
+                    line.amount += add_amount
+                    line.save()
+        return lines
+
+    def get_salary_prom(self, contract, line_, kind):
+        pool = Pool()
+        Payroll = pool.get('staff.payroll')
+        employee = contract.employee
+        transport_bonus = contract.transport_bonus if contract.transport_bonus else 0
+        total_base_salary = 0
+        total_base_extras = 0
+        total_test = 0
+        cant_payrolls = 0
+
+        if (line_.wage.type_concept_electronic == 'PrimasS'
+                and kind == 'unemployment'):
+            if not self.payment_liquidation_date:
+                message = (
+                    """Debe proporcionar la fecha de pago de la liquidacion""")
+                clean_message = re.sub(r'\s+', ' ', message).strip()
+                raise UserError('Error', clean_message)
+
+        domain = [('employee', '=', employee), ('contract', '=', contract)]
+        if (kind == 'contract' or kind == 'unemployment'
+                or kind == 'bonus_service' or kind == 'interest'):
+            start_period = self.start_period.start
+            end_period = self.end_period.end
+            end_year_period = end_period.year
+            start_year_period = start_period.year
+            if ((line_.wage.type_concept_electronic == 'PrimasS')
+                    and end_year_period == start_year_period):
+                if start_period.month != end_period.month:
+                    if end_period.month > 6:
+                        start_period = datetime(start_period.year, 7, 1)
+            elif (line_.wage.type_concept_electronic == 'PrimasS'
+                    and end_year_period != start_year_period):
+                start_period = date(end_year_period, 1, 1)
+                end_period = contract.end_date
+
+            work_days = self.get_work_days_line_liquidation(
+                start_period, end_period, contract, line_.wage)
+            domain.append(('end', '>=', start_period))
+            domain.append(('end', '<=', end_period))
+
+        payrolls = Payroll.search(domain, order=[('id', 'ASC')])
+
+        # extras, recargos, bonificaciones y comisiones
+        for payroll in payrolls:
+            cant_payrolls += 1
+            for line in payroll.lines:
+                concept = line.wage_type.type_concept
+                concept_electronic = line.wage_type.type_concept_electronic
+                salary = 0
+                if line_.wage.type_concept == 'holidays':
+                    if concept_electronic == 'HRN':
+                        total_base_extras += (line.quantity * line.unit_value)
+                else:
+                    if (concept == 'salary'
+                            or concept_electronic == 'VacacionesComunes'):
+
+                        if (cant_payrolls == 1
+                                or cant_payrolls == len(payrolls)):
+                            salary = line.payroll.worked_days * line.unit_value
+                        else:
+                            salary = self.get_salary_base(
+                                contract, line, end_period)
+                        total_base_salary += salary
+                        total_test += salary
+                    if concept == 'extras':
+                        total_base_extras += (line.quantity * line.unit_value)
+                    if concept_electronic == 'BonificacionS':
+                        total_base_extras += (line.quantity * line.unit_value)
+                    if concept_electronic == 'Comision':
+                        total_base_extras += (line.quantity * line.unit_value)
+        percentage_factor = round(Decimal(work_days / 30), 6)
+
+        if (line_.wage.type_concept_electronic == 'PrimasS'
+                and kind == 'unemployment'):
+            if start_period.month != end_period.month:
+                day_liquidation_payments = self.payment_liquidation_date.day
+                if day_liquidation_payments >= 15:
+                    total_base_salary += contract.salary / 2
+                else:
+                    total_base_salary += contract.salary
+        if line_.wage.type_concept == 'holidays':
+            days = self.get_days_line_liquidation(
+                start_period, end_period, contract, line_.wage)
+
+            total_base_salary = contract.salary
+            total_base = round(
+                (total_base_extras / work_days * 30) + total_base_salary, 2)
+            salary_prom = round((total_base / 30) * days, 2)
+        else:
+            total_base = round(total_base_salary + total_base_extras, 2)
+            salary_prom = (total_base / percentage_factor) + transport_bonus
+
+        if line_.wage.type_concept_electronic == 'Cesantias':
+            salary_prom = (salary_prom * line_.days) / 360
+        if line_.wage.type_concept_electronic == 'PrimasS':
+            salary_prom = (salary_prom * work_days) / 360
+        if line_.wage.type_concept_electronic == 'IntCesantias':
+            val_cesantias = (salary_prom * line_.days) / 360
+            salary_prom = ((val_cesantias * Decimal('0.12'))
+                           / 360) * line_.days
+        return salary_prom
+
+    def get_work_days_line_liquidation(self, start_period, end_period,
+            contract, wage):
+        work_days = 0
+        start_date = None
+        end_date = None
+        date_end_year = end_period.year
+        date_start_year = start_period.year
+        first_of_july = date(date_end_year, 7, 1)
+        start_date_contract = contract.start_date
+
+        if wage.type_concept_electronic == 'PrimasS':
+            if ((end_period > first_of_july)
+                    and date_end_year == date_start_year):
+                start_date = first_of_july if first_of_july > contract.start_date else contract.start_date
+                if contract.end_date:
+                    end_date = contract.end_date if contract.end_date < end_period else end_period
+                else:
+                    end_date = end_period
+            elif date_start_year != date_end_year:
+                start_date = date(date_end_year, 1, 1)
+                end_date = contract.end_date
+            elif ((end_period < first_of_july)
+                  and (start_date_contract > start_period)):
+                start_date = start_date_contract
+                end_date = end_period
+            else:
+                start_date = start_period
+                end_date = end_period
+        else:
+            start_date = start_period if start_period > contract.start_date else contract.start_date
+            end_date = contract.end_date
+        work_days = contract.get_time_days_contract(start_date, end_date)
+        return work_days
+
+    def get_days_line_liquidation(self, start_period, end_period,
+            contract, wage):
+        days = 0
+        start_date = None
+        end_date = None
+        date_end_year = end_period.year
+        date_start_year = start_period.year
+        first_of_july = date(date_end_year, 7, 1)
+
+        if (self.kind != 'holidays'
+                and wage.type_concept == 'holidays'):
+            days = round((Decimal(15 / 360) * contract.time_worked)
+                         - contract.days_enjoy, 2)
+            return days
+        elif wage.type_concept_electronic == 'PrimasS':
+            if ((end_period > first_of_july)
+                    and date_end_year == date_start_year):
+                start_date = first_of_july if first_of_july > contract.start_date else contract.start_date
+                end_date = contract.end_date
+            elif date_start_year != date_end_year:
+                start_date = date(date_end_year, 1, 1)
+                end_date = contract.end_date
+            else:
+                start_date = start_period
+                end_date = end_period
+        else:
+            start_date = start_period if start_period > contract.start_date else contract.start_date
+            end_date = contract.end_date
+        days = contract.get_time_days_contract(start_date, end_date)
+        return days
+
+    def get_salary_base(self, contract, line, end_period):
+        pool = Pool()
+        PayrollLines = pool.get('staff.payroll.line')
+        Futhermore = pool.get('staff.contract.futhermore')
+        payroll_holiday_lines = PayrollLines.search(
+            [('payroll', '=', line.payroll),
+             ('wage_type.type_concept_electronic', '=', 'VacacionesComunes')])
+        validate_futhermore_ = self.validate_futhermore(end_period, contract)
+        concept = line.wage_type.type_concept
+        concept_electronic = line.wage_type.type_concept_electronic
+
+        if not validate_futhermore_:
+            if concept == 'salary' and not payroll_holiday_lines:
+                salary = contract.salary / 2
+            elif concept == 'salary' and payroll_holiday_lines:
+                salary = line.quantity * line.unit_value
+            elif concept_electronic == 'VacacionesComunes':
+                salary = line.quantity * line.unit_value
+        else:
+            futhermore = Futhermore.search(
+                [('contract', '=', contract.id),
+                ('futhermore_date', '<=', line.payroll.date_effective)],
+                order=[('futhermore_date', 'DESC')],
+                limit=1
+                )
+            if not futhermore:
+                message = (f"""Falta informacion de 'Otro si' para el empleado
+                                {contract.employee.party.name}""")
+                clean_message = re.sub(r'\s+', ' ', message).strip()
+                raise UserError('Error', clean_message)
+
+            if futhermore:
+                salary = futhermore[0].salary / 2
+        return salary
+
+    def validate_futhermore(self, end_period, contract):
+        pool = Pool()
+        Futhermore = pool.get('staff.contract.futhermore')
+
+        futhermore_validate = Futhermore.search(
+            [('contract', '=', contract.id), ('state', '=', 'confirmed'),
+                ('futhermore_date', '<=', end_period)],
+            order=[('futhermore_date', 'DESC')],
+            limit=1
+            )
+
+        if futhermore_validate:
+            futhermore_date = futhermore_validate[0].futhermore_date
+            if isinstance(end_period, str):
+                end_period = datetime.strptime(end_period, '%Y-%m-%d')
+            if isinstance(futhermore_date, str):
+                futhermore_date = datetime.strptime(
+                    futhermore_date, '%Y-%m-%d')
+
+            three_months_ago = end_period - timedelta(days=3 * 30)
+
+            if futhermore_date > three_months_ago:
+                return True
+            return False
 
     def process_loans_to_pay_holidays(self):
         pool = Pool()
@@ -962,23 +1224,6 @@ class Liquidation(metaclass=PoolMeta):
             cls.write([rec], {
                 'lines': [('create', [create_tax])],
             })
-
-    def get_liquidation_days_lines(self, date_start, date_end, contract,
-                                   wage_type):
-        date_end_year = date_end.year
-        first_of_july = date(date_end_year, 7, 1)
-        days = 0
-        if wage_type.type_concept_electronic == 'VacacionesComunes':
-            days = round((Decimal(15 / 360) * contract.time_worked)
-                         - contract.days_enjoy, 2)
-        elif wage_type.type_concept_electronic == 'PrimasS':
-            if date_end > first_of_july:
-                if contract.start_date > first_of_july:
-                    date_start = contract.start_date
-                else:
-                    date_start = first_of_july
-                days = contract.get_time_days_contract(date_start, date_end)
-        return days
 
 
 class LiquidationLine(AnalyticMixin, metaclass=PoolMeta):
