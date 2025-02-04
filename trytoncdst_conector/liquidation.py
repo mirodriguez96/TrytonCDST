@@ -969,7 +969,7 @@ class Liquidation(metaclass=PoolMeta):
 
             total_base_salary = contract.salary
             total_base = round(
-                (total_base_extras / work_days * 30) + total_base_salary, 2)
+                Decimal(total_base_extras / work_days * 30) + total_base_salary, 2)
             salary_prom = round((total_base / 30) * days, 2)
         else:
             total_base = round(total_base_salary + total_base_extras, 2)
