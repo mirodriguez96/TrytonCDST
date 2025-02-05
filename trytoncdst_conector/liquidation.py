@@ -925,6 +925,13 @@ class Liquidation(metaclass=PoolMeta):
 
         payrolls = Payroll.search(domain, order=[('id', 'ASC')])
 
+        if work_days == 0:
+            message = ("""No se encontraron dias laborados para el periodo, 
+                       revise si esta proporcionando la fecha de finalizacion
+                       del contrato""")
+            clean_message = re.sub(r'\s+', ' ', message).strip()
+            raise UserError('Error', clean_message)
+
         # extras, recargos, bonificaciones y comisiones
         for payroll in payrolls:
             cant_payrolls += 1
@@ -964,12 +971,10 @@ class Liquidation(metaclass=PoolMeta):
                 else:
                     total_base_salary += contract.salary
         if line_.wage.type_concept == 'holidays':
-            days = self.get_days_line_liquidation(
-                start_period, end_period, contract, line_.wage)
+            days = self.get_days_line_liquidation(start_period, end_period, contract, line_.wage)
 
             total_base_salary = contract.salary
-            total_base = round(
-                Decimal(total_base_extras / work_days * 30) + total_base_salary, 2)
+            total_base = round(Decimal(total_base_extras / work_days * 30) + total_base_salary, 2)
             salary_prom = round((total_base / 30) * days, 2)
         else:
             total_base = round(total_base_salary + total_base_extras, 2)
@@ -1009,7 +1014,7 @@ class Liquidation(metaclass=PoolMeta):
             elif ((end_period < first_of_july)
                   and (start_date_contract > start_period)):
                 start_date = start_date_contract
-                end_date = end_period
+                end_date = contract.end_date
             else:
                 start_date = start_period
                 end_date = end_period
@@ -1031,7 +1036,7 @@ class Liquidation(metaclass=PoolMeta):
         if (self.kind != 'holidays'
                 and wage.type_concept == 'holidays'):
             days = round((Decimal(15 / 360) * contract.time_worked)
-                         - contract.days_enjoy, 2)
+                         - contract.days_enjoy, 12)
             return days
         elif wage.type_concept_electronic == 'PrimasS':
             if ((end_period > first_of_july)
