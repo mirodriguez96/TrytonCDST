@@ -2363,47 +2363,36 @@ class IncomeStatement(metaclass=PoolMeta):
         Fiscalyear = pool.get('account.fiscalyear')
         Company = pool.get('company.company')
 
-        # records = Type(report_context['data']['id'])
         fiscalyear_id = Transaction().context.get('fiscalyear')
-        start_period = Transaction().context.get('start_period')
-        end_period = Transaction().context.get('end_period')
-        from_date = Transaction().context.get('from_date')
-        to_date = Transaction().context.get('to_date')
         comparison = Transaction().context.get('comparison')
 
-        types = Type.search([
-            ('statement', '=', 'income'),
-        ], order=[('sequence', 'ASC')])
         od = {}
         filtered_records = []
         accounts_types = []
         types_added = []
+        from_date_ = to_date_ = None
+        first_period = second_period = ''
 
-        if start_period:
-            start_period = Period(start_period)
-        if end_period:
-            end_period = Period(end_period)
+        types = Type.search([
+            ('statement', '=', 'income'),
+        ], order=[('sequence', 'ASC')])
 
-        dom_periods = [
-            ('type', '=', 'standard'),
-            ('fiscalyear', '=', fiscalyear_id),
-        ]
+        if (Transaction().context.get('start_period')
+                and Transaction().context.get('end_period')):
+            start_period = Period(Transaction().context.get('start_period'))
+            end_period = Period(Transaction().context.get('end_period'))
+            from_date_ = start_period.start_date
+            to_date_ = end_period.end_date
+            first_period = f'{from_date_} - {to_date_}'
+        elif (Transaction().context.get('from_date')
+              and Transaction().context.get('to_date')):
+            from_date_ = Transaction().context.get('from_date')
+            to_date_ = Transaction().context.get('to_date')
+            first_period = f'{from_date_} - {to_date_}'
 
-        first_period = ''
-        second_period = ''
-        if start_period and end_period:
-            dom_periods.append(('start_date', '>=', start_period.start_date))
-            dom_periods.append(('start_date', '<=', end_period.start_date))
-            first_period = f'{start_period.start_date} - {end_period.start_date}'
-        elif from_date and to_date:
-            dom_periods.append(('start_date', '>=', from_date))
-            dom_periods.append(('start_date', '<=', to_date))
-            first_period = f'{from_date} - {to_date}'
-
-        range_periods = Period.search(dom_periods)
-        periods_ids = [p.id for p in range_periods]
         main_balance = 0
-        with Transaction().set_context(periods=periods_ids):
+        with Transaction().set_context(start_period=None, end_period=None,
+                                       from_date=from_date_, to_date=to_date_):
             main_type, = Type.search([('sequence', '=', 30100)])
             main_balance = main_type.amount
             while types:
@@ -2477,8 +2466,6 @@ class IncomeStatement(metaclass=PoolMeta):
             for accounts_ in filtered_records:
                 if accounts_['childs']:
                     for accounts_child in accounts_['childs']:
-                        # main_child = accounts_child['type']
-                        # main_amount = main_child.amount
                         for parent, accounts in accounts_child['parents'].items():
                             parent_balance = parent.balance
                             av_ = 0
@@ -2501,7 +2488,6 @@ class IncomeStatement(metaclass=PoolMeta):
 
                 else:
                     for parent, accounts in accounts_['parents'].items():
-                        # main_amount = accounts_['type'].amount
                         parent_balance = parent.balance
                         av_ = 0
                         if main_balance != 0:
@@ -2511,7 +2497,6 @@ class IncomeStatement(metaclass=PoolMeta):
                         accounts['data']['first_period']['balance'] = parent_balance
                         accounts['data']['first_period']['name'] = parent.name
                         accounts['data']['first_period']['code'] = parent.code
-                        # main_amount = parent.balance
                         for account, data in accounts['accounts'].items():
                             av_ = 0
                             if main_balance != 0:
@@ -2537,78 +2522,72 @@ class IncomeStatement(metaclass=PoolMeta):
                         if record['type'].id in merged_records:
                             merged_record = merged_records[record['type'].id]
                             merged_record['data']['second_period'] = record['data']['second_period']
-                            balance1 = merged_record['data']['first_period']['balance']
-                            balance2 = merged_record['data']['second_period']['balance']
-                            AHR = ((abs(balance1) - abs(balance2))
+                            balance1 = abs(merged_record['data']['first_period']['balance'])
+                            balance2 = abs(merged_record['data']['second_period']['balance'])
+                            AHR = ((balance1 - balance2)
                                 / balance2) if balance2 != 0 else 0
-                            AHA = abs(balance1) - abs(balance2)
-                            merged_record['data']['second_period']['AHR'] = round(
-                                AHR, 2)
+                            AHA = balance1 - balance2
+                            merged_record['data']['second_period']['AHR'] = AHR
                             merged_record['data']['second_period']['AHA'] = round(
                                 AHA, 4)
                             for parent, accounts in record['parents'].items():
                                 if parent in merged_record['parents']:
                                     merged_parent = merged_record['parents'][parent]
                                     merged_parent['data']['second_period'] = accounts['data']['second_period']
-                                    balance1 = merged_parent['data']['first_period']['balance']
-                                    balance2 = merged_parent['data']['second_period']['balance']
-                                    AHR = ((abs(balance1) - abs(balance2))
+                                    balance1 = abs(merged_parent['data']['first_period']['balance'])
+                                    balance2 = abs(merged_parent['data']['second_period']['balance'])
+                                    AHR = ((balance1 - balance2)
                                         / balance2) if balance2 != 0 else 0
-                                    AHA = abs(balance1) - abs(balance2)
-                                    merged_parent['data']['second_period']['AHR'] = round(
-                                        AHR, 2)
+                                    AHA = balance1 - balance2
+                                    merged_parent['data']['second_period']['AHR'] = AHR
                                     merged_parent['data']['second_period']['AHA'] = round(
                                         AHA, 4)
                                 for account, data in accounts['accounts'].items():
                                     if account in merged_parent['accounts']:
                                         merged_parent['accounts'][account]['second_period'] = data['second_period']
-                                        balance1 = merged_parent['accounts'][account]['first_period']['balance']
-                                        balance2 = merged_parent['accounts'][account]['second_period']['balance']
-                                        AHR = ((abs(balance1) - abs(balance2))
+                                        balance1 = abs(merged_parent['accounts'][account]['first_period']['balance'])
+                                        balance2 = abs(merged_parent['accounts'][account]['second_period']['balance'])
+                                        AHR = ((balance1 - balance2)
                                             / balance2) if balance2 != 0 else 0
-                                        AHA = abs(balance1) - abs(balance2)
+                                        AHA = balance1 - balance2
 
-                                        merged_parent['accounts'][account]['second_period']['AHR'] = round(
-                                            AHR, 2)
+                                        merged_parent['accounts'][account]['second_period']['AHR'] = AHR
                                         merged_parent['accounts'][account]['second_period']['AHA'] = round(
                                             AHA, 4)
                 else:
                     if record['type'].id in merged_records:
                         merged_record = merged_records[record['type'].id]
                         merged_record['data']['second_period'] = record['data']['second_period']
-                        balance1 = merged_record['data']['first_period']['balance']
-                        balance2 = merged_record['data']['second_period']['balance']
-                        AHR = ((abs(balance1) - abs(balance2))
+                        balance1 = abs(merged_record['data']['first_period']['balance'])
+                        balance2 = abs(merged_record['data']['second_period']['balance'])
+                        AHR = ((balance1 - balance2)
                             / balance2) if balance2 != 0 else 0
-                        AHA = abs(balance1) - abs(balance2)
-                        merged_record['data']['second_period']['AHR'] = round(
-                            AHR, 2)
+                        AHA = balance1 - balance2
+                        merged_record['data']['second_period']['AHR'] = AHR
                         merged_record['data']['second_period']['AHA'] = round(
                             AHA, 4)
                         for parent, accounts in record['parents'].items():
                             if parent in merged_record['parents']:
                                 merged_parent = merged_record['parents'][parent]
                                 merged_parent['data']['second_period'] = accounts['data']['second_period']
-                                balance1 = merged_parent['data']['first_period']['balance']
-                                balance2 = merged_parent['data']['second_period']['balance']
-                                AHR = ((abs(balance1) - abs(balance2))
+                                balance1 = abs(merged_parent['data']['first_period']['balance'])
+                                balance2 = abs(merged_parent['data']['second_period']['balance'])
+                                AHR = ((balance1 - balance2)
                                     / balance2) if balance2 != 0 else 0
-                                AHA = abs(balance1) - abs(balance2)
-                                merged_parent['data']['second_period']['AHR'] = round(
-                                    AHR, 2)
+                                AHA = balance1 - balance2
+                                merged_parent['data']['second_period']['AHR'] = AHR
                                 merged_parent['data']['second_period']['AHA'] = round(
                                     AHA, 4)
                             for account, data in accounts['accounts'].items():
                                 if account in merged_parent['accounts']:
                                     merged_parent['accounts'][account]['second_period'] = data['second_period']
-                                    balance1 = merged_parent['accounts'][account]['first_period']['balance']
-                                    balance2 = merged_parent['accounts'][account]['second_period']['balance']
-                                    AHR = ((abs(balance1) - abs(balance2))
+                                    balance1 = abs(merged_parent['accounts'][account]['first_period']['balance'])
+                                    balance2 = abs(merged_parent['accounts'][account]['second_period']['balance'])
+                                    AHR = ((balance1 - balance2)
                                         / balance2) if balance2 != 0 else 0
-                                    AHA = abs(balance1) - abs(balance2)
+                                    AHA = balance1 - balance2
 
-                                    merged_parent['accounts'][account]['second_period']['AHR'] = round(
-                                        AHR, 2)
+                                    merged_parent['accounts'][account]['second_period']['AHR'] = AHR
                                     merged_parent['accounts'][account]['second_period']['AHA'] = round(
                                         AHA, 4)
 
@@ -2629,41 +2608,28 @@ class IncomeStatement(metaclass=PoolMeta):
         Type = pool.get('account.account.type')
         Account = pool.get('account.account')
         Period = pool.get('account.period')
-        fiscalyear_id = Transaction().context.get('fiscalyear_cmp')
-        start_period = Transaction().context.get('start_period_cmp')
-        end_period = Transaction().context.get('end_period_cmp')
-        from_date = Transaction().context.get('from_date_cmp')
-        to_date = Transaction().context.get('to_date_cmp')
 
         od = {}
         filtered_records_ = []
         accounts_types = []
         types_added = []
-        if start_period:
-            start_period = Period(start_period)
-        if end_period:
-            end_period = Period(end_period)
 
-        dom_periods = [
-            ('type', '=', 'standard'),
-            ('fiscalyear', '=', fiscalyear_id),
-        ]
+        from_date_ = to_date_ = None
+        if (Transaction().context.get('start_period_cmp')
+                and Transaction().context.get('end_period_cmp')):
+            start_period = Period(Transaction().context.get('start_period_cmp'))
+            end_period = Period(Transaction().context.get('end_period_cmp'))
+            from_date_ = start_period.start_date
+            to_date_ = end_period.end_date
+            second_period = f'{start_period.start_date} - {end_period.end_date}'
+        elif (Transaction().context.get('from_date_cmp')
+              and Transaction().context.get('to_date_cmp')):
+            from_date_ = Transaction().context.get('from_date_cmp')
+            to_date_ = Transaction().context.get('to_date_cmp')
+            second_period = f'{from_date_} - {to_date_}'
 
-        if start_period and end_period:
-            dom_periods.append(
-                ('start_date', '>=', start_period.start_date))
-            dom_periods.append(
-                ('start_date', '<=', end_period.start_date))
-            second_period = f'{start_period.start_date} - {end_period.start_date}'
-        elif from_date and to_date:
-            dom_periods.append(('start_date', '>=', from_date))
-            dom_periods.append(('start_date', '<=', to_date))
-            second_period = f'{from_date} - {to_date}'
-
-        with Transaction().set_context(start_period=Transaction().context.get('start_period_cmp'),
-                                       end_period=Transaction().context.get('end_period_cmp'),
-                                       from_date=Transaction().context.get('from_date_cmp'),
-                                       to_date=Transaction().context.get('to_date_cmp')):
+        with Transaction().set_context(start_period=None, end_period=None,
+                                       from_date=from_date_, to_date=to_date_):
             types = Type.search([
                 ('statement', '=', 'income')
             ])
@@ -2671,6 +2637,11 @@ class IncomeStatement(metaclass=PoolMeta):
             main_balance = main_type.amount
             while types:
                 type_ = types.pop()
+                balance = type_.amount
+                av_ = 0
+                if main_balance != 0:
+                    av_ = round(
+                                Decimal(abs(balance) / abs(main_balance)), 4)
                 type_dict = {'type': type_, 'data': {'first_period': {
                                                             "name": type_.name,
                                                             'balance': 0},
@@ -2679,7 +2650,7 @@ class IncomeStatement(metaclass=PoolMeta):
                                                             'balance': type_.amount,
                                                             'AHR': 0,
                                                             'AHA': 0,
-                                                            'av': 0}},
+                                                            'av': av_}},
                                             'parents': {}}
                 if type_.statement == 'income':
                     accounts = Account.search([
