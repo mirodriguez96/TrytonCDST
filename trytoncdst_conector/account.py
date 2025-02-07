@@ -17,7 +17,7 @@ from trytond.modules.stock.exceptions import PeriodCloseError
 from trytond.pool import Pool, PoolMeta
 from trytond.pyson import Bool, Eval, If, Not
 from trytond.report import Report
-from trytond.tools import grouped_slice
+from trytond.tools import grouped_slice, reduce_ids
 from trytond.transaction import Transaction
 from trytond.wizard import (Button, StateAction, StateReport, StateTransition,
                             StateView, Wizard)
@@ -1916,7 +1916,8 @@ class PartyWithholding(metaclass=PoolMeta):
             for v in moves:
                 try:
                     moves_[v['id']] = v['origin.']['rec_name']
-                except:
+                except Exception as error:
+                    print(error)
                     moves_[v['id']] = None
             report_context['moves'] = moves_
         else:
@@ -1977,7 +1978,8 @@ class PartyWithholding(metaclass=PoolMeta):
                 res_dict[key_id]['total_amount'] += row_dict['amount']
                 res_dict[key_id]['total_untaxed'] += row_dict['base']
                 moves_ids.add(row_dict['move'])
-            except:
+            except Exception as error:
+                print(error)
                 res_dict[key_id] = {
                     'party': Party(row[0]),
                     'tax_type': row_dict['classification'],
@@ -2006,7 +2008,8 @@ class PartyWithholding(metaclass=PoolMeta):
             try:
                 res_dict[key_id]['amount'] += row_dict['amount']
                 res_dict[key_id]['base'] += row_dict['base']
-            except:
+            except Exception as error:
+                print(error)
                 res_dict[key_id] = {
                     'party': Party(row[0]),
                     'tax_type': row_dict['classification'],
@@ -2343,3 +2346,439 @@ class AuxiliaryParty(metaclass=PoolMeta):
                             "end_balance": end_balance
                         }
                         records[key_]['balances'].append(balances)
+
+
+class IncomeStatement(metaclass=PoolMeta):
+    'Income Statement'
+    __name__ = 'account.income_statement'
+
+    @classmethod
+    def get_context(cls, records, header, data):
+        report_context = Report.get_context(records, header, data)
+
+        pool = Pool()
+        Type = pool.get('account.account.type')
+        Account = pool.get('account.account')
+        Period = pool.get('account.period')
+        Fiscalyear = pool.get('account.fiscalyear')
+        Company = pool.get('company.company')
+
+        # records = Type(report_context['data']['id'])
+        fiscalyear_id = Transaction().context.get('fiscalyear')
+        start_period = Transaction().context.get('start_period')
+        end_period = Transaction().context.get('end_period')
+        from_date = Transaction().context.get('from_date')
+        to_date = Transaction().context.get('to_date')
+        comparison = Transaction().context.get('comparison')
+
+        types = Type.search([
+            ('statement', '=', 'income'),
+        ], order=[('sequence', 'ASC')])
+        od = {}
+        filtered_records = []
+        accounts_types = []
+        types_added = []
+
+        if start_period:
+            start_period = Period(start_period)
+        if end_period:
+            end_period = Period(end_period)
+
+        dom_periods = [
+            ('type', '=', 'standard'),
+            ('fiscalyear', '=', fiscalyear_id),
+        ]
+
+        first_period = ''
+        second_period = ''
+        if start_period and end_period:
+            dom_periods.append(('start_date', '>=', start_period.start_date))
+            dom_periods.append(('start_date', '<=', end_period.start_date))
+            first_period = f'{start_period.start_date} - {end_period.start_date}'
+        elif from_date and to_date:
+            dom_periods.append(('start_date', '>=', from_date))
+            dom_periods.append(('start_date', '<=', to_date))
+            first_period = f'{from_date} - {to_date}'
+
+        range_periods = Period.search(dom_periods)
+        periods_ids = [p.id for p in range_periods]
+        main_balance = 0
+        with Transaction().set_context(periods=periods_ids):
+            main_type, = Type.search([('sequence', '=', 30100)])
+            main_balance = main_type.amount
+            while types:
+                type_ = types.pop()
+                balance = type_.amount
+                av_ = 0
+                if main_balance != 0:
+                    av_ = round(
+                                Decimal(abs(balance) / abs(main_balance)), 4)
+                type_dict = {'type': type_, 'data': {'first_period': {
+                                                            "name": type_.name,
+                                                            'balance': balance,
+                                                            'av': av_},
+                                           'second_period': {
+                                                            'name': type_.name,
+                                                            'balance': 0,
+                                                            'av': 0}},
+                                            'parents': {}}
+
+                if type_.statement == 'income':
+                    accounts = Account.search([
+                        ('type', '=', type_.id),
+                    ])
+                    if accounts:
+                        for account in accounts:
+                            account_data = {'first_period': {
+                                                            "av": 0,
+                                                            'balance': 0,
+                                                            'name': '',
+                                                            'code': ''},
+                                           'second_period': {
+                                                            "av": 0,
+                                                            'balance': 0,
+                                                            'name': '',
+                                                            'code': ''}}
+                            parent_data = {'first_period': {
+                                                            "av": 0,
+                                                            'balance': 0,
+                                                            'name': '',
+                                                            'code': ''},
+                                           'second_period': {
+                                                            "av": 0,
+                                                            'balance': 0,
+                                                            'name': '',
+                                                            'code': ''}}
+                            if account.parent not in type_dict['parents']:
+                                type_dict['parents'][account.parent] = {
+                                    'data': parent_data,
+                                    'accounts': {}
+                                }
+                                type_dict['parents'][account.parent]['accounts'][account] = account_data
+                            else:
+                                type_dict['parents'][account.parent]['accounts'][account] = account_data
+
+                    accounts_types.append((type_.sequence, type_dict))
+                if type_.childs:
+                    types.extend(list(type_.childs))
+
+            if accounts_types:
+                od = OrderedDict(sorted(dict(accounts_types).items()))
+
+            for k, v in od.items():
+                childs = []
+                for c in v['type'].childs:
+                    if c.id not in types_added:
+                        childs.append(od[c.sequence])
+                        types_added.extend([v['type'].id, c.id])
+                v['childs'] = childs
+                filtered_records.append(v)
+
+            for accounts_ in filtered_records:
+                if accounts_['childs']:
+                    for accounts_child in accounts_['childs']:
+                        # main_child = accounts_child['type']
+                        # main_amount = main_child.amount
+                        for parent, accounts in accounts_child['parents'].items():
+                            parent_balance = parent.balance
+                            av_ = 0
+                            if main_balance != 0:
+                                av_ = round(
+                                            Decimal(abs(parent_balance) / abs(main_balance)), 8)
+                            accounts['data']['first_period']['av'] = av_
+                            accounts['data']['first_period']['balance'] = parent_balance
+                            accounts['data']['first_period']['name'] = parent.name
+                            accounts['data']['first_period']['code'] = parent.code
+                            for account, data in accounts['accounts'].items():
+                                av_ = 0
+                                if main_balance != 0:
+                                    av_ = round(
+                                        Decimal(abs(account.balance) / abs(main_balance)), 8)
+                                data['first_period']['av'] = av_
+                                data['first_period']['balance'] = account.balance
+                                data['first_period']['name'] = account.name
+                                data['first_period']['code'] = account.code
+
+                else:
+                    for parent, accounts in accounts_['parents'].items():
+                        # main_amount = accounts_['type'].amount
+                        parent_balance = parent.balance
+                        av_ = 0
+                        if main_balance != 0:
+                            av_ = round(
+                                        Decimal(abs(parent_balance) / abs(main_balance)), 8)
+                        accounts['data']['first_period']['av'] = av_
+                        accounts['data']['first_period']['balance'] = parent_balance
+                        accounts['data']['first_period']['name'] = parent.name
+                        accounts['data']['first_period']['code'] = parent.code
+                        # main_amount = parent.balance
+                        for account, data in accounts['accounts'].items():
+                            av_ = 0
+                            if main_balance != 0:
+                                av_ = round(
+                                    Decimal(abs(account.balance) / abs(main_balance)), 8)
+
+                            data['first_period']['av'] = av_
+                            data['first_period']['balance'] = account.balance
+                            data['first_period']['name'] = account.name
+                            data['first_period']['code'] = account.code
+            Transaction().commit()
+        # BUILD DATA FROM SECOND PERIOD
+        merged_records = {}
+        if comparison:
+            filtered_records_, second_period = cls.get_second_period_data()
+            # Fusionar filtered_records y filtered_records_
+            for record in filtered_records:
+                merged_records[record['type'].id] = record
+
+            for record in filtered_records_:
+                if record['childs']:
+                    for accounts_child in record['childs']:
+                        if record['type'].id in merged_records:
+                            merged_record = merged_records[record['type'].id]
+                            merged_record['data']['second_period'] = record['data']['second_period']
+                            balance1 = merged_record['data']['first_period']['balance']
+                            balance2 = merged_record['data']['second_period']['balance']
+                            AHR = ((abs(balance1) - abs(balance2))
+                                / balance2) if balance2 != 0 else 0
+                            AHA = abs(balance1) - abs(balance2)
+                            merged_record['data']['second_period']['AHR'] = round(
+                                AHR, 2)
+                            merged_record['data']['second_period']['AHA'] = round(
+                                AHA, 4)
+                            for parent, accounts in record['parents'].items():
+                                if parent in merged_record['parents']:
+                                    merged_parent = merged_record['parents'][parent]
+                                    merged_parent['data']['second_period'] = accounts['data']['second_period']
+                                    balance1 = merged_parent['data']['first_period']['balance']
+                                    balance2 = merged_parent['data']['second_period']['balance']
+                                    AHR = ((abs(balance1) - abs(balance2))
+                                        / balance2) if balance2 != 0 else 0
+                                    AHA = abs(balance1) - abs(balance2)
+                                    merged_parent['data']['second_period']['AHR'] = round(
+                                        AHR, 2)
+                                    merged_parent['data']['second_period']['AHA'] = round(
+                                        AHA, 4)
+                                for account, data in accounts['accounts'].items():
+                                    if account in merged_parent['accounts']:
+                                        merged_parent['accounts'][account]['second_period'] = data['second_period']
+                                        balance1 = merged_parent['accounts'][account]['first_period']['balance']
+                                        balance2 = merged_parent['accounts'][account]['second_period']['balance']
+                                        AHR = ((abs(balance1) - abs(balance2))
+                                            / balance2) if balance2 != 0 else 0
+                                        AHA = abs(balance1) - abs(balance2)
+
+                                        merged_parent['accounts'][account]['second_period']['AHR'] = round(
+                                            AHR, 2)
+                                        merged_parent['accounts'][account]['second_period']['AHA'] = round(
+                                            AHA, 4)
+                else:
+                    if record['type'].id in merged_records:
+                        merged_record = merged_records[record['type'].id]
+                        merged_record['data']['second_period'] = record['data']['second_period']
+                        balance1 = merged_record['data']['first_period']['balance']
+                        balance2 = merged_record['data']['second_period']['balance']
+                        AHR = ((abs(balance1) - abs(balance2))
+                            / balance2) if balance2 != 0 else 0
+                        AHA = abs(balance1) - abs(balance2)
+                        merged_record['data']['second_period']['AHR'] = round(
+                            AHR, 2)
+                        merged_record['data']['second_period']['AHA'] = round(
+                            AHA, 4)
+                        for parent, accounts in record['parents'].items():
+                            if parent in merged_record['parents']:
+                                merged_parent = merged_record['parents'][parent]
+                                merged_parent['data']['second_period'] = accounts['data']['second_period']
+                                balance1 = merged_parent['data']['first_period']['balance']
+                                balance2 = merged_parent['data']['second_period']['balance']
+                                AHR = ((abs(balance1) - abs(balance2))
+                                    / balance2) if balance2 != 0 else 0
+                                AHA = abs(balance1) - abs(balance2)
+                                merged_parent['data']['second_period']['AHR'] = round(
+                                    AHR, 2)
+                                merged_parent['data']['second_period']['AHA'] = round(
+                                    AHA, 4)
+                            for account, data in accounts['accounts'].items():
+                                if account in merged_parent['accounts']:
+                                    merged_parent['accounts'][account]['second_period'] = data['second_period']
+                                    balance1 = merged_parent['accounts'][account]['first_period']['balance']
+                                    balance2 = merged_parent['accounts'][account]['second_period']['balance']
+                                    AHR = ((abs(balance1) - abs(balance2))
+                                        / balance2) if balance2 != 0 else 0
+                                    AHA = abs(balance1) - abs(balance2)
+
+                                    merged_parent['accounts'][account]['second_period']['AHR'] = round(
+                                        AHR, 2)
+                                    merged_parent['accounts'][account]['second_period']['AHA'] = round(
+                                        AHA, 4)
+
+            filtered_records = list(merged_records.values())
+        report_context['fiscalyear'] = Fiscalyear(fiscalyear_id).name
+        report_context['records'] = filtered_records
+        report_context['comparison'] = comparison
+        report_context['company'] = Company(
+            Transaction().context.get('company'))
+        report_context['first_period'] = first_period
+        report_context['second_period'] = second_period
+        report_context['date'] = Transaction().context.get('date')
+        return report_context
+
+    @classmethod
+    def get_second_period_data(cls):
+        pool = Pool()
+        Type = pool.get('account.account.type')
+        Account = pool.get('account.account')
+        Period = pool.get('account.period')
+        fiscalyear_id = Transaction().context.get('fiscalyear_cmp')
+        start_period = Transaction().context.get('start_period_cmp')
+        end_period = Transaction().context.get('end_period_cmp')
+        from_date = Transaction().context.get('from_date_cmp')
+        to_date = Transaction().context.get('to_date_cmp')
+
+        od = {}
+        filtered_records_ = []
+        accounts_types = []
+        types_added = []
+        if start_period:
+            start_period = Period(start_period)
+        if end_period:
+            end_period = Period(end_period)
+
+        dom_periods = [
+            ('type', '=', 'standard'),
+            ('fiscalyear', '=', fiscalyear_id),
+        ]
+
+        if start_period and end_period:
+            dom_periods.append(
+                ('start_date', '>=', start_period.start_date))
+            dom_periods.append(
+                ('start_date', '<=', end_period.start_date))
+            second_period = f'{start_period.start_date} - {end_period.start_date}'
+        elif from_date and to_date:
+            dom_periods.append(('start_date', '>=', from_date))
+            dom_periods.append(('start_date', '<=', to_date))
+            second_period = f'{from_date} - {to_date}'
+
+        with Transaction().set_context(start_period=Transaction().context.get('start_period_cmp'),
+                                       end_period=Transaction().context.get('end_period_cmp'),
+                                       from_date=Transaction().context.get('from_date_cmp'),
+                                       to_date=Transaction().context.get('to_date_cmp')):
+            types = Type.search([
+                ('statement', '=', 'income')
+            ])
+            main_type, = Type.search([('sequence', '=', 30100)])
+            main_balance = main_type.amount
+            while types:
+                type_ = types.pop()
+                type_dict = {'type': type_, 'data': {'first_period': {
+                                                            "name": type_.name,
+                                                            'balance': 0},
+                                           'second_period': {
+                                                            'name': type_.name,
+                                                            'balance': type_.amount,
+                                                            'AHR': 0,
+                                                            'AHA': 0,
+                                                            'av': 0}},
+                                            'parents': {}}
+                if type_.statement == 'income':
+                    accounts = Account.search([
+                        ('type', '=', type_.id),
+                    ])
+                    if accounts:
+                        for account in accounts:
+                            account_data = {'first_period': {
+                                                            "av": 0,
+                                                            'balance': 0,
+                                                            'name': '',
+                                                            'code': ''},
+                                        'second_period': {
+                                                            "av": 0,
+                                                            'balance': 0,
+                                                            'name': '',
+                                                            'code': '',
+                                                            'AHR': 0,
+                                                            'AHA': 0}}
+                            parent_data = {'first_period': {
+                                                            "av": 0,
+                                                            'balance': 0,
+                                                            'name': '',
+                                                            'code': ''},
+                                        'second_period': {
+                                                            "av": 0,
+                                                            'balance': 0,
+                                                            'name': '',
+                                                            'code': '',
+                                                            'AHR': 0,
+                                                            'AHA': 0}}
+
+                            if account.parent not in type_dict['parents']:
+                                type_dict['parents'][account.parent] = {
+                                    'data': parent_data,
+                                    'accounts': {}
+                                }
+                                type_dict['parents'][account.parent]['accounts'][account] = account_data
+                            else:
+                                type_dict['parents'][account.parent]['accounts'][account] = account_data
+
+                    accounts_types.append((type_.sequence, type_dict))
+                if type_.childs:
+                    types.extend(list(type_.childs))
+
+            if accounts_types:
+                od = OrderedDict(sorted(dict(accounts_types).items()))
+
+            for k, v in od.items():
+                childs = []
+                for c in v['type'].childs:
+                    if c.id not in types_added:
+                        childs.append(od[c.sequence])
+                        types_added.extend([v['type'].id, c.id])
+                v['childs'] = childs
+                filtered_records_.append(v)
+
+            for accounts_ in filtered_records_:
+                if accounts_['childs']:
+                    for accounts_child in accounts_['childs']:
+                        for parent, accounts in accounts_child['parents'].items():
+                            parent_balance = parent.balance
+                            av_ = 0
+                            if main_balance != 0:
+                                av_ = round(
+                                            Decimal(abs(parent_balance) / abs(main_balance)), 4)
+                            accounts['data']['second_period']['av'] = av_
+                            accounts['data']['second_period']['balance'] = parent_balance
+                            accounts['data']['second_period']['name'] = parent.name
+                            accounts['data']['second_period']['code'] = parent.code
+                            for account, data in accounts['accounts'].items():
+                                av_ = 0
+                                if main_balance != 0:
+                                    av_ = round(
+                                        Decimal(abs(account.balance) / abs(main_balance)), 4)
+                                data['second_period']['av'] = av_
+                                data['second_period']['balance'] = account.balance
+                                data['second_period']['name'] = account.name
+                                data['second_period']['code'] = account.code
+                else:
+                    for parent, accounts in accounts_['parents'].items():
+                        # main_amount = accounts_['type'].amount
+                        parent_balance = parent.balance
+                        av_ = 0
+                        if main_balance != 0:
+                            av_ = round(
+                                        Decimal(abs(parent_balance) / abs(main_balance)), 4)
+                        accounts['data']['second_period']['av'] = av_
+                        accounts['data']['second_period']['balance'] = parent_balance
+                        accounts['data']['second_period']['name'] = parent.name
+                        accounts['data']['second_period']['code'] = parent.code
+                        # main_amount = parent.balance
+                        for account, data in accounts['accounts'].items():
+                            av_ = 0
+                            if main_balance != 0:
+                                av_ = round(
+                                    Decimal(abs(account.balance) / abs(main_balance)), 4)
+                            data['second_period']['av'] = av_
+                            data['second_period']['balance'] = account.balance
+                            data['second_period']['name'] = account.name
+                            data['second_period']['code'] = account.code
+        return filtered_records_, second_period

@@ -179,6 +179,7 @@ def register():
     Pool.register(account.AuxiliaryParty,
                   account.AuxiliaryBookCDS,
                   account.IncomeStatementReport,
+                  account.IncomeStatement,
                   account.TrialBalanceDetailedCds,
                   account.PartyWithholding,
                   collection.PortfolioStatusReport,
