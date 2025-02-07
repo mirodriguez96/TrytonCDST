@@ -875,12 +875,13 @@ class Liquidation(metaclass=PoolMeta):
 
                 if line.amount != line_amount:
                     add_amount = round(line_amount - line.amount, 2)
-                    line.adjustments = [Adjustment(
-                            account=wage.debit_account.id,
-                            amount=add_amount,
-                            description=f"AJUSTE {line.description}")]
-                    line.amount += add_amount
-                    line.save()
+                    if add_amount != 0:
+                        line.adjustments = [Adjustment(
+                                account=wage.debit_account.id,
+                                amount=add_amount,
+                                description=f"AJUSTE {line.description}")]
+                        line.amount += add_amount
+                        line.save()
         return lines
 
     def get_salary_prom(self, contract, line_, kind):
@@ -925,7 +926,7 @@ class Liquidation(metaclass=PoolMeta):
 
         payrolls = Payroll.search(domain, order=[('id', 'ASC')])
 
-        if work_days == 0:
+        if work_days == 0 and kind == 'contract':
             message = ("""No se encontraron dias laborados para el periodo, 
                        revise si esta proporcionando la fecha de finalizacion
                        del contrato""")
@@ -1014,13 +1015,17 @@ class Liquidation(metaclass=PoolMeta):
             elif ((end_period < first_of_july)
                   and (start_date_contract > start_period)):
                 start_date = start_date_contract
-                end_date = contract.end_date
+                end_date = contract.end_date if contract.end_date else end_period
+            elif ((end_period < first_of_july)
+                  and (start_date_contract < start_period)):
+                start_date = start_period
+                end_date = contract.end_date if contract.end_date else end_period
             else:
                 start_date = start_period
                 end_date = end_period
         else:
             start_date = start_period if start_period > contract.start_date else contract.start_date
-            end_date = contract.end_date
+            end_date = end_period
         work_days = contract.get_time_days_contract(start_date, end_date)
         return work_days
 
