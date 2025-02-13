@@ -1963,6 +1963,7 @@ class PartyWithholding(metaclass=PoolMeta):
 
         dom_periods = [
             ('fiscalyear', '=', data['fiscalyear']),
+            ('type', '=', 'standard')
         ]
         if data['start_period']:
             start_period = Period(data['start_period'])
