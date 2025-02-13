@@ -2467,46 +2467,48 @@ class IncomeStatement(metaclass=PoolMeta):
                 if accounts_['childs']:
                     for accounts_child in accounts_['childs']:
                         for parent, accounts in accounts_child['parents'].items():
-                            parent_balance = parent.balance
+                            for account, data in accounts['accounts'].items():
+                                av_ = 0
+                                balance_ = account.debit - account.credit
+                                if main_balance != 0:
+                                    av_ = round(
+                                        Decimal(abs(balance_) / abs(main_balance)), 8)
+                                data['first_period']['av'] = av_
+                                data['first_period']['balance'] = balance_
+                                data['first_period']['name'] = account.name
+                                data['first_period']['code'] = account.code
+                                accounts['data']['first_period']['balance'] += balance_
+
+                            parent_balance = accounts['data']['first_period']['balance']
                             av_ = 0
                             if main_balance != 0:
                                 av_ = round(
                                             Decimal(abs(parent_balance) / abs(main_balance)), 8)
                             accounts['data']['first_period']['av'] = av_
-                            accounts['data']['first_period']['balance'] = parent_balance
                             accounts['data']['first_period']['name'] = parent.name
                             accounts['data']['first_period']['code'] = parent.code
-                            for account, data in accounts['accounts'].items():
-                                av_ = 0
-                                if main_balance != 0:
-                                    av_ = round(
-                                        Decimal(abs(account.balance) / abs(main_balance)), 8)
-                                data['first_period']['av'] = av_
-                                data['first_period']['balance'] = account.balance
-                                data['first_period']['name'] = account.name
-                                data['first_period']['code'] = account.code
-
                 else:
                     for parent, accounts in accounts_['parents'].items():
-                        parent_balance = parent.balance
-                        av_ = 0
-                        if main_balance != 0:
-                            av_ = round(
-                                        Decimal(abs(parent_balance) / abs(main_balance)), 8)
-                        accounts['data']['first_period']['av'] = av_
-                        accounts['data']['first_period']['balance'] = parent_balance
-                        accounts['data']['first_period']['name'] = parent.name
-                        accounts['data']['first_period']['code'] = parent.code
                         for account, data in accounts['accounts'].items():
                             av_ = 0
+                            balance_ = account.debit - account.credit
                             if main_balance != 0:
                                 av_ = round(
-                                    Decimal(abs(account.balance) / abs(main_balance)), 8)
-
+                                    Decimal(abs(balance_) / abs(main_balance)), 8)
                             data['first_period']['av'] = av_
-                            data['first_period']['balance'] = account.balance
+                            data['first_period']['balance'] = balance_
                             data['first_period']['name'] = account.name
                             data['first_period']['code'] = account.code
+                            # accounts['data']['first_period']['balance'] += balance_
+
+                        # parent_balance = accounts['data']['first_period']['balance']
+                        # av_ = 0
+                        # if main_balance != 0:
+                        #     av_ = round(
+                        #                 Decimal(abs(parent_balance) / abs(main_balance)), 8)
+                        # accounts['data']['first_period']['av'] = av_
+                        # accounts['data']['first_period']['name'] = parent.name
+                        # accounts['data']['first_period']['code'] = parent.code
             Transaction().commit()
         # BUILD DATA FROM SECOND PERIOD
         merged_records = {}
@@ -2712,44 +2714,46 @@ class IncomeStatement(metaclass=PoolMeta):
                 if accounts_['childs']:
                     for accounts_child in accounts_['childs']:
                         for parent, accounts in accounts_child['parents'].items():
-                            parent_balance = parent.balance
+                            for account, data in accounts['accounts'].items():
+                                balance_ = account.debit - account.credit
+                                av_ = 0
+                                if main_balance != 0:
+                                    av_ = round(
+                                        Decimal(abs(balance_) / abs(main_balance)), 4)
+                                data['second_period']['av'] = av_
+                                data['second_period']['balance'] = balance_
+                                data['second_period']['name'] = account.name
+                                data['second_period']['code'] = account.code
+                                accounts['data']['second_period']['balance'] += balance_
+                            parent_balance = accounts['data']['second_period']['balance']
                             av_ = 0
                             if main_balance != 0:
                                 av_ = round(
                                             Decimal(abs(parent_balance) / abs(main_balance)), 4)
                             accounts['data']['second_period']['av'] = av_
-                            accounts['data']['second_period']['balance'] = parent_balance
                             accounts['data']['second_period']['name'] = parent.name
                             accounts['data']['second_period']['code'] = parent.code
-                            for account, data in accounts['accounts'].items():
-                                av_ = 0
-                                if main_balance != 0:
-                                    av_ = round(
-                                        Decimal(abs(account.balance) / abs(main_balance)), 4)
-                                data['second_period']['av'] = av_
-                                data['second_period']['balance'] = account.balance
-                                data['second_period']['name'] = account.name
-                                data['second_period']['code'] = account.code
+
                 else:
                     for parent, accounts in accounts_['parents'].items():
-                        # main_amount = accounts_['type'].amount
-                        parent_balance = parent.balance
-                        av_ = 0
-                        if main_balance != 0:
-                            av_ = round(
-                                        Decimal(abs(parent_balance) / abs(main_balance)), 4)
-                        accounts['data']['second_period']['av'] = av_
-                        accounts['data']['second_period']['balance'] = parent_balance
-                        accounts['data']['second_period']['name'] = parent.name
-                        accounts['data']['second_period']['code'] = parent.code
-                        # main_amount = parent.balance
                         for account, data in accounts['accounts'].items():
                             av_ = 0
+                            balance_ = account.debit - account.credit
                             if main_balance != 0:
                                 av_ = round(
-                                    Decimal(abs(account.balance) / abs(main_balance)), 4)
+                                    Decimal(abs(balance_) / abs(main_balance)), 4)
                             data['second_period']['av'] = av_
-                            data['second_period']['balance'] = account.balance
+                            data['second_period']['balance'] = balance_
                             data['second_period']['name'] = account.name
                             data['second_period']['code'] = account.code
+                            # accounts['data']['second_period']['balance'] += balance_
+                        # parent_balance = accounts['data']['second_period']['balance']
+                        # av_ = 0
+                        # if main_balance != 0:
+                        #     av_ = round(
+                        #                 Decimal(abs(parent_balance) / abs(main_balance)), 4)
+                        # accounts['data']['second_period']['av'] = av_
+                        # accounts['data']['second_period']['name'] = parent.name
+                        # accounts['data']['second_period']['code'] = parent.code
+
         return filtered_records_, second_period
