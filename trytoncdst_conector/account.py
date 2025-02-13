@@ -1315,11 +1315,9 @@ class IncomeStatementWizard(Wizard):
             'Analitic_filter': Analitic_filter,
             'allstart': allstart
         }
-        print(data)
         return action, data
 
     def transition_print_(self):
-
         return 'end'
 
 
@@ -1329,38 +1327,41 @@ class IncomeStatementReport(Report):
 
     @classmethod
     def get_context(cls, records, header, data):
-        report_context = super().get_context(records, header, data)
+        report_context = Report.get_context(records, header, data)
         pool = Pool()
         cursor = Transaction().connection.cursor()
         Account = pool.get('account.account')
-        Move = pool.get('account.move')
         Line = pool.get('account.move.line')
         AccountType = pool.get('account.account.type')
         Company = pool.get('company.company')
         AnalyticAccount = pool.get('analytic_account.account')
         AnalyticAccountLine = pool.get('analytic_account.line')
+        Type = pool.get('account.account.type')
+
+        domain = [('active', '=', True)]
+        if data['analytic_accounts']:
+            domain.append(('id', 'in', data['analytic_accounts']))
 
         account = Account.__table__()
         accountType = AccountType.__table__()
-        move = Move.__table__()
         line = Line.__table__()
         analyticAccount = AnalyticAccount.__table__()
         analyticAccountLine = AnalyticAccountLine.__table__()
 
+        types = Type.search([
+            ('statement', '=', 'income'),
+        ], order=[('sequence', 'ASC')])
+        period = f"{data['from_date']} - {data['to_date']}"
         # Realizamos las condiciones para la busqueda en la base de datos
         where = analyticAccountLine.date >= data['from_date']
         where &= analyticAccountLine.date <= data['to_date']
         where &= accountType.statement == 'income'
         where &= analyticAccount.active == True
 
-        # if data['posted']:
-        #     where &= move.state == 'posted'
-
         # si cumple la siguiente codicion, se
         # agregan los id de las cuentas analiticas
         # seleccionadas en los parametros de entrada
         if data['analytic_accounts'] and not data['allstart']:
-
             where &= analyticAccount.id.in_(data['analytic_accounts'])
 
         # Aqui se asignan las columnas para los parametros que extraeremos de la db
@@ -1376,8 +1377,9 @@ class IncomeStatementReport(Report):
             'description_line': line.description,
             'debit': analyticAccountLine.debit,
             'credit': analyticAccountLine.credit,
+            'parent_account': account.parent,
             'neto':
-            Sum(analyticAccountLine.debit - analyticAccountLine.credit),
+            Sum(analyticAccountLine.debit - analyticAccountLine.credit)
         }
 
         # Construccion de la consulta a la
@@ -1396,12 +1398,13 @@ class IncomeStatementReport(Report):
                             *columns.values(),
                             where=where,
                             group_by=(accountType.sequence,
-                                      analyticAccountLine.id, account.name,
-                                      account.code, line.description,
-                                      analyticAccount.code,
-                                      analyticAccount.name, accountType.name,
-                                      accountType.parent),
-                            order_by=(account.code))
+                                    analyticAccountLine.id, account.name,
+                                    account.code, line.description,
+                                    analyticAccount.code,
+                                    analyticAccount.name, accountType.name,
+                                    accountType.parent,
+                                    account.parent),
+                            order_by=(accountType.sequence, account.code))
 
         # ejecuta la consulta, el * se asigna para que lo pase como un string
         cursor.execute(*selected)
@@ -1410,92 +1413,183 @@ class IncomeStatementReport(Report):
         result = cursor.fetchall()
 
         records = []
-
-        print(result)
         # Realizamos validacion para saber si existen datos extraidos de la db
         if result:
-            finalitems = {}
             items = {}
+            account_type_cache = {}
+            parent_account_cache = {}
+            analytic_accounts = set()
+            utilidad_neta, = AccountType.search_read(
+                        [('name', '=', 'UTILIDAD NETA')],
+                        fields_names=['sequence', 'name'])
 
             for index, record in enumerate(result):
-                fila_dict = OrderedDict(
-                )  # Le damos la extructura de diccionario
+                fila_dict = OrderedDict()
+                fila_dict = dict(zip(columns.keys(), record))
+                analytic_name = fila_dict['name_analytic']
+                analytic_accounts.add(analytic_name)
+                if analytic_name not in items:
+                    items[analytic_name] = {'account_type': {}}
 
-                # con esta funcion lo que hacemos es crear el
-                # diccionario con las claves de las columnas
-                # y asi sea mas facil acceder a los datos
+            for index, record in enumerate(result):
                 fila_dict = dict(zip(columns.keys(), record))
 
                 parent_results = fila_dict['parent_results']
                 type_account = fila_dict['type_account']
                 analytic_name = fila_dict['name_analytic']
                 sequence = fila_dict['sequence']
-
+                parent_account_id = fila_dict['parent_account']
+                if parent_account_id not in parent_account_cache:
+                    parent_account, = Account.search([('id', '=', parent_account_id)])
+                    parent_account_cache[parent_account_id] = parent_account
+                parent_account = parent_account_cache[parent_account_id]
+                parent_account_code = parent_account.code
                 # Si se selecciono la opcion de 'Analitic_filter'
                 # en los parametros de entrada, ingresamos
                 # directamente a ingresar el diccionario de datos
-                if data['Analitic_filter']:
 
-                    records.append(fila_dict)
-
-                elif data['accumulated']:
-
-                    if analytic_name not in items:
-                        items[analytic_name] = {'account_type': {}}
-
-                    if sequence not in items[analytic_name]['account_type']:
-                        items[analytic_name]['account_type'][sequence] = {
+                for analytic_account in analytic_accounts:
+                    if sequence not in items[analytic_account]['account_type']:
+                        items[analytic_account]['account_type'][sequence] = {
                             'account_type': type_account,
-                            'neto': 0
+                            'account': "",
+                            'neto': 0,
+                            'av': 0,
+                            'childs': {}
                         }
 
+                    if parent_account_code not in items[analytic_account]['account_type'][sequence]['childs']:
+                        items[analytic_account]['account_type'][sequence]['childs'][parent_account_code] = {
+                            'name': parent_account.name,
+                            'code': parent_account_code,
+                            'neto': 0,
+                            'accounts': {}
+                        }
+
+                    if fila_dict['account'] not in items[analytic_account]['account_type'][sequence][
+                            'childs'][parent_account_code]['accounts']:
+                        items[analytic_account]['account_type'][sequence][
+                            'childs'][parent_account_code]['accounts'][fila_dict['account']] = {
+                                'type': type_account,
+                                'code': fila_dict['account'],
+                                'analytic': analytic_account,
+                                'name': fila_dict['name'],
+                                'neto': 0
+                            }
+                items[analytic_name]['account_type'][sequence][
+                    'neto'] += fila_dict['neto']
+                items[analytic_name]['account_type'][sequence][
+                    'childs'][parent_account_code]['accounts'][fila_dict['account']]['neto'] += fila_dict['neto']
+                items[analytic_name]['account_type'][sequence][
+                    'childs'][parent_account_code]['neto'] += fila_dict['neto']
+
+                # Se agrega la utilidad neta a la estructura
+                secuencia_utilidad_neta = utilidad_neta['sequence']
+                if secuencia_utilidad_neta not in items[analytic_name]['account_type']:
+                    items[analytic_name]['account_type'][secuencia_utilidad_neta] = {
+                        'account_type': utilidad_neta['name'],
+                        'account': "",
+                        'neto': 0,
+                        'childs': {}
+                    }
+
+                # Se agregan las cuentas padres a la estructura
+                if parent_results:
+                    if parent_results not in account_type_cache:
+                        name, = AccountType.search_read(
+                            [('id', '=', parent_results)],
+                            fields_names=['name', 'sequence'])
+                        account_type_cache[parent_results] = name
+                    else:
+                        name = account_type_cache[parent_results]
+                    sequence = name['sequence']
+                    if sequence not in items[analytic_name]['account_type']:
+                        items[analytic_name]['account_type'][sequence] = {
+                                'account_type': name['name'],
+                                'account': "",
+                                'neto': 0,
+                                'analytic': analytic_name,
+                                'childs': {}}
                     items[analytic_name]['account_type'][sequence][
                         'neto'] += fila_dict['neto']
-
-                # Es este tramo de codigo, realizamos una acomulacion
-                # de los datos para la extrutura de el estado de
-                # resultado, utilidas bruta, utilidad antes de
-                # impuesto y utilidad neta
-                if analytic_name not in finalitems:
-                    name = AccountType.search_read(
-                        [('name', '=', 'UTILIDAD NETA')],
-                        fields_names=['sequence', 'name'])
-                    finalitems[analytic_name] = {
-                        'parent_results': {},
-                        'sequence': name[0]['sequence'],
-                        'name': name[0]['name'],
-                        'UTILIDAD_NETA': 0
-                    }
-
-                if parent_results not in finalitems[analytic_name][
-                        'parent_results']:
-                    name = AccountType.search_read(
-                        [('id', '=', parent_results)],
-                        fields_names=['name', 'sequence'])
-                    finalitems[analytic_name]['parent_results'][
-                        parent_results] = {
-                            'account_type_result': name[0]['name'],
-                            'sequence': name[0]['sequence'],
-                            'neto_secuence': 0,
-                    }
-
-                finalitems[analytic_name]['parent_results'][parent_results][
-                    'neto_secuence'] += fila_dict['neto']
-                finalitems[analytic_name]['UTILIDAD_NETA'] += fila_dict['neto']
-
         else:
-            # Si el reporte no cuenta con informacion, el usuario recibira este mensaje y no se ejectara el reporte.
             raise UserError(
                 message=None,
                 description=f"El reporte no contiene informacion, no es posible generarlo")
 
+        order = [30100, 30200, 30300, 44200, 44300, 44400, 44500, 45000, 44100, 44600, 46000, 47100, 47000, 51000]
+        sorted_data = {}
+        for analytic_account in analytic_accounts:
+            if analytic_account not in sorted_data:
+                sorted_data[analytic_account] = {
+                    "account_type": {}
+                }
+            if analytic_account in items:
+                for k in order:
+                    if k in items[analytic_account]["account_type"]:
+                        if k not in sorted_data[analytic_account]["account_type"]:
+                            sorted_data[analytic_account]["account_type"][k] = {}
+                        sorted_data[analytic_account]["account_type"][k] = items[analytic_account]["account_type"][k]
+
+        # Se saca las utilidades
+        for item, data_ in sorted_data.items():
+            for sequence, data__ in data_['account_type'].items():
+                utilidad_bruta = sorted_data.get(item, {}).get("account_type", {}).get(30300, {}).get("neto", 0)
+                gastos_admon = sorted_data.get(item, {}).get("account_type", {}).get(44200, {}).get("neto", 0)
+                gastos_distribucion = sorted_data.get(item, {}).get("account_type", {}).get(44300, {}).get("neto", 0)
+                gastos_venta = sorted_data.get(item, {}).get("account_type", {}).get(44400, {}).get("neto", 0)
+                otros_gastos = sorted_data.get(item, {}).get("account_type", {}).get(44500, {}).get("neto", 0)
+                ingresos_no_operacionales = sorted_data.get(item, {}).get("account_type", {}).get(44100, {}).get("neto", 0)
+                gastos_no_operacionales = sorted_data.get(item, {}).get("account_type", {}).get(44600, {}).get("neto", 0)
+                impuestos = sorted_data.get(item, {}).get("account_type", {}).get(47000, {}).get("neto", 0)
+                neto = 0
+
+                utilidad_operacional = utilidad_bruta + gastos_admon + gastos_distribucion + gastos_venta + otros_gastos
+                utilidad_antes_impuestos = utilidad_operacional + ingresos_no_operacionales + gastos_no_operacionales
+                # Utilidad operacional
+                if sequence == 45000:
+                    neto = utilidad_operacional
+
+                # Utilidad antes de impuestos
+                if sequence == 46000:
+                    neto = utilidad_antes_impuestos
+
+                # Utilidad neta
+                if sequence == 51000:
+                    neto = utilidad_antes_impuestos + impuestos
+                if neto != 0:
+                    data__['neto'] = neto
+
+                # Se saca el analisis vertical a cada cuenta
+        for item, data_ in sorted_data.items():
+            main_balance = sorted_data.get(item, {}).get("account_type", {}).get(30100, {}).get("neto", 0)
+            for sequence, data__ in data_['account_type'].items():
+                balance = abs(data__['neto'])
+                if main_balance != 0:
+                    av = round(balance / abs(main_balance), 6)
+                    data__['av'] = round(av, 6)
+                for accounts in data__['childs'].values():
+                    av = 0
+                    balance = abs(accounts['neto'])
+                    if main_balance != 0:
+                        av = round(balance / abs(main_balance), 6)
+                        accounts['av'] = round(av, 6)
+                    for account, data___ in accounts['accounts'].items():
+                        av = 0
+                        balance = abs(data___['neto'])
+                        if main_balance != 0:
+                            av = round(balance / abs(main_balance), 6)
+                        data___['av'] = round(av, 6)
+
         report_context['accumulated'] = str(data['accumulated'])
         report_context['Analitic_filter'] = str(data['Analitic_filter'])
-        report_context['finalitems'] = finalitems
-        report_context['records'] = records if records else items
         report_context['company'] = Company(
             Transaction().context.get('company'))
         report_context['date'] = Transaction().context.get('date')
+        report_context['types'] = types
+        report_context['items'] = sorted_data
+        report_context['accumulated'] = data['accumulated']
+        report_context['period'] = period
         return report_context
 
 
