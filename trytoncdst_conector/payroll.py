@@ -1599,6 +1599,7 @@ class LineLiquidationEvent(ModelSQL):
 
 class Payroll(metaclass=PoolMeta):
     __name__ = 'staff.payroll'
+    payment_extras = fields.Boolean('Payment extras')
 
     @classmethod
     def __setup__(cls):

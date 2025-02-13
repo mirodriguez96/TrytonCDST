@@ -3,6 +3,12 @@
 this repository contains the full copyright notices and license terms. -->
 <tryton>
     <data>
+        <!-- vista form para nomina -->
+        <record model="ir.ui.view" id="payroll_view_form">
+            <field name="model">staff.payroll</field>
+            <field name="inherit" ref="staff_payroll.payroll_view_form"/>
+            <field name="name">payroll_form</field>
+        </record>
 
         <!-- vista form para las nominas electonicas -->
         <record model="ir.ui.view" id="electronic_payroll_view_form">
