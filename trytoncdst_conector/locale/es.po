@@ -980,3 +980,7 @@ msgstr "Fecha de pago de liquidacion"
 msgctxt "field:stock.configuration,to_location:"
 msgid "Output inventory location"
 msgstr "Ubicación Salida de inventario"
+
+msgctxt "field:staff.payroll,payment_extras:"
+msgid "Payment extras"
+msgstr "Pago extras"

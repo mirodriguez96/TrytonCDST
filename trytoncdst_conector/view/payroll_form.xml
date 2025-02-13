@@ -1,0 +1,6 @@
+<data>
+    <xpath expr="/form/field[@name='date_effective']" position="after">
+        <label name="payment_extras"/>
+        <field name="payment_extras"/>
+    </xpath>
+</data>
