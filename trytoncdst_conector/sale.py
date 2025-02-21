@@ -118,7 +118,7 @@ class Sale(metaclass=PoolMeta):
                 documentos_linea, analytic_account,
                 operation_center, exception_) = cls.validate_sale_from_tecno(actualizacion, actualizacion_che,
                                                                             data=data, venta=venta
-                                                                            )
+                                                                                  )
                 if exception_:
                     continue
 
@@ -150,7 +150,6 @@ class Sale(metaclass=PoolMeta):
                                                         tipo_doc)
                             check_post = cls._post_invoices(
                                 actualizacion, actualizacion_che, sale, venta)
-
                             if not check_post:
                                 continue
 
@@ -693,7 +692,6 @@ class Sale(metaclass=PoolMeta):
                 linea.analytic_accounts = [analytic_entry]
 
             linea.save()
-            print(f'Guardando linea {linea}')
 
         if id_venta in sale_in_exception:
             print('Eliminando venta con excepcion')
@@ -798,7 +796,7 @@ class Sale(metaclass=PoolMeta):
         cls.update_exportado_tecno(id_sale_tecno, exportado="T")
         return True
 
-    @ classmethod
+    @classmethod
     def finish_shipment_process(cls, sale, numero_doc, Config, tipo_doc):
         """
         Function to end the process sale sending
@@ -860,7 +858,7 @@ class Sale(metaclass=PoolMeta):
             shipment.receive([shipment])
             shipment.done([shipment])
 
-    @ classmethod
+    @classmethod
     def _post_invoices(cls, actualizacion, actualizacion_che, sale, venta):
         """Function to update invoices and sends with sale info"""
 
@@ -966,7 +964,7 @@ class Sale(metaclass=PoolMeta):
                 Invoice.reconcile_invoice(invoice)
         return True
 
-    @ classmethod
+    @classmethod
     def _validate_total(cls, total_tryton, venta):
         """ Function to validate difference from tecno and tryton"""
 
@@ -985,7 +983,7 @@ class Sale(metaclass=PoolMeta):
         result['diferencia'] = diferencia
         return result
 
-    @ classmethod
+    @classmethod
     def set_payment_pos(cls, actualizacion, actualizacion_che, pagos, sale, args_statement):
         """Function to seach paid cash receipts in tecno
             to pay in tryton"""
@@ -1033,7 +1031,7 @@ class Sale(metaclass=PoolMeta):
                 # cls.update_exportado_tecno(id_tecno=id_tecno_, exportado="E")
                 # Validar aqui porque no se hace una excepcion
 
-    @ classmethod
+    @classmethod
     def search_or_create_statement(cls, args):
         """Function to search account statement by a sale device
             if it doest not exist, create it"""
@@ -1074,7 +1072,7 @@ class Sale(metaclass=PoolMeta):
             statement = Statement.create([values])
         return statement
 
-    @ classmethod
+    @classmethod
     def multipayment_invoices_statement(cls, actualizacion, actualizacion_che, args):
         """Function to pay multiple invoice with
             multiple payment types"""
@@ -1163,7 +1161,7 @@ class Sale(metaclass=PoolMeta):
         return 'ok'
 
     # Función encargada de obtener los ids de los registros a eliminar
-    @ classmethod
+    @classmethod
     def _get_delete_sales(cls, sales):
         pool = Pool()
         LineStatement = pool.get('account.statement.line')
@@ -1243,7 +1241,7 @@ class Sale(metaclass=PoolMeta):
 
     # Función creada con base al asistente force_draft del módulo sale_pos de presik
     # Esta función se encarga de eliminar los registros mediante cursor
-    @ classmethod
+    @classmethod
     def _delete_sales(cls, to_delete):
         sale_table = Table('sale_sale')
         invoice_table = Table('account_invoice')
@@ -1319,7 +1317,7 @@ class Sale(metaclass=PoolMeta):
                 where=sale_table.id.in_(to_delete['sale'])))
 
     # Función encargada de eliminar y marcar para importar ventas de importadas de TecnoCarnes
-    @ classmethod
+    @classmethod
     def delete_imported_sales(cls, sales, cod='N'):
         Cnxn = Pool().get('conector.configuration')
         ids_tecno, to_delete = cls._get_delete_sales(sales)
@@ -1382,7 +1380,7 @@ class Sale(metaclass=PoolMeta):
 class Statement(metaclass=PoolMeta):
     __name__ = 'account.statement'
 
-    @ fields.depends('end_balance')
+    @fields.depends('end_balance')
     def on_change_with_end_balance(self):
         amount = (self.start_balance + sum(line.amount for line in self.lines))
         return amount
@@ -1416,7 +1414,7 @@ class SaleShopDetailedCDSStart(ModelView):
     # product = fields.Many2One('product.product', 'Product')
     # shop = fields.Many2One('sale.shop', 'Shop')
 
-    @ staticmethod
+    @staticmethod
     def default_company():
         return Transaction().context.get('company')
 
@@ -1458,7 +1456,7 @@ class SaleShopDetailedCDSReport(Report):
     'Sale Shop Detailed Report'
     __name__ = 'sale_shop.report_sale_detailed_cds'
 
-    @ classmethod
+    @classmethod
     def get_context(cls, records, header, data):
         report_context = super().get_context(records, header, data)
         pool = Pool()
@@ -1664,7 +1662,7 @@ class SaleInvoiceValueCdstStart(ModelView):
     document_type = fields.Selection('get_document_type', 'Type Document')
     # state = fields.Selection(STATES, 'State')
 
-    @ staticmethod
+    @staticmethod
     def default_company():
         return Transaction().context.get('company')
 
@@ -1714,7 +1712,7 @@ class SaleInvoiceValueCdstReport(Report):
     'Sale Invoice Values Report'
     __name__ = 'sale.invoice_values_cdst.report'
 
-    @ classmethod
+    @classmethod
     def get_context(cls, records, header, data):
         """Function that take context of report and import it"""
         report_context = super().get_context(records, header, data)

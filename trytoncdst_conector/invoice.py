@@ -1,5 +1,5 @@
 """INVOICE MODULE"""
-import datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 
 from sql import Table
@@ -373,10 +373,10 @@ class Invoice(metaclass=PoolMeta):
                 # no permitira ninguna operacion con el documento
 
                 if doc.fecha_hora and isinstance(doc.fecha_hora,
-                                                 datetime.datetime):
+                                                 datetime):
                     fecha_hora = doc.fecha_hora.date()
 
-                    if isinstance(fecha_hora, datetime.date):
+                    if isinstance(fecha_hora, date):
 
                         validate_period = Period.search([
                             ('start_date', '>=', fecha_hora),
@@ -529,8 +529,8 @@ class Invoice(metaclass=PoolMeta):
                         data['exportado'][id_tecno] = 'E'
                         continue
                     fecha = str(doc.fecha_hora).split()[0].split('-')
-                    invoice_date = datetime.date(int(fecha[0]), int(fecha[1]),
-                                                 int(fecha[2]))
+                    invoice_date = date(int(fecha[0]), int(fecha[1]),
+                                        int(fecha[2]))
                     description = (doc.notas).replace(
                         '\n', ' ').replace('\r', '')
                     retencion_rete = False
@@ -1009,19 +1009,17 @@ class Invoice(metaclass=PoolMeta):
         for invoice in invoices:
             move = invoice.get_move()
             if move != invoice.move:
+                if invoice.type == 'out':
+                    move = cls.configure_party(invoice, move)
                 invoice.move = move
                 moves.append(move)
         if moves:
             Move.save(moves)
         for invoice in invoices:
-            if invoice.type == 'out':
-                cls.configure_party(invoice.move, invoice)
-                invoice.print_invoice()
             if invoice.reconciled:
                 reconciled.append(invoice)
             if invoice.state != 'posted':
                 invoice.state = 'posted'
-
         cls.save(invoices)
         Move.post([i.move for i in invoices if i.move.state != 'posted'])
         if reconciled:
@@ -1045,7 +1043,7 @@ class Invoice(metaclass=PoolMeta):
                 Purchase.process(purchases)
 
     @classmethod
-    def configure_party(cls, move, invoice):
+    def configure_party(cls, invoice, move):
         """Function to change party if invoice type out
         in the move lines
 
@@ -1053,9 +1051,6 @@ class Invoice(metaclass=PoolMeta):
             move (object): account_move model
             invoice (object): account_invoice model
         """
-        pool = Pool()
-        AccountMoveLine = pool.get('account.move.line')
-        lines_to_change = []
         for lines in invoice.lines:
             if hasattr(lines, 'account') and hasattr(lines, 'product'):
                 product = lines.product
@@ -1065,17 +1060,12 @@ class Invoice(metaclass=PoolMeta):
                     account_stock_in_used = product.account_stock_in_used.code
 
                     if account_cogs_used and account_stock_in_used:
-                        if move.state == "draft":
-                            for lines in move.lines:
-                                if lines.account.code != account_code:
-                                    if lines.account.code == account_cogs_used or\
-                                            lines.account.code == account_stock_in_used:
-                                        lines.party = move.company.party
-                                        lines.save()
-                                        # lines_to_change.append(lines)
-        # if lines_to_change:
-        #     AccountMoveLine.save(lines_to_change)
-        #     Transaction().commit()
+                        for lines_ in move.lines:
+                            if lines_.account.code != account_code:
+                                if lines_.account.code == account_cogs_used or\
+                                        lines_.account.code == account_stock_in_used:
+                                    lines_.party = invoice.company.party
+        return move
 
 
 class InvoiceLine(metaclass=PoolMeta):
@@ -1548,7 +1538,7 @@ class AdvancePayment(metaclass=PoolMeta):
         note, = Note.create([{
             'description': description,
             'journal': config.default_journal_note.id,
-            'date': datetime.date.today(),
+            'date': date.today(),
             'state': 'draft',
             'lines': [('create', lines_to_create)],
         }])
