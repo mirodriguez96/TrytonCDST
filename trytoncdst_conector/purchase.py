@@ -109,6 +109,8 @@ class Purchase(metaclass=PoolMeta):
             numero_doc = compra.Numero_documento
             tipo_doc = compra.tipo
             id_compra = str(sw) + '-' + tipo_doc + '-' + str(numero_doc)
+            dcto_referencia = str(compra.Numero_Docto_Base)
+            number_ = tipo_doc + '-' + str(numero_doc)
             try:
                 existe = Purchase.search([('id_tecno', '=', id_compra)])
                 if existe:
@@ -151,7 +153,7 @@ class Purchase(metaclass=PoolMeta):
 
                     continue
                 purchase = Purchase()
-                purchase.number = tipo_doc + '-' + str(numero_doc)
+                purchase.number = number_
                 purchase.id_tecno = id_compra
                 purchase.description = compra.notas.replace('\n', ' ').replace(
                     '\r', '')
@@ -258,7 +260,8 @@ class Purchase(metaclass=PoolMeta):
                         ) + '-' + str(compra.Numero_Docto_Base)
                     else:
                         line.quantity = cantidad_facturada
-                        purchase.reference = tipo_doc + '-' + str(numero_doc)
+                        purchase.reference = dcto_referencia
+
                     if company_operation:
                         line.operation_center = operation_center[0]
                     # Comprueba los cambios y trae los impuestos del producto
@@ -355,10 +358,10 @@ class Purchase(metaclass=PoolMeta):
                     invoice.invoice_date = fecha_date
                     invoice.description = purchase.description
                     original_invoice = None
-
+                    id_tecno_ = None
                     if compra.sw == 4:
-                        dcto_base = str(compra.Tipo_Docto_Base) + '-' + str(
-                            compra.Numero_Docto_Base)
+                        id_tecno_ = f'{sw}-{invoice.number}'
+                        dcto_base = str(compra.Tipo_Docto_Base) + '-' + str(compra.Numero_Docto_Base)
                         invoice.reference = dcto_base
                         invoice.comment = f"DEVOLUCION DE LA FACTURA {dcto_base}"
                         original_invoice = Invoice.search([('number', '=',
@@ -368,6 +371,7 @@ class Purchase(metaclass=PoolMeta):
                         else:
                             msg = f"NO SE ENCONTRO LA FACTURA {dcto_base} PARA CRUZAR CON LA DEVOLUCION {invoice.number}"
                             logs[id_compra] = msg
+                    invoice.id_tecno = id_tecno_ if compra.sw == 4 else id_compra
                     invoice.save()
                     ttecno = {
                         'retencion_causada': compra.retencion_causada,
@@ -415,7 +419,6 @@ class Purchase(metaclass=PoolMeta):
     @classmethod
     def delete_imported_purchases(cls, purchases):
         pool = Pool()
-        # Purchase = pool.get('purchase.purchase')
         purchase_table = Table('purchase_purchase')
         invoice_table = Table('account_invoice')
         move_table = Table('account_move')
