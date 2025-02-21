@@ -807,26 +807,19 @@ class Invoice(metaclass=PoolMeta):
 
     @classmethod
     def check_duplicated_reference(cls, invoice):
-        pool = Pool()
-        Purchase = pool.get('purchase.purchase')
         exception = False
-        if (invoice.total_amount < 0
-                or not invoice.reference or invoice.number):
+        count_reference = 0
+        if (invoice.total_amount < 0 or not invoice.reference
+                or invoice.number):
             return
-
-        purchase = Purchase.search([('reference', '=', invoice.reference),
-                                    ('number', '=', invoice.number)])
-        if not purchase:
-            return
-        if len(purchase) > 1:
+        id_tecno = invoice.id_tecno if invoice.id_tecno else None
+        sw_ = id_tecno.split('-')[0] if id_tecno else None
+        invoices_ = cls.search([('reference', '=', invoice.reference),
+                                ('state', '!=', 'cancelled')])
+        count_reference = len(invoices_)
+        if (sw_ and sw_ == '3' and count_reference > 1):
             exception = True
-
-        id_tecno = purchase.id_tecno.split('-')
-        sw = id_tecno[0]
-        if sw in ['27', '28', '31', '32']:
-            return
-
-        if (sw == '3' or not sw):
+        elif not sw_ and count_reference > 1:
             exception = True
 
         if exception:
