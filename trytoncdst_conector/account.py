@@ -152,7 +152,6 @@ class Move(ModelSQL, metaclass=PoolMeta):
         Wagetype = pool.get('staff.wage_type')
         account = None
         party = None
-
         for move in moves:
             lines = move.lines
             if lines:
@@ -160,12 +159,14 @@ class Move(ModelSQL, metaclass=PoolMeta):
                 if analytic_error:
                     raise UserError('ERROR', message)
 
+        moves_to_save = []
         for move in moves:
             amount = Decimal('0.0')
             if not move.lines:
                 raise PostError(
                     gettext('account.msg_post_empty_move', move=move.rec_name))
             company = None
+
             for line in move.lines:
                 if account is None and line.party:
                     party = line.party
@@ -208,7 +209,7 @@ class Move(ModelSQL, metaclass=PoolMeta):
                         move.lines = tuple(move_lines_list)
                         move.save()
                         line_cociled = True
-
+                        moves_to_save.append(move)
                     if not line_cociled:
                         raise UserError('ERROR', 'Hay diferencia en debitos'
                                         'y creditos y no se puede contabilizar.'
@@ -220,7 +221,8 @@ class Move(ModelSQL, metaclass=PoolMeta):
                 else:
                     raise UserError('ERROR', 'Hay diferencia en debitos'
                                     'y creditos, no se puede contabilizar.')
-        cls.save(moves)
+        if moves_to_save:
+            cls.save(moves_to_save)
 
     @classmethod
     def check_analytyc_required(cls, lines):
