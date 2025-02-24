@@ -1567,3 +1567,29 @@ class AdvancePayment(metaclass=PoolMeta):
         if reconcile_invoice and not pending_to_pay:
             MoveLine.reconcile(reconcile_invoice)
         return 'end'
+
+
+class InvoicesReport(metaclass=PoolMeta):
+    'Invoices Report'
+    __name__ = 'invoice_report.invoices_report'
+
+    @classmethod
+    def get_record(cls, invoice):
+        invoice = {
+            'date': invoice.invoice_date,
+            'reference': invoice.reference,
+            'payment_term': invoice.payment_term,
+            'number': invoice.number,
+            'party': invoice.party.rec_name,
+            'id_number': invoice.party.id_number,
+            'description': invoice.description,
+            'iva': 0,
+            'ret': 0,
+            'ica': 0,
+            'ic': 0,
+            'untaxed_amount': 0,
+            'taxed_amount': 0,
+            'total_amount': invoice.total_amount,
+            'state': invoice.state_string
+        }
+        return invoice

@@ -204,6 +204,7 @@ def register():
                   exogena.F5250,
                   exogena.F5251,
                   exogena.F5252,
+                  invoice.InvoicesReport,
                   liquidation.LiquidationReport,
                   payment_bank.PaymentBankGroupReport,
                   payment_bank.BankReportBancolombia,
