@@ -1028,3 +1028,7 @@ msgstr "Traslado de dinero"
 msgctxt "model:ir.action,name:act_bank_money_transfer"
 msgid "Bank-Money Transfer"
 msgstr "Traslado de dinero"
+
+msgctxt "field:staff.liquidation.line,salary_prom:"
+msgid "Salary Prom"
+msgstr "Salario promedio"

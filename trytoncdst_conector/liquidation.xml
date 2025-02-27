@@ -12,10 +12,15 @@ this repository contains the full copyright notices and license terms. -->
             <field name="name">liquidation_form</field>
         </record>
 
-        <!-- <record model="ir.ui.view" id="liquidation_view_form">
-            <field name="model">staff.liquidation</field>
-            <field name="type">form</field>
-            <field name="name">liquidation_form</field>
-        </record> -->
+        <record model="ir.ui.view" id="liquidation_line_view_form">
+            <field name="model">staff.liquidation.line</field>
+            <field name="inherit" ref="staff_payroll_co.liquidation_line_view_form"/>
+            <field name="name">liquidation_line_form</field>
+        </record>
+        <record model="ir.ui.view" id="liquidation_line_view_tree">
+            <field name="model">staff.liquidation.line</field>
+            <field name="inherit" ref="staff_payroll_co.liquidation_line_view_tree"/>
+            <field name="name">liquidation_line_tree</field>
+        </record>
     </data>
 </tryton>
