@@ -984,3 +984,47 @@ msgstr "Ubicación Salida de inventario"
 msgctxt "field:staff.payroll,payment_extras:"
 msgid "Payment extras"
 msgstr "Pago extras"
+
+msgctxt "field:account.bank.money_transfer.start,journal:"
+msgid "Journal"
+msgstr "Libro diario"
+
+msgctxt "field:account.bank.money_transfer.start,fiscalyear:"
+msgid "Fiscal Year"
+msgstr "Año fiscal"
+
+msgctxt "field:account.bank.money_transfer.start,date:"
+msgid "Date"
+msgstr "Fecha"
+
+msgctxt "field:account.bank.money_transfer.start,account_in:"
+msgid "Account in"
+msgstr "Entrada de dinero"
+
+msgctxt "field:account.bank.money_transfer.start,account_out:"
+msgid "Account out"
+msgstr "Salida de dinero"
+
+msgctxt "field:account.bank.money_transfer.start,amount:"
+msgid "Amount"
+msgstr "Cantidad"
+
+msgctxt "field:account.bank.money_transfer.start,description:"
+msgid "Description"
+msgstr "Descripcion"
+
+msgctxt "wizard_button:account.bank.money_transfer,start,move:"
+msgid "Create Move"
+msgstr "Crear asiento"
+
+msgctxt "wizard_button:account.bank.money_transfer,start,end:"
+msgid "Cancel"
+msgstr "Cancelar"
+
+msgctxt "model:ir.ui.menu,name:menu_bank_money_transfer"
+msgid "Bank-Money Transfer"
+msgstr "Traslado de dinero"
+
+msgctxt "model:ir.action,name:act_bank_money_transfer"
+msgid "Bank-Money Transfer"
+msgstr "Traslado de dinero"

@@ -98,5 +98,21 @@ this repository contains the full copyright notices and license terms. -->
             <field name="inherit" ref="account.account_view_form"/>
             <field name="name">account_form</field>
         </record>
+
+        <!-- Asistente para crear movimiento de dinero a bancos -->
+        <record model="ir.ui.view" id="bank_money_transfer_start_view_form">
+            <field name="model">account.bank.money_transfer.start</field>
+            <field name="type">form</field>
+            <field name="name">bank_money_transfer_start_form</field>
+        </record>
+
+        <record model="ir.action.wizard" id="act_bank_money_transfer">
+            <field name="name">Bank-Money Transfer</field>
+            <field name="wiz_name">account.bank.money_transfer</field>
+        </record>
+
+        <menuitem parent="account_voucher.menu_vouchers" sequence="-1" action="act_bank_money_transfer" id="menu_bank_money_transfer"/>
+
+
     </data>
 </tryton>

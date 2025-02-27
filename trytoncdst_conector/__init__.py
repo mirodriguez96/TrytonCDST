@@ -16,6 +16,7 @@ def register():
                   account.Move,
                   account.MoveLine,
                   account.BalanceStockStart,
+                  account.BankMoneyTransferStart,
                   account.AnalyticAccountEntry,
                   account.PartyWithholdingStart,
                   account.Period,
@@ -118,6 +119,7 @@ def register():
                   type_='model')
 
     Pool.register(account.BalanceStock,
+                  account.BankMoneyTransfer,
                   account.PrintAuxiliaryBookCDS,
                   account.IncomeStatementWizard,
                   account.ActiveForceDraft,
