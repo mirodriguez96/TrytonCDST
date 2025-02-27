@@ -871,7 +871,7 @@ class Liquidation(metaclass=PoolMeta):
                 or concept_electronic == 'PrimasS'
                 or concept_electronic == 'IntCesantias')
                     or (kind != 'holidays' and concept == 'holidays')):
-                line_amount = self.get_salary_prom(contract, line, kind)
+                line_amount, salary_prom = self.get_salary_prom(contract, line, kind)
 
                 if line.amount != line_amount:
                     add_amount = round(line_amount - line.amount, 2)
@@ -881,7 +881,9 @@ class Liquidation(metaclass=PoolMeta):
                                 amount=add_amount,
                                 description=f"AJUSTE {line.description}")]
                         line.amount += add_amount
-                        line.save()
+                line.salary_prom = salary_prom
+                line.save()
+
         return lines
 
     def get_salary_prom(self, contract, line_, kind):
@@ -979,22 +981,22 @@ class Liquidation(metaclass=PoolMeta):
             days = self.get_days_line_liquidation(
                 start_period, end_period, contract, line_.wage)
             total_base_salary = contract.salary
-            total_base = round(Decimal(total_base_extras
+            salary_prom = round(Decimal(total_base_extras
                                / work_days * 30) + total_base_salary, 2)
-            salary_prom = round((total_base / 30) * days, 2)
+            line_value = round((salary_prom / 30) * days, 2)
         else:
             total_base = round(total_base_salary + total_base_extras, 2)
             salary_prom = (total_base / percentage_factor) + transport_bonus
 
         if line_.wage.type_concept_electronic == 'Cesantias':
-            salary_prom = (salary_prom * line_.days) / 360
+            line_value = (salary_prom * line_.days) / 360
         if line_.wage.type_concept_electronic == 'PrimasS':
-            salary_prom = (salary_prom * work_days) / 360
+            line_value = (salary_prom * work_days) / 360
         if line_.wage.type_concept_electronic == 'IntCesantias':
             val_cesantias = (salary_prom * line_.days) / 360
-            salary_prom = ((val_cesantias * Decimal('0.12'))
+            line_value = ((val_cesantias * Decimal('0.12'))
                           / 360) * line_.days
-        return salary_prom
+        return line_value, round(salary_prom, 2)
 
     def get_work_days_line_liquidation(self, start_period, end_period,
             contract, wage):
@@ -1234,6 +1236,7 @@ class Liquidation(metaclass=PoolMeta):
 class LiquidationLine(AnalyticMixin, metaclass=PoolMeta):
     __name__ = 'staff.liquidation.line'
     origin = fields.Reference('Origin', selection='get_origin')
+    salary_prom = fields.Numeric('Salary Prom', digits=(16, 2))
 
     @classmethod
     def __setup__(cls):
@@ -1261,6 +1264,10 @@ class LiquidationLine(AnalyticMixin, metaclass=PoolMeta):
         get_name = Model.get_name
         models = cls._get_origin()
         return [(None, '')] + [(m, get_name(m)) for m in models]
+
+    @classmethod
+    def default_salary_prom(cls):
+        return Decimal(0)
 
     def get_analytic_lines(self, account, line, date):
         'Yield analytic lines for the accounting line and the date'
