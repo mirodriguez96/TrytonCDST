@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<!-- This file is part of Tryton.  The COPYRIGHT file at the top level of
+this repository contains the full copyright notices and license terms. -->
+<form>
+
+    <group id="company" colspan="4" col="6">
+        <label name="fiscalyear"/>
+        <field name="fiscalyear"/>
+        <label name="journal"/>
+        <field name="journal"/>
+    </group>
+
+    <group id="account" colspan="4" col="6">
+        <label name="account_in"/>
+        <field name="account_in"/>
+        <label name="account_out"/>
+        <field name="account_out"/>
+    </group>
+
+    <group id="account" colspan="4" col="6">
+        <label name="date"/>
+        <field name="date"/>
+        <label name="amount"/>
+        <field name="amount"/>
+    </group>
+
+    <label name="description"/>
+    <field name="description"/>
+</form>

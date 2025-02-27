@@ -2839,3 +2839,122 @@ class IncomeStatement(metaclass=PoolMeta):
                             data['second_period']['code'] = account.code
 
         return filtered_records_, second_period
+
+
+class BankMoneyTransferStart(ModelView):
+    'Bank Money Transfer Start'
+    __name__ = 'account.bank.money_transfer.start'
+    fiscalyear = fields.Many2One('account.fiscalyear',
+                                 "Fiscal Year",
+                                 required=True,
+                                 domain=[
+                                     ('state', '=', 'open'),
+                                 ])
+    journal = fields.Many2One('account.journal', "Journal", required=True)
+    date = fields.Date("Date", required=True)
+    account_in = fields.Many2One('account.account',
+                                 'Account in',
+                                 domain=[('type.sequence', '=', 11010)],
+                                 required=True)
+    account_out = fields.Many2One('account.account',
+                                  'Account out',
+                                  domain=[('type.sequence', '=', 11010)],
+                                  required=True)
+    amount = fields.Numeric('Amount', digits=(16, 2), required=True)
+    description = fields.Text('Description')
+
+    @classmethod
+    def default_journal(cls):
+        pool = Pool()
+        Journal = pool.get('account.journal')
+        default_journal = Journal.search([('name', '=', 'Traslado')])
+
+        if default_journal:
+            return default_journal[0].id
+
+    @classmethod
+    def default_fiscalyear(cls):
+        pool = Pool()
+        Fiscalyear = pool.get('account.fiscalyear')
+        current_year = str(date.today().year)
+        fiscalyear = Fiscalyear.search([('name', '=', current_year)])
+        if fiscalyear:
+            return fiscalyear[0].id
+
+
+# Asistente encargado de crear asiento contable para transferencia de dinero
+class BankMoneyTransfer(Wizard):
+    'Bank Money Transfer'
+    __name__ = 'account.bank.money_transfer'
+    start = StateView(
+        'account.bank.money_transfer.start',
+        'conector.bank_money_transfer_start_view_form', [
+            Button('Cancel', 'end', 'tryton-cancel'),
+            Button('Create Move', 'move', 'tryton-ok', default=True),
+        ])
+    move = StateAction('account.act_move_form')
+
+    def create_move(self):
+        pool = Pool()
+        Move = pool.get('account.move')
+        Period = pool.get('account.period')
+
+        lines = []
+        line1 = self.build_line(self.start.account_in, 'debit')
+        line2 = self.build_line(self.start.account_out, 'credit')
+        lines.append(line1)
+        lines.append(line2)
+
+        company = self.start.fiscalyear.company.id
+        period, = Period.search([
+            ('company', '=', self.start.fiscalyear.company.id),
+            ('state', '=', 'open'),
+            ('start_date', '<=', self.start.date),
+            ('end_date', '>=', self.start.date),
+            ('type', '=', 'standard'),
+        ], limit=1)
+
+        move = Move()
+        move.company = company
+        move.period = period.id
+        move.journal = self.start.journal
+        move.date = self.start.date
+        move.lines = lines
+        move.description = self.start.description
+        move.save()
+        Move.post([move])
+        return move
+
+    def build_line(self, account, name=None):
+        pool = Pool()
+        Line = pool.get('account.move.line')
+        line = Line()
+
+        line.account = account
+        line.description = self.start.description
+        if name == 'credit':
+            line.debit = Decimal(0)
+            line.credit = self.start.amount
+        else:
+            line.debit = self.start.amount
+            line.credit = Decimal(0)
+        return line
+
+    def do_move(self, action):
+        pool = Pool()
+        Period = pool.get('account.period')
+        period = Period.search([
+            ('company', '=', self.start.fiscalyear.company.id),
+            ('state', '=', 'open'),
+            ('start_date', '<=', self.start.date),
+            ('end_date', '>=', self.start.date),
+            ('type', '=', 'standard'),
+        ], limit=1)
+        if not period:
+            raise UserError('No se encontro periodo contable en la fecha')
+        move = self.create_move()
+        if not move:
+            raise UserError('Error al crear el asiento contable')
+        action['res_id'] = [move.id]
+        action['views'].reverse()
+        return action, {}
