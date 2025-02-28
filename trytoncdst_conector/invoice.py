@@ -810,7 +810,7 @@ class Invoice(metaclass=PoolMeta):
         exception = False
         count_reference = 0
         if (invoice.total_amount < 0 or not invoice.reference
-                or invoice.number):
+                or not invoice.number):
             return
         id_tecno = invoice.id_tecno if invoice.id_tecno else None
         sw_ = id_tecno.split('-')[0] if id_tecno else None
