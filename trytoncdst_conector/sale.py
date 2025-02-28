@@ -991,6 +991,10 @@ class Sale(metaclass=PoolMeta):
         pool = Pool()
         Journal = pool.get('account.statement.journal')
 
+        valor_total = 0
+        for pago in pagos:
+            valor_total += pago.valor
+
         for pago in pagos:
             valor = pago.valor
             id_tecno_ = sale.id_tecno
@@ -1021,15 +1025,13 @@ class Sale(metaclass=PoolMeta):
                 'date': fecha_date,
             }
             result_payment = cls.multipayment_invoices_statement(
-                actualizacion, actualizacion_che, data_payment)
+                actualizacion, actualizacion_che, data_payment, valor_total)
             if result_payment != 'ok':
                 msg = (f"""ERROR AL PROCESAR EL PAGO DE LA VENTA POS
                         {sale.number}""").replace("\n", " ").strip()
                 log = {id_tecno_: msg}
                 cls.update_logs_from_imports(
                     actualizacion, actualizacion_che, logs=log)
-                # cls.update_exportado_tecno(id_tecno=id_tecno_, exportado="E")
-                # Validar aqui porque no se hace una excepcion
 
     @classmethod
     def search_or_create_statement(cls, args):
@@ -1073,7 +1075,7 @@ class Sale(metaclass=PoolMeta):
         return statement
 
     @classmethod
-    def multipayment_invoices_statement(cls, actualizacion, actualizacion_che, args):
+    def multipayment_invoices_statement(cls, actualizacion, actualizacion_che, args, valor_total):
         """Function to pay multiple invoice with
             multiple payment types"""
 
@@ -1090,6 +1092,7 @@ class Sale(metaclass=PoolMeta):
         for sale in sales.keys():
             total_paid = Decimal(0.0)
             id_tecno_ = sale.id_tecno
+
             if sale.payments:
                 total_paid = sum([p.amount for p in sale.payments])
                 if abs(total_paid) >= abs(sale.total_amount):
@@ -1102,8 +1105,6 @@ class Sale(metaclass=PoolMeta):
                         log = {id_tecno_: msg}
                         cls.update_logs_from_imports(
                             actualizacion, actualizacion_che, logs=log)
-                        # cls.update_exportado_tecno(id_tecno=id_tecno_, exportado="E")
-                        # Validar aqui porque no se hace una excepcion
                     continue
 
             total_pay = args.get('sales')[sale]
@@ -1111,7 +1112,8 @@ class Sale(metaclass=PoolMeta):
                 total_pay = sale.total_amount
             else:
                 remainder = sale.residual_amount - total_pay
-                if abs(remainder) < Decimal(600.0) and remainder != 0:
+                if (abs(remainder) <= Decimal(500.0) and remainder != 0
+                        and sale.residual_amount != valor_total):
                     total_pay = sale.residual_amount
 
             if not sale.invoice or (sale.invoice.state != 'posted'
@@ -1135,7 +1137,9 @@ class Sale(metaclass=PoolMeta):
                         actualizacion, actualizacion_che, logs=log)
                     continue
 
+            description = sale.invoice.number or ""
             account_id = sale.party.account_receivable.id
+
             total_pay = Decimal(str(round(total_pay, 2)))
             to_create = {
                 'sale': sale.id,
@@ -1144,8 +1148,7 @@ class Sale(metaclass=PoolMeta):
                 'amount': total_pay,
                 'party': sale.party.id,
                 'account': account_id,
-                'description': sale.invoice_number or sale.invoice.number
-                or '',
+                'description': description,
             }
             line, = StatementLine.create([to_create])
             write_sale = {
@@ -1158,6 +1161,7 @@ class Sale(metaclass=PoolMeta):
             Sale.write([sale], write_sale)
             if (total_pay + total_paid) == sale.total_amount:
                 Sale.do_reconcile([sale])
+
         return 'ok'
 
     # Función encargada de obtener los ids de los registros a eliminar
