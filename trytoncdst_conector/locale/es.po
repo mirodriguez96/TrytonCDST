@@ -1032,3 +1032,7 @@ msgstr "Traslado de dinero"
 msgctxt "field:staff.liquidation.line,salary_prom:"
 msgid "Salary Prom"
 msgstr "Salario promedio"
+
+msgctxt "field:account_col.move_close_year.start,account:"
+msgid "Analytic account"
+msgstr "Cuenta analitica"

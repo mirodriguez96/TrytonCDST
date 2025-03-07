@@ -114,5 +114,12 @@ this repository contains the full copyright notices and license terms. -->
         <menuitem parent="account_voucher.menu_vouchers" sequence="-1" action="act_bank_money_transfer" id="menu_bank_money_transfer"/>
 
 
+        <!-- Herencia de vista de asistente para cierre contable -->
+        <record model="ir.ui.view" id="move_close_year_start_view_form">
+            <field name="model">account_col.move_close_year.start</field>
+            <field name="inherit" ref="account_col.move_close_year_start_view_form"/>
+            <field name="name">move_close_year_start_form</field>
+        </record>
+
     </data>
 </tryton>
