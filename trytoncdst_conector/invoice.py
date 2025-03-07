@@ -366,6 +366,9 @@ class Invoice(metaclass=PoolMeta):
             for doc in documentos:
                 id_tecno = f"{doc.sw}-{doc.tipo}-{doc.Numero_documento}"
                 if doc.anulado.upper() == 'S':
+                    invoice = Invoice.search([('id_tecno', '=', id_tecno)])
+                    if invoice:
+                        Invoice.delete_imported_notes(invoice, 'X')
                     data['logs'][id_tecno] = f"Documento anulado en TecnoCarnes"
                     data['exportado'][id_tecno] = 'X'
                     continue
@@ -985,12 +988,12 @@ class Invoice(metaclass=PoolMeta):
 
     # Función encargada de eliminar y marcar para importar ventas de importadas de TecnoCarnes
     @classmethod
-    def delete_imported_notes(cls, invoices):
+    def delete_imported_notes(cls, invoices, exportado):
         Cnxn = Pool().get('conector.configuration')
         ids_tecno, to_delete = cls._get_delete_invoices(invoices)
         cls._delete_invoices(to_delete)
         for idt in ids_tecno:
-            Cnxn.update_exportado(idt, 'N')
+            Cnxn.update_exportado(idt, exportado)
 
     @classmethod
     def _post(cls, invoices):
@@ -1257,7 +1260,6 @@ class UpdateInvoiceTecno(Wizard):
                     raise UserError(
                         "Revisa el número de la factura (tipo-numero): ",
                         rec_party)
-            print('llegamos aqui')
             if to_delete_sales:
                 Sale.delete_imported_sales(to_delete_sales)
                 log_delete_sale = [i.number for i in to_delete_sales]
@@ -1265,9 +1267,8 @@ class UpdateInvoiceTecno(Wizard):
                 Purchase.delete_imported_purchases(to_delete_purchases)
                 log_delete_purchase = [i.number for i in to_delete_purchases]
             if to_delete_note:
-                Invoice.delete_imported_notes(to_delete_note)
+                Invoice.delete_imported_notes(to_delete_note, 'N')
                 log_delete_note = [i.number for i in to_delete_note]
-            print('llegamos aqui2')
             if exceptions:
                 actualizacion.add_logs(logs)
                 return 'end'
@@ -1278,19 +1279,14 @@ class UpdateInvoiceTecno(Wizard):
             ventas:{log_delete_sale},\
             compras:{log_delete_purchase},\
             notas:{log_delete_note}"
-            print('llegamos aqui2.1')
             actualizacion.add_logs(logs)
-            print('llegamos aqui2.2')
             return 'end'
 
-        print('llegamos aqui3')
         logs[self.start.user.name] = f"El usuario {self.start.user.name}, \
         intento ejecutar el asistente de eliminar y reimportar facturas \
         para el cual, no cuenta con los permisos requeridos"
 
-        print('llegamos aqui4')
         actualizacion.add_logs(logs)
-        print('llegamos aqui5')
         raise UserError(
             f"EL usuario {self.start.user.name}, no cuenta con los permisos para realizar esta accion"
         )
