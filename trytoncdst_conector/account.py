@@ -1,12 +1,13 @@
 import operator
 from collections import OrderedDict, defaultdict
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from itertools import groupby
 from timeit import default_timer as timer
 
-from sql import Null
-from sql.aggregate import Max, Sum
+from sql import Literal, Null, Table, With
+from sql.conditionals import Case
+from sql.aggregate import Max, Sum, Aggregate
 from sql.conditionals import Coalesce
 from trytond.exceptions import UserError
 from trytond.i18n import gettext
@@ -22,6 +23,8 @@ from trytond.transaction import Transaction
 from trytond.wizard import (Button, StateAction, StateReport, StateTransition,
                             StateView, Wizard)
 
+from sql.aggregate import __all__ as __all__aggregate
+
 try:
     from itertools import izip
 except ImportError:
@@ -30,6 +33,13 @@ except ImportError:
 TYPES_PRODUCT = [('no_consumable', 'No consumable'),
                  ('consumable', 'Consumable')]
 _ZERO = Decimal('0.0')
+TODAY = date.today()
+__all__aggregate.append('ArrayAgg')
+
+
+class ArrayAgg(Aggregate):
+    __slots__ = ()
+    _sql = 'ARRAY_AGG'
 
 
 def _get_structured_json_data(json_data):
@@ -2958,3 +2968,159 @@ class BankMoneyTransfer(Wizard):
         action['res_id'] = [move.id]
         action['views'].reverse()
         return action, {}
+
+
+class MoveCloseYearStart(metaclass=PoolMeta):
+    'Move Close Year Start'
+    __name__ = 'account_col.move_close_year.start'
+
+    account = fields.Many2One('analytic_account.account', 'Analytic account',
+        domain=[
+            ('root', '=', Eval('root')),
+            ('type', '=', 'normal'),
+            ],
+        depends=['root', 'company'], required=True)
+
+
+class MoveCloseYear(metaclass=PoolMeta):
+    'Move Close Year'
+    __name__ = 'account_col.move_close_year'
+
+    def transition_create_(self):
+        pool = Pool()
+        Move = pool.get('account.move')
+        MoveLine = pool.get('account.move.line')
+        Fiscalyear = pool.get('account.fiscalyear')
+        Reconciliation = pool.get('account.move.reconciliation')
+        Company = pool.get('company.company')
+        company = Company(self.start.company)
+        fiscalyear = Fiscalyear(self.start.fiscalyear)
+        move_line = MoveLine.__table__()
+        move_ = Move.__table__()
+        account = pool.get('account.account').__table__()
+        period = self.start.period_consolidate
+        cursor = Transaction().connection.cursor()
+
+        from_ = move_line.join(move_, condition=move_line.move == move_.id,
+            ).join(account, condition=move_line.account == account.id,
+            )
+
+        where_ = move_.period == period.id
+        where_ &= account.code >= '4'
+        where_ &= move_line.reconciliation == Null
+
+        query_without_party = from_.select(
+            move_.number,
+            account.code,
+            where=(where_ & (move_line.party == Null)),
+        )
+        cursor.execute(*query_without_party)
+        rows_without_party = cursor.fetchall()
+
+        if rows_without_party:
+            msg = f'Error missing party for the accounts in the next moves \n {rows_without_party}'
+            raise UserError(msg)
+        columns_ = [
+            move_line.account,
+            move_line.party,
+            Sum(move_line.credit).as_('credit'),
+            Sum(move_line.debit).as_('debit'),
+            ArrayAgg(move_line.id).as_('ids'),
+            ]
+
+        def execute_close_period(method):
+            aditional_where = ((move_.method == Null) | (move_.method == ''))
+            if isinstance(method, str):
+                aditional_where = (move_.method == str(method))
+            withs_ = With(query=from_.select(*columns_,
+                where=where_ & aditional_where,
+                group_by=[move_line.account, move_line.party]))
+
+            query_party_account = withs_.select(withs_.account, withs_.party,
+                Case((withs_.credit < withs_.debit, withs_.debit - withs_.credit), else_=0).as_('credit'),
+                Case((withs_.credit > withs_.debit, withs_.credit - withs_.debit), else_=0).as_('debit'),
+                withs_.ids,
+                with_=[withs_],
+                )
+
+            cursor.execute(*query_party_account)
+            result_party_account = cursor.fetchall()
+            query_4 = withs_.select(Sum(withs_.credit - withs_.debit), with_=[withs_])
+            cursor.execute(*query_4)
+            balance = cursor.fetchone()[0]
+            method = method if isinstance(method, str) else None
+
+            if result_party_account:
+                move, = Move.create([{
+                    'period': self.start.period.id,
+                    'date': fiscalyear.end_date,
+                    'journal': self.start.journal.id,
+                    'state': 'draft',
+                    'description': self.start.description,
+                    'method': method,
+                }])
+                move_id = move.id
+                lines_to_create = []
+                for r in result_party_account:
+                    if r[2] > 0 or r[3] > 0:
+                        line_analytic = {
+                            'account': self.start.account,
+                            'debit': r[3],
+                            'credit': r[2]}
+
+                        line = {'party': r[1],
+                                'account': r[0],
+                                'credit': r[2],
+                                'debit': r[3],
+                                'state': 'valid',
+                                'move': move_id,
+                                'analytic_lines': [('create', [line_analytic])]}
+                        lines_to_create.append(line)
+
+                concile_direct = [r[4] for r in result_party_account if (r[2] == 0 and r[3] == 0)]
+                lines_to_concile = {str(r[1]) + '_' + str(r[0]): r[4] for r in result_party_account}
+
+                profit_line = {
+                    'account': self.start.expense_account.id,
+                    'move': move_id,
+                    'debit': _ZERO,
+                    'credit': _ZERO,
+                    'party': company.party.id,
+                }
+                if balance > _ZERO:
+                    profit_line['credit'] = balance
+                else:
+                    profit_line['debit'] = abs(balance)
+
+                line_analytic = {
+                        'account': self.start.account,
+                        'debit': profit_line['debit'],
+                        'credit': profit_line['credit']}
+                profit_line['analytic_lines'] = [('create', [line_analytic])]
+                lines = MoveLine.create(lines_to_create)
+                MoveLine.create([profit_line])
+                Move.post([move])
+
+                for l in lines:
+                    data_to_concile = lines_to_concile[str(l.party.id) + '_' + str(l.account.id)]
+
+                    to_reconcile = [*data_to_concile, l.id]
+                    conciliation, = Reconciliation.create([{'date': TODAY}])
+                    cursor.execute(*move_line.update(
+                        columns=[move_line.reconciliation],
+                        values=[conciliation.id],
+                        where=move_line.id.in_(to_reconcile)),
+                    )
+                for t in concile_direct:
+                    conciliation, = Reconciliation.create([{'date': TODAY}])
+                    cursor.execute(*move_line.update(
+                        columns=[move_line.reconciliation],
+                        values=[conciliation.id],
+                        where=move_line.id.in_(t)),
+                    )
+
+        methods = [(Null, ''), 'colgaap', 'ifrs']
+        for method in methods:
+            execute_close_period(method=method)
+
+        return 'done'
