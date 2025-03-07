@@ -815,7 +815,8 @@ class Invoice(metaclass=PoolMeta):
         id_tecno = invoice.id_tecno if invoice.id_tecno else None
         sw_ = id_tecno.split('-')[0] if id_tecno else None
         invoices_ = cls.search([('reference', '=', invoice.reference),
-                                ('state', '!=', 'cancelled')])
+                                ('state', '!=', 'cancelled'),
+                                ('party', '=', invoice.party)])
         count_reference = len(invoices_)
         if (sw_ and sw_ == '3' and count_reference > 1):
             exception = True
