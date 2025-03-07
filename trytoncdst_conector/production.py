@@ -216,10 +216,17 @@ class Production(metaclass=PoolMeta):
                     numero_doc = transformacion.Numero_documento
                     tipo_doc = transformacion.tipo
                     id_tecno = str(sw) + '-' + tipo_doc + '-' + str(numero_doc)
-                    print(id_tecno)
 
                     if transformacion.anulado == 'S':
-                        logs[id_tecno] = "Documento anulado en TecnoCarnes"
+                        msg = "Documento anulado en TecnoCarnes"
+                        already_production = Production.search([('id_tecno', '=', id_tecno)])
+                        if already_production:
+                            delete_production = Production.delete_productions_account(
+                                already_production)
+                            if delete_production:
+                                msg = f"La producción {id_tecno}fue anulada y eliminada"
+
+                        logs[id_tecno] = msg
                         not_import.append(id_tecno)
                         continue
 
