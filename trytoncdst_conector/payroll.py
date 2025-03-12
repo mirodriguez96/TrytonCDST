@@ -2037,6 +2037,7 @@ class Payroll(metaclass=PoolMeta):
         pool = Pool()
         Move = pool.get('account.move')
         Period = pool.get('account.period')
+        MoveLine = pool.get('account.move.line')
         move_post = []
         for payroll in payrolls:
             if payroll.move:
@@ -2058,6 +2059,26 @@ class Payroll(metaclass=PoolMeta):
             move_post.append(payroll.move)
         if move_post:
             Move.post(move_post)
+
+        grouped = {}
+        for payroll in payrolls:
+            for line in payroll.lines:
+                if line.wage_type.definition != 'payment':
+                    account_id = line.wage_type.credit_account.id
+                else:
+                    account_id = line.wage_type.debit_account.id
+                grouped.update({account_id: {'lines': list(line.move_lines)}})
+
+        for payroll in payrolls:
+            for p in payroll.move.lines:
+                if p.account.id not in grouped or (
+                        p.account.type.statement not in ('balance')) or p.reconciliation:
+                    continue
+                to_reconcile = [p] + grouped[p.account.id]['lines']
+                amount = sum([(r.debit - r.credit) for r in to_reconcile])
+                if payroll.company.currency.is_zero(amount):
+                    MoveLine.reconcile(set(to_reconcile))
+
         for payroll in payrolls:
             payroll.concile_loan_lines()
 
