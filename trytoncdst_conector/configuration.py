@@ -562,11 +562,10 @@ class Configuration(ModelSQL, ModelView):
             SELECT idTipoDoctos FROM dbo.TblTipoDoctos_Tryton
             WHERE PasaATryton='S'
             """
-            subquery = f"""SELECT TOP 50 sw, tipo, Numero_documento, bodega, notas
+            subquery = f"""SELECT TOP 50 sw, tipo, Numero_documento, bodega, notas, anulado
                         FROM dbo.Documentos
                         WHERE sw = {sw}
                         AND Fecha_Hora_Factura >= CAST('{fecha}' AS datetime)
-                        AND anulado != 'S'
                         AND exportado NOT IN ('T', 'E', 'X')
                         """
             if config.end_date:
@@ -575,7 +574,7 @@ class Configuration(ModelSQL, ModelView):
             subquery += "ORDER BY Fecha_Hora_Factura ASC"
             query = f"""
                     SET DATEFORMAT ymd
-                    SELECT d.bodega from_location, l.*, notas
+                    SELECT d.bodega from_location, l.*, notas, anulado
                     FROM dbo.Documentos_Lin AS l
                     INNER JOIN (
                         {subquery}

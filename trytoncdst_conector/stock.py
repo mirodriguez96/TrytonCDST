@@ -3,9 +3,12 @@
 import copy
 import logging
 from collections import defaultdict
-from datetime import timedelta
+from datetime import timedelta, date
 from decimal import Decimal
 from operator import itemgetter
+from sql import Table
+import calendar
+
 
 from trytond.exceptions import UserError
 from trytond.i18n import gettext
@@ -15,8 +18,6 @@ from trytond.pyson import Bool, Eval, Not
 from trytond.report import Report
 from trytond.transaction import Transaction
 from trytond.wizard import Button, StateReport, StateView, Wizard
-
-from .additional import validate_documentos
 
 SW = 16
 
@@ -449,7 +450,7 @@ class ShipmentInternal(metaclass=PoolMeta):
         if not data:
             return
         actualizacion = Actualizacion.create_or_update(import_name)
-        result = validate_documentos(data)
+        result = cls.validate_documentos(data)
         shipments = []
         for value in result["tryton"].values():
             try:
@@ -497,6 +498,323 @@ class ShipmentInternal(metaclass=PoolMeta):
 
         actualizacion.add_logs(result["logs"])
         print(f"---------------FINISH {import_name}---------------")
+
+    @classmethod
+    def validate_documentos(cls, data):
+        """Function to validate documetns from internal shipments"""
+
+        pool = Pool()
+        Config = pool.get('conector.configuration')
+        Actualizacion = pool.get('conector.actualizacion')
+        Internal = pool.get('stock.shipment.internal')
+        StockPeriod = pool.get('stock.period')
+
+        actualizacion = Actualizacion.create_or_update(
+            'CREAR ENVIOS INTERNOS VALIDACION DE PERIODOS')
+        logs = {}
+        dictprodut = {}
+        to_exception = []
+        exists = []
+        tipos_doctos = []
+        bodegas = []
+        productos = []
+        selecto_product = []
+
+        result = {
+            "tryton": {},
+            "logs": {},
+            "exportado": {
+                "T": [],
+                "E": [],
+                "X": [],
+            },
+        }
+        operation_center = cls.get_operation_center(Internal)
+        id_company = Transaction().context.get('company')
+        shipments = Internal.search([('id_tecno', '!=', None)])
+
+        for ship in shipments:
+            exists.append(ship.id_tecno)
+
+        for p in data:
+            if p.IdProducto not in selecto_product:
+                selecto_product.append(p.IdProducto)
+
+        selecto_product = tuple(selecto_product)
+
+        if len(selecto_product) <= 1:
+            selecto_product = f'({selecto_product[0]})'
+
+        select = f"SELECT tr.IdProducto, tr.IdResponsable \
+                    FROM TblProducto tr \
+                    WHERE tr.IdProducto in {selecto_product};"
+
+        set_data = Config.get_data(select)
+
+        for item in set_data:
+
+            dictprodut[item[0]] = {
+                'idresponsable': str(item[1]),
+            }
+
+        move = {}
+        for value, d in enumerate(data):
+            tipo = str(d.tipo)
+            reference = f"{tipo}-{d.Numero_Documento}"
+            reference_ = f"{d.notas}"
+            id_tecno = f"{d.sw}-{reference}"
+            anulado = d.anulado
+            sw = d.sw
+            if id_tecno in exists:
+                if anulado == "S" and sw == 11:
+                    shipment = Internal.search([('id_tecno', '=', id_tecno)])
+                    to_delete = {'shipment': [], 'stock_move': []}
+                    if shipment:
+                        shipment, = shipment
+                        effective_date = shipment.effective_date
+                        _, month_period = calendar.monthrange(effective_date.year, effective_date.month)
+                        date_period = date(effective_date.year, effective_date.month, month_period)
+
+                        period = StockPeriod.search([('date', '=', date_period),
+                                                     ('state', '=', 'closed')])
+
+                        if period:
+                            result["logs"][id_tecno] = "Periodo del documento se encuentra cerrado"
+                            result["exportado"]["E"].append(id_tecno)
+                            continue
+                        stock_move = shipment.moves
+                        to_delete['shipment'] = [shipment.id]
+                        if stock_move:
+                            to_delete['stock_move'] = [stock_move[0].id]
+                        cls.delete_shipments(to_delete)
+                        result["logs"][id_tecno] = "Documento anulado fue eliminado"
+                        result["exportado"]["X"].append(id_tecno)
+                    continue
+
+                result["logs"][id_tecno] = "Ya existe en Tryton"
+                result["exportado"]["T"].append(id_tecno)
+                continue
+            fecha_documento = d.Fecha_Documento.date()
+            if id_tecno not in result["tryton"]:
+                shipment = {
+                    "id_tecno": id_tecno,
+                    "reference": reference_,
+                    "number": reference,
+                    "planned_date": fecha_documento,
+                    "effective_date": fecha_documento,
+                    "planned_start_date": fecha_documento,
+                    "effective_start_date": fecha_documento,
+                    "company": id_company,
+                }
+                if operation_center:
+                    shipment["operation_center"] = operation_center.id
+                if tipo not in tipos_doctos:
+                    tipos_doctos.append(tipo)
+                id_bodega = str(d.from_location)
+                if id_bodega not in bodegas:
+                    bodegas.append(id_bodega)
+                id_bodega_destino = str(d.IdBodega)
+                if id_bodega_destino not in bodegas:
+                    bodegas.append(id_bodega_destino)
+                shipment["from_location"] = id_bodega
+                shipment["to_location"] = id_bodega_destino
+                result["tryton"][id_tecno] = shipment
+
+            shipment = result["tryton"][id_tecno]
+            if "moves" not in shipment:
+                shipment["moves"] = []
+            # Se crea el movimiento
+            producto = dictprodut[d.IdProducto]['idresponsable'] if dictprodut[
+                d.IdProducto] and dictprodut[
+                    d.IdProducto]['idresponsable'] != '0' else str(d.IdProducto)
+            if producto not in productos:
+                productos.append(producto)
+            quantity = round(float(round(d.Cantidad_Facturada, 3)), 3)
+
+            if quantity < 0:
+                result["logs"][
+                    id_tecno] = f"Cantidad en negativo: {quantity} Producto: {producto}"
+                result["exportado"]["E"].append(id_tecno)
+                del (result["tryton"][id_tecno])
+                continue
+
+            if id_tecno not in move:
+                move[id_tecno] = {'move_product': {}}
+            if producto not in move[id_tecno]['move_product']:
+
+                move[id_tecno]['move_product'][producto] = {
+                    "from_location": shipment["from_location"],
+                    "to_location": shipment["to_location"],
+                    "product": producto,
+                    "company": id_company,
+                    "quantity": round(float(0), 3),
+                    "planned_date": shipment["planned_date"],
+                    "effective_date": shipment["effective_date"],
+                }
+
+            quantity_float = move[id_tecno]['move_product'][producto]["quantity"]
+            move[id_tecno]['move_product'][producto]["quantity"] = round(
+                quantity + quantity_float, 3)
+
+        for id_tec, line_move in result['tryton'].items():
+
+            if result['tryton'][id_tec]:
+                result['tryton'][id_tec]['moves'] = [
+                    ('create', [i for i in move[id_tec]['move_product'].values()])
+                ]
+
+        products = cls.get_products(productos)
+        locations = cls.get_locations(bodegas)
+        analytic_types = None
+        if hasattr(Internal, 'analytic_account') and tipos_doctos:
+            analytic_types = cls.get_analytic_types(tipos_doctos)
+        for id_tecno, shipment in result["tryton"].items():
+            if analytic_types:
+                # tipo = shipment["reference"].split("-")[0]
+                tipo = shipment["number"].split("-")[0]
+                if tipo in analytic_types:
+                    shipment["analytic_account"] = analytic_types[tipo].id
+                else:
+                    result["logs"][
+                        id_tecno] = f"No se encontro la cuenta analitica para el tipo: {tipo}"
+                    result["exportado"]["E"].append(id_tecno)
+                    continue
+            from_location = shipment["from_location"]
+            if from_location in locations:
+                storage_location_id = locations[from_location].storage_location.id
+                shipment["from_location"] = storage_location_id
+            else:
+                result["tryton"][
+                    id_tecno] = f"No se encontro la bodega con id_tecno: {from_location}"
+                result["exportado"]["E"].append(id_tecno)
+                continue
+            to_location = shipment["to_location"]
+            if to_location in locations:
+                storage_location_id = locations[to_location].storage_location.id
+                shipment["to_location"] = storage_location_id
+            else:
+                result["tryton"][
+                    id_tecno] = f"No se encontro la bodega con id_tecno: {to_location}"
+                result["exportado"]["E"].append(id_tecno)
+                continue
+            products_exist = True
+            for mv in shipment["moves"][0][1]:
+                mv["from_location"] = shipment["from_location"]
+                mv["to_location"] = shipment["to_location"]
+                if mv["product"] in products:
+                    product = products[mv["product"]]
+                    mv["uom"] = product.default_uom.id
+                    mv["product"] = product.id
+                    if product.default_uom.symbol.upper() == 'U':
+                        mv["quantity"] = round(float(int(mv["quantity"])), 3)
+                else:
+                    products_exist = False
+                    result["logs"][
+                        id_tecno] = f"No se encontro el producto: {mv['product']}"
+                    break
+            if not products_exist:
+                result["exportado"]["E"].append(id_tecno)
+                continue
+        for to_delete in result["exportado"]["E"]:
+            if to_delete in result["tryton"]:
+                del (result["tryton"][to_delete])
+        if to_exception:
+            actualizacion.add_logs(logs)
+        return result
+
+    @classmethod
+    def delete_shipments(cls, to_delete):
+        shipment_table = Table('stock_shipment_internal')
+        stock_move_table = Table('stock_move')
+        cursor = Transaction().connection.cursor()
+
+        if to_delete['shipment']:
+            cursor.execute(*shipment_table.update(
+                columns=[shipment_table.state],
+                values=['draft'],
+                where=shipment_table.id.in_(to_delete['shipment'])))
+            cursor.execute(*shipment_table.delete(
+                where=shipment_table.id.in_(to_delete['shipment'])))
+
+        if to_delete['stock_move']:
+            cursor.execute(*stock_move_table.update(
+                columns=[stock_move_table.state],
+                values=['draft'],
+                where=stock_move_table.id.in_(to_delete['stock_move'])))
+            cursor.execute(*stock_move_table.delete(
+                where=stock_move_table.id.in_(to_delete['stock_move'])))
+
+    @classmethod
+    def get_operation_center(cls, shipment):
+        operation_center = hasattr(shipment, 'operation_center')
+        if operation_center:
+            OperationCenter = Pool().get('company.operation_center')
+            operation_center = OperationCenter.search([],
+                                                    order=[('id', 'DESC')],
+                                                    limit=1)
+            if not operation_center:
+                raise UserError("operation_center",
+                                "the operation center is missing")
+            operation_center, = operation_center
+        return operation_center
+
+    @classmethod
+    def list_to_tuple(cls, value, string=False):
+        result = None
+        if value:
+            if string:
+                result = "('" + "', '".join(map(str, value)) + "')"
+            else:
+                result = "(" + ", ".join(map(str, value)) + ")"
+        return result
+
+    @classmethod
+    def get_analytic_types(cls, tipos_doctos):
+        analytic_types = {}
+        if tipos_doctos:
+            pool = Pool()
+            Config = pool.get('conector.configuration')
+            ids_tipos = cls.list_to_tuple(tipos_doctos)
+            tbltipodocto = Config.get_tbltipodoctos_encabezado(ids_tipos)
+            _values = {}
+            for tipodocto in tbltipodocto:
+                if tipodocto.Encabezado and tipodocto.Encabezado != '0':
+                    encabezado = str(tipodocto.Encabezado)
+                    idtipod = str(tipodocto.idTipoDoctos)
+                    if encabezado not in _values:
+                        _values[encabezado] = []
+                    _values[encabezado].append(idtipod)
+            if _values:
+                AnalyticAccount = pool.get('analytic_account.account')
+                analytic_accounts = AnalyticAccount.search([('code', 'in',
+                                                            _values.keys())])
+                for ac in analytic_accounts:
+                    idstipo = _values[ac.code]
+                    for idt in idstipo:
+                        analytic_types[idt] = ac
+        return analytic_types
+
+    @classmethod
+    def get_locations(cls, bodegas):
+        result = {}
+        if bodegas:
+            Location = Pool().get('stock.location')
+            locations = Location.search([('id_tecno', 'in', bodegas)])
+            for l in locations:
+                result[l.id_tecno] = l
+        return result
+
+    @classmethod
+    def get_products(cls, values):
+        result = {}
+        if values:
+            Product = Pool().get('product.product')
+            products = Product.search(
+                [['OR', ('id_tecno', 'in', values), ('code', 'in', values)],
+                ('active', '=', True)])
+            for p in products:
+                result[p.code] = p
+        return result
 
     @classmethod
     def process_shipment(cls, shipment):
