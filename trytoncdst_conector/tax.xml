@@ -20,5 +20,23 @@ this repository contains the full copyright notices and license terms. -->
             <field name="inherit" ref="account_voucher.taxes_consolidation_start_view_form"/>
             <field name="name">taxes_consolidation_start_form</field>
         </record>
+
+
+        <record model="ir.action.wizard" id="wizard_taxes_posted_accumulated">
+            <field name="name">Taxes Posted Accumulated</field>
+            <field name="wiz_name">account_col.print_taxes_posted_accumulated</field>
+        </record>
+        <record model="ir.action.report" id="report_taxes_posted_accumulated">
+            <field name="name">Taxes Posted Accumulated</field>
+            <field name="model"></field>
+            <field name="report_name">account_col.taxes_posted_report_accumulated</field>
+            <field name="report">conector/ImpuestosContabilizadosAcumulados.ods</field>
+            <field name="template_extension">ods</field>
+            <field name="translatable">False</field>
+        </record>
+        
+        <menuitem parent="account.menu_reporting" action="wizard_taxes_posted_accumulated"
+            id="menu_taxes_posted_accumulated" icon="tryton-print"/>
+
     </data>
 </tryton>
