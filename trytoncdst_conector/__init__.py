@@ -158,6 +158,7 @@ def register():
                   stock.ModifyCostPrice,
                   stock.WarehouseKardexStockCds,
                   tax.TaxesConsolidation,
+                  tax.PrintTaxesPostedAccumulated,
                   voucher.SelectMoveLines,
                   wiz.DeleteVoucherTecno,
                   wiz.VoucherMoveUnreconcile,
@@ -230,5 +231,6 @@ def register():
                   stock.ShipmentDetailedReport,
                   stock.WarehouseCdsKardexReport,
                   stock.WarehouseReport,
+                  tax.TaxesPostedAccumulated,
                   module='conector',
                   type_='report')

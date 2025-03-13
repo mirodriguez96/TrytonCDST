@@ -1036,3 +1036,15 @@ msgstr "Salario promedio"
 msgctxt "field:account_col.move_close_year.start,account:"
 msgid "Analytic account"
 msgstr "Cuenta analitica"
+
+msgctxt "model:ir.action,name:report_taxes_posted_accumulated"
+msgid "Taxes Posted Accumulated"
+msgstr "Impuestos Contabilizados Acumulados"
+
+msgctxt "model:ir.action,name:wizard_taxes_posted_accumulated"
+msgid "Taxes Posted Accumulated"
+msgstr "Impuestos Contabilizados Acumulados"
+
+msgctxt "model:ir.ui.menu,name:menu_taxes_posted_accumulated"
+msgid "Taxes Posted Accumulated"
+msgstr "Impuestos Contabilizados Acumulados"
