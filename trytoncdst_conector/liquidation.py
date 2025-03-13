@@ -954,21 +954,33 @@ class Liquidation(metaclass=PoolMeta):
                     if concept_electronic == 'Comision':
                         total_base_extras += (line.quantity * line.unit_value)
             total_base_salary += payroll_value
+
+        february_days = 0
+        if end_period.month == 2 and end_period.day == 28:
+            february_days = 2
+        elif end_period.month == 2 and end_period.day == 29:
+            february_days = 1
+
+        work_days += february_days
         percentage_factor = round(Decimal(work_days / 30), 6)
 
+        work_days_holidays = 0
+        count_work_days_holidays = 0
         # Calculo de extras nocturnas
         if line_.wage.type_concept == 'holidays':
-            start_period_ = start_period - timedelta(days=365)
+            start_period_ = end_period - timedelta(days=360)
             domain = [('employee', '=', employee), ('contract', '=', contract),
                       ('end', '>=', start_period_), ('end', '<=', end_period)]
             payrolls = Payroll.search(domain, order=[('id', 'ASC')])
             for payroll in payrolls:
+                count_work_days_holidays += 1
                 for line in payroll.lines:
                     concept_electronic = line.wage_type.type_concept_electronic
                     if concept_electronic == 'HRN':
                         total_base_extras += (line.quantity
                                               * line.unit_value)
 
+        work_days_holidays = count_work_days_holidays * 15
         if (line_.wage.type_concept_electronic == 'PrimasS'
                 and kind == 'unemployment'):
             if start_period.month != end_period.month:
@@ -982,20 +994,21 @@ class Liquidation(metaclass=PoolMeta):
                 start_period, end_period, contract, line_.wage)
             total_base_salary = contract.salary
             salary_prom = round(Decimal(total_base_extras
-                               / work_days * 30) + total_base_salary, 2)
+                               / work_days_holidays * 30) + total_base_salary, 2)
             line_value = round((salary_prom / 30) * days, 2)
         else:
             total_base = round(total_base_salary + total_base_extras, 2)
             salary_prom = (total_base / percentage_factor) + transport_bonus
 
+        line_days = line_.days + february_days
         if line_.wage.type_concept_electronic == 'Cesantias':
-            line_value = (salary_prom * line_.days) / 360
+            line_value = (salary_prom * line_days) / 360
         if line_.wage.type_concept_electronic == 'PrimasS':
             line_value = (salary_prom * work_days) / 360
         if line_.wage.type_concept_electronic == 'IntCesantias':
-            val_cesantias = (salary_prom * line_.days) / 360
+            val_cesantias = (salary_prom * line_days) / 360
             line_value = ((val_cesantias * Decimal('0.12'))
-                          / 360) * line_.days
+                          / 360) * line_days
         return line_value, round(salary_prom, 2)
 
     def get_work_days_line_liquidation(self, start_period, end_period,
