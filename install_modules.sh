@@ -3,7 +3,7 @@
 modules="
 trytoncdst_access
 trytoncdst_conector
-trytondcdst-account_bank_statement_cdst
+account_bank_statement_cdst
 "
 
 echo "[INFO] Uninstalling trytoncdst modules... "
