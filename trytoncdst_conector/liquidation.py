@@ -867,6 +867,12 @@ class Liquidation(metaclass=PoolMeta):
             wage = WageType(line.wage)
             concept_electronic = wage.type_concept_electronic
             concept = wage.type_concept
+            month_start_period = line.liquidation.start_period.start.month
+            month_end_period = line.liquidation.end_period.start.month
+            if (concept_electronic == 'PrimasS'
+                    and month_start_period == month_end_period):
+                continue
+
             if ((concept_electronic == 'Cesantias'
                 or concept_electronic == 'PrimasS'
                 or concept_electronic == 'IntCesantias')
@@ -982,13 +988,14 @@ class Liquidation(metaclass=PoolMeta):
 
         work_days_holidays = count_work_days_holidays * 15
         if (line_.wage.type_concept_electronic == 'PrimasS'
-                and kind == 'unemployment'):
+                and kind != 'contract'):
             if start_period.month != end_period.month:
                 day_liquidation_payments = self.payment_liquidation_date.day
                 if day_liquidation_payments >= 15:
                     total_base_salary += contract.salary / 2
                 else:
                     total_base_salary += contract.salary
+
         if line_.wage.type_concept == 'holidays':
             days = self.get_days_line_liquidation(
                 start_period, end_period, contract, line_.wage)
