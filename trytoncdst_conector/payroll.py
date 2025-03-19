@@ -3147,7 +3147,7 @@ class PayrollPaycheckReportExten(metaclass=PoolMeta):
         concept_electronic = line['wage_type.']['type_concept_electronic']
         other_health_retirement = line['wage_type.']['excluded_payroll_electronic']
 
-        if concept == 'holidays' and other_health_retirement and validate:
+        if concept == 'holidays' and validate:
             (staff_line,) = PayrollLine.search([('id', '=', line['id'])])
             wages = [
                 (wage_type.wage_type.credit_account, wage_type)
