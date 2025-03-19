@@ -2,12 +2,13 @@
 
 from trytond.pool import Pool
 
+
 from . import (account, account_dunning, collection, company,
                conector, conector_log, configuration, contract, cron, currency,
                electronic_payroll_wizard, email_, exogena, invoice, line,
                liquidation, loan, party, pay_mode, payment_bank, payment_term,
                payroll, permissions, product, production, purchase, report,
-               sale, sale_device, stock, tax, voucher, wiz)
+               sale, sale_device, stock, tax, wiz)
 
 
 def register():
@@ -105,9 +106,6 @@ def register():
                   tax.MiddleModel,
                   tax.TaxRuleLine,
                   tax.TaxesConsolidationStart,
-                  voucher.Voucher,
-                  voucher.MultiRevenue,
-                  voucher.VoucherConfiguration,
                   wiz.CreateAdjustmentNotesParameters,
                   wiz.AddCenterOperationLineP,
                   wiz.DocumentsForImportParameters,
@@ -159,7 +157,6 @@ def register():
                   stock.WarehouseKardexStockCds,
                   tax.TaxesConsolidation,
                   tax.PrintTaxesPostedAccumulated,
-                  voucher.SelectMoveLines,
                   wiz.DeleteVoucherTecno,
                   wiz.VoucherMoveUnreconcile,
                   wiz.DeleteAccountType,
