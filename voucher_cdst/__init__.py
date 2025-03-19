@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from trytond.pool import Pool
-from . import voucher
+from . import voucher, cron
 
 __all__ = ['register']
 
@@ -15,6 +15,7 @@ def register():
         voucher.Voucher,
         voucher.MultiRevenue,
         voucher.VoucherConfiguration,
+        cron.Cron,
         module='voucher_cdst', type_='model')
 
     Pool.register(

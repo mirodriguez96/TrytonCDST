@@ -61,13 +61,6 @@ class Cron(metaclass=PoolMeta):
             ('sale.device|import_data_pos', "Importar Config Pos"), )
 
         # PDTE POR REESTRUCTURAR / OK
-        cls.method.selection.append(('account.voucher|import_voucher',
-                                     "Importar comprobantes de ingreso"), )
-        # PDTE POR REESTRUCTURAR / OK
-        cls.method.selection.append(('account.voucher|import_voucher_payment',
-                                     "Importar comprobantes de egreso"), )
-
-        # PDTE POR REESTRUCTURAR / OK
         cls.method.selection.append(('account.voucher.paymode|update_paymode',
                                      "Importar formas de pago"), )
 
