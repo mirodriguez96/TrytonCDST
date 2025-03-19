@@ -849,6 +849,7 @@ class ShipmentInternal(metaclass=PoolMeta):
         Period = pool.get('account.period')
         ProductCategory = pool.get('product.category')
         Configuration = pool.get('account.configuration')
+        ProductRevision = pool.get('product.cost_price.revision')
 
         configuration = Configuration(1)
         if not configuration.stock_journal:
@@ -891,8 +892,21 @@ class ShipmentInternal(metaclass=PoolMeta):
                 cost_price = Uom.compute_price(product.default_uom,
                                                product.cost_price,
                                                move.uom)
-                amount = shipment.company.currency.round(
-                    Decimal(str(move.quantity)) * cost_price)
+
+                date_inventory = move.effective_date
+
+                if move.product and move.product.template:
+                    cost_revision = ProductRevision.search(
+                        [('template', '=', move.product.template),
+                            ('date', '<=', date_inventory)],
+                        order=[('date', 'DESC'), ('id', 'DESC')],
+                        limit=1
+                    )
+                if cost_revision:
+                    cost_price = cost_revision[0].cost_price
+
+                amount_ = Decimal(str(move.quantity)) * Decimal(cost_price)
+                amount = shipment.company.currency.round(amount_)
                 line_debit = {
                     'account': account_debit,
                     'party': party,
@@ -1276,20 +1290,19 @@ class MoveCDT(metaclass=PoolMeta):
         super(MoveCDT, cls).do(moves)
         for move in moves:
             cost_price_move = move.cost_price
-            if move.origin and move.origin.__name__ == 'stock.inventory.line':
-                date_inventory = move.origin.inventory.date
-                if move.product and move.product.template:
-                    cost_revision = ProductRevision.search(
-                        [('template', '=', move.product.template),
-                            ('date', '<=', date_inventory)],
-                        order=[('id', 'DESC')],
-                        limit=1
-                    )
-                if cost_revision:
-                    if cost_revision[0].cost_price != cost_price_move:
-                        cost_price = cost_revision[0].cost_price
-                        move.cost_price = cost_price
-                        move.save()
+            date_inventory = move.effective_date
+            if move.product and move.product.template:
+                cost_revision = ProductRevision.search(
+                    [('template', '=', move.product.template),
+                        ('date', '<=', date_inventory)],
+                    order=[('date', 'DESC'),('id', 'DESC')],
+                    limit=1
+                )
+            if cost_revision:
+                if cost_revision[0].cost_price != cost_price_move:
+                    cost_price = cost_revision[0].cost_price
+                    move.cost_price = cost_price
+                    move.save()
         account_moves = []
         for move in moves:
             account_move = move._get_account_stock_move()
