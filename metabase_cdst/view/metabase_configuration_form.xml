@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<tryton>
+    <data>
+        <record model="ir.ui.view" id="metabase_configuration_view_form">
+            <field name="model">metabase.configuration</field>
+            <field name="type">form</field>
+            <field name="name">configuration_form</field>
+            <field name="arch" type="xml"><![CDATA[
+                <form>
+                    <label name="name"/>
+                    <field name="name"/>
+                    <label name="metabase_url"/>
+                    <field name="metabase_url"/>
+                    <label name="api_key"/>
+                    <field name="api_key" widget="password"/>
+                </form>
+            ]]></field>
+        </record>
+
+        <record model="ir.action.act_window" id="act_metabase_configuration_form">
+            <field name="name">Metabase Configuration</field>
+            <field name="res_model">metabase.configuration</field>
+        </record>
+
+        <record model="ir.action.act_window.view" id="act_metabase_configuration_view1">
+            <field name="sequence" eval="1"/>
+            <field name="view" ref="metabase_configuration_view_form"/>
+            <field name="act_window" ref="act_metabase_configuration_form"/>
+        </record>
+
+        <!-- Definir el menú padre si no existe -->
+        <record model="ir.ui.menu" id="menu_metabase_root">
+            <field name="name">Metabase</field>
+        </record>
+
+        <menuitem name="Configuration" parent="menu_metabase_root"
+            action="act_metabase_configuration_form" sequence="20"
+            id="menu_metabase_configuration" icon="tryton-list"/>
+    </data>
+</tryton>

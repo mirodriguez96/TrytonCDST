@@ -1,0 +1,52 @@
+<?xml version="1.0"?>
+<tryton>
+  <data>
+    <!-- Vista de formulario para metabase.access -->
+    <record model="ir.ui.view" id="metabase_access_view_form">
+      <field name="model">metabase.access</field>
+      <field name="type">form</field>
+      <field name="name">metabase.access.form</field>
+      <field name="arch" type="xml"><![CDATA[
+        <form>
+          <label name="name"/>
+          <field name="name"/>
+          <label name="dashboard_id"/>
+          <field name="dashboard_id"/>
+          <label name="params"/>
+          <field name="params"/>
+          <label name="expiration"/>
+          <field name="expiration"/>
+          <label name="allowed_groups"/>
+          <field name="allowed_groups" widget="many2many"/>
+        </form>
+      ]]></field>
+    </record>
+
+    <record model="ir.ui.view" id="metabase_access_view_tree">
+      <field name="model">metabase.access</field>
+      <field name="type">tree</field>
+      <field name="name">metabase.access.tree</field>
+      <field name="arch" type="xml">
+        <![CDATA[
+        <tree>
+          <field name="name" width="300"/>
+          <field name="dashboard_id"/>
+          <field name="params"/>
+          <field name="expiration"/>
+        </tree>
+        ]]>
+      </field>
+    </record>
+
+    <record model="ir.action.act_window" id="act_metabase_access_form">
+      <field name="name">Metabase Access</field>
+      <field name="res_model">metabase.access</field>
+    </record>
+
+    <menuitem name="Access"
+              parent="menu_metabase_root"
+              action="act_metabase_access_form"
+              sequence="30"
+              id="menu_metabase_access"/>
+  </data>
+</tryton>

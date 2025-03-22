@@ -1,0 +1,3 @@
+msgctxt "model:ir.model.button,string:move_post_button"
+msgid "Post"
+msgstr "Abrir reporte"
