@@ -21,7 +21,6 @@ this repository contains the full copyright notices and license terms. -->
         <record model="ir.ui.view" id="staff_event_view_form">
             <field name="model">staff.event</field>
             <field name="inherit" ref="staff_event.staff_event_view_form"/>
-            <!--HEREDA DE LA VISTA-->
             <field name="name">staff_event_form</field>
         </record>
 
@@ -33,7 +32,7 @@ this repository contains the full copyright notices and license terms. -->
         </record>
 
         <!--interfaz para el campo nuevo de la liquidacion-->
-        <record model="ir.ui.view" id="liquidation_view_form1">
+        <!-- <record model="ir.ui.view" id="liquidation_view_form1">
             <field name="model">staff.liquidation</field>
             <field name="inherit" ref="staff_payroll_co.liquidation_view_form"/>
             <field name="name">liquidation_form</field>
@@ -44,14 +43,14 @@ this repository contains the full copyright notices and license terms. -->
             <field name="sequence" eval="10"/>
             <field name="domain" eval="[('state', '=', 'wait')]" pyson="1"/>
             <field name="act_window" ref="staff_payroll_co.act_liquidation_form"/>
-        </record>
+        </record> -->
 
         <!--interfaz para la generación del reporte-->
         <record model="ir.action.report" id="report_payroll_payment_bancolombia">
             <field name="name">Payroll Payment Report Bancolombia</field>
             <field name="model"></field>
             <field name="report_name">staff.payroll.payment_report_bancolombia</field>
-            <field name="report">conector/bank_payments_bancolombia_sap.fods</field>
+            <field name="report">staff_payroll_cdst/bank_payments_bancolombia_sap.fods</field>
             <field name="template_extension">ods</field>
             <field name="translatable">False</field>
         </record>
@@ -71,7 +70,7 @@ this repository contains the full copyright notices and license terms. -->
             <field name="name">Liquidation Payment Report Bancolombia</field>
             <field name="model"></field>
             <field name="report_name">staff.payroll_payment_liq_report_bancolombia</field>
-            <field name="report">conector/bank_payments_bancolombia_sap.fods</field>
+            <field name="report">staff_payroll_cdst/bank_payments_bancolombia_sap.fods</field>
             <field name="template_extension">ods</field>
             <field name="translatable">False</field>
         </record>
@@ -143,7 +142,7 @@ this repository contains the full copyright notices and license terms. -->
             <field name="name">Payroll IBC Report</field>
             <field name="model"></field>
             <field name="report_name">staff_payroll.ibc_report</field>
-            <field name="report">conector/payroll_ibc_report.fods</field>
+            <field name="report">staff_payroll_cdst/payroll_ibc_report.fods</field>
             <field name="template_extension">ods</field>
             <field name="translatable">False</field>
         </record>

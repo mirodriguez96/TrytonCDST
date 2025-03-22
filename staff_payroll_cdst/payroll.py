@@ -331,7 +331,7 @@ class PayrollPaymentBcl(Wizard):
     __name__ = 'staff.payroll.payment_bancolombia'
     start = StateView(
         'staff.payroll_payment_bancolombia.start',
-        'conector.payroll_payment_start_bancolombia_view_form',
+        'staff_payroll_cdst.payroll_payment_start_bancolombia_view_form',
         [
             Button('Cancel', 'end', 'tryton-cancel'),
             Button('Print', 'print_', 'tryton-ok', default=True),
@@ -524,7 +524,7 @@ class LiquidationPaymentBcl(Wizard):
     __name__ = 'staff.payroll.liquidation_payment'
     start = StateView(
         'staff.payroll_liquidation_payment_bancolombia.start',
-        'conector.payment_liquidation_start_bancolombia_view_form',
+        'staff_payroll_cdst.payment_liquidation_start_bancolombia_view_form',
         [
             Button('Cancel', 'end', 'tryton-cancel'),
             Button('Print', 'print_', 'tryton-ok', default=True),
@@ -640,7 +640,7 @@ class PayslipSend(Wizard):
     __name__ = 'staff.payroll.payslip_send'
     start = StateView(
         'staff.payroll_payslip_send.start',
-        'conector.payroll_payslip_send_view_form',
+        'staff_payroll_cdst.payroll_payslip_send_view_form',
         [
             Button('Cancel', 'end', 'tryton-cancel'),
             Button('Send', 'send_', 'tryton-ok', default=True),
@@ -754,7 +754,7 @@ class SendCertificateOfIncomeAndWithholding(Wizard):
     __name__ = 'staff.payroll.certificates_send'
     start = StateView(
         'staff.payroll_certificates_send.start',
-        'conector.payroll_certificates_send_view_form',
+        'staff_payroll_cdst.payroll_certificates_send_view_form',
         [
             Button('Cancel', 'end', 'tryton-cancel'),
             Button('Send', 'send_', 'tryton-ok', default=True),
@@ -983,7 +983,7 @@ class SettlementSend(Wizard):
     __name__ = 'staff.payroll.settlement_send'
     start = StateView(
         'staff.payroll_settlement_send.start',
-        'conector.payroll_settlement_send_view_form',
+        'staff_payroll_cdst.payroll_settlement_send_view_form',
         [
             Button('Cancel', 'end', 'tryton-cancel'),
             Button('Send', 'send_', 'tryton-ok', default=True),
@@ -2754,7 +2754,7 @@ class PayrollIBCWizard(Wizard):
     __name__ = 'staff.payroll_ibc_wizard'
     start = StateView(
         'staff.payroll_ibc.start',
-        'conector.payroll_ibc_form',
+        'staff_payroll_cdst.payroll_ibc_form',
         [
             Button('Cancel', 'end', 'tryton-cancel'),
             Button('Print', 'print_', 'tryton-ok', default=True),
