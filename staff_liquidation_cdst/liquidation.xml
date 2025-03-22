@@ -11,6 +11,12 @@ this repository contains the full copyright notices and license terms. -->
             <field name="inherit" ref="staff_payroll_co.liquidation_view_form"/>
             <field name="name">liquidation_form</field>
         </record>
+        <record model="ir.action.act_window.domain" id="act_liquidation_form_domain_wait">
+            <field name="name">Wait</field>
+            <field name="sequence" eval="10"/>
+            <field name="domain" eval="[('state', '=', 'wait')]" pyson="1"/>
+            <field name="act_window" ref="staff_payroll_co.act_liquidation_form"/>
+        </record>
 
         <record model="ir.ui.view" id="liquidation_line_view_form">
             <field name="model">staff.liquidation.line</field>
