@@ -1,0 +1,5 @@
+psql -U postgres -d 'DEMO7' -c "DELETE FROM ir_ui_view WHERE id IN (SELECT id FROM ir_ui_view WHERE name LIKE 'metabase.access%');"
+psql -U postgres -d 'DEMO7' -c "DELETE FROM ir_action_act_window WHERE id IN (SELECT id FROM ir_action_act_window WHERE name LIKE 'Metabase Access%' OR name LIKE 'Reportes Metabase%');"
+psql -U postgres -d 'DEMO7' -c "DELETE FROM ir_action_act_window_view WHERE act_window IN (SELECT id FROM ir_action_act_window WHERE name LIKE 'Metabase Access%' OR name LIKE 'Reportes Metabase%');"
+psql -U postgres -d 'DEMO7' -c "DELETE FROM ir_ui_menu WHERE id IN (SELECT id FROM ir_ui_menu WHERE name LIKE 'Reportes Metabase%' OR name LIKE 'Access%');"
+psql -U postgres -d 'DEMO7' -c "DELETE FROM ir_model_data WHERE module = 'metabase_integration';"

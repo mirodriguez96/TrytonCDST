@@ -1,0 +1,77 @@
+<?xml version="1.0"?>
+<tryton>
+  <data>
+    <!-- Vista de formulario para metabase.access - Reportes Metabase (independiente) -->
+    <record model="ir.ui.view" id="metabase_access_view_form_reportes">
+      <field name="model">metabase.access</field>
+      <field name="type">form</field>
+      <field name="name">metabase.access.form.reportes</field>
+      <field name="arch" type="xml"><![CDATA[
+        <form>
+          <label name="name"/>
+          <field name="name" readonly="1"/>
+          <label name="dashboard_id"/>
+          <field name="dashboard_id" readonly="1"/>
+          <button name="generate_url" icon="tryton-open" string="Abrir Dashboard" colspan="2"/>
+        </form>
+      ]]></field>
+    </record>
+
+    <!-- Vista en árbol para metabase.access - Reportes Metabase (independiente) -->
+    <record model="ir.ui.view" id="metabase_access_view_tree_reportes">
+      <field name="model">metabase.access</field>
+      <field name="type">tree</field>
+      <field name="name">metabase.access.tree.reportes</field>
+      <field name="arch" type="xml">
+        <![CDATA[
+        <tree>
+          <field name="name" width="300"/>
+          <field name="dashboard_id" readonly="1"/>
+          <field name="params" readonly="1"/>
+          <field name="expiration" readonly="1"/>
+        </tree>
+        ]]>
+      </field>
+    </record>
+
+    <!-- Acción para abrir el formulario Reportes Metabase -->
+    <record model="ir.action.act_window" id="act_metabase_access_form_reportes">
+      <field name="name">Reportes Metabase</field>
+      <field name="res_model">metabase.access</field>
+    </record>
+
+    <!-- Vincular la vista en árbol (para Reportes Metabase) -->
+    <record model="ir.action.act_window.view" id="act_metabase_access_view_tree_reportes">
+      <field name="sequence" eval="1"/>
+      <field name="view" ref="metabase_access_view_tree_reportes"/>
+      <field name="act_window" ref="act_metabase_access_form_reportes"/>
+    </record>
+
+    <!-- Vincular la vista de formulario (para Reportes Metabase) -->
+    <record model="ir.action.act_window.view" id="act_metabase_access_view_form_reportes">
+      <field name="sequence" eval="2"/>
+      <field name="view" ref="metabase_access_view_form_reportes"/>
+      <field name="act_window" ref="act_metabase_access_form_reportes"/>
+    </record>
+
+  <record model="ir.action.wizard" id="act_abrir_reporte_wizard">
+      <field name="name">Abrir Reporte</field>
+      <field name="wiz_name">metabase_integration.abrir_reporte</field> <!-- Nombre del wizard -->
+  </record>
+
+  <record model="ir.action.keyword" id="action_abrir_reporte_keyword">
+      <field name="keyword">form_action</field>
+      <field name="model">metabase.access,-1</field>  <!-- Aquí se usa el modelo 'metabase.access' -->
+      <field name="action" ref="act_abrir_reporte_wizard"/>
+  </record>
+
+
+    <!-- Menú para abrir el formulario Reportes Metabase -->
+    <menuitem name="Reportes Metabase"
+              parent="menu_metabase_root"
+              action="act_metabase_access_form_reportes"
+              sequence="40"
+              id="menu_metabase_access_reportes"/>
+  </data>
+
+</tryton>

@@ -5,6 +5,7 @@ trytoncdst_access
 trytoncdst_conector
 account_bank_statement_cdst
 voucher_cdst
+metabase_cdst
 "
 
 echo "[INFO] Uninstalling trytoncdst modules... "
