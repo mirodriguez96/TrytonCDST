@@ -5,7 +5,7 @@ from trytond.pool import Pool
 
 from . import (account, account_dunning, collection, company,
                conector, conector_log, configuration, cron, currency,
-               electronic_payroll_wizard, email_, exogena, invoice, line,
+               email_, exogena, invoice, line,
                loan, pay_mode, payment_bank, payment_term,
                permissions, product, production, purchase, report,
                sale, sale_device, stock, tax, wiz)
@@ -102,7 +102,6 @@ def register():
                   account.MoveCloseYear,
                   conector.ImportedDocumentWizard,
                   conector_log.DeleteImportRecords,
-                  electronic_payroll_wizard.PayrollElectronicCdst,
                   invoice.UpdateInvoiceTecno,
                   invoice.UpdateNoteDate,
                   invoice.CreditInvoice,
