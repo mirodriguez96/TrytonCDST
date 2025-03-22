@@ -1,0 +1,45 @@
+# Python artifacts
+/build/
+/dist/
+__pycache__/
+*.py[co]
+
+# Environments
+/venv/
+/_venv/
+/.direnv/
+
+# Distribution / packaging
+/*.egg-info/
+/*.egg-link
+/*.egg
+/.eggs/
+
+# Unit test / coverage reports
+/.dbcache/
+/.pytest_cache/
+/.tox
+/.coverage
+/.coverage.*
+/coverage.*
+/.coveragerc
+/TEST-*.xml
+
+# Translations
+*.mo
+*.pot
+
+# Sphinx documentation
+/doc/_build/
+
+# editor artifacts and config
+*~
+.\#*
+\#*#
+*.swp
+.idea
+.spyproject
+*.code-workspace
+
+# platform artifacts
+.DS_store
