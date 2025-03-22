@@ -3,6 +3,7 @@
 modules="
 trytoncdst_access
 trytoncdst_conector
+staff_payroll_cdst
 account_bank_statement_cdst
 voucher_cdst
 "
