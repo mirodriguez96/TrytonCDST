@@ -4,7 +4,7 @@ from trytond.pool import Pool
 
 
 from . import (account, account_dunning, collection, company,
-               conector, conector_log, configuration, contract, cron, currency,
+               conector, conector_log, configuration, cron, currency,
                electronic_payroll_wizard, email_, exogena, invoice, line,
                liquidation, loan, party, pay_mode, payment_bank, payment_term,
                payroll, permissions, product, production, purchase, report,
@@ -34,7 +34,6 @@ def register():
                   conector.ImportedDocument,
                   conector_log.ConectorLog,
                   configuration.Configuration,
-                  contract.Contract,
                   currency.Cron,
                   currency.CurrencyRate,
                   cron.Cron,
@@ -110,7 +109,6 @@ def register():
                   account.MoveCloseYear,
                   conector.ImportedDocumentWizard,
                   conector_log.DeleteImportRecords,
-                  contract.ContractExportAvaliableVacation,
                   electronic_payroll_wizard.PayrollElectronicCdst,
                   invoice.UpdateInvoiceTecno,
                   invoice.UpdateNoteDate,
@@ -159,7 +157,6 @@ def register():
                   account.TrialBalanceDetailedCds,
                   account.PartyWithholding,
                   collection.PortfolioStatusReport,
-                  contract.ContractExportAvaliableVacationReport,
                   exogena.TemplateExogena,
                   exogena.F1001,
                   exogena.F1003,

@@ -19,7 +19,7 @@ this repository contains the full copyright notices and license terms. -->
             <field name="name">Report Avaliable Vacations</field>
             <field name="model">staff.contract</field>
             <field name="report_name">contract.export_avaliable_vacation</field>
-            <field name="report">conector/avaliable_vacations.fods</field>
+            <field name="report">contract_cdst/avaliable_vacations.fods</field>
             <field name="template_extension">ods</field>
             <field name="translatable">False</field>
         </record>
