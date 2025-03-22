@@ -6,8 +6,8 @@ from trytond.pool import Pool
 from . import (account, account_dunning, collection, company,
                conector, conector_log, configuration, cron, currency,
                electronic_payroll_wizard, email_, exogena, invoice, line,
-               loan, party, pay_mode, payment_bank, payment_term,
-               payroll, permissions, product, production, purchase, report,
+               loan, pay_mode, payment_bank, payment_term,
+               permissions, product, production, purchase, report,
                sale, sale_device, stock, tax, wiz)
 
 
@@ -50,10 +50,6 @@ def register():
                   payment_bank.AccountBankParty,
                   payment_bank.BankPayment,
                   payment_term.PaymentTerm,
-                  party.CheckVIESResult,
-                  party.Party,
-                  party.PartyAddress,
-                  party.ContactMechanism,
                   permissions.Permissions,
                   permissions.LinePermissions,
                   product.Product,
@@ -112,7 +108,6 @@ def register():
                   invoice.CreditInvoice,
                   invoice.AdvancePayment,
                   loan.LoanForceDraft,
-                  party.CheckVIES,
                   payment_bank.PaymentBankGroup,
                   production.ProductionDetailed,
                   production.ProductionForceDraft,

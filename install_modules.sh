@@ -3,6 +3,7 @@
 modules="
 trytoncdst_access
 trytoncdst_conector
+party_cdst
 staff_liquidation_cdst
 contract_cdst
 staff_payroll_cdst
