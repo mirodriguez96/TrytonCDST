@@ -6,7 +6,7 @@ from trytond.pool import Pool
 from . import (account, account_dunning, collection, company,
                conector, conector_log, configuration, cron, currency,
                email_, exogena, invoice, line,
-               loan, pay_mode, payment_bank, payment_term,
+               pay_mode, payment_bank, payment_term,
                permissions, product, production, purchase, report,
                sale, sale_device, stock, tax, wiz)
 
@@ -42,8 +42,6 @@ def register():
                   invoice.InvoiceLine,
                   invoice.UpdateInvoiceTecnoStart,
                   invoice.AnalyticAccountEntry,
-                  loan.Loan,
-                  loan.LoanLine,
                   line.Line,
                   pay_mode.VoucherPayMode,
                   payment_bank.PaymentBankGroupStart,
@@ -106,7 +104,6 @@ def register():
                   invoice.UpdateNoteDate,
                   invoice.CreditInvoice,
                   invoice.AdvancePayment,
-                  loan.LoanForceDraft,
                   payment_bank.PaymentBankGroup,
                   production.ProductionDetailed,
                   production.ProductionForceDraft,

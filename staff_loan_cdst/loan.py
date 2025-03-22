@@ -1,9 +1,5 @@
-import calendar
-from datetime import date, datetime
-from decimal import Decimal
-
 from dateutil.relativedelta import relativedelta
-from sql import Literal, Table
+from sql import Table
 from trytond.exceptions import UserError
 from trytond.pool import Pool, PoolMeta
 from trytond.pyson import Eval
@@ -50,7 +46,6 @@ class Loan(metaclass=PoolMeta):
                         line_payroll = LinePayroll(line.origin)
                         cls.calculate_loan_payroll(
                             line_payroll, line)
-
 
     @classmethod
     def validate_amount_loan(cls, loans):
@@ -187,7 +182,7 @@ class LoanLine(metaclass=PoolMeta):
     def validate_line(cls, lines):
         line = cls.__table__()
         cursor = Transaction().connection.cursor()
-        
+
         pending_lines = []
         paid_lines = []
         for line_ in lines:
@@ -219,10 +214,11 @@ class LoanLine(metaclass=PoolMeta):
     @classmethod
     def validate_paid_line(cls, line):
         AccountMoveLine = Pool().get('account.move.line')
-        loan_move_line = AccountMoveLine.search([('origin','=',line),
-                                                 ('reconciliation','!=',None)])
-        loan_paid = True if loan_move_line else False        
+        loan_move_line = AccountMoveLine.search([('origin', '=', line),
+                                                 ('reconciliation', '!=', None)])
+        loan_paid = True if loan_move_line else False
         return loan_paid
+
 
 class LoanForceDraft(Wizard):
     """Function to Force draft Loan

@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+
+<tryton>
+    <data>
+        <!--Forzar borrado Prestamos-->
+        <record model="ir.action.wizard" id="act_staff_loan_force_draft">
+            <field name="name">Loan Force Draft</field>
+            <field name="wiz_name">staff.loan.force_draft</field>
+        </record>
+        <record model="ir.action.keyword" id="action_staff_loan_force_draft_keyword">
+            <field name="keyword">form_action</field>
+            <field name="model">staff.loan,-1</field>
+            <field name="action" ref="act_staff_loan_force_draft"/>
+        </record>
+
+        <!--Reporte de prestamo -->
+        <record model="ir.action.report" id="report_loan_format">
+            <field name="name">Loan Format</field>
+            <field name="report_name">staff.loan.loan_format_report</field>
+            <field name="model">staff.loan</field>
+            <field name="report">staff_loan_cdst/loan_format.fodt</field>
+            <field name="template_extension">odt</field>
+        </record>
+        <record model="ir.action.keyword" id="report_loan_format_keyword">
+            <field name="keyword">form_print</field>
+            <field name="model">staff.loan,-1</field>
+            <field name="action" ref="report_loan_format"/>
+        </record>
+
+    </data>
+</tryton>
