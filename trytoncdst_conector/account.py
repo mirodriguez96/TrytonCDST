@@ -2976,10 +2976,9 @@ class MoveCloseYearStart(metaclass=PoolMeta):
 
     account = fields.Many2One('analytic_account.account', 'Analytic account',
         domain=[
-            ('root', '=', Eval('root')),
             ('type', '=', 'normal'),
             ],
-        depends=['root', 'company'], required=True)
+        depends=['company'], required=True)
 
 
 class MoveCloseYear(metaclass=PoolMeta):
