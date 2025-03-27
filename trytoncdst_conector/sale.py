@@ -1092,7 +1092,7 @@ class Sale(metaclass=PoolMeta):
         for sale in sales.keys():
             total_paid = Decimal(0.0)
             id_tecno_ = sale.id_tecno
-
+            residual_amount = 0
             if sale.payments:
                 total_paid = sum([p.amount for p in sale.payments])
                 if abs(total_paid) >= abs(sale.total_amount):
@@ -1111,10 +1111,11 @@ class Sale(metaclass=PoolMeta):
             if not total_pay:
                 total_pay = sale.total_amount
             else:
-                remainder = sale.residual_amount - total_pay
+                remainder = total_pay - sale.residual_amount
                 if (abs(remainder) <= Decimal(500.0) and remainder != 0
                         and sale.residual_amount != valor_total):
                     total_pay = sale.residual_amount
+                    residual_amount = round(remainder, 2)
 
             if not sale.invoice or (sale.invoice.state != 'posted'
                                     and sale.invoice.state != 'paid'):
@@ -1149,15 +1150,14 @@ class Sale(metaclass=PoolMeta):
                 'party': sale.party.id,
                 'account': account_id,
                 'description': description,
+                'origin_value': residual_amount,
             }
             line, = StatementLine.create([to_create])
             write_sale = {
                 'turn': line.statement.turn,
             }
-
             if hasattr(sale, 'order_status'):
                 write_sale['order_status'] = 'delivered'
-
             Sale.write([sale], write_sale)
             if (total_pay + total_paid) == sale.total_amount:
                 Sale.do_reconcile([sale])
