@@ -454,6 +454,13 @@ class ShipmentInternal(metaclass=PoolMeta):
         shipments = []
         for value in result["tryton"].values():
             try:
+                if value['from_location'] == value['to_location']:
+                    msg = """En traslados no puede tener la misma ubicacion
+                        de entrada y salida"""
+                    result["logs"][value['id_tecno']] = str(msg)
+                    result["exportado"]["E"].append(value['id_tecno'])
+                    continue
+
                 if sw == '11':
                     if not output_location:
                         msg = """Debe configuracion una ubicacion
@@ -461,6 +468,14 @@ class ShipmentInternal(metaclass=PoolMeta):
                         result["logs"][value['id_tecno']] = str(msg)
                         result["exportado"]["E"].append(value['id_tecno'])
                         break
+
+                    if output_location == value['from_location']:
+                        msg = """En traslados no puede tener la misma ubicacion
+                        de entrada y salida"""
+                        result["logs"][value['id_tecno']] = str(msg)
+                        result["exportado"]["E"].append(value['id_tecno'])
+                        continue
+
                     value['to_location'] = output_location.id
 
                     for moves in value['moves']:
@@ -469,9 +484,11 @@ class ShipmentInternal(metaclass=PoolMeta):
                             move['to_location'] = output_location.id
                             move['unit_price'] = product.cost_price
                 shipment, = cls.create([value])
-                shipments.append(shipment)
+                if shipment:
+                    shipments.append(shipment)
             except Exception as error:
-                logging.error(f"ROLLBACK1-{import_name}: {error}")
+                logging.error(f"ROLLBACK1-{import_name}-[{value['id_tecno']}]: {error}")
+                Transaction().rollback()
                 result["logs"][value['id_tecno']] = str(error)
                 result["exportado"]["E"].append(value['id_tecno'])
 
@@ -1295,7 +1312,7 @@ class MoveCDT(metaclass=PoolMeta):
                 cost_revision = ProductRevision.search(
                     [('template', '=', move.product.template),
                         ('date', '<=', date_inventory)],
-                    order=[('date', 'DESC'),('id', 'DESC')],
+                    order=[('date', 'DESC'), ('id', 'DESC')],
                     limit=1
                 )
             if cost_revision:
