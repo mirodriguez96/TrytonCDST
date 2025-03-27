@@ -268,11 +268,117 @@ class CreateBankLineParameters(ModelView):
                          help='File type CSV, separated by commas(;)')
 
 
-class StatementLine(ModelSQL, ModelView, metaclass=PoolMeta):
+class StatementLine(metaclass=PoolMeta):
     __name__ = 'account.statement.line'
+
+    origin_value = fields.Numeric('Origin value', digits=(16, 2))
 
     move_lines_source = fields.Function(
         fields.Many2One('account.move', 'Move'), 'get_move_value')
+
+    def _get_move2(self):
+        pool = Pool()
+        Move = pool.get('account.move')
+        MoveLine = pool.get('account.move.line')
+        Period = pool.get('account.period')
+        Journal = pool.get('account.statement.journal')
+        company_id = self.statement.company.id
+        period_id = Period.find(company_id, date=self.date)
+        _move = {
+            'period': period_id,
+            'journal': self.statement.journal.journal.id,
+            'date': self.date,
+            'origin': str(self.statement),
+            'company': company_id,
+            'state': 'draft',
+        }
+
+        move, = Move.create([_move])
+        to_create = self.get_move_lines(move)
+
+        journals = Journal.search([
+            ('kind', '=', 'cash')
+        ])
+        journal_ids = [j.id for j in journals]
+
+        # Just add extra amount to move line when payment is different to cash
+        if hasattr(self, 'extra_amount') and self.extra_amount and self.extra_amount > 0 and \
+                self.statement.journal.id not in journal_ids:
+            if journals:
+                journal = journals[0]
+                move_line3 = self.get_move_line2({
+                    'account': journal.account,
+                    'move_id': move.id,
+                    'amount': self.extra_amount
+                })
+                to_create.append(move_line3)
+
+        MoveLine.create(to_create)
+        return move
+
+    def get_move_lines(self, move):
+        pool = Pool()
+        Adjustment = pool.get('account.move.reconcile.write_off')
+        to_create = []
+        move_line1 = self.get_move_line2({
+            'move_id': move.id,
+            'account': self.account,
+            'amount': self.amount
+        })
+        to_create.append(move_line1)
+        extra_amount = 0
+        if hasattr(self, 'extra_amount') and self.extra_amount:
+            extra_amount = self.extra_amount
+
+        if self.origin_value:
+            value_ = self.origin_value
+            adjustment, = Adjustment.search([])
+            if value_ > 0:
+                account_ = adjustment.credit_account
+                adjust_line = self.get_move_line2({
+                    'move_id': move.id,
+                    'account': account_,
+                    'amount': value_,
+                })
+                move_line2 = self.get_move_line2({
+                    'account': self.statement.journal.account,
+                    'move_id': move.id,
+                    'amount': self.amount + extra_amount + value_,
+                    'journal_account': True,
+                    })
+            else:
+                account_ = adjustment.debit_account
+                adjust_line = self.get_move_line2({
+                    'move_id': move.id,
+                    'account': account_,
+                    'amount': abs(value_),
+                    'journal_account': True,
+                })
+
+                move_line2 = self.get_move_line2({
+                    'account': self.statement.journal.account,
+                    'move_id': move.id,
+                    'amount': self.amount + extra_amount - abs(value_),
+                    'journal_account': True,
+                })
+            to_create.append(adjust_line)
+        else:
+            move_line2 = self.get_move_line2({
+                'account': self.statement.journal.account,
+                'move_id': move.id,
+                'amount': self.amount + extra_amount,
+                'journal_account': True,
+            })
+
+        if self.statement.journal.require_party and self.statement.journal.party:
+            party = self.statement.journal.party.id
+            move_line2['party'] = party
+        elif self.statement.journal.journal.type == 'commission':
+            party = self.sale.agent.party.id
+            move_line2['party'] = party
+        to_create.append(move_line2)
+
+        return to_create
 
     @fields.depends('move')
     def get_move_value(self, name=None):
