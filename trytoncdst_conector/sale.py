@@ -955,13 +955,19 @@ class Sale(metaclass=PoolMeta):
                 raise Exception(error)
 
             if invoice.original_invoice:
-                paymentline = PaymentLine()
-                paymentline.invoice = invoice.original_invoice
-                paymentline.invoice_account = invoice.account
-                paymentline.invoice_party = invoice.party
-                paymentline.line = invoice.lines_to_pay[0]
-                paymentline.save()
-                Invoice.reconcile_invoice(invoice)
+                original_invoice = invoice.original_invoice
+                total_amount = original_invoice.untaxed_amount
+                line_amount = invoice.lines_to_pay[0].credit
+                if total_amount == line_amount:
+                    Invoice.reconcile_invoice(invoice)
+                else:
+                    paymentline = PaymentLine()
+                    paymentline.invoice = original_invoice
+                    paymentline.invoice_account = invoice.account
+                    paymentline.invoice_party = invoice.party
+                    paymentline.line = invoice.lines_to_pay[0]
+                    paymentline.save()
+                    Invoice.process([original_invoice])
         return True
 
     @classmethod

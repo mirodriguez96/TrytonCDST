@@ -392,13 +392,19 @@ class Purchase(metaclass=PoolMeta):
                         Invoice.post_batch([invoice])
                         Invoice.post([invoice])
                         if original_invoice:
-                            paymentline = PaymentLine()
-                            paymentline.invoice = original_invoice
-                            paymentline.invoice_account = invoice.account
-                            paymentline.invoice_party = invoice.party
-                            paymentline.line = invoice.lines_to_pay[0]
-                            paymentline.save()
-                            Invoice.process([original_invoice])
+                            total_amount = original_invoice.untaxed_amount
+                            line_amount = invoice.lines_to_pay[0].debit
+                            if total_amount == line_amount:
+                                invoice.original_invoice = original_invoice
+                                Invoice.reconcile_invoice(invoice)
+                            else:
+                                paymentline = PaymentLine()
+                                paymentline.invoice = original_invoice
+                                paymentline.invoice_account = invoice.account
+                                paymentline.invoice_party = invoice.party
+                                paymentline.line = invoice.lines_to_pay[0]
+                                paymentline.save()
+                                Invoice.process([original_invoice])
                 to_created.append(id_compra)
             except Exception as error:
                 Transaction().rollback()
