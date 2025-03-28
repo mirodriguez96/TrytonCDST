@@ -488,7 +488,6 @@ class ShipmentInternal(metaclass=PoolMeta):
                     shipments.append(shipment)
             except Exception as error:
                 logging.error(f"ROLLBACK1-{import_name}-[{value['id_tecno']}]: {error}")
-                Transaction().rollback()
                 result["logs"][value['id_tecno']] = str(error)
                 result["exportado"]["E"].append(value['id_tecno'])
 
