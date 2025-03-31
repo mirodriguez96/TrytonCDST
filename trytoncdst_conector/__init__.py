@@ -4,7 +4,7 @@
 from trytond.pool import Pool
 
 
-from . import (account_dunning, collection,
+from . import (collection,
                cron, currency,
                email_, exogena, line,
                pay_mode, payment_bank, payment_term,
@@ -50,8 +50,7 @@ def register():
                   module='conector',
                   type_='model')
 
-    Pool.register(account_dunning.DunningForceDraft,
-                  payment_bank.PaymentBankGroup,
+    Pool.register(payment_bank.PaymentBankGroup,
                   report.PayrollExport,
                   report.CDSSaleIncomeDaily,
                   stock.ModifyCostPrice,
