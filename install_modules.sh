@@ -3,6 +3,7 @@
 modules="
 trytoncdst_access
 trytoncdst_conector
+conector_cdst
 account_cdst
 configuration_cdst
 permissions_cdst

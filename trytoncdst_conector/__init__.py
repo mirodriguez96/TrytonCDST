@@ -5,7 +5,7 @@ from trytond.pool import Pool
 
 
 from . import (account_dunning, collection,
-               conector, conector_log, cron, currency,
+               cron, currency,
                email_, exogena, line,
                pay_mode, payment_bank, payment_term,
                product, report,
@@ -15,10 +15,6 @@ from . import (account_dunning, collection,
 def register():
     """Function that register model view, wizard and reports with pool"""
     Pool.register(collection.Tracking,
-                  conector.Actualizacion,
-                  conector.Email,
-                  conector.ImportedDocument,
-                  conector_log.ConectorLog,
                   currency.Cron,
                   currency.CurrencyRate,
                   cron.Cron,
@@ -55,8 +51,6 @@ def register():
                   type_='model')
 
     Pool.register(account_dunning.DunningForceDraft,
-                  conector.ImportedDocumentWizard,
-                  conector_log.DeleteImportRecords,
                   payment_bank.PaymentBankGroup,
                   report.PayrollExport,
                   report.CDSSaleIncomeDaily,

@@ -680,7 +680,7 @@ class ImportedDocumentWizard(Wizard):
 
     start = StateView(
         'conector.actualizacion.imported_document',
-        'conector.view_imported_document', [
+        'conector_cdst.view_imported_document', [
             Button('Cancel', 'end', 'tryton-cancel'),
             Button('Import', 'importfile', 'tryton-ok', default=True),
         ])
