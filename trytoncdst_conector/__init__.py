@@ -8,7 +8,7 @@ from . import (account, account_dunning, collection,
                conector, conector_log, cron, currency,
                email_, exogena, line,
                pay_mode, payment_bank, payment_term,
-               permissions, product, report,
+               product, report,
                stock, wiz)
 
 
@@ -43,8 +43,6 @@ def register():
                   payment_bank.AccountBankParty,
                   payment_bank.BankPayment,
                   payment_term.PaymentTerm,
-                  permissions.Permissions,
-                  permissions.LinePermissions,
                   product.Product,
                   product.ProductCategory,
                   product.CategoryAccount,
