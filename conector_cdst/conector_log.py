@@ -8,8 +8,6 @@ from trytond.pool import Pool
 from trytond.transaction import Transaction
 from trytond.wizard import StateTransition, Wizard
 
-from . import fixes
-
 STATE_LOG = [
     ('pending', 'Pending'),
     ('in_progress', 'In progress'),
