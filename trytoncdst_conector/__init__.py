@@ -8,7 +8,7 @@ from . import (account, account_dunning, collection,
                conector, conector_log, cron, currency,
                email_, exogena, line,
                pay_mode, payment_bank, payment_term,
-               permissions, product, production, purchase, report,
+               permissions, product, production, report,
                stock, wiz)
 
 
@@ -52,9 +52,6 @@ def register():
                   product.CostPriceRevision,
                   production.Production,
                   production.ProductionDetailedStart,
-                  purchase.Configuration,
-                  purchase.Purchase,
-                  purchase.PurchaseLine,
                   report.PayrollExportStart,
                   report.CDSSaleIncomeDailyStart,
                   stock.Configuration,
