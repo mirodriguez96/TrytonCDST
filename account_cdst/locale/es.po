@@ -1,0 +1,1038 @@
+#
+msgid ""
+msgstr "Content-Type: text/plain; charset=utf-8\n"
+
+msgctxt "field:conector.configuration,server:"
+msgid "Server"
+msgstr "Servidor"
+
+msgctxt "field:conector.configuration,db:"
+msgid "Database"
+msgstr "Base de datos"
+
+msgctxt "field:conector.configuration,user:"
+msgid "User"
+msgstr "Usuario"
+
+msgctxt "field:conector.configuration,password:"
+msgid "Password"
+msgstr "Contraseña"
+
+msgctxt "field:conector.configuration,date:"
+msgid "Date"
+msgstr "Fecha inicial"
+
+msgctxt "field:conector.configuration,end_date:"
+msgid "End Date"
+msgstr "Fecha final"
+
+msgctxt "field:conector.configuration,file:"
+msgid "File"
+msgstr "Archivo"
+
+msgctxt "field:conector.configuration,type_file:"
+msgid "Type file"
+msgstr "Tipo de archivo"
+
+msgctxt "field:conector.actualizacion,name:"
+msgid "Update"
+msgstr "Actualización"
+
+msgctxt "field:conector.actualizacion,quantity:"
+msgid "Quantity"
+msgstr "Cantidad a importar"
+
+msgctxt "field:conector.actualizacion,imported:"
+msgid "Imported"
+msgstr "Cantidad importada"
+
+msgctxt "field:conector.actualizacion,exceptions:"
+msgid "Exceptions"
+msgstr "Cantidad de excepciones"
+
+msgctxt "field:conector.actualizacion,cancelled:"
+msgid "Cancelled"
+msgstr "Cantidad anulada"
+
+msgctxt "field:conector.actualizacion,not_imported:"
+msgid "Not imported"
+msgstr "Cantidad sin importar"
+
+msgctxt "field:conector.actualizacion,logs:"
+msgid "Logs"
+msgstr "Registros"
+
+msgctxt "field:conector.actualizacion,log:"
+msgid "Log"
+msgstr "Registro"
+
+msgctxt "field:conector.log,event_time:"
+msgid "Event time"
+msgstr "Hora del evento"
+
+msgctxt "field:conector.log,message:"
+msgid "Message"
+msgstr "Mensaje"
+
+msgctxt "field:conector.log,state:"
+msgid "State"
+msgstr "Estado"
+
+msgctxt "model:ir.action,name:act_payrollelectronic_cdst"
+msgid "Send supplier it"
+msgstr "Enviar al proveedor tecnologico"
+
+msgctxt "view:staff.payroll.electronic:"
+msgid "Submit to supplier"
+msgstr "Enviar al proveedor"
+
+msgctxt "model:ir.action,name:act_add_operation_center"
+msgid "Add operation center"
+msgstr "Añadir centro de operaciones"
+
+msgctxt "model:ir.action,name:act_create_adjustment_note"
+msgid "Create adjustment notes
+msgstr "Crear nota de ajuste"
+
+msgctxt "model:ir.action,name:act_unreconcilie_multi"
+msgid "Unreconcile multirevenue move"
+msgstr "Desconciliar asientos de multi-ingreso"
+
+msgctxt "model:ir.action,name:act_multirevenue_mark_rimport"
+msgid "Multirevenue reimport"
+msgstr "Eliminar y reimportar de tecnocarnes"
+
+msgctxt "model:ir.action,name:act_delete_account_type"
+msgid "Remove type to parent account"
+msgstr "Quitar tipo a cuentas padres"
+
+msgctxt "model:ir.action,name:act_check_imported"
+msgid "Check imported docs"
+msgstr "Revisar documentos importados"
+
+msgctxt "model:ir.action,name:act_delete_import_records"
+msgid "Delete import log"
+msgstr "Eliminar registro de importación"
+
+msgctxt "model:ir.action,name:act_update_note_date"
+msgid "Update accounting note date"
+msgstr "Actualizar fecha de nota contable"
+
+msgctxt "model:ir.action,name:wizard_production_force_draft"
+msgid "Force Draft"
+msgstr "Forzar a borrador"
+
+msgctxt "model:ir.action,name:act_move_fix_party_account"
+msgid "Add missing party to invoice moves"
+msgstr "(FIX) Añadir tercero faltante a los asientos de las facturas"
+
+msgctxt "model:ir.action,name:act_voucher_move_unreconcile"
+msgid "Voucher move unreconcile"
+msgstr "Desconciliar asiento del comprobante"
+
+msgctxt "model:ir.action,name:act_force_draft_voucher"
+msgid "Force draft voucher"
+msgstr "Forzar a borrador"
+
+msgctxt "model:ir.action,name:act_delete_voucher_tecno"
+msgid "Delete voucher imported"
+msgstr "Eliminar y reimportar de tecnocarnes"
+
+msgctxt "model:ir.action,name:act_update_invoice_tecno"
+msgid "Reimport invoice"
+msgstr "Eliminar y reimportar de tecnocarnes"
+
+msgctxt "model:ir.action,name:act_reimport_documents"
+msgid "Reimport documents with exception"
+msgstr "Reimportar documentos con excepción"
+
+msgctxt "model:ir.ui.menu,name:act_config"
+msgid "Configuration"
+msgstr "Configuración"
+
+msgctxt "field:account.tax,consumo:"
+msgid "Tax consumption"
+msgstr "Impuesto consumo"
+
+msgctxt "field:account.voucher_configuration,account_discount_tecno:"
+msgid "Account Discount for Conector TecnoCarnes"
+msgstr "Cuenta de descuento para TecnoCarnes"
+
+msgctxt "field:account.voucher_configuration,account_rete_tecno:"
+msgid "Account Retention for Conector TecnoCarnes"
+msgstr "Cuenta de Retención para TecnoCarnes"
+
+msgctxt "field:account.voucher_configuration,account_retiva_tecno:"
+msgid "Account Retention IVA for Conector TecnoCarnes"
+msgstr "Cuenta de Retención Iva para TecnoCarnes"
+
+msgctxt "field:account.voucher_configuration,account_retica_tecno:"
+msgid "Account Retention ICA for Conector TecnoCarnes"
+msgstr "Cuenta de Retención ICA para TecnoCarnes"
+
+msgctxt "model:ir.action,name:wizard_print_portfolio_status"
+msgid "Portfolio Status"
+msgstr "Estado de Cartera"
+
+msgctxt "model:ir.action,name:report_portfolio_status"
+msgid "Portfolio Status"
+msgstr "Estado de Cartera"
+
+msgctxt "field:collection.print_portfolio_status.start,category_party:"
+msgid "Party Categories"
+msgstr "Categorias de Cliente"
+
+msgctxt "field:collection.print_portfolio_status.start,company:"
+msgid "Company"
+msgstr "Empresa"
+
+msgctxt "field:collection.print_portfolio_status.start,date_to:"
+msgid "Date to"
+msgstr "Fecha corte"
+
+msgctxt "field:collection.print_portfolio_status.start,detailed:"
+msgid "Detailed"
+msgstr "Detallado"
+
+msgctxt "field:collection.print_portfolio_status.start,kind:"
+msgid "Kind"
+msgstr "Tipo"
+
+msgctxt "field:collection.print_portfolio_status.start,payment_terms:"
+msgid "Payment Term"
+msgstr "Plazo de pago"
+
+msgctxt "model:ir.action,name:payroll_export_wizard"
+msgid "Payroll Export Wizard"
+msgstr "Reporte de Nómina"
+
+msgctxt "model:ir.ui.menu,name:menu_payroll_export_wizard"
+msgid "Payroll Export Wizard"
+msgstr "Reporte de Nómina"
+
+msgctxt "field:staff.payroll.export.start,start_period:"
+msgid "Start Period"
+msgstr "Período Inicial"
+
+msgctxt "field:staff.payroll.export.start,end_period:"
+msgid "End Period"
+msgstr "Período Final"
+
+msgctxt "view:company.company:"
+msgid "Supplier it"
+msgstr "Proveedor Tecnológico"
+
+msgctxt "view:company.company:"
+msgid "Payroll"
+msgstr "Nómina"
+
+msgctxt "field:company.company,url_supplier:"
+msgid "Url prod"
+msgstr "Ruta (url)"
+
+msgctxt "field:company.company,auth_supplier:"
+msgid "Auth"
+msgstr "Autorización"
+
+msgctxt "field:company.company,host_supplier:"
+msgid "Host"
+msgstr "Dominio url"
+
+msgctxt "field:company.company,supplier_code:"
+msgid "Code"
+msgstr "Código sucursal"
+
+msgctxt "view:company.company:"
+msgid "Support document"
+msgstr "Documento soporte"
+
+msgctxt "field:company.company,url_ds_itsupplier:"
+msgid "Url prod"
+msgstr "Ruta (url)"
+
+msgctxt "field:company.company,auth_ds_itsupplier:"
+msgid "Auth"
+msgstr "Autorización"
+
+msgctxt "field:company.company,host_ds_itsupplier:"
+msgid "Host"
+msgstr "Dominio url"
+
+msgctxt "field:company.company,itsupplier_code_ds:"
+msgid "Code"
+msgstr "Código sucursal"
+
+msgctxt "field:company.company,itsupplier_billing_resolution:"
+msgid "Billing Resolution Number"
+msgstr "Número de resolución"
+
+msgctxt "field:company.company,itsupplier_billing_resolution_note:"
+msgid "Adjustment Note Billing Resolution Number"
+msgstr "Número de resolución para la nota de ajuste"
+
+msgctxt "field:company.company,itsupplier_print_format:"
+msgid "Print Format Number"
+msgstr "Número de formato de impresión"
+
+msgctxt "field:company.company,itsupplier_print_format_note:"
+msgid "Adjustment Note Print Format"
+msgstr "Número de formato de impresión para la nota de ajuste"
+
+msgctxt "field:company.company,itsupplier_email_ds:"
+msgid "Email support document"
+msgstr "Copia al correo electrónico"
+
+msgctxt "model:ir.ui.menu,name:menu_payslip_send"
+msgid "Payslip Send"
+msgstr "Enviar Soporte de Nómina"
+
+msgctxt "model:ir.action,name:wizard_payroll_payslip_send"
+msgid "Payslip Send"
+msgstr "Enviar Soporte de Nómina"
+
+msgctxt "field:staff.payroll_payslip_send.start,company:"
+msgid "Company"
+msgstr "Empresa"
+
+msgctxt "field:staff.payroll_payslip_send.start,department:"
+msgid "Department"
+msgstr "Departamento"
+
+msgctxt "field:staff.payroll_payslip_send.start,period:"
+msgid "Start Period"
+msgstr "Período"
+
+msgctxt "field:staff.payroll_payslip_send.start,subject:"
+msgid "Subject"
+msgstr "Asunto"
+
+msgctxt "wizard_button:staff.payroll.payslip_send,start,end:"
+msgid "Cancel"
+msgstr "Cancelar"
+
+msgctxt "wizard_button:staff.payroll.payslip_send,start,send_:"
+msgid "Send"
+msgstr "Enviar"
+
+msgctxt "field:party.party,payable_tecno:"
+msgid "Payable Tecno"
+msgstr "Por pagar Tecno"
+
+msgctxt "field:party.party,receivable_tecno:"
+msgid "Receivable Tecno"
+msgstr "Por cobrar Tecno"
+
+msgctxt "field:account.tax.rule.line,additional_taxes:"
+msgid "Additional Taxes"
+msgstr "Impuestos adicionales"
+
+msgctxt "model:ir.action,name:act_group_multirevenue_lines"
+msgid "Group MultiRevenue Lines"
+msgstr "Agrupar líneas (Multi-Ingreso)"
+
+msgctxt "model:ir.action,name:act_confirm_lines"
+msgid "Confirm lines bank statement"
+msgstr "Confirmar líneas de extracto"
+
+msgctxt "model:ir.action,name:act_config"
+msgid "Configuration"
+msgstr "Configuración"
+
+msgctxt "model:ir.ui.menu,name:menu_act_config"
+msgid "Configuration"
+msgstr "Configuración"
+
+msgctxt "field:purchase.configuration,type_order_tecno:"
+msgid "Type order TecnoCarnes"
+msgstr "Tipo orden de entrada TecnoCarnes"
+
+msgctxt "field:purchase.purchase,order_tecno:"
+msgid "Order TecnoCarnes"
+msgstr "Orden para TecnoCarnes"
+
+msgctxt "field:purchase.purchase,order_tecno_sent:"
+msgid "Order TecnoCarnes sent"
+msgstr "Orden TecnoCarnes enviada"
+
+msgctxt "field:account.bank_statement,bank_lines:"
+msgid "Bank lines"
+msgstr "Líneas del banco"
+
+msgctxt "field:account.bank_statement.line,bank_line:"
+msgid "Bank line"
+msgstr "Línea del banco"
+
+msgctxt "field:account.bank_statement.bank_line,statement_line:"
+msgid "Statement line"
+msgstr "Línea del extracto"
+
+msgctxt "field:account.bank_statement.bank_line,date:"
+msgid "Date"
+msgstr "Fecha"
+
+msgctxt "field:account.bank_statement.bank_line,description:"
+msgid "Description"
+msgstr "Descripción"
+
+msgctxt "field:account.bank_statement.bank_line,amount:"
+msgid "Amount"
+msgstr "Valor"
+
+msgctxt "model:ir.action,name:act_create_bank_line"
+msgid "Upload Bank lines"
+msgstr "Subir líneas del banco"
+
+msgctxt "field:account.bank_statement.create_bank_line.parameters,file:"
+msgid "File"
+msgstr "Archivo"
+
+msgctxt "field:account.fiscalyear.balance_stock.start,journal:"
+msgid "Journal"
+msgstr "Diario"
+
+msgctxt "field:account.fiscalyear.balance_stock.start,fiscalyear:"
+msgid "Fiscal Year"
+msgstr "Año fiscal"
+
+msgctxt "field:account.fiscalyear.balance_stock.start,date:"
+msgid "Date"
+msgstr "Fecha"
+
+msgctxt "field:account.fiscalyear.balance_stock.start,type:"
+msgid "Type"
+msgstr "Tipo"
+
+msgctxt "field:account.fiscalyear.balance_stock.start,arbitrary_cost:"
+msgid "Arbitrary cost"
+msgstr "Costo arbitrario"
+
+msgctxt "wizard_button:account.fiscalyear.balance_stock,start,balance:"
+msgid "Create Move"
+msgstr "Crear asiento"
+
+msgctxt "wizard_button:account.fiscalyear.balance_stock,start,end:"
+msgid "Cancel"
+msgstr "Cancelar"
+
+msgctxt "wizard_button:account.payment_bank,start,end:"
+msgid "Cancel"
+msgstr "Cancelar"
+
+msgctxt "wizard_button:account.payment_bank,start,print_:"
+msgid "Print"
+msgstr "Imprimir"
+
+msgctxt "field:account.payment_bank.start,company:"
+msgid "Company"
+msgstr "Empresa"
+
+msgctxt "field:account.payment_bank.start,report:"
+msgid "Report"
+msgstr "Reporte"
+
+msgctxt "model:ir.action,name:act_report_payment"
+msgid "Generate Payment Bank"
+msgstr "Generar Pagos para Banco"
+
+msgctxt "field:account.payment_bank.start,sequence:"
+msgid "Sequence"
+msgstr "Secuencia"
+
+msgctxt "field:account.payment_bank.start,type_transaction:"
+msgid "Type of transaction"
+msgstr "Tipo de transacción"
+
+msgctxt "field:account.payment_bank.start,payment_type:"
+msgid "Type payment"
+msgstr "Tipo de pago"
+
+msgctxt "model:ir.action,name:report_payment_1007"
+msgid "Bancolombia Payments Format"
+msgstr "Formato de Pagos Bancolombia"
+
+msgctxt "field:account.payment_bank.start,tarjet:"
+msgid "Bank Account"
+msgstr "Cuenta Bancaria"
+
+msgctxt "model:ir.ui.menu,name:menu_certificates_send"
+msgid "Certificate Send"
+msgstr "Enviar Soporte Certificado Ingresos y Retenciones"
+
+msgctxt "model:ir.action,name:wizard_payroll_certificates_send"
+msgid "Certificate Send"
+msgstr "Enviar Soporte Certificado Ingresos y Retenciones"
+
+msgctxt "field:staff.payroll_certificates_send.start,company:"
+msgid "Company"
+msgstr "Empresa"
+
+msgctxt "field:staff.payroll_certificates_send.start,fiscalyear:"
+msgid "Fiscal Year"
+msgstr "Año Fiscal"
+
+msgctxt "field:staff.payroll_certificates_send.start,employees:"
+msgid "Employees"
+msgstr "Empleados"
+
+msgctxt "field:staff.payroll_certificates_send.start,subject:"
+msgid "Subject"
+msgstr "Asunto"
+
+msgctxt "wizard_button:staff.payroll.certificates_send,start,send_:"
+msgid "Send"
+msgstr "Enviar"
+
+msgctxt "view:conector.configuration:"
+msgid "Test"
+msgstr "Probar conexión"
+
+msgctxt "view:conector.configuration:"
+msgid "File Import"
+msgstr "Importar archivo"
+
+msgctxt "view:staff.event:"
+msgid "Create liquidation"
+msgstr "Crear liquidación"
+
+msgctxt "field:conector.configuration,enhabled:"
+msgid "Enhabled"
+msgstr "Habilitado"
+
+msgctxt "field:staff.access,rests:"
+msgid "Rests"
+msgstr "Descansos"
+
+msgctxt "field:staff.access.rests,start:"
+msgid "Start"
+msgstr "Inicio"
+
+msgctxt "field:staff.access.rests,end:"
+msgid "End"
+msgstr "Final"
+
+msgctxt "field:staff.access.rests,amount:"
+msgid "Amount"
+msgstr "Cantidad (Hr)"
+
+msgctxt "field:staff.access.rests,pay:"
+msgid "Pay"
+msgstr "Pagar"
+
+msgctxt "view:account.invoice:"
+msgid "Send document"
+msgstr "Enviar documento"
+
+msgctxt "field:staff.event,analytic_account:"
+msgid "Analytic account code"
+msgstr "Código de cuenta analítica"
+
+msgctxt "selection:ir.cron,method:"
+msgid "Import biometric accesses"
+msgstr "Importar accesos biométricos"
+
+msgctxt "model:ir.action,name:act_import_biometric_records"
+msgid "Import Biometric Records"
+msgstr "Importar registros del biométrico"
+
+msgctxt "field:staff.access.import_biometric_records.parameters,day:"
+msgid "Day"
+msgstr "Día"
+
+msgctxt "wizard_button:staff.access.import_biometric_records,parameters,end:"
+msgid "Cancel"
+msgstr "Cancelar"
+
+msgctxt "wizard_button:staff.access.import_biometric_records,parameters,import_biometric_records:"
+msgid "Import"
+msgstr "Importar"
+
+msgctxt "wizard_button:conector.actualizacion.imported_document_asistend,start,importfile:"
+msgid "Import"
+msgstr "Importar"
+
+msgctxt "wizard_button:conector.actualizacion.imported_document_asistend,start,end:"
+msgid "Cancel"
+msgstr "Cancelar"
+
+msgctxt "field:conector.actualizacion.imported_document,file:"
+msgid "File"
+msgstr "Archivo"
+
+msgctxt "field:conector.actualizacion.imported_document,type_file:"
+msgid "Type file"
+msgstr "Tipo de documento"
+
+msgctxt "model:ir.action,name:act_imported_document"
+msgid "imported documents"
+msgstr "Importar Documentos"
+
+msgctxt "selection:conector.actualizacion.imported_document,type_file:"
+msgid "Parties"
+msgstr "Terceros"
+
+msgctxt "selection:conector.actualizacion.imported_document,type_file:"
+msgid "Products"
+msgstr "Productos"
+
+msgctxt "selection:conector.actualizacion.imported_document,type_file:"
+msgid "Balances"
+msgstr "Saldos iniciales"
+
+msgctxt "selection:conector.actualizacion.imported_document,type_file:"
+msgid "Accounts"
+msgstr "Cuentas contables"
+
+msgctxt "selection:conector.actualizacion.imported_document,type_file:"
+msgid "Update Accounts"
+msgstr "Actualizar cuentas contables"
+
+msgctxt "selection:conector.actualizacion.imported_document,type_file:"
+msgid "Product costs"
+msgstr "Precio de costo de productos"
+
+msgctxt "selection:conector.actualizacion.imported_document,type_file:"
+msgid "Inventory"
+msgstr "Inventario"
+
+msgctxt "selection:conector.actualizacion.imported_document,type_file:"
+msgid "Bank Account"
+msgstr "Cuentas de banco"
+
+msgctxt "model:ir.ui.menu,name:menu_auxiliary_book_print"
+msgid "Print Auxiliary Book"
+msgstr "Reporte Libro Auxiliar"
+
+msgctxt "model:ir.action,name:wizard_auxiliary_book_print"
+msgid "Print Auxiliary Book"
+msgstr "Reporte Libro Auxiliar"
+
+msgctxt "field:account_col.auxiliary_book_cds.start,fiscalyear:"
+msgid "Fiscal Year"
+msgstr "Año Fiscal"
+
+msgctxt "field:account_col.auxiliary_book_cds.start,start_period:"
+msgid "Start Period"
+msgstr "Periodo Inicial"
+
+msgctxt "field:account_col.auxiliary_book_cds.start,end_period:"
+msgid "End Period"
+msgstr "Periodo Final"
+
+msgctxt "field:account_col.auxiliary_book_cds.start,start_account:"
+msgid "Start Account"
+msgstr "Cuenta Inicial"
+
+msgctxt "field:account_col.auxiliary_book_cds.start,end_account:"
+msgid "End Account"
+msgstr "Cuenta Final"
+
+msgctxt "field:account_col.auxiliary_book_cds.start,party:"
+msgid "Party"
+msgstr "Tercero"
+
+msgctxt "field:account_col.auxiliary_book_cds.start,company:"
+msgid "Company"
+msgstr "Empresa"
+
+msgctxt "field:account_col.auxiliary_book_cds.start,reference:"
+msgid "Reference"
+msgstr "Referencia"
+
+msgctxt "field:account_col.auxiliary_book_cds.start,empty_account:"
+msgid "Empty Account"
+msgstr "Cuenta vacia"
+
+msgctxt "field:account_col.auxiliary_book_cds.start,posted:"
+msgid "Posted Move"
+msgstr "Movimientos enviados"
+
+msgctxt "model:ir.action,name:wizard_print_payroll_payment_bancolombia"
+msgid "Payroll Payment Bancolombia"
+msgstr "Pago de Nómina Bancolombia"
+
+msgctxt "field:staff.payroll_payment_bancolombia.start,period:"
+msgid "Period"
+msgstr "Periodo"
+
+msgctxt "field:staff.payroll_payment_bancolombia.start,company:"
+msgid "Company"
+msgstr "Empresa"
+
+msgctxt "field:staff.payroll_payment_bancolombia.start,department:"
+msgid "Department"
+msgstr "Departamento"
+
+msgctxt "field:staff.payroll_payment_bancolombia.start,payment_type:"
+msgid "Type payment"
+msgstr "Tipo de pago"
+
+msgctxt "field:staff.payroll_payment_bancolombia.start,send_sequence:"
+msgid "Shipping sequence"
+msgstr "Secuencia de envío"
+
+msgctxt "field:staff.payroll_payment_bancolombia.start,type_bank_account:"
+msgid "Bank account type"
+msgstr "Tipo de cuenta bancaria"
+
+msgctxt "field:staff.payroll_payment_bancolombia.start,reference:"
+msgid "Reference"
+msgstr "Referencia"
+
+msgctxt "field:staff.payroll_payment_bancolombia.start,type_transaction:"
+msgid "Type of transaction"
+msgstr "Tipo de transacción"
+
+msgctxt "model:ir.action,name:report_production"
+msgid "Production"
+msgstr "Producción"
+
+msgctxt "model:ir.ui.menu,name:menu_reports"
+msgid "Reports"
+msgstr "Informes"
+
+msgctxt "model:ir.action,name:wizard_production_detailed"
+msgid "Report Production Detailed"
+msgstr "Informe de producción detallada"
+
+msgctxt "model:ir.action,name:report_production_detailed"
+msgid "Report Production Detailed"
+msgstr "Informe de producción detallada"
+
+msgctxt "model:ir.ui.menu,name:menu_production_detailed"
+msgid "Report Production Detailed"
+msgstr "Informe de producción detallada"
+
+
+msgctxt "model:ir.ui.menu,name:wizard_payroll_settlement_send"
+msgid "Settlement Send"
+msgstr "Enviar soporte de liquidación"
+
+msgctxt "model:ir.action,name:wizard_payroll_settlement_send"
+msgid "Settlement Send"
+msgstr "Enviar soporte de liquidación"
+
+msgctxt "field:staff.payroll_settlement_send.start,subject:"
+msgid "Subject"
+msgstr "Asunto"
+
+msgctxt "field:staff.staff.payroll_settlement_send.start,department:"
+msgid "Department"
+msgstr "Departamento"
+
+msgctxt "field:staff.payroll_settlement_send.start,company:"
+msgid "Company"
+msgstr "Empresa"
+
+msgctxt "field:staff.payroll_settlement_send.start,kind:"
+msgid "Kind"
+msgstr "Tipo"
+
+msgctxt "field:staff.payroll_settlement_send.start,date:"
+msgid "Date"
+msgstr "Fecha"
+
+msgctxt "wizard_button:staff.payroll_settlement_send,start,end:"
+msgid "Cancel"
+msgstr "Cancelar"
+
+msgctxt "wizard_button:staff.payroll_settlement_send,start,send_:"
+msgid "Send"
+msgstr "Enviar"
+
+msgctxt "model:ir.ui.menu,name:wizard_print_payroll_payment_bancolombia"
+msgid "Payroll Payment Bancolombia"
+msgstr "Pago de Nómina Bancolombia"
+
+msgctxt "model:ir.action,name:wizard_print_payroll_payment_bancolombia"
+msgid "Payroll Payment Bancolombia"
+msgstr "Pago de Nómina Bancolombia"
+
+msgctxt "model:ir.ui.menu,name:menu_payroll_ibc_report"
+msgid "Payroll IBC Report"
+msgstr "Reporte Acomulado IBC"
+
+msgctxt "field:staff.payroll_ibc.start,company:"
+msgid "Company"
+msgstr "Empresa"
+
+msgctxt "field:staff.payroll_ibc.start,start_period:"
+msgid "Start Period"
+msgstr "Periodo Inicial"
+
+msgctxt "field:staff.payroll_ibc.start,end_period:"
+msgid "End Period"
+msgstr "Periodo Final"
+
+msgctxt "field:staff.payroll_ibc.start,department:"
+msgid "Department"
+msgstr "Departamento"
+
+msgctxt "field:staff.payroll_ibc.start,accomulated_month:"
+msgid "accomulated Month"
+msgstr "Acomulado mensual"
+
+msgctxt "field:staff.payroll_ibc.start,accomulated_period:"
+msgid "accomulated Period"
+msgstr "Acomulado quincenal"
+
+msgctxt "field:staff.payroll_ibc.start,fiscalyear:"
+msgid "Fiscal Year"
+msgstr "Año Fiscal"
+
+msgctxt "field:staff.payroll_ibc.start,start_period_fiscalyear:"
+msgid "Start Period"
+msgstr "Periodo Inicial"
+
+msgctxt "field:staff.payroll_ibc.start,end_period_fiscalyear:"
+msgid "End Period"
+msgstr "Periodo Final"
+
+msgctxt "wizard_button:staff.payroll_ibc.start.payroll_ibc_wizard,start,print_:"
+msgid "Print"
+msgstr "Imprimir"
+
+msgctxt "wizard_button:staff.payroll_ibc.start.payroll_ibc_wizard,start,end:"
+msgid "Cancel"
+msgstr "Cancelar"
+
+msgctxt "model:ir.action,name:wizard_income_statement"
+msgid "Income statement Report"
+msgstr "Reporte Balance cuentas analiticas"
+
+msgctxt "field:account.income_statement.start,company:"
+msgid "Company"
+msgstr "Empresa"
+
+msgctxt "field:account.income_statement.start,from_date:"
+msgid "From Date"
+msgstr "Fecha Inicial"
+
+msgctxt "field:account.income_statement.start,to_date:"
+msgid "To Date"
+msgstr "Fecha Final"
+
+msgctxt "field:account.income_statement.start,posted:"
+msgid "Posted Move"
+msgstr "Movimientos contabilizados"
+
+msgctxt "field:account.income_statement.start,accumulated:"
+msgid "Accumulated"
+msgstr "Acomulado por cuenta analitica"
+
+msgctxt "field:account.income_statement.start,Analitic_filter:"
+msgid "Analytic Detailed"
+msgstr "Detallado por cuenta analitica"
+
+msgctxt "field:account.income_statement.start,analytic_accounts:"
+msgid "Analytic Account"
+msgstr "Cuentas Analiticas"
+
+msgctxt "field:account.income_statement.start,allstart:"
+msgid "All"
+msgstr "Todas las cuentas"
+
+msgctxt "wizard_button:account.income_statement_wizard_cds,start,print_:"
+msgid "Print"
+msgstr "Imprimir"
+
+msgctxt "wizard_button:account.income_statement_wizard_cds,start,end:"
+msgid "Cancel"
+msgstr "Cancelar"
+
+msgctxt "model:ir.ui.menu,name:menu_sale_shop_detailed_cds"
+msgid "Print Cost Sale Shop Detailed Cds"
+msgstr "Reporte Costo de Venta Detallado"
+
+msgctxt "model:ir.action,name:wizard_print_sale_shop_detailed_cds"
+msgid "Print Cost Sale Shop Detailed Cds"
+msgstr "Reporte Costo de Venta Detallado"
+
+msgctxt "field:sale_shop.sale_detailed_cds.start,company:"
+msgid "Company"
+msgstr "Empresa"
+
+msgctxt "field:sale_shop.sale_detailed_cds.start,start_date:"
+msgid "From Date"
+msgstr "Fecha Inicial"
+
+msgctxt "field:sale_shop.sale_detailed_cds.start,end_date:"
+msgid "To Date"
+msgstr "Fecha Final"
+
+
+msgctxt "wizard_button:sale_shop.sale_detailed_cds,start,print_:"
+msgid "Print"
+msgstr "Imprimir"
+
+msgctxt "wizard_button:account.income_statement_wizard_cds,start,end:"
+msgid "Cancel"
+msgstr "Cancelar"
+
+msgctxt "model:ir.action,name:wizard_invoice_values_cdst"
+msgid "Sale Invoices Report"
+msgstr "Reporte de facturas"
+
+msgctxt "model:ir.action,name:report_invoice_values_cdst"
+msgid "Sale Invoices Report"
+msgstr "Reporte de facturas"
+
+msgctxt "model:ir.ui.menu,name:menu_invoice_values_cdst"
+msgid "Sale Invoices Report"
+msgstr "Reporte de facturas"
+
+msgctxt "field:sale.invoice_values_cdst.start,from_date:"
+msgid "From Date"
+msgstr "Fecha Inicial"
+
+msgctxt "field:sale.invoice_values_cdst.start,to_date:"
+msgid "To Date"
+msgstr "Fecha Final"
+
+msgctxt "field:sale.invoice_values_cdst.start,state:"
+msgid "State"
+msgstr "Estado"
+
+msgctxt "field:sale.invoice_values_cdst.start,document_type:"
+msgid "Type Document"
+msgstr "Tipo de documento"
+
+msgctxt "field:account_voucher.taxes_consolidation.start,date_note:"
+msgid "Date Note"
+msgstr "Fecha de nota"
+
+msgctxt "field:account_voucher.taxes_consolidation.start,operation_center:"
+msgid "Operation Center"
+msgstr "Centro de operaciones"
+
+
+msgctxt "model:ir.action,name:act_create_holidays_access"
+msgid "Create Holidays Access"
+msgstr "Crear registros de festivos"
+
+msgctxt "field:staff.create_holidays_view_wizard,date:"
+msgid "Date"
+msgstr "Fecha"
+
+msgctxt "field:staff.create_holidays_view_wizard,time_in:"
+msgid "Time in"
+msgstr "Hora de ingreso"
+
+msgctxt "field:staff.create_holidays_view_wizard,time_out:"
+msgid "Time out"
+msgstr "Hora de salida"
+
+msgctxt "model:ir.action,name:act_report_access"
+msgid "Staff access report"
+msgstr "Reporte de accesos"
+
+msgctxt "field:stock.configuration,state_shipment:"
+msgid "State shipment"
+msgstr "Estado de traslados"
+
+msgctxt "field:staff.payroll_global.start,analytic_account:"
+msgid "Analytic Account"
+msgstr "Cuenta analitica"
+
+msgctxt "field:staff.payroll_global.start,account:"
+msgid "Account"
+msgstr "Cuenta contable"
+
+msgctxt "field:staff.payroll.sheet.start,analytic_account:"
+msgid "Analytic Account"
+msgstr "Cuenta analitica"
+
+msgctxt "field:staff.payroll.sheet.start,account:"
+msgid "Account"
+msgstr "Cuenta contable"
+
+msgctxt "field:product.category,account_lost_found:"
+msgid "Lost and Found Account"
+msgstr "Cuenta de perdidos y encontrados"
+
+msgctxt "field:staff.configuration,default_hour_biweekly:"
+msgid "Default Hour Biweekly"
+msgstr "Tiempo quincenal por defecto"
+
+msgctxt "field:account.account,analytical_management:"
+msgid "Analytical Management"
+msgstr "Requiere analitica"
+
+msgctxt "field:stock.inventory,analitic_account:"
+msgid "Analytic Account"
+msgstr "Cuenta analitica"
+
+msgctxt "field:stock.inventory,product_type:"
+msgid "Type Product"
+msgstr "Tipo de producto"
+
+msgctxt "field:stock.configuration,consumable_products_state:"
+msgid "Consumable products"
+msgstr "Productos consumibles"
+
+msgctxt "field:product.category,account_credit_note:"
+msgid "Account Credit Note"
+msgstr "Cuenta Nota de Crédito"
+
+msgctxt "field:staff.liquidation,payment_liquidation_date:"
+msgid "Payment liquidation date"
+msgstr "Fecha de pago de liquidacion"
+
+msgctxt "field:stock.configuration,to_location:"
+msgid "Output inventory location"
+msgstr "Ubicación Salida de inventario"
+
+msgctxt "field:staff.payroll,payment_extras:"
+msgid "Payment extras"
+msgstr "Pago extras"
+
+msgctxt "field:account.bank.money_transfer.start,journal:"
+msgid "Journal"
+msgstr "Libro diario"
+
+msgctxt "field:account.bank.money_transfer.start,fiscalyear:"
+msgid "Fiscal Year"
+msgstr "Año fiscal"
+
+msgctxt "field:account.bank.money_transfer.start,date:"
+msgid "Date"
+msgstr "Fecha"
+
+msgctxt "field:account.bank.money_transfer.start,account_in:"
+msgid "Account in"
+msgstr "Entrada de dinero"
+
+msgctxt "field:account.bank.money_transfer.start,account_out:"
+msgid "Account out"
+msgstr "Salida de dinero"
+
+msgctxt "field:account.bank.money_transfer.start,amount:"
+msgid "Amount"
+msgstr "Cantidad"
+
+msgctxt "field:account.bank.money_transfer.start,description:"
+msgid "Description"
+msgstr "Descripcion"
+
+msgctxt "wizard_button:account.bank.money_transfer,start,move:"
+msgid "Create Move"
+msgstr "Crear asiento"
+
+msgctxt "wizard_button:account.bank.money_transfer,start,end:"
+msgid "Cancel"
+msgstr "Cancelar"
+
+msgctxt "model:ir.ui.menu,name:menu_bank_money_transfer"
+msgid "Bank-Money Transfer"
+msgstr "Traslado de dinero"
+
+msgctxt "model:ir.action,name:act_bank_money_transfer"
+msgid "Bank-Money Transfer"
+msgstr "Traslado de dinero"
+
+msgctxt "field:staff.liquidation.line,salary_prom:"
+msgid "Salary Prom"
+msgstr "Salario promedio"
+
+msgctxt "field:account_col.move_close_year.start,account:"
+msgid "Analytic account"
+msgstr "Cuenta analitica"

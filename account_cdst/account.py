@@ -1,11 +1,11 @@
 import operator
 from collections import OrderedDict, defaultdict
-from datetime import date, datetime
+from datetime import date
 from decimal import Decimal
 from itertools import groupby
 from timeit import default_timer as timer
 
-from sql import Literal, Null, Table, With
+from sql import Null, With
 from sql.conditionals import Case
 from sql.aggregate import Max, Sum, Aggregate
 from sql.conditionals import Coalesce
@@ -18,7 +18,7 @@ from trytond.modules.stock.exceptions import PeriodCloseError
 from trytond.pool import Pool, PoolMeta
 from trytond.pyson import Bool, Eval, If, Not
 from trytond.report import Report
-from trytond.tools import grouped_slice, reduce_ids
+from trytond.tools import grouped_slice
 from trytond.transaction import Transaction
 from trytond.wizard import (Button, StateAction, StateReport, StateTransition,
                             StateView, Wizard)
@@ -486,7 +486,7 @@ class BalanceStock(Wizard):
     __name__ = 'account.fiscalyear.balance_stock'
     start = StateView(
         'account.fiscalyear.balance_stock.start',
-        'conector.balance_stock_start_view_form', [
+        'account_cdst.balance_stock_start_view_form', [
             Button('Cancel', 'end', 'tryton-cancel'),
             Button('Create Move', 'balance', 'tryton-ok', default=True),
         ])
@@ -754,7 +754,7 @@ class PrintAuxiliaryBookCDS(Wizard):
     __name__ = 'account_col.auxiliary_book_print'
     start = StateView(
         'account_col.auxiliary_book_cds.start',
-        'conector.print_auxiliary_book_start_view_form', [
+        'account_cdst.print_auxiliary_book_start_view_form', [
             Button('Cancel', 'end', 'tryton-cancel'),
             Button('Print', 'print_', 'tryton-print', default=True),
         ])
@@ -1294,7 +1294,7 @@ class IncomeStatementWizard(Wizard):
     __name__ = 'account.income_statement_wizard_cds'
     start = StateView(
         'account.income_statement.start',
-        'conector.detailed_income_statement_form', [
+        'account_cdst.detailed_income_statement_form', [
             Button('Cancel', 'end', 'tryton-cancel'),
             Button('Print', 'print_', 'tryton-print', default=True),
         ])
@@ -2898,7 +2898,7 @@ class BankMoneyTransfer(Wizard):
     __name__ = 'account.bank.money_transfer'
     start = StateView(
         'account.bank.money_transfer.start',
-        'conector.bank_money_transfer_start_view_form', [
+        'account_cdst.bank_money_transfer_start_view_form', [
             Button('Cancel', 'end', 'tryton-cancel'),
             Button('Create Move', 'move', 'tryton-ok', default=True),
         ])
