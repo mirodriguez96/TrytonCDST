@@ -1174,7 +1174,7 @@ class UpdateInvoiceTecno(Wizard):
 
     start = StateView(
         'delete.invoice.wizard.start',
-        'conector.validated_identity_invoice_view_form', [
+        'account_invoice_cdst.validated_identity_invoice_view_form', [
             Button('Cancel', 'end', 'tryton-cancel'),
             Button('Confirm', 'do_submit', 'tryton-ok', default=True),
         ])

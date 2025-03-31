@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<tryton>
+    <data>
+        <record model="ir.ui.view" id="invoice_view_form">
+            <field name="model">account.invoice</field>
+            <field name="inherit" ref="account_invoice.invoice_view_form"/>
+            <field name="name">invoice_form</field>
+        </record>
+    </data>
+
+    <!--Asistente para eliminar las facturas importados de TecnoCarnes-->
+    <record model="ir.action.wizard" id="act_update_invoice_tecno">
+        <field name="name">Reimport invoice</field>
+        <field name="wiz_name">account.invoice.update_invoice_tecno</field>
+    </record>
+    <record model="ir.action.keyword" id="act_update_invoice_tecno_keyword">
+        <field name="keyword">form_action</field>
+        <field name="model">account.invoice,-1</field>
+        <field name="action" ref="act_update_invoice_tecno"/>
+    </record>
+
+    <record model="ir.ui.view" id="validated_identity_invoice_view_form">
+        <field name="model">delete.invoice.wizard.start</field>
+        <field name="type">form</field>
+        <field name="name">validated_identity_invoice_form</field>
+    </record>
+</tryton>
