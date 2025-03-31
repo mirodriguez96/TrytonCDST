@@ -3,8 +3,9 @@
 modules="
 trytoncdst_access
 trytoncdst_conector
-production_cdst
 configuration_cdst
+permissions_cdst
+production_cdst
 purchase_cdst
 sale_cdst
 company_cdst
