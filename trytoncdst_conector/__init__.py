@@ -33,7 +33,6 @@ def register():
                   conector.Email,
                   conector.ImportedDocument,
                   conector_log.ConectorLog,
-                  configuration.Configuration,
                   currency.Cron,
                   currency.CurrencyRate,
                   cron.Cron,
