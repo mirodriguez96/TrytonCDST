@@ -103,22 +103,15 @@ class PayrollExportReport(Report):
                 if not line.party:
                     continue
                 line_ = {
-                    'date':
-                    line.move.date,
-                    'code':
-                    '---',
-                    'party':
-                    employee.party.id_number,
-                    'name':
-                    employee.party.name,
-                    'description':
-                    line.description,
-                    'department':
-                    employee.department.name if employee.department else '---',
-                    'amount':
-                    line.debit or line.credit,
-                    'type':
-                    'D',
+                    'payroll': line.move.origin.number,
+                    'date': line.move.date,
+                    'code': '---',
+                    'party': employee.party.id_number,
+                    'party_contributor': line.party.name,
+                    'name': employee.party.name,
+                    'description': line.description,
+                    'department': employee.department.name if employee.department else '---',
+                    'amount': line.debit or line.credit,
                 }
                 if line.debit > 0:
                     if line.account.id in accountdb_ids:
@@ -132,7 +125,6 @@ class PayrollExportReport(Report):
                         line_['code'] = line.account.code
 
                 else:
-                    line_['type'] = 'C'
                     id_number = line.party.id_number
                     if id_number in ENTITY_ACCOUNTS.keys():
                         line_['code'] = ENTITY_ACCOUNTS[id_number][0]
@@ -631,8 +623,8 @@ class CDSSaleIncomeDailyReport(Report):
                     devices[sale.sale_device.id]['credit'].append(
                         total_amount_)
                 if value_except > 0:
-                    payment_modes['credit'].append(invoice.amount_to_pay -
-                                                   value_except)
+                    payment_modes['credit'].append(invoice.amount_to_pay
+                                                   - value_except)
                 else:
                     payment_modes['credit'].append(invoice.amount_to_pay)
 
