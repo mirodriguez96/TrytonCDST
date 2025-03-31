@@ -1,0 +1,3 @@
+include:
+    - project: tryton-community/community/ci-tools
+      file: _ci-templates/tryton60-module.yml

@@ -3,7 +3,7 @@
 from trytond.pool import Pool
 
 
-from . import (account, account_dunning, collection, company,
+from . import (account, account_dunning, collection,
                conector, conector_log, configuration, cron, currency,
                email_, exogena, line,
                pay_mode, payment_bank, payment_term,
@@ -28,7 +28,6 @@ def register():
                   account.AuxiliaryBookStartCDS,
                   account.IncomeStatementView,
                   collection.Tracking,
-                  company.Company,
                   conector.Actualizacion,
                   conector.Email,
                   conector.ImportedDocument,
