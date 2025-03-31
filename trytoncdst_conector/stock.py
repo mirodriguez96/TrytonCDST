@@ -454,7 +454,7 @@ class ShipmentInternal(metaclass=PoolMeta):
         shipments = []
         for value in result["tryton"].values():
             try:
-                if value['from_location'] == value['to_location']:
+                if value['from_location'] == value['to_location'] and sw != '11':
                     msg = """En traslados no puede tener la misma ubicacion
                         de entrada y salida"""
                     result["logs"][value['id_tecno']] = str(msg)
