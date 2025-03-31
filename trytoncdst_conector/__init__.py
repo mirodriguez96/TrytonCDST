@@ -8,7 +8,7 @@ from . import (account, account_dunning, collection,
                email_, exogena, line,
                pay_mode, payment_bank, payment_term,
                permissions, product, production, purchase, report,
-               sale, sale_device, stock, tax, wiz)
+               sale, sale_device, stock, wiz)
 
 
 def register():
@@ -69,10 +69,6 @@ def register():
                   stock.WarehouseKardexStockStartCds,
                   stock.MoveCDT,
                   stock.Inventory,
-                  tax.Tax,
-                  tax.MiddleModel,
-                  tax.TaxRuleLine,
-                  tax.TaxesConsolidationStart,
                   wiz.CreateAdjustmentNotesParameters,
                   wiz.AddCenterOperationLineP,
                   wiz.DocumentsForImportParameters,
@@ -103,8 +99,6 @@ def register():
                   sale.SaleInvoiceValueCdst,
                   stock.ModifyCostPrice,
                   stock.WarehouseKardexStockCds,
-                  tax.TaxesConsolidation,
-                  tax.PrintTaxesPostedAccumulated,
                   wiz.DeleteVoucherTecno,
                   wiz.VoucherMoveUnreconcile,
                   wiz.DeleteAccountType,
@@ -164,6 +158,5 @@ def register():
                   stock.ShipmentDetailedReport,
                   stock.WarehouseCdsKardexReport,
                   stock.WarehouseReport,
-                  tax.TaxesPostedAccumulated,
                   module='conector',
                   type_='report')
