@@ -10,6 +10,4 @@ this repository contains the full copyright notices and license terms. -->
     <field name="date"/>
     <label name="type"/>
     <field name="type"/>
-    <!-- <label name="arbitrary_cost"/>
-    <field name="arbitrary_cost"/> -->
 </form>

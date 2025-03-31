@@ -4,7 +4,7 @@
 from trytond.pool import Pool
 
 
-from . import (account, account_dunning, collection,
+from . import (account_dunning, collection,
                conector, conector_log, cron, currency,
                email_, exogena, line,
                pay_mode, payment_bank, payment_term,
@@ -14,21 +14,7 @@ from . import (account, account_dunning, collection,
 
 def register():
     """Function that register model view, wizard and reports with pool"""
-    Pool.register(account.Account,
-                  account.Move,
-                  account.MoveLine,
-                  account.BalanceStockStart,
-                  account.BankMoneyTransferStart,
-                  account.AnalyticAccountEntry,
-                  account.MoveCloseYearStart,
-                  account.PartyWithholdingStart,
-                  account.Period,
-                  account.Reconciliation,
-                  account.AuxiliaryPartyStart,
-                  account.AccountAsset,
-                  account.AuxiliaryBookStartCDS,
-                  account.IncomeStatementView,
-                  collection.Tracking,
+    Pool.register(collection.Tracking,
                   conector.Actualizacion,
                   conector.Email,
                   conector.ImportedDocument,
@@ -68,14 +54,7 @@ def register():
                   module='conector',
                   type_='model')
 
-    Pool.register(account.BalanceStock,
-                  account.BankMoneyTransfer,
-                  account.PrintAuxiliaryBookCDS,
-                  account.IncomeStatementWizard,
-                  account.ActiveForceDraft,
-                  account.PrintPartyWithholding,
-                  account_dunning.DunningForceDraft,
-                  account.MoveCloseYear,
+    Pool.register(account_dunning.DunningForceDraft,
                   conector.ImportedDocumentWizard,
                   conector_log.DeleteImportRecords,
                   payment_bank.PaymentBankGroup,
@@ -104,13 +83,7 @@ def register():
                   module='conector',
                   type_='wizard')
 
-    Pool.register(account.AuxiliaryParty,
-                  account.AuxiliaryBookCDS,
-                  account.IncomeStatementReport,
-                  account.IncomeStatement,
-                  account.TrialBalanceDetailedCds,
-                  account.PartyWithholding,
-                  collection.PortfolioStatusReport,
+    Pool.register(collection.PortfolioStatusReport,
                   exogena.TemplateExogena,
                   exogena.F1001,
                   exogena.F1003,

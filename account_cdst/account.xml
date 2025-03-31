@@ -39,7 +39,7 @@ this repository contains the full copyright notices and license terms. -->
             <field name="name">Auxiliary Book</field>
             <field name="model"></field>
             <field name="report_name">account_col.auxiliary_book_cds.report</field>
-            <field name="report">conector/reports/auxiliary_book.fods</field>
+            <field name="report">account_cdst/auxiliary_book.fods</field>
             <field name="template_extension">ods</field>
             <field name="translatable">False</field>
         </record>
@@ -80,7 +80,7 @@ this repository contains the full copyright notices and license terms. -->
             <field name="name">Income statement Report</field>
             <field name="model">account.account.type</field>
             <field name="report_name">account.income_statement_report</field>
-            <field name="report">conector/reports/analytic_accounts.fods</field>
+            <field name="report">account_cdst/analytic_accounts.fods</field>
             <field name="template_extension">ods</field>
             <field name="translatable">False</field>
         </record>
