@@ -17,7 +17,7 @@ this repository contains the full copyright notices and license terms. -->
             <field name="name">Sale Cost Shop Detailed</field>
             <field name="model">sale.sale</field>
             <field name="report_name">sale_shop.report_sale_detailed_cds</field>
-            <field name="report">conector/reports/cost_sale_detailed.fods</field>
+            <field name="report">sale_cdst/cost_sale_detailed.fods</field>
             <field name="template_extension">ods</field>
             <field name="translatable">False</field>
         </record>
@@ -41,7 +41,7 @@ this repository contains the full copyright notices and license terms. -->
             <field name="name">Sale Invoices Report</field>
             <field name="model"></field>
             <field name="report_name">sale.invoice_values_cdst.report</field>
-            <field name="report">conector/reports/invoice_sales.fods</field>
+            <field name="report">sale_cdst/invoice_sales.fods</field>
             <field name="template_extension">ods</field>
             <field name="translatable">False</field>
         </record>

@@ -1,14 +1,15 @@
 """--------INIT MODULE---------"""
 
+
 from trytond.pool import Pool
 
 
 from . import (account, account_dunning, collection,
-               conector, conector_log, configuration, cron, currency,
+               conector, conector_log, cron, currency,
                email_, exogena, line,
                pay_mode, payment_bank, payment_term,
                permissions, product, production, purchase, report,
-               sale, sale_device, stock, wiz)
+               stock, wiz)
 
 
 def register():
@@ -56,12 +57,6 @@ def register():
                   purchase.PurchaseLine,
                   report.PayrollExportStart,
                   report.CDSSaleIncomeDailyStart,
-                  sale.Sale,
-                  sale.Statement,
-                  sale_device.SaleDevice,
-                  sale_device.Journal,
-                  sale.SaleShopDetailedCDSStart,
-                  sale.SaleInvoiceValueCdstStart,
                   stock.Configuration,
                   stock.Location,
                   stock.ShipmentInternal,
@@ -95,8 +90,6 @@ def register():
                   production.ProductionForceDraft,
                   report.PayrollExport,
                   report.CDSSaleIncomeDaily,
-                  sale.SaleShopDetailedCDS,
-                  sale.SaleInvoiceValueCdst,
                   stock.ModifyCostPrice,
                   stock.WarehouseKardexStockCds,
                   wiz.DeleteVoucherTecno,
@@ -153,8 +146,6 @@ def register():
                   report.PayrollExportReport,
                   report.CDSSaleIncomeDailyReport,
                   report.LoanFormatReport,
-                  sale.SaleShopDetailedCDSReport,
-                  sale.SaleInvoiceValueCdstReport,
                   stock.ShipmentDetailedReport,
                   stock.WarehouseCdsKardexReport,
                   stock.WarehouseReport,

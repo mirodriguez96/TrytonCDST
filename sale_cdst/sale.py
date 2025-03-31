@@ -1433,7 +1433,7 @@ class SaleShopDetailedCDS(Wizard):
     'Sale Shop Detailed'
     __name__ = 'sale_shop.sale_detailed_cds'
     start = StateView('sale_shop.sale_detailed_cds.start',
-                      'conector.sale_shop_detailed_start_cds_form', [
+                      'sale_cdst.sale_shop_detailed_start_cds_form', [
                           Button('Cancel', 'end', 'tryton-cancel'),
                           Button('Print', 'print_', 'tryton-ok', default=True),
                       ])
@@ -1693,7 +1693,7 @@ class SaleInvoiceValueCdst(Wizard):
     'Sale Invoice Values Wizard'
     __name__ = 'sale.invoice_values_cdst'
     start = StateView('sale.invoice_values_cdst.start',
-                      'conector.form_view_invoice_values_cdst_start', [
+                      'sale_cdst.form_view_invoice_values_cdst_start', [
                           Button('Cancel', 'end', 'tryton-cancel'),
                           Button('Print', 'print_', 'tryton-ok', default=True),
                       ])
