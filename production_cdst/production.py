@@ -574,7 +574,7 @@ class ProductionDetailed(Wizard):
     'Production Detailed'
     __name__ = 'production.detailed'
     start = StateView('production.detailed.start',
-                      'conector.production_detailed_start_view_form', [
+                      'production_cdst.production_detailed_start_view_form', [
                           Button('Cancel', 'end', 'tryton-cancel'),
                           Button('Print', 'print_', 'tryton-ok', default=True),
                       ])
