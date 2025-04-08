@@ -104,8 +104,10 @@ class Invoice(metaclass=PoolMeta):
                                    ('invoice_date', '>=', data['date_start']),
                                    ('invoice_date', '<=', data['date_finish'])
                                    ])
-        transaction = Transaction()
-        context = transaction.context
+        # transaction = Transaction()
+        # context = transaction.context
+        # with transaction.set_context(
+        #             queue_batch=context.get('queue_batch', True)):
         cls.note_analytic_account = data['analytic_account']
         cls.note_invoice_type = data['invoice_type']
         cls.note_adjustment_account = data['adjustment_account']
@@ -119,10 +121,10 @@ class Invoice(metaclass=PoolMeta):
             raise UserError("ERROR: No se encontraron facturas asociadas.")
 
         for invoice in inv_adjustment:
-            invoice_ = cls.__queue__.create_adjustment_note(invoice)
-            with transaction.set_context(
-                    queue_batch=context.get('queue_batch', True)):
-                cls.__queue__.process([invoice_])
+            invoice_ = cls.create_adjustment_note(invoice)
+            # with transaction.set_context(
+            #         queue_batch=context.get('queue_batch', True)):
+            cls.process([invoice_])
 
     @classmethod
     def create_adjustment_note(cls, inv):
