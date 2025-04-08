@@ -9,7 +9,7 @@ from . import (collection,
                email_, exogena, line,
                pay_mode, payment_bank, payment_term,
                product, report,
-               stock, wiz)
+               stock)
 
 
 def register():
@@ -39,14 +39,6 @@ def register():
                   stock.WarehouseKardexStockStartCds,
                   stock.MoveCDT,
                   stock.Inventory,
-                  wiz.CreateAdjustmentNotesParameters,
-                  wiz.AddCenterOperationLineP,
-                  wiz.DocumentsForImportParameters,
-                  wiz.DeleteVoucherTecnoStart,
-                  wiz.MarkImportMultiStart,
-                  wiz.FixBugsConectorView,
-                  wiz.DeleteLiquidationStart,
-                  wiz.DeleteEventLiquidationStart,
                   module='conector',
                   type_='model')
 
@@ -55,24 +47,6 @@ def register():
                   report.CDSSaleIncomeDaily,
                   stock.ModifyCostPrice,
                   stock.WarehouseKardexStockCds,
-                  wiz.DeleteVoucherTecno,
-                  wiz.VoucherMoveUnreconcile,
-                  wiz.DeleteAccountType,
-                  wiz.CheckImportedDoc,
-                  wiz.MarkImportMulti,
-                  wiz.MoveFixParty,
-                  wiz.ForceDraftVoucher,
-                  wiz.UnreconcilieMulti,
-                  wiz.CreateAdjustmentNotes,
-                  wiz.AddCenterOperationLine,
-                  wiz.ReimportExcepcionDocument,
-                  wiz.DocumentsForImport,
-                  wiz.ConfirmLinesBankstatement,
-                  wiz.GroupMultirevenueLines,
-                  wiz.GroupDatafonoLines,
-                  wiz.FixBugsConector,
-                  wiz.DeleteLiquidation,
-                  wiz.DeleteEventLiquidation,
                   module='conector',
                   type_='wizard')
 
