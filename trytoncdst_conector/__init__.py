@@ -8,7 +8,7 @@ from . import (collection,
                cron, currency,
                email_, exogena, line,
                pay_mode, payment_bank, payment_term,
-               product, report)
+               product)
 
 
 def register():
@@ -29,14 +29,10 @@ def register():
                   product.CategoryAccount,
                   product.Template,
                   product.CostPriceRevision,
-                  report.PayrollExportStart,
-                  report.CDSSaleIncomeDailyStart,
                   module='conector',
                   type_='model')
 
     Pool.register(payment_bank.PaymentBankGroup,
-                  report.PayrollExport,
-                  report.CDSSaleIncomeDaily,
                   module='conector',
                   type_='wizard')
 
@@ -63,8 +59,5 @@ def register():
                   exogena.F5252,
                   payment_bank.PaymentBankGroupReport,
                   payment_bank.BankReportBancolombia,
-                  report.PayrollExportReport,
-                  report.CDSSaleIncomeDailyReport,
-                  report.LoanFormatReport,
                   module='conector',
                   type_='report')

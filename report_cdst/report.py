@@ -38,7 +38,7 @@ class PayrollExport(Wizard):
     'Payroll Export'
     __name__ = 'report.payroll.export'
     start = StateView('report.payroll.export.start',
-                      'conector.payroll_export_start_view_form', [
+                      'report_cdst.payroll_export_start_view_form', [
                           Button('Cancel', 'end', 'tryton-cancel'),
                           Button('Print', 'print_', 'tryton-ok', default=True),
                       ])
@@ -175,7 +175,7 @@ class CDSSaleIncomeDaily(Wizard):
     'CDSSale Income Daily'
     __name__ = 'sale_pos.cdssale_income_daily'
     start = StateView('sale_pos.cdssale_income_daily.start',
-                      'conector.cdssale_income_daily_start_view_form', [
+                      'report_cdst.cdssale_income_daily_start_view_form', [
                           Button('Cancel', 'end', 'tryton-cancel'),
                           Button('Print', 'print_', 'tryton-ok', default=True),
                       ])
