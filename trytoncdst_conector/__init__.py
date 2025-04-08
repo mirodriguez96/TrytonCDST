@@ -4,10 +4,7 @@
 from trytond.pool import Pool
 
 
-from . import (collection,
-               cron, currency,
-               email_, exogena, line,
-               pay_mode, payment_bank, payment_term)
+from . import (collection, cron, currency, email_, exogena, line, pay_mode, payment_term)
 
 
 def register():
@@ -19,15 +16,11 @@ def register():
                   email_.Email,
                   line.Line,
                   pay_mode.VoucherPayMode,
-                  payment_bank.PaymentBankGroupStart,
-                  payment_bank.AccountBankParty,
-                  payment_bank.BankPayment,
                   payment_term.PaymentTerm,
                   module='conector',
                   type_='model')
 
-    Pool.register(payment_bank.PaymentBankGroup,
-                  module='conector',
+    Pool.register(module='conector',
                   type_='wizard')
 
     Pool.register(collection.PortfolioStatusReport,
@@ -51,7 +44,5 @@ def register():
                   exogena.F5250,
                   exogena.F5251,
                   exogena.F5252,
-                  payment_bank.PaymentBankGroupReport,
-                  payment_bank.BankReportBancolombia,
                   module='conector',
                   type_='report')
