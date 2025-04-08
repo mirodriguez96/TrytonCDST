@@ -1,6 +1,7 @@
 #!/bin/sh
 
 modules="
+product_cdst
 report_cdst
 trytoncdst_access
 trytoncdst_conector

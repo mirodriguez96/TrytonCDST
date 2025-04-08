@@ -7,8 +7,7 @@ from trytond.pool import Pool
 from . import (collection,
                cron, currency,
                email_, exogena, line,
-               pay_mode, payment_bank, payment_term,
-               product)
+               pay_mode, payment_bank, payment_term)
 
 
 def register():
@@ -24,11 +23,6 @@ def register():
                   payment_bank.AccountBankParty,
                   payment_bank.BankPayment,
                   payment_term.PaymentTerm,
-                  product.Product,
-                  product.ProductCategory,
-                  product.CategoryAccount,
-                  product.Template,
-                  product.CostPriceRevision,
                   module='conector',
                   type_='model')
 
