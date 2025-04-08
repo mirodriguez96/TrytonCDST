@@ -1036,3 +1036,11 @@ msgstr "Salario promedio"
 msgctxt "field:account_col.move_close_year.start,account:"
 msgid "Analytic account"
 msgstr "Cuenta analitica"
+
+msgctxt "model:ir.action,name:act_create_vacation_report"
+msgid "Vacations detail"
+msgstr "Detalle de vacaciones"
+
+msgctxt "model:ir.action,name:report_avaliable_vacations"
+msgid "Vacations detail"
+msgstr "Detalle de vacaciones"
