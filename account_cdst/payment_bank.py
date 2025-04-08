@@ -237,7 +237,7 @@ class PaymentBankGroup(Wizard):
     'Payment Bank Group'
     __name__ = 'account.payment_bank'
     start = StateView('account.payment_bank.start',
-                      'conector.payment_bank_start_view_form', [
+                      'payment_bank_cdst.payment_bank_start_view_form', [
                           Button('Cancel', 'end', 'tryton-cancel'),
                           Button('Print', 'print_', 'tryton-ok', default=True),
                       ])

@@ -24,7 +24,7 @@
                   <field name="name">Bancolombia Payments Format</field>
                   <field name="model">account.payment.group</field>
                   <field name="report_name">account.payment_bank.report</field>
-                  <field name="report">conector/reports/payments_bancolombia_sap.fods</field>
+                  <field name="report">account_cdst/payments_bancolombia_sap.fods</field>
                   <field name="template_extension">ods</field>
                   <field name="translatable">False</field>
             </record>
