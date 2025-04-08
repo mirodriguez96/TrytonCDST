@@ -47,6 +47,11 @@ def _get_structured_json_data(json_data):
     for i in json_data:
         date_json = list(i)
         dic = dict(zip(date_json, date_json))
+        record = None
+        if dic[date_json[12]]:
+            model_name, record_id = dic[date_json[12]].split(',')
+            Model = Pool().get(model_name)
+            record = Model(int(record_id))
         structured_json_body = {
             'reference': dic[date_json[0]] or "",
             'credit': dic[date_json[1]] or 0,
@@ -65,8 +70,7 @@ def _get_structured_json_data(json_data):
                 'id': dic[date_json[8]] or ""
             },
             'move_origin.': {
-                'id': '',
-                'rec_name': ''
+                'rec_name': getattr(record, 'rec_name', ''),
             }
         }
 
@@ -1081,7 +1085,6 @@ class AuxiliaryBookCDS(Report):
             where &= account.state == 'posted'
         if reference:
             where &= moveLine.reference.like_(reference)
-        print(accountfilter, periodsfilter)
         # Consulta que trae cada una de las lineas de las cuentas
         query = moveLine.join(
             partys, 'LEFT', condition=(partys.id == moveLine.party)).join(
@@ -1099,6 +1102,7 @@ class AuxiliaryBookCDS(Report):
                     moveLine.party,
                     partys.name,
                     partys.id_number,
+                    account.origin,
                     where=where)
 
         cursor.execute(*query)
@@ -1138,6 +1142,7 @@ class AuxiliaryBookCDS(Report):
                         line['party_id'] = line['party.']['id_number']
                     if line['move_origin.']:
                         line['origin'] = line['move_origin.']['rec_name']
+
                     credit += line['credit']
                     debit += line['debit']
                     line['balance'] = balance
