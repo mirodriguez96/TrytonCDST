@@ -63,7 +63,7 @@ class FixBugsConector(Wizard):
     __name__ = 'conector.configuration.fix_bugs_conector'
     start = StateView(
         'conector.configuration.documents_for_import_parameters_view',
-        'conector.fix_exec_accion_view_form', [
+        'wiz_cdst.fix_exec_accion_view_form', [
             Button('Cancel', 'end', 'tryton-cancel'),
             Button('Execute', 'do_submit', 'tryton-ok', default=True),
         ])
@@ -182,7 +182,7 @@ class DocumentsForImport(Wizard):
 
     start = StateView(
         'conector.configuration.documents_for_import_parameters',
-        'conector.documents_for_import_parameters_view_form', [
+        'wiz_cdst.documents_for_import_parameters_view_form', [
             Button('Cancel', 'end', 'tryton-cancel'),
             Button(
                 'Mark', 'documents_for_import', 'tryton-go-next', default=True)
@@ -253,7 +253,7 @@ class DeleteVoucherTecno(Wizard):
     __name__ = 'account.voucher.delete_voucher_tecno'
 
     start = StateView(
-        'delete.voucher.wizard.start', 'conector.validated_identity_view_form',
+        'delete.voucher.wizard.start', 'wiz_cdst.validated_identity_view_form',
         [
             Button('Cancel', 'end', 'tryton-cancel'),
             Button('Confirm', 'do_submit', 'tryton-ok', default=True),
@@ -502,7 +502,7 @@ class MarkImportMulti(Wizard):
 
     start = StateView(
         'delete.multi.wizard.start',
-        'conector.validated_identity_multi_view_form', [
+        'wiz_cdst.validated_identity_multi_view_form', [
             Button('Cancel', 'end', 'tryton-cancel'),
             Button('Confirm', 'mark_import', 'tryton-ok', default=True),
         ])
@@ -572,7 +572,7 @@ class CreateAdjustmentNotes(Wizard):
     __name__ = 'account.note.create_adjustment_note'
 
     start = StateView('account.note.create_adjustment_note.parameters',
-                      'conector.view_adjustment_note_form', [
+                      'wiz_cdst.view_adjustment_note_form', [
                           Button('Cancel', 'end', 'tryton-cancel'),
                           Button('Add', 'add_note', 'tryton-ok', default=True),
                       ])
@@ -628,7 +628,7 @@ class AddCenterOperationLine(Wizard):
     __name__ = 'account.note.add_operation_center'
     start = StateView(
         'account.note.add_operation_center.parameters',
-        'conector.view_add_operation_center_form', [
+        'wiz_cdst.view_add_operation_center_form', [
             Button('Cancel', 'end', 'tryton-cancel'),
             Button('Add', 'operation_center', 'tryton-ok', default=True),
         ])
@@ -832,7 +832,7 @@ class DeleteLiquidation(Wizard):
     __name__ = 'staff.liquidation.delete_start'
 
     start = StateView('delete.liquidation.wizard.start',
-                      'conector.validated_identity_liquidation_view_form', [
+                      'wiz_cdst.validated_identity_liquidation_view_form', [
                           Button('Cancel', 'end', 'tryton-cancel'),
                           Button('Confirm', 'run', 'tryton-ok', default=True),
                       ])
@@ -909,7 +909,7 @@ class DeleteEventLiquidation(Wizard):
 
     start = StateView(
         'delete.event.liquidation.wizard.start',
-        'conector.validated_identity_event_liquidation_view_form', [
+        'wiz_cdst.validated_identity_event_liquidation_view_form', [
             Button('Cancel', 'end', 'tryton-cancel'),
             Button('Confirm', 'run', 'tryton-ok', default=True),
         ])

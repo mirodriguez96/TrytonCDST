@@ -3,6 +3,7 @@
 modules="
 trytoncdst_access
 trytoncdst_conector
+wiz_cdst
 production_cdst
 conector_cdst
 account_cdst
@@ -23,6 +24,8 @@ account_bank_statement_cdst
 voucher_cdst
 metabase_cdst
 "
+
+
 
 echo "[INFO] Uninstalling trytoncdst modules... "
 for i in ${modules}
