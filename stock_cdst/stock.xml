@@ -33,7 +33,7 @@ this repository contains the full copyright notices and license terms. -->
             <field name="name">Kardex Report</field>
             <field name="model"></field>
             <field name="report_name">stock_co.warehouse_kardex_cds_stock.report</field>
-            <field name="report">conector/reports/kardex.fods</field>
+            <field name="report">stock_cdst/kardex.fodt</field>
             <field name="template_extension">ods</field>
             <field name="translatable">False</field>
         </record>

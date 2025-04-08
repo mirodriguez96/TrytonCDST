@@ -1,0 +1,7 @@
+[build-system]
+requires = ["trytoncommunity-setuptools >= 0.3"]
+build-backend = "setuptools.build_meta"
+
+[tool.isort]
+multi_line_output = 4  # vertical grid
+known_first_party = ["trytond"]

@@ -8,8 +8,7 @@ from . import (collection,
                cron, currency,
                email_, exogena, line,
                pay_mode, payment_bank, payment_term,
-               product, report,
-               stock)
+               product, report)
 
 
 def register():
@@ -32,21 +31,12 @@ def register():
                   product.CostPriceRevision,
                   report.PayrollExportStart,
                   report.CDSSaleIncomeDailyStart,
-                  stock.Configuration,
-                  stock.Location,
-                  stock.ShipmentInternal,
-                  stock.ShipmentDetailedStart,
-                  stock.WarehouseKardexStockStartCds,
-                  stock.MoveCDT,
-                  stock.Inventory,
                   module='conector',
                   type_='model')
 
     Pool.register(payment_bank.PaymentBankGroup,
                   report.PayrollExport,
                   report.CDSSaleIncomeDaily,
-                  stock.ModifyCostPrice,
-                  stock.WarehouseKardexStockCds,
                   module='conector',
                   type_='wizard')
 
@@ -76,8 +66,5 @@ def register():
                   report.PayrollExportReport,
                   report.CDSSaleIncomeDailyReport,
                   report.LoanFormatReport,
-                  stock.ShipmentDetailedReport,
-                  stock.WarehouseCdsKardexReport,
-                  stock.WarehouseReport,
                   module='conector',
                   type_='report')

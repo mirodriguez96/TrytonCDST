@@ -1381,7 +1381,7 @@ class WarehouseKardexStockCds(Wizard):
     'Warehouse Kardex Stock'
     __name__ = 'stock_co.warehouse_kardex_cds_stock'
     start = StateView('stock_co.warehouse_kardex_cds_stock.start',
-                      'conector.warehouse_kardex_stock_start_cds_view_form', [
+                      'stock_cdst.warehouse_kardex_stock_start_cds_view_form', [
                           Button('Cancel', 'end', 'tryton-cancel'),
                           Button('Print', 'print_', 'tryton-ok', default=True),
                       ])
