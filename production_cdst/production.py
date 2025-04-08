@@ -33,7 +33,6 @@ class Production(metaclass=PoolMeta):
         done_revision = []
         done_cost = []
         for rec in records:
-            print(rec)
             for inputs in rec.inputs:
                 inputs.origin = rec
                 inputs.save()
@@ -47,14 +46,14 @@ class Production(metaclass=PoolMeta):
                     "product": product.id,
                     "template": product.template.id,
                     "cost_price": product.cost_price,
-                    "date": datetime.date.today(),
+                    "date": move.effective_date,
                 }
                 done_revision.append(revision)
 
                 data = {
                     "stock_move": move.id,
                     "product": product.id,
-                    "effective_date": datetime.date.today(),
+                    "effective_date": move.effective_date,
                     "cost_price": product.cost_price,
                 }
                 done_cost.append(data)
@@ -142,10 +141,11 @@ class Production(metaclass=PoolMeta):
         pool = Pool()
         Move = pool.get('stock.move')
         Product = Pool().get('product.product')
+        Revision = pool.get("product.cost_price.revision")
 
         to_draft, to_delete = [], []
         id_products = []
-
+        revisions = []
         cursor = Transaction().connection.cursor()
         sql_table = cls.__table__()
         _today = datetime.date.today()
@@ -154,6 +154,14 @@ class Production(metaclass=PoolMeta):
             # Save data of move stock to delete it
             for move in chain(production.inputs, production.outputs):
                 id_products.append(move.product.id)
+                if move.production_output:
+                    date_ = move.effective_date
+                    revision = Revision.search([
+                        ('product', '=', move.product.id),
+                        ('date', '=', date_),])
+                    if revision:
+                        # _today = move.effective_date
+                        revisions.append(revision[0])
                 if move.state != 'cancelled':
                     to_draft.append(move)
                 else:
@@ -170,7 +178,8 @@ class Production(metaclass=PoolMeta):
                 return False
         Move.draft(to_draft)
         Move.delete(to_delete)
-
+        if revisions:
+            Revision.delete(revisions)
         products = Product.search([('id', 'in', id_products)])
         Product.recompute_cost_price(products, start=_today)
 
