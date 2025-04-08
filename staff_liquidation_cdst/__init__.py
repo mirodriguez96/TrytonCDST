@@ -21,8 +21,10 @@ def register():
     Pool.register(
         liquidation.MoveProvisionBonusService,
         liquidation.LiquidationGroup,
+        liquidation.LiquidationDetail,
         module='staff_liquidation_cdst', type_='wizard')
 
     Pool.register(
         liquidation.LiquidationReport,
+        liquidation.LiquidationDetailReport,
         module='staff_liquidation_cdst', type_='report')
