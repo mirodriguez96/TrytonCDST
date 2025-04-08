@@ -3,34 +3,13 @@
 this repository contains the full copyright notices and license terms. -->
 <tryton>
     <data>
-        <!-- Reporte cartera detallada -->
-        <!--
-        <record model="ir.ui.view" id="print_portfolio_status_start_view_form">
-            <field name="model">report.print_portfolio_status.start</field>
-            <field name="type">form</field>
-            <field name="name">print_portfolio_status_start_view_form</field>
-        </record>
-        <record model="ir.action.wizard" id="wizard_print_portfolio_status">
-            <field name="name">Portfolio Status</field>
-            <field name="wiz_name">report.print_portfolio_status</field>
-        </record>
-        <record model="ir.action.report" id="report_portfolio_status">
-            <field name="name">Portfolio Status</field>
-            <field name="model"></field>
-            <field name="report_name">report.portfolio_status_report</field>
-            <field name="report">conector/portfolio_status.fods</field>
-            <field name="template_extension">ods</field>
-            <field name="translatable">False</field>
-        </record>
-        <menuitem parent="party.menu_party" action="wizard_print_portfolio_status" id="menu_print_expired_portfolio" icon="tryton-print" sequence="200"/>
-        -->
 
         <!-- Reporte nómina -->
         <record model="ir.action.report" id="payroll_export_report">
             <field name="name">Payroll Export Report</field>
             <field name="model"></field>
             <field name="report_name">report.payroll.export_report</field>
-            <field name="report">conector/payroll_export_report.fods</field>
+            <field name="report">report_cdst/payroll_export_report.fodt</field>
             <field name="template_extension">ods</field>
             <field name="translatable">False</field>
         </record>
@@ -50,7 +29,7 @@ this repository contains the full copyright notices and license terms. -->
             <field name="name">Report Sale Income Daily Test</field>
             <field name="model"></field>
             <field name="report_name">sale_pos.cdssale_income_daily_report</field>
-            <field name="report">conector/reporte_diario_ventas.fods</field>
+            <field name="report">report_cdst/reporte_diario_ventas.fodt</field>
             <field name="template_extension">ods</field>
             <field name="translatable">False</field>
         </record>
@@ -64,20 +43,5 @@ this repository contains the full copyright notices and license terms. -->
             <field name="wiz_name">sale_pos.cdssale_income_daily</field>
         </record>
         <menuitem parent="sale.menu_reporting" id="menu_sale_income_daily" action="wizard_printer_sale_income_daily" sequence="11" icon="tryton-print"/>
-
-        <!--Reporte de prestamo -->
-        <!-- <record model="ir.action.report" id="report_loan_format">
-            <field name="name">Loan Format</field>
-            <field name="report_name">staff.loan.loan_format_report</field>
-            <field name="model">staff.loan</field>
-            <field name="report">conector/loan_format_report.fodt</field>
-            <field name="template_extension">odt</field>
-        </record>
-        <record model="ir.action.keyword" id="report_loan_format_keyword">
-            <field name="keyword">form_print</field>
-            <field name="model">staff.loan,-1</field>
-            <field name="action" ref="report_loan_format"/>
-        </record> -->
-
     </data>
 </tryton>
