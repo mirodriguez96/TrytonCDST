@@ -3,6 +3,7 @@
 modules="
 trytoncdst_access
 trytoncdst_conector
+stock_cdst
 wiz_cdst
 production_cdst
 conector_cdst

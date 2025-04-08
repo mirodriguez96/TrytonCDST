@@ -1,0 +1,55 @@
+# Python artifacts
+
+syntax: glob
+__pycache__/
+*.py{c,o}
+
+syntax: rootglob
+build/
+dist/
+
+# Environments
+syntax: rootglob
+venv/
+_venv/
+.direnv/
+
+# Distribution / packaging
+syntax: rootglob
+*.egg-info/
+*.egg-link
+*.egg
+.eggs/
+
+# Unit test / coverage reports
+syntax: rootglob
+.dbcache/
+.pytest_cache/
+.tox
+.coverage
+.coverage.*
+coverage.*
+.coveragerc
+TEST-*.xml
+
+# Translations
+syntax: glob
+*.mo
+*.pot
+
+# Sphinx documentation
+syntax: rootglob
+docs/_build/
+
+# editor artifacts and config
+syntax: glob
+*~
+.\#*
+\#*#
+*.swp
+.idea
+.spyproject
+*.code-workspace
+
+# platform artifacts
+.DS_store
