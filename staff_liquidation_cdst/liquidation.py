@@ -544,6 +544,7 @@ class Liquidation(metaclass=PoolMeta):
                             'lines': [],
                             'origin': data['origin'],
                             'reference': data['reference'],
+                            'analytic': analytic_account,
                         }
                     grouped[account_id]['amount'].append(amount_line)
                     grouped[account_id]['lines'].append(moveline)
@@ -560,6 +561,7 @@ class Liquidation(metaclass=PoolMeta):
                         'lines': [],
                         'origin': data['origin'],
                         'reference': data['reference'],
+                        'analytic': analytic_account,
                     }
                 grouped[account_id]['amount'].append(line.amount)
                 amount.append(line.amount)
@@ -600,7 +602,7 @@ class Liquidation(metaclass=PoolMeta):
                                 debit=round(self.gross_payments
                                             * Decimal(0.12), 2),
                                 credit=_ZERO,
-                                analytic=values.get('analytic', None),
+                                analytics=values.get('analytic', None),
                                 origin=origin_,
                                 reference=reference_,
                                 wage=values['wage'],
@@ -622,7 +624,7 @@ class Liquidation(metaclass=PoolMeta):
                     debit=debit,
                     credit=credit,
                     party_to_pay_concept=party_payment,
-                    analytic=values.get('analytic', None),
+                    analytics=values.get('analytic', None),
                     origin=origin_,
                     reference=reference_,
                     wage=values['wage'],
@@ -669,14 +671,10 @@ class Liquidation(metaclass=PoolMeta):
                         ['employee', '=', employee])
                     if mandatories:
                         for mandatory in mandatories:
-                            if (
-                                mandatory.analytic_account
-                                and mandatory.analytic_account.type == 'normal'
-                            ):
-                                analytic_account.append(
-                                    mandatory.analytic_account)
+                            if mandatory.analytic_account:
+                                analytic_account.append(mandatory.analytic_account)
                                 break
-                return analytic_account[0] if analytic_account else None
+                return analytic_account if analytic_account else None
             else:
                 return None
         else:
@@ -689,7 +687,7 @@ class Liquidation(metaclass=PoolMeta):
         debit=_ZERO,
         credit=_ZERO,
         party_to_pay=None,
-        analytic=None,
+        analytics=None,
         party_to_pay_concept=None,
         origin=None,
         reference=None,
@@ -726,22 +724,42 @@ class Liquidation(metaclass=PoolMeta):
             'party': party_id,
             'origin': origin,
             'reference': reference,
+            'analytic_lines': []
         }
 
-        if analytic and debit > 0:
-            res['analytic_lines'] = [
-                (
-                    'create',
-                    [
-                        {
-                            'debit': res['debit'],
-                            'credit': res['credit'],
-                            'account': analytic.id,
-                            'date': self.liquidation_date,
-                        }
-                    ],
-                )
-            ]
+        if analytics:
+            for analytic in analytics:
+                if analytic.type == "normal":
+                    res['analytic_lines'] = [
+                        (
+                            'create',
+                            [
+                                {
+                                    'debit': res['debit'],
+                                    'credit': res['credit'],
+                                    'account': analytic.id,
+                                    'date': self.liquidation_date,
+                                }
+                            ],
+                        )
+                    ]
+                else:
+                    amount = res['debit'] if res['debit'] else res['credit']
+                    for account, amount in analytic.distribute(amount):
+                        res['analytic_lines'].append(
+                            (
+                                'create',
+                                [
+                                    {
+                                        'debit': amount if res['debit'] else Decimal(0),
+                                        'credit': amount if res['credit'] else Decimal(0),
+                                        'account': account,
+                                        'date': self.liquidation_date,
+                                    }
+                                ],
+                            )
+                        )
+
         return res
 
     def get_party_liquidation_line(self, wage, mandatories):
