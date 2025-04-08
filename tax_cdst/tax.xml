@@ -30,7 +30,7 @@ this repository contains the full copyright notices and license terms. -->
             <field name="name">Taxes Posted Accumulated</field>
             <field name="model"></field>
             <field name="report_name">account_col.taxes_posted_report_accumulated</field>
-            <field name="report">conector/ImpuestosContabilizadosAcumulados.ods</field>
+            <field name="report">tax_cdst/impuestos_contabilizados_acumulado.fodt</field>
             <field name="template_extension">ods</field>
             <field name="translatable">False</field>
         </record>

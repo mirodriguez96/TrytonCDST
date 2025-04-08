@@ -14,7 +14,7 @@ this repository contains the full copyright notices and license terms. -->
             <field name="name">Production</field>
             <field name="model">production</field>
             <field name="report_name">production.report</field>
-            <field name="report">production_cdst/production.fodt</field>
+            <field name="report">production_cdst/order_production.fodt</field>
             <field name="template_extension">odt</field>
             <field name="translatable">false</field>
         </record>
@@ -38,7 +38,7 @@ this repository contains the full copyright notices and license terms. -->
             <field name="name">Report Production Detailed</field>
             <field name="model">production</field>
             <field name="report_name">production.detailed_report</field>
-            <field name="report">production_cdst/detail_production.fods</field>
+            <field name="report">production_cdst/detail_production.fodt</field>
             <field name="template_extension">ods</field>
             <field name="translatable">False</field>
         </record>
