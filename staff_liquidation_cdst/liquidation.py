@@ -9,6 +9,9 @@ from trytond.model import ModelView, fields
 from trytond.modules.analytic_account import AnalyticMixin
 from trytond.pool import Pool, PoolMeta
 from trytond.pyson import Bool, Eval, If, Not
+from trytond.wizard import StateReport, Wizard
+from trytond.transaction import Transaction
+from trytond.report import Report
 
 from .constants import EXTRAS
 
@@ -1634,3 +1637,230 @@ class LiquidationGroup(metaclass=PoolMeta):
 
         Liquidation.compute_liquidation(to_liquidation)
         return 'end'
+
+
+class LiquidationDetail(Wizard):
+    'Liquidation detail wizard'
+    __name__ = 'staff.liquidation.detail_liquidation'
+    start = StateReport('staff.liquidation.detail_liquidation_report')
+
+    def do_start(self, action):
+        ids_ = Transaction().context['active_ids']
+        data = {
+            'ids': ids_,
+        }
+        return action, data
+
+    def transition_start(self):
+        return 'end'
+
+
+class LiquidationDetailReport(Report):
+    'Liquidation detail report'
+    __name__ = 'staff.liquidation.detail_liquidation_report'
+
+    @classmethod
+    def get_context(cls, records, header, data):
+        """Function to build data to report"""
+        pool = Pool()
+        Liquidation = pool.get('staff.liquidation')
+        WageType = pool.get('staff.wage_type')
+        report_context = super().get_context(records, header, data)
+        ids_ = data.get('ids', [])
+        data_ = {}
+        if len(ids_) == 0:
+            raise (UserError('ERROR', 'Debe seleccionar al menos un contrato'))
+
+        type_liquidation = {'contract': 'Contrato',
+            'bonus_service': 'Bono de servicio',
+            'interest': 'Intereses de cesantias',
+            'unemployment': 'Cesantias',
+            'holidays': 'Vacaciones',
+            'convencional_bonus': 'Bono convencional',
+        }
+
+        liquidations = Liquidation.search([("id", "in", ids_)])
+
+        for liquidation in liquidations:
+            kind = liquidation.kind
+            for line in liquidation.lines:
+                wage = WageType(line.wage)
+                concept = wage.type_concept
+                concept_electronic = wage.type_concept_electronic
+                if ((concept_electronic == 'Cesantias'
+                        or concept_electronic == 'PrimasS'
+                        or concept_electronic == 'IntCesantias')
+                        or (kind != 'holidays' and concept == 'holidays')):
+                    if liquidation.id not in data_:
+                        data_[liquidation.id] = {'data': {}}
+                    data_[liquidation.id]['data'][line.description] = cls.get_data_line(line, liquidation)
+
+            text = ""
+            if liquidation.kind == 'contract' and liquidation.contract.end_date:
+                start_contract = liquidation.contract.start_date
+                end_contract = liquidation.contract.end_date
+                text = f"""Este empleado laboro desde {start_contract} hasta {end_contract}"""
+            type = type_liquidation[liquidation.kind] if liquidation.kind in type_liquidation else None
+
+            data_[liquidation.id]['employee'] = liquidation.employee.party.name
+            data_[liquidation.id]['description'] = liquidation.description
+            data_[liquidation.id]['text'] = text
+            data_[liquidation.id]['type'] = type
+
+        report_context['records'] = data_
+        return report_context
+
+    @classmethod
+    def get_data_line(cls, line_, liquidation):
+        pool = Pool()
+        Payroll = pool.get('staff.payroll')
+        data = {}
+        contract = liquidation.contract
+        kind = liquidation.kind
+        employee = contract.employee
+        transport_bonus = contract.transport_bonus if contract.transport_bonus else 0
+        total_base_salary = 0
+        total_base_extras = 0
+        overtime = 0
+        night_overtime = 0
+        commission = 0
+        bonus = 0
+
+        if (line_.wage.type_concept_electronic == 'PrimasS'
+                and kind == 'unemployment'):
+            if not liquidation.payment_liquidation_date:
+                message = (
+                    """Debe proporcionar la fecha de pago de la liquidacion""")
+                clean_message = re.sub(r'\s+', ' ', message).strip()
+                raise UserError('Error', clean_message)
+
+        domain = [('employee', '=', employee), ('contract', '=', contract)]
+        if (kind == 'contract' or kind == 'unemployment'
+                or kind == 'bonus_service' or kind == 'interest'):
+            start_period = liquidation.start_period.start
+            end_period = liquidation.end_period.end
+            end_year_period = end_period.year
+            start_year_period = start_period.year
+            if ((line_.wage.type_concept_electronic == 'PrimasS')
+                    and end_year_period == start_year_period):
+                if start_period.month != end_period.month:
+                    if end_period.month > 6:
+                        start_period = datetime(start_period.year, 7, 1)
+            elif (line_.wage.type_concept_electronic == 'PrimasS'
+                    and end_year_period != start_year_period):
+                start_period = date(end_year_period, 1, 1)
+                end_period = contract.end_date
+            work_days = liquidation.get_work_days_line_liquidation(
+                start_period, end_period, contract, line_.wage)
+            domain.append(('end', '>=', start_period))
+            domain.append(('end', '<=', end_period))
+            data['start_period'] = start_period
+            data['end_period'] = end_period
+        payrolls = Payroll.search(domain, order=[('id', 'ASC')])
+
+        if work_days == 0 and kind == 'contract':
+            message = ("""No se encontraron dias laborados para el periodo, 
+                       revise si esta proporcionando la fecha de finalizacion
+                       del contrato""")
+            clean_message = re.sub(r'\s+', ' ', message).strip()
+            raise UserError('Error', clean_message)
+
+        # extras, recargos, bonificaciones y comisiones
+        for payroll in payrolls:
+            payroll_value = 0
+
+            if not payroll.payment_extras and not payroll_value:
+                salary = liquidation.get_salary_base(
+                        contract, payroll, end_period)
+                salary_daily = salary / 30
+                payroll_value = salary_daily * payroll.worked_days
+
+            for line in payroll.lines:
+                concept = line.wage_type.type_concept
+                concept_electronic = line.wage_type.type_concept_electronic
+                value = 0
+                if line_.wage.type_concept != 'holidays':
+                    value = line.quantity * line.unit_value
+                    if concept_electronic == 'HRN':
+                        night_overtime += value
+                        continue
+                    if concept == 'extras':
+                        overtime += value
+                    if concept_electronic == 'BonificacionS':
+                        bonus += value
+                    if concept_electronic == 'Comision':
+                        commission += value
+            total_base_salary += payroll_value
+
+        data['cant_payrolls'] = len(payrolls)
+        february_days = 0
+        if end_period.month == 2 and end_period.day == 28:
+            february_days = 2
+        elif end_period.month == 2 and end_period.day == 29:
+            february_days = 1
+
+        work_days += february_days
+        percentage_factor = round(Decimal(work_days / 30), 6)
+
+        work_days_holidays = 0
+        count_work_days_holidays = 0
+        # Calculo de extras nocturnas
+        if line_.wage.type_concept == 'holidays':
+            start_period_ = end_period - timedelta(days=360)
+            domain = [('employee', '=', employee), ('contract', '=', contract),
+                      ('end', '>=', start_period_), ('end', '<=', end_period)]
+            payrolls = Payroll.search(domain, order=[('id', 'ASC')])
+            for payroll in payrolls:
+                count_work_days_holidays += 1
+                for line in payroll.lines:
+                    concept_electronic = line.wage_type.type_concept_electronic
+                    if concept_electronic == 'HRN':
+                        night_overtime += line.quantity * line.unit_value
+
+        work_days_holidays = count_work_days_holidays * 15
+        if (line_.wage.type_concept_electronic == 'PrimasS'
+                and kind != 'contract'):
+            if start_period.month != end_period.month:
+                day_liquidation_payments = liquidation.payment_liquidation_date.day
+                if day_liquidation_payments >= 15:
+                    total_base_salary += contract.salary / 2
+                else:
+                    total_base_salary += contract.salary
+
+        total_base_extras = round(
+            (commission + bonus + overtime + night_overtime), 2)
+        if line_.wage.type_concept == 'holidays':
+            days = liquidation.get_days_line_liquidation(
+                start_period, end_period, contract, line_.wage)
+            total_base_salary = contract.salary
+            salary_prom = round(Decimal(total_base_extras
+                               / work_days_holidays * 30) + total_base_salary, 2)
+            line_value = round((salary_prom / 30) * days, 2)
+            data['days'] = days
+        else:
+            total_base = round(total_base_salary + total_base_extras, 2)
+            salary_prom = (total_base / percentage_factor) + transport_bonus
+
+            line_days = line_.days + february_days
+            data['days'] = line_days
+            if line_.wage.type_concept_electronic == 'Cesantias':
+                line_value = (salary_prom * line_days) / 360
+            if line_.wage.type_concept_electronic == 'PrimasS':
+                line_value = (salary_prom * work_days) / 360
+                data['days'] = work_days
+            if line_.wage.type_concept_electronic == 'IntCesantias':
+                val_cesantias = (salary_prom * line_days) / 360
+                line_value = ((val_cesantias * Decimal('0.12'))
+                            / 360) * line_days
+
+        data['commission'] = commission
+        data['bonus'] = bonus
+        data['overtime'] = overtime
+        data['night_overtime'] = night_overtime
+        data['base_salary'] = total_base_salary
+        data['percentage_factor'] = percentage_factor
+        data['total_extras'] = total_base_extras
+        data['salary_prom'] = round(salary_prom, 2)
+        data['description'] = line_.description
+        data['value'] = line_value
+        return data

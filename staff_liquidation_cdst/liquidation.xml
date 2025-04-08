@@ -28,5 +28,27 @@ this repository contains the full copyright notices and license terms. -->
             <field name="inherit" ref="staff_payroll_co.liquidation_line_view_tree"/>
             <field name="name">liquidation_line_tree</field>
         </record>
+
+
+        <!-- ###################################### -->
+        <!-- # Create detail liquidation report   # -->
+        <!-- ###################################### -->
+        <record model="ir.action.wizard" id="act_create_liquidation_detail_report">
+            <field name="name">Detail Liquidation</field>
+            <field name="wiz_name">staff.liquidation.detail_liquidation</field>
+        </record>
+        <record model="ir.action.keyword" id="act_create_liquidation_detail_report_keyword">
+            <field name="keyword">form_action</field>
+            <field name="model">staff.liquidation,-1</field>
+            <field name="action" ref="act_create_liquidation_detail_report"/>
+        </record>
+        <record model="ir.action.report" id="report_detail_liquidation">
+            <field name="name">Detail Liquidation</field>
+            <field name="model">staff.liquidation</field>
+            <field name="report_name">staff.liquidation.detail_liquidation_report</field>
+            <field name="report">staff_liquidation_cdst/liquidation_detail.fodt</field>
+            <field name="template_extension">ods</field>
+            <field name="translatable">False</field>
+        </record>
     </data>
 </tryton>

@@ -97,7 +97,7 @@ class ContractExportAvaliableVacation(Wizard):
 
 
 class ContractExportAvaliableVacationReport(Report):
-    'Production Detailed Report'
+    'Vacation Report'
     __name__ = 'contract.export_avaliable_vacation'
 
     @classmethod
