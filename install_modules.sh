@@ -1,44 +1,44 @@
 #!/bin/sh
 
 modules="
-product_cdst
-report_cdst
-trytoncdst_access
-trytoncdst_conector
-stock_cdst
-wiz_cdst
-production_cdst
-conector_cdst
+account_bank_statement_cdst
 account_cdst
+account_invoice_cdst
+company_cdst
+conector_cdst
 configuration_cdst
+contract_cdst
+electronic_payroll_cdst
+metabase_cdst
+party_cdst
 permissions_cdst
+product_cdst
 production_cdst
 purchase_cdst
+report_cdst
 sale_cdst
-company_cdst
-account_invoice_cdst
-staff_loan_cdst
-electronic_payroll_cdst
-party_cdst
 staff_liquidation_cdst
-contract_cdst
+staff_loan_cdst
 staff_payroll_cdst
-account_bank_statement_cdst
+stock_cdst
+tax_cdst
 voucher_cdst
-metabase_cdst
+wiz_cdst
 "
 
 
 
 echo "[INFO] Uninstalling trytoncdst modules... "
+pip uninstall -y trytoncdst_access trytoncdst_conector
 for i in ${modules}
     do
-        pip uninstall -y $i
+        pip uninstall -y trytond-$i
     done
 echo "[INFO] Done. "
 
 
 echo "[INFO] Installing trytoncdst modules... "
+pip install trytoncdst_access trytoncdst_conector
 for i in ${modules}
     do
         cd $i
