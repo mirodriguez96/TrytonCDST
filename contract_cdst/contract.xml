@@ -23,5 +23,23 @@ this repository contains the full copyright notices and license terms. -->
             <field name="template_extension">ods</field>
             <field name="translatable">False</field>
         </record>
+
+
+        <!--Asistente para actualizar otro si-->
+        <record model="ir.action.wizard" id="act_update_futhermore">
+            <field name="name">Update futhermore</field>
+            <field name="wiz_name">staff_contract.update_futhermore_wizard</field>
+        </record>
+        <record model="ir.action.keyword" id="act_update_futhermore_keyword">
+            <field name="keyword">form_action</field>
+            <field name="model">staff.contract,-1</field>
+            <field name="action" ref="act_update_futhermore"/>
+        </record>
+
+        <record model="ir.ui.view" id="update_futhermore_form">
+            <field name="model">staff_contract.update_futhermore_view_wizard</field>
+            <field name="type">form</field>
+            <field name="name">update_futhermore_form</field>
+        </record>
     </data>
 </tryton>

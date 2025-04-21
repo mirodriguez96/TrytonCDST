@@ -1044,3 +1044,11 @@ msgstr "Detalle de vacaciones"
 msgctxt "model:ir.action,name:report_avaliable_vacations"
 msgid "Vacations detail"
 msgstr "Detalle de vacaciones"
+
+msgctxt "model:ir.action,name:act_update_futhermore"
+msgid "Update futhermore"
+msgstr "Actualizar 'Otro si'"
+
+msgctxt "field:staff_contract.update_futhermore_view_wizard,date:"
+msgid "Date"
+msgstr "Fecha de referencia"
