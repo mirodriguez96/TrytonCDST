@@ -38,7 +38,7 @@ echo "[INFO] Done. "
 
 
 echo "[INFO] Installing trytoncdst modules... "
-pip install trytoncdst_access trytoncdst_conector
+pip install trytoncdst_access/ trytoncdst_conector/
 for i in ${modules}
     do
         cd $i

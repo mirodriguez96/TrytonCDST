@@ -112,6 +112,8 @@ class Actualizacion(ModelSQL, ModelView):
             consult += " AND sw = 5"
         elif self.name == 'COMPROBANTES DE EGRESO':
             consult += " AND sw = 6"
+        elif self.name == 'TRASLADOS':
+            consult += " AND sw = 16"
         elif self.name == 'PRODUCCION':
             consult += " AND ("
             parameter = Config.get_data_parametros('177')
@@ -175,6 +177,13 @@ class Actualizacion(ModelSQL, ModelView):
             if config.end_date:
                 query += f" AND planned_date < '{config.end_date}' "
             cursor.execute(query)
+        elif self.name == 'TRASLADOS':
+            query += f"stock_shipment_internal WHERE planned_date >= '{config.date}' "\
+                "AND id_tecno LIKE '16-%' "
+            if config.end_date:
+                query += f" AND planned_date < '{config.end_date}' "
+            cursor.execute(query)
+
         else:
             return quantity
         result = cursor.fetchone()
@@ -210,6 +219,8 @@ class Actualizacion(ModelSQL, ModelView):
                 if (valor_parametro.index(tipo) + 1) < len(valor_parametro):
                     consult += " OR "
             consult += ")"
+        elif self.name == 'TRASLADOS':
+            consult += " AND sw = 16"
         else:
             return None
         result = connection.get_data(consult)
@@ -245,6 +256,8 @@ class Actualizacion(ModelSQL, ModelView):
                 if (valor_parametro.index(tipo) + 1) < len(valor_parametro):
                     consult += " OR "
             consult += ")"
+        elif self.name == 'TRASLADOS':
+            consult += " AND sw = 16"
         else:
             return None
         result = connection.get_data(consult)
@@ -280,6 +293,8 @@ class Actualizacion(ModelSQL, ModelView):
                 if (valor_parametro.index(tipo) + 1) < len(valor_parametro):
                     consult += " OR "
             consult += ")"
+        elif self.name == 'TRASLADOS':
+            consult += " AND sw = 16"
         else:
             return None
         result = connection.get_data(consult)
