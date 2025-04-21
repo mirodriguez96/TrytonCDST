@@ -346,7 +346,7 @@ class Configuration(ModelSQL, ModelView):
             if config.end_date:
                 end_date = config.end_date.strftime('%Y-%m-%d %H:%M:%S')
                 query += f" AND fecha_hora < CAST('{end_date}' AS datetime) "
-            query += "ORDER BY fecha_hora ASC"
+            # query += "ORDER BY fecha_hora ASC"
             data = cls.get_data(query)
         except (pyodbc.OperationalError, pyodbc.InterfaceError) as db_error:
             logging.error(
@@ -376,7 +376,7 @@ class Configuration(ModelSQL, ModelView):
             if config.end_date:
                 end_date = config.end_date.strftime('%Y-%m-%d %H:%M:%S')
                 query += f" AND Fecha_Hora_Factura < CAST('{end_date}' AS datetime) "
-            query += "ORDER BY Fecha_Hora_Factura ASC"
+            # query += "ORDER BY Fecha_Hora_Factura ASC"
             data = cls.get_data(query)
         except (pyodbc.OperationalError, pyodbc.InterfaceError) as db_error:
             logging.error(
@@ -571,7 +571,7 @@ class Configuration(ModelSQL, ModelView):
             if config.end_date:
                 end_date = config.end_date.strftime('%Y-%m-%d %H:%M:%S')
                 subquery += f"AND Fecha_Hora_Factura < CAST('{end_date}' AS datetime) "
-            subquery += "ORDER BY Fecha_Hora_Factura ASC"
+            # subquery += "ORDER BY Fecha_Hora_Factura ASC"
             query = f"""
                     SET DATEFORMAT ymd
                     SELECT d.bodega from_location, l.*, notas, anulado

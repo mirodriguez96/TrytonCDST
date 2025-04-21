@@ -685,6 +685,8 @@ class ReimportExcepcionDocument(Wizard):
                 cond += "AND sw = 6 "
             elif actualizacion.name == 'PRODUCCION':
                 cond += "AND sw = 12 "
+            elif actualizacion.name == 'TRASLADOS':
+                cond += "AND sw = 16 "
         if cond:
             query = "UPDATE dbo.Documentos SET exportado = 'N' WHERE exportado = 'E' " + cond
             Config.set_data(query)
