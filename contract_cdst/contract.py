@@ -1,8 +1,10 @@
-from trytond.wizard import (StateReport, Wizard)
 from trytond.transaction import Transaction
 from trytond.exceptions import UserError
 from trytond.pool import PoolMeta, Pool
 from trytond.report import Report
+from trytond.model import ModelView, fields
+from trytond.wizard import (Button, StateReport, StateTransition, StateView,
+                            Wizard)
 
 from decimal import Decimal
 import datetime
@@ -162,3 +164,70 @@ class ContractExportAvaliableVacationReport(Report):
 
             report_context['records'] = data
         return report_context
+
+
+class UpdateFuthermoreView(ModelView):
+    'Update futhermore view'
+    __name__ = 'staff_contract.update_futhermore_view_wizard'
+
+    date = fields.Date("Date", required=True)
+
+
+class UpdateFuthermoreWizard(Wizard):
+    __name__ = 'staff_contract.update_futhermore_wizard'
+
+    start = StateView(
+        'staff_contract.update_futhermore_view_wizard',
+        'contract_cdst.update_futhermore_form', [
+            Button('Cancel', 'end', 'tryton-cancel'),
+            Button('Confirm', 'excecute_wizard', 'tryton-ok', default=True),
+        ])
+
+    excecute_wizard = StateTransition()
+
+    def transition_excecute_wizard(self):
+        pool = Pool()
+        Contract = pool.get('staff.contract')
+        Futhermore = pool.get('staff.contract.futhermore')
+        date = self.start.date
+        contracts = Contract.search([("state", "=", "active"),
+                                     ("OR",
+                                      ("futhermores.state", "=", "draft"),
+                                      ("futhermores.state", "<=", "confirmed"),
+                                    ),
+                                    ("futhermores.futhermore_date", "<=", date)]
+                )
+
+        today = datetime.date.today()
+        if date > today:
+            raise (UserError('ERROR', 'La fecha no puede ser mayor a la fecha actual'))
+
+        for contract in contracts:
+            futhermores = Futhermore.search([("contract", "=", contract),
+                                            ("OR",
+                                      ("state", "=", "draft"),
+                                      ("state", "<=", "confirmed"),
+                                      ("futhermore_date", "<=", date)
+                                    )])
+            if len(futhermores) > 1:
+                draft_futhermores = []
+                confirmed_futhermores = []
+                draft_futhermore = False
+                confirmed_futhermore = False
+
+                for futhermore in futhermores:
+                    if futhermore.state == 'draft':
+                        draft_futhermore = True
+                        draft_futhermores.append(futhermore)
+                    elif futhermore.state == 'confirmed':
+                        confirmed_futhermore = True
+                        confirmed_futhermores.append(futhermore)
+
+                if draft_futhermore and confirmed_futhermore:
+                    for futhermore in draft_futhermores:
+                        futhermore.state = 'confirmed'
+                        futhermore.save()
+                    for futhermore in confirmed_futhermores:
+                        futhermore.state = 'finished'
+                        futhermore.save()
+        return 'end'

@@ -14,9 +14,11 @@ from . import contract
 def register():
     Pool.register(
         contract.Contract,
+        contract.UpdateFuthermoreView,
         module='contract_cdst', type_='model')
     Pool.register(
         contract.ContractExportAvaliableVacation,
+        contract.UpdateFuthermoreWizard,
         module='contract_cdst', type_='wizard')
     Pool.register(
         contract.ContractExportAvaliableVacationReport,
