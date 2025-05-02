@@ -12,11 +12,11 @@ __all__ = ['register']
 
 def register():
     Pool.register(
-                product.Product,
-                product.ProductCategory,
-                product.CategoryAccount,
-                product.Template,
-                product.CostPriceRevision,
+        product.Product,
+        product.ProductCategory,
+        product.CategoryAccount,
+        product.Template,
+        product.CostPriceRevision,
         module='product_cdst', type_='model')
     Pool.register(
         module='product_cdst', type_='wizard')
