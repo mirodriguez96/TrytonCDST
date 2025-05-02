@@ -1,12 +1,11 @@
 from trytond.pool import Pool
-from .metabase import MetabaseAccess, MetabaseConfiguration
-
+from .metabase import MetabaseAccess, MetabaseConfiguration, MetabaseAccessResGroup
 
 
 def register():
     Pool.register(
-        metabase.MetabaseConfiguration,
-        metabase.MetabaseAccess,
-        metabase.MetabaseAccessResGroup,  # Agregar aquí la clase intermedia
+        MetabaseConfiguration,
+        MetabaseAccess,
+        MetabaseAccessResGroup,  # Agregar aquí la clase intermedia
         module='metabase_cdst', type_='model'
     )

@@ -12,8 +12,8 @@ __all__ = ['register']
 
 def register():
     Pool.register(
-                permissions.Permissions,
-                permissions.LinePermissions,
+        permissions.Permissions,
+        permissions.LinePermissions,
         module='permissions_cdst', type_='model')
     Pool.register(
         module='permissions_cdst', type_='wizard')
