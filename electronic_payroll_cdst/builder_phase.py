@@ -1,4 +1,3 @@
-#import json
 import datetime
 import os
 from decimal import Decimal
@@ -135,9 +134,10 @@ class ElectronicPayroll(object):
         self.payroll = payroll
         self.config = config
         self.status = 'ok'
-        # self.auth = auth
         self.number = payroll.number
-        # Company information --------------------------------------------------
+        self.total_payment = 0
+        self.total_deduction = 0
+        # Company information
         self.company_id = payroll.company.party.id_number
         self.company_type_id = payroll.company.party.type_document
         self.company_full_name = payroll.company.party.name
@@ -152,9 +152,8 @@ class ElectronicPayroll(object):
         self.company_department_code = payroll.company.party.department_code
         self.company_city_code = payroll.company.party.city_code
         self.company_address = payroll.company.party.street.replace('\n', '')
-        #     # Employee information------------------------------------------------------------------------------------------
-        # self.department_code = payroll.employee.party.department_code
-        # self.party_city_code = payroll.employee.party.city_code
+
+        # Employee information
         self.party_name = payroll.employee.party.name
         self.party_id = payroll.employee.party.id_number
         self.party_type_id = payroll.employee.party.type_document
@@ -206,7 +205,7 @@ class ElectronicPayroll(object):
                 self.status = MESSAGES[k]
                 break
 
-    #funcion encargada de reunir la información del periodo de pago
+    # funcion encargada de reunir la información del periodo de pago
     def _get_payroll_period(self):
         start_date = self.payroll.contract.start_date
         end_date = None
@@ -229,61 +228,26 @@ class ElectronicPayroll(object):
             end_date = settlement_end_date
 
         payroll_period = {
-            "Nvper_fing": str(start_date),  #FechaIngreso
-            "Nvper_fpin": str(settlement_start_date),  #FechaLiquidacionInicio
-            "Nvper_fpfi": str(settlement_end_date),  #FechaLiquidacionFin
-            "Nvper_tlab": str(self.payroll.get_time_worked()),  #TiempoLaborado
-            #"FechaGen":self.issue_date,
+            "Nvper_fing": str(start_date),  # FechaIngreso
+            "Nvper_fpin": str(settlement_start_date),  # FechaLiquidacionInicio
+            "Nvper_fpfi": str(settlement_end_date),  # FechaLiquidacionFin
+            "Nvper_tlab": str(self.payroll.get_time_worked()),  # TiempoLaborado
         }
         if end_date:
-            payroll_period['Nvper_fret'] = str(end_date)  #FechaRetiro
+            payroll_period['Nvper_fret'] = str(end_date)  # FechaRetiro
         return payroll_period
 
     def _get_sequence(self):
         seq = self.number.split(self.prefix, maxsplit=1)
         sequence = {
-            "Nvsuc_codi": self.sucode,  #Codigo sucursal (noova)
-            "Nvnom_pref": self.prefix,  #Prefijo
-            "Nvnom_cons": seq[1],  #Consecutivo
-            "Nvnom_nume": self.number,  #Numero (pref+num)
+            "Nvsuc_codi": self.sucode,  # Codigo sucursal (noova)
+            "Nvnom_pref": self.prefix,  # Prefijo
+            "Nvnom_cons": seq[1],  # Consecutivo
+            "Nvnom_nume": self.number,  # Numero (pref+num)
             "Nvope_tipo":
-            "NM"  #Tipo de operación nómina (siempre debe ir "NM")
+            "NM"  # Tipo de operación nómina (siempre debe ir "NM")
         }
-        #if self.code_employee:
-        #    sequence['CodigoTrabajador'] = self.code_employee
         return sequence
-
-    #SIN USO
-    def _get_place_generation(self):
-        place_generation = {
-            "Pais":
-            self.company_country_code,
-            "DepartamentoEstado":
-            self.company_department_code,
-            "MunicipioCiudad":
-            str(self.company_department_code + self.company_city_code),
-            "Idioma":
-            "es"
-        }
-        return place_generation
-
-    #SIN USO
-    def _get_provider(self):
-        provider = {
-            "RazonSocial": self.company_full_name,  #RazonSocial
-            "NIT": str(self.company_id),  #NIT
-            "DV": str(self.company_check_digit),  #DV
-            "SoftwareID": self.software_id,
-            "SoftwareSC": self.payroll.get_security_code(self.config)
-        }
-        if self.company_first_name:
-            provider[
-                'PrimerApellido'] = self.company_first_name  #PrimerApellido
-            provider[
-                'SegundoApellido'] = self.company_second_familyname  #SegundoApellido
-            provider['PrimerNombre'] = self.company_first_name  #PrimerNombre
-            provider['OtrosNombres'] = self.company_second_name  #OtrosNombres
-        return provider
 
     def _get_qrcode(self):
         qrcode = {
@@ -294,16 +258,9 @@ class ElectronicPayroll(object):
 
     def _get_general_information(self):
         information = {
-            #"Version":"V1.0: Documento Soporte de Pago de Nómina Electrónica",
-            #"Ambiente":str(self.environment),
-            "Nvinf_tnom": self.payroll_type,  #Tipo de nomina
-            #"CUNE":self.payroll.get_cune(),
-            #"EncripCUNE":"CUNE-SHA384",
-            #"FechaGen":self.issue_date,
-            #"HoraGen":self.issue_time,
-            "Nvinf_pnom": self.period_payroll,  #PeriodoNomina
-            "Nvinf_tmon": self.currency,  #TipoMoneda
-            #"TRM":"0"
+            "Nvinf_tnom": self.payroll_type,  # Tipo de nomina
+            "Nvinf_pnom": self.period_payroll,  # PeriodoNomina
+            "Nvinf_tmon": self.currency,  # TipoMoneda
         }
         return information
 
@@ -314,7 +271,7 @@ class ElectronicPayroll(object):
     def _get_information_company(self):
         information = {
             "Nvemp_nomb":
-            self.company_full_name,  #RazonSocial
+            self.company_full_name,  # RazonSocial
             "Nvemp_nnit":
             str(self.company_id),
             "Nvemp_endv":
@@ -337,7 +294,7 @@ class ElectronicPayroll(object):
 
     def _get_information_employee(self):
         information = {
-            "Nvtra_tipo": str(self.type_employee),  #TipoTrabajador
+            "Nvtra_tipo": str(self.type_employee),  # TipoTrabajador
             "Nvtra_stip": str(self.subtype_employee),
             "Nvtra_arpe": self.alto_riesgo_pension,
             "Nvtra_dtip": str(self.party_type_id),
@@ -362,21 +319,16 @@ class ElectronicPayroll(object):
 
     def _get_payment_terms(self):
         information = {
-            "Nvpag_form": self.payment_term,  #Forma
-            "Nvpag_meto": self.payment_method  #Metodo
+            "Nvpag_form": self.payment_term,  # Forma
+            "Nvpag_meto": self.payment_method  # Metodo
         }
         if self.payroll.bank_payment:
-            information['Nvpag_banc'] = self.bank  #Banco
-            information['Nvpag_tcue'] = self.bank_account_type  #TipoCuenta
-            information['Nvpag_ncue'] = self.bank_account  #NumeroCuenta
+            information['Nvpag_banc'] = self.bank  # Banco
+            information['Nvpag_tcue'] = self.bank_account_type  # TipoCuenta
+            information['Nvpag_ncue'] = self.bank_account  # NumeroCuenta
         return information
 
     def _get_pay_date(self):
-        #pay_dates = {}
-        #pagos = []
-        #for pay in self.payroll.payrolls_relationship:
-        #    pagos.append(str(pay.date_effective))
-        #pay_dates["FechaPago"] = pagos
         pay_date = datetime.date(999, 1, 1)
         for pay in self.payroll.payrolls_relationship:
             print(pay.date_effective)
@@ -387,16 +339,15 @@ class ElectronicPayroll(object):
     def _get_predecessor(self):
         issue_date = self.payroll.original_payroll.get_datetime_local()
         predecessor = {
-            "Nvpre_nume": self.payroll.original_payroll.number,  #NumeroPred
-            "Nvpre_cune": self.payroll.original_payroll.cune,  #CUNEPred
-            "Nvpre_fgen": issue_date[0]  #FechaGenPred
+            "Nvpre_nume": self.payroll.original_payroll.number,  # NumeroPred
+            "Nvpre_cune": self.payroll.original_payroll.cune,  # CUNEPred
+            "Nvpre_fgen": issue_date[0]  # FechaGenPred
         }
         return predecessor
 
     def _get_type_note(self):
         return self.payroll.type_note
 
-    #
     def _get_lines(self):
         line_payments = []
         line_deductions = []
@@ -414,19 +365,28 @@ class ElectronicPayroll(object):
     def _get_payments(self, line_payments):
         subelements = {}
 
+        amount_holidays = 0
+        quantity_holidays = 0
+        amount_licencia_nr = 0
+        quantity_licencia_nr = 0
+        amount_licencia_ = 0
+        quantity_licencia_ = 0
+        amount_incapacidad_ = 0
+        quantity_incapacidad_ = 0
+
         for line in line_payments:
             concept = line.wage_type.type_concept_electronic
-
             if concept == 'Basico':
                 factor = 1.0
                 if line.uom and line.uom.name == 'Hora':
                     factor = 8.0
                 worked_days = line.quantity / Decimal(factor)
                 basico = {
-                    'Nvbas_dtra': rvalue(worked_days, 0),  #DiasTrabajados
-                    'Nvbas_stra': rvalue(line.amount, 1)  #SueldoTrabajado
+                    'Nvbas_dtra': rvalue(worked_days, 0),  # DiasTrabajados
+                    'Nvbas_stra': rvalue(line.amount, 1)  # SueldoTrabajado
                 }
                 subelements['Basico'] = basico
+                self.total_payment += float(rvalue(line.amount, 1))
 
             elif concept in WAGE_TYPE['Transporte']:
                 if 'Transporte' not in subelements.keys():
@@ -434,12 +394,15 @@ class ElectronicPayroll(object):
                 if concept == 'AuxilioTransporte':
                     subelements['Transporte']['Nvtrn_auxt'] = rvalue(
                         line.amount, 1)
+                    self.total_payment += float(rvalue(line.amount, 1))
                 elif concept == 'ViaticoManuAlojS':
                     subelements['Transporte']['Nvtrn_vias'] = rvalue(
                         line.amount, 1)
+                    self.total_payment += float(rvalue(line.amount, 1))
                 elif concept == 'ViaticoManuAlojNS':
                     subelements['Transporte']['Nvtrn_vins'] = rvalue(
                         line.amount, 1)
+                    self.total_payment += float(rvalue(line.amount, 1))
 
             elif concept in WAGE_TYPE['HEDs']:
                 if 'LHorasExtras' not in subelements.keys():
@@ -451,32 +414,24 @@ class ElectronicPayroll(object):
                     'Nvhor_porc': str(EXTRAS[concept]['percentaje'])
                 }
                 subelements['LHorasExtras'].append(hr)
+                self.total_payment += float(rvalue(line.amount, 1))
 
             elif concept in WAGE_TYPE['Vacaciones']:
                 if 'LVacaciones' not in subelements.keys():
                     subelements['LVacaciones'] = []
+                quantity = float(rvalue(line.quantity, 2))
+                amount = float(rvalue(line.amount, 2))
                 if concept == 'VacacionesComunes':
                     for l in line.lines_payroll:
-                        e = {
-                            "Nvcom_cant": rvalue(l.quantity, 2),
-                            "Nvcom_pago": rvalue(l.amount, 2),
-                            "Nvvac_tipo": "1"
-                        }
-                        subelements['LVacaciones'].append(e)
+                        quantity_holidays += quantity
+                        amount_holidays += amount
+
                     if not line.lines_payroll:
-                        e = {
-                            "Nvcom_cant": rvalue(line.quantity, 2),
-                            "Nvcom_pago": rvalue(line.amount, 2),
-                            "Nvvac_tipo": "1"
-                        }
-                        subelements['LVacaciones'].append(e)
+                        quantity_holidays += quantity
+                        amount_holidays += amount
                 else:
-                    e = {
-                        "Nvcom_cant": rvalue(line.quantity, 2),
-                        "Nvcom_pago": rvalue(line.amount, 2),
-                        "Nvvac_tipo": "2"
-                    }
-                    subelements['LVacaciones'].append(e)
+                    quantity_holidays += quantity
+                    amount_holidays += amount
 
             elif concept in WAGE_TYPE['Primas']:
                 if 'Primas' not in subelements.keys():
@@ -489,6 +444,7 @@ class ElectronicPayroll(object):
                 else:
                     subelements['Primas']['Nvpri_pagn'] = rvalue(
                         line.amount, 2)
+                self.total_payment += float(rvalue(line.amount, 1))
 
             elif concept in WAGE_TYPE['Cesantias']:
                 if 'Cesantias' not in subelements.keys():
@@ -500,38 +456,26 @@ class ElectronicPayroll(object):
                     subelements['Cesantias']['Nvces_porc'] = '12.00'
                     subelements['Cesantias']['Nvces_pagi'] = rvalue(
                         line.amount, 2)
+                self.total_payment += float(rvalue(line.amount, 1))
 
             elif concept in WAGE_TYPE['Incapacidades']:
                 if 'LIncapacidades' not in subelements.keys():
                     subelements['LIncapacidades'] = []
-                    for l in line.lines_payroll:
-                        e = {
-                            'Nvcom_fini': str(l.start_date),
-                            'Nvcom_ffin': str(l.end_date),
-                            'Nvcom_cant': rvalue(l.quantity, 2),
-                            'Nvcom_pago': rvalue(l.amount, 2),
-                            'Nvinc_tipo': TIPO_INCAPACIDAD[concept]
-                        }
-                        subelements['LIncapacidades'].append(e)
+
+                for l in line.lines_payroll:
+                    amount_incapacidad_ += float(rvalue(l.amount, 2))
+                    quantity_incapacidad_ += float(rvalue(l.quantity, 2))
 
             elif concept in WAGE_TYPE['Licencias']:
                 if 'LLicencias' not in subelements.keys():
                     subelements['LLicencias'] = []
-                    for l in line.lines_payroll:
-                        tipo = '3'
-                        if concept == 'LicenciaMP':
-                            tipo = '1'
-                        if concept == 'LicenciaR':
-                            tipo = '2'
-                        e = {
-                            'Nvcom_fini': str(l.start_date),
-                            'Nvcom_ffin': str(l.end_date),
-                            'Nvcom_cant': rvalue(l.quantity, 2),
-                            'Nvlic_tipo': tipo
-                        }
-                        if concept != 'LicenciaNR':
-                            e['Nvcom_pago'] = rvalue(l.amount, 2)
-                        subelements['LLicencias'].append(e)
+                for l in line.lines_payroll:
+                    if concept == 'LicenciaMP' or concept == 'LicenciaR':
+                        amount_licencia_ += float(rvalue(l.amount, 2))
+                        quantity_licencia_ += float(rvalue(l.quantity, 2))
+                    else:
+                        amount_licencia_nr += float(rvalue(l.amount, 2))
+                        quantity_licencia_nr += float(rvalue(l.quantity, 2))
 
             elif concept in WAGE_TYPE['Bonificaciones']:
                 if 'LBonificaciones' not in subelements.keys():
@@ -541,6 +485,7 @@ class ElectronicPayroll(object):
                 else:
                     e = {"Nvbon_bons": rvalue(line.amount, 2)}
                 subelements['LBonificaciones'].append(e)
+                self.total_payment += float(rvalue(line.amount, 1))
 
             elif concept in WAGE_TYPE['Auxilios']:
                 if 'LAuxilios' not in subelements.keys():
@@ -550,6 +495,7 @@ class ElectronicPayroll(object):
                 else:
                     e = {'Nvaux_auns': rvalue(line.amount, 2)}
                 subelements['LAuxilios'].append(e)
+                self.total_payment += float(rvalue(line.amount, 1))
 
             elif concept in WAGE_TYPE['HuelgasLegales']:
                 if 'LHuelgasLegales' not in subelements.keys():
@@ -560,6 +506,7 @@ class ElectronicPayroll(object):
                     "NVCOM_CANT": "0"
                 }
                 subelements['LHuelgasLegales'].append(e)
+                self.total_payment += float(rvalue(line.amount, 1))
 
             elif concept in WAGE_TYPE['OtrosConceptos']:
                 if 'LOtrosConceptos' not in subelements.keys():
@@ -570,6 +517,7 @@ class ElectronicPayroll(object):
                 else:
                     e['Nvotr_pans'] = rvalue(line.amount, 2)
                 subelements['LOtrosConceptos'].append(e)
+                self.total_payment += float(rvalue(line.amount, 1))
 
             elif concept in WAGE_TYPE['Compensaciones']:
                 if 'LCompensaciones' not in subelements.keys():
@@ -579,6 +527,7 @@ class ElectronicPayroll(object):
                 else:
                     e = {'Nvcom_come': rvalue(line.amount, 2)}
                 subelements['LCompensaciones'].append(e)
+                self.total_payment += float(rvalue(line.amount, 1))
 
             elif concept in WAGE_TYPE['BonoEPCTVs']:
                 if 'LBonoEPCTVs' not in subelements.keys():
@@ -592,6 +541,7 @@ class ElectronicPayroll(object):
                 else:
                     e = {'Nvbon_alns': rvalue(line.amount, 2)}
                 subelements['LBonoEPCTVs'].append(e)
+                self.total_payment += float(rvalue(line.amount, 1))
 
             elif concept in WAGE_TYPE['OtrosTag']:
                 valor = rvalue(line.amount, 2)
@@ -599,14 +549,17 @@ class ElectronicPayroll(object):
                     if 'LComisiones' not in subelements.keys():
                         subelements['LComisiones'] = []
                     subelements['LComisiones'].append(valor)
+                    self.total_payment += float(rvalue(line.amount, 1))
                 if concept == 'PagoTercero':
                     if 'LPagosTerceros' not in subelements.keys():
                         subelements['LPagosTerceros'] = []
                     subelements['LPagosTerceros'].append(valor)
+                    self.total_payment += float(rvalue(line.amount, 1))
                 if concept == 'Anticipo':
                     if 'LAnticipos' not in subelements.keys():
                         subelements['LAnticipos'] = []
                     subelements['LAnticipos'].append(valor)
+                    self.total_payment += float(rvalue(line.amount, 1))
 
             elif concept in WAGE_TYPE['OtrosI']:
                 valor = rvalue(line.amount, 2)
@@ -619,18 +572,61 @@ class ElectronicPayroll(object):
                 if concept == 'BonifRetiro':
                     subelements['BonificacionRetiro'] = valor
                 if concept == 'Indemnizacion':
-                    subelements['Indemnización'] = valor
+                    subelements['Indemnizacion'] = valor
                 if concept == 'Reintegro':
                     subelements['Reintegro'] = valor
+                self.total_payment += float(rvalue(line.amount, 1))
+
+        # Sumatoria vacaciones
+        if amount_holidays and quantity_holidays:
+            e = {
+                "Nvcom_cant": rvalue(quantity_holidays, 2),
+                "Nvcom_pago": rvalue(amount_holidays, 2),
+                "Nvvac_tipo": "1"
+            }
+            subelements['LVacaciones'].append(e)
+            self.total_payment += amount_holidays
+
+        # Sumatoria incapacidades
+        if amount_incapacidad_ and quantity_incapacidad_:
+            e = {
+                'Nvcom_cant': quantity_incapacidad_,
+                'Nvcom_pago': amount_incapacidad_,
+                'Nvinc_tipo': 1,
+            }
+            subelements['LIncapacidades'].append(e)
+            self.total_payment += amount_incapacidad_
+
+        # Sumatoria licencias
+        if amount_licencia_ and quantity_licencia_:
+            tipo = '1'
+            e = {
+                'Nvcom_cant': quantity_licencia_,
+                'Nvlic_tipo': tipo,
+                'Nvcom_pago': amount_licencia_,
+            }
+            subelements['LLicencias'].append(e)
+            self.total_payment += amount_licencia_
+
+        if amount_licencia_nr and quantity_licencia_nr:
+            tipo = '3'
+            e = {
+                'Nvcom_cant': quantity_licencia_nr,
+                'Nvlic_tipo': tipo,
+                'Nvcom_pago': amount_licencia_nr,
+            }
+            subelements['LLicencias'].append(e)
 
         return subelements
 
     # DEDUCCIONES
     def _get_deductions(self, line_deductions):
         subelements = {}
+        amount_libranza = 0
+        libranza_description = ''
+        other_deductions = 0
 
         subelements['Salud'] = {"Nvsal_porc": "0", "Nvsal_dedu": "0"}
-
         subelements['FondoPension'] = {"Nvfon_porc": "0", "Nvfon_dedu": "0"}
 
         for line in line_deductions:
@@ -641,6 +637,7 @@ class ElectronicPayroll(object):
                 p = Decimal(p[1].strip()) * 100
                 subelements['Salud']["Nvsal_porc"] = str(p)
                 subelements['Salud']["Nvsal_dedu"] = rvalue(line.amount, 2)
+                self.total_deduction += float(rvalue(line.amount, 1))
 
             elif concept == 'FondoPension':
                 p = line.wage_type.unit_price_formula.split('*')
@@ -648,6 +645,7 @@ class ElectronicPayroll(object):
                 subelements['FondoPension']["Nvfon_porc"] = str(p)
                 subelements['FondoPension']["Nvfon_dedu"] = rvalue(
                     line.amount, 2)
+                self.total_deduction += float(rvalue(line.amount, 1))
 
             elif concept in WAGE_TYPE['FondoSP']:
                 if 'FondoSP' not in subelements.keys():
@@ -661,6 +659,7 @@ class ElectronicPayroll(object):
                 else:
                     subelements['FondoSP']['Nvfsp_posb'] = str(p)
                     subelements['FondoSP']['Nvfsp_desb'] = valor
+                self.total_deduction += float(rvalue(line.amount, 1))
 
             elif concept in WAGE_TYPE['Sindicatos']:
                 if 'LSindicatos' not in subelements.keys():
@@ -672,6 +671,7 @@ class ElectronicPayroll(object):
                     "Nvsin_dedu": rvalue(line.amount, 2)
                 }
                 subelements['LSindicatos'].append(e)
+                self.total_deduction += float(rvalue(line.amount, 1))
 
             elif concept in WAGE_TYPE['Sanciones']:
                 if 'LSanciones' not in subelements.keys():
@@ -681,15 +681,13 @@ class ElectronicPayroll(object):
                 else:
                     e = {'Nvsan_sapv': rvalue(line.amount, 2)}
                 subelements['LSanciones'].append(e)
+                self.total_deduction += float(rvalue(line.amount, 1))
 
             elif concept in WAGE_TYPE['Libranzas']:
                 if 'LLibranzas' not in subelements.keys():
                     subelements['LLibranzas'] = []
-                e = {
-                    "Nvlib_desc": line.description,
-                    "Nvlib_dedu": rvalue(line.amount, 2)
-                }
-                subelements['LLibranzas'].append(e)
+                    libranza_description = line.description
+                amount_libranza += float(rvalue(line.amount, 2))
 
             elif concept in WAGE_TYPE['OtrosTag']:
                 valor = rvalue(line.amount, 2)
@@ -701,11 +699,12 @@ class ElectronicPayroll(object):
                     if 'LAnticipos' not in subelements.keys():
                         subelements['LAnticipos'] = []
                     subelements['LAnticipos'].append(valor)
+                self.total_deduction += float(rvalue(line.amount, 1))
 
             elif concept == 'OtraDeduccion':
                 if 'LOtrasDeducciones' not in subelements.keys():
                     subelements['LOtrasDeducciones'] = []
-                subelements['LOtrasDeducciones'].append(rvalue(line.amount, 2))
+                other_deductions += float(rvalue(line.amount, 2))
 
             elif concept in WAGE_TYPE['OtrosD']:
                 'PensionVoluntaria', 'RetencionFuente', 'AFC', 'Cooperativa', 'EmbargoFiscal', 'PlanComplementario', 'Educacion', 'Reintegro', 'Deuda'
@@ -728,65 +727,58 @@ class ElectronicPayroll(object):
                     subelements['Reintegro'] = valor
                 if concept == 'Deuda':
                     subelements['Deuda'] = valor
-
+                self.total_deduction += float(rvalue(line.amount, 1))
+        if amount_libranza and libranza_description:
+            e = {
+                "Nvlib_desc": libranza_description,
+                "Nvlib_dedu": amount_libranza
+            }
+            subelements['LLibranzas'].append(e)
+            self.total_deduction += amount_libranza
+        if other_deductions:
+            subelements['LOtrasDeducciones'].append(other_deductions)
+            self.total_deduction += other_deductions
         return subelements
-
-    def _get_total(self):
-        DevengadosTotal = rvalue(self.payroll.gross_payments, 2)
-        DeduccionesTotal = rvalue(self.payroll.total_deductions, 2)
-        ComprobanteTotal = rvalue(self.payroll.net_payment, 2)
-        return DevengadosTotal, DeduccionesTotal, ComprobanteTotal
-
-
-#----------------------------------------------- MAKE ELECTRONIC payroll------------------------------------------------------
 
     def make(self, type):
         nom = {}
-        if type == '102':  #Nomina individua
+        if type == '102':  # Nomina individua
             nom.update(self._get_sequence())
-            gross, deductions, net_payment = self._get_total()
-            nom["Nvnom_devt"] = gross
-            nom["Nvnom_dedt"] = deductions
-            nom["Nvnom_comt"] = net_payment
             nom["Nvnom_fpag"] = self._get_pay_date()
             nom["Periodo"] = self._get_payroll_period()
             nom["InformacionGeneral"] = self._get_general_information()
-            #nom["LNotas"] = [self._get_notes()]
             nom["Empleador"] = self._get_information_company()
             nom["Trabajador"] = self._get_information_employee()
             nom["Pago"] = self._get_payment_terms()
             acrueds, deductions = self._get_lines()
             nom["Devengados"] = acrueds
             nom["Deducciones"] = deductions
+            nom["Nvnom_devt"] = self.total_payment
+            nom["Nvnom_dedt"] = self.total_deduction
+            nom["Nvnom_comt"] = self.total_payment - self.total_deduction
 
-        elif type == '103':  #Nomina individual de ajuste
+        elif type == '103':  # Nomina individual de ajuste
             nom.update(self._get_sequence())
             type_note = self._get_type_note()
             if type_note == '1':
-                gross, deductions, net_payment = self._get_total()
-                nom["Nvnom_devt"] = gross
-                nom["Nvnom_dedt"] = deductions
-                nom["Nvnom_comt"] = net_payment
                 nom["Nvnom_fpag"] = self._get_pay_date()
                 nom["Nvnom_tipo"] = type_note
                 nom["Predecesor"] = self._get_predecessor()
                 nom["Periodo"] = self._get_payroll_period()
                 nom["InformacionGeneral"] = self._get_general_information()
-                #nom["LNotas"] = [self._get_notes()]
                 nom["Empleador"] = self._get_information_company()
                 nom["Trabajador"] = self._get_information_employee()
                 nom["Pago"] = self._get_payment_terms()
                 acrueds, deductions = self._get_lines()
                 nom["Devengados"] = acrueds
                 nom["Deducciones"] = deductions
+                nom["Nvnom_devt"] = self.total_payment
+                nom["Nvnom_dedt"] = self.total_deduction
+                nom["Nvnom_comt"] = self.total_payment - self.total_deduction
 
             elif type_note == '2':
                 nom["Nvnom_tipo"] = type_note
                 nom["Predecesor"] = self._get_predecessor()
                 nom["InformacionGeneral"] = self._get_general_information()
-                #nom["LNotas"] = [self._get_notes()]
                 nom["Empleador"] = self._get_information_company()
-
-        #data = json.dumps(nom, indent=4)
-        #print(nom)
         return nom
