@@ -8,7 +8,7 @@ from trytond.pool import Pool
 
 __all__ = ['register']
 
-from . import account, payment_bank
+from . import account, payment_bank, configuration
 
 
 def register():
@@ -27,6 +27,7 @@ def register():
         account.AccountAsset,
         account.AuxiliaryBookStartCDS,
         account.IncomeStatementView,
+        configuration.Configuration,
         payment_bank.PaymentBankGroupStart,
         payment_bank.AccountBankParty,
         payment_bank.BankPayment,

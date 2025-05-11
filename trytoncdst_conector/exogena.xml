@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<tryton>
+    <data>
+        <record model="ir.action.report" id="report_exogena_1010">
+            <field name="name">Informacion Exogena 1010</field>
+            <field name="report_name">account.f1010</field>
+            <field name="report">conector/exogena_1010.fodt</field>
+            <field name="template_extension">ods</field>
+            <field name="translatable">False</field>
+        </record>
+    </data>
+</tryton> 
