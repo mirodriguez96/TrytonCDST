@@ -1651,10 +1651,16 @@ class TrialBalanceDetailedCds(metaclass=PoolMeta):
 
         if data['end_period']:
             end_period = period(data['end_period'])
-            end_periods = period.search([
-                ('fiscalyear', '=', data['fiscalyear']),
-                ('end_date', '<=', end_period.start_date),
-            ])
+            if end_period.type == 'adjustment':
+                end_periods = period.search([
+                        ('fiscalyear', '=', data['fiscalyear']),
+                        ('end_date', '<=', end_period.end_date),
+                        ])
+            else:
+                end_periods = period.search([
+                    ('fiscalyear', '=', data['fiscalyear']),
+                    ('end_date', '<=', end_period.start_date),
+                    ])
             end_periods = list(set(end_periods).difference(set(start_periods)))
             end_period_name = end_period.name
             if end_period not in end_periods:
@@ -3128,3 +3134,167 @@ class MoveCloseYear(metaclass=PoolMeta):
             execute_close_period(method=method)
 
         return 'done'
+
+
+class TrialBalanceClassic(metaclass=PoolMeta):
+    __name__ = 'account_col.trial_balance_classic'
+
+    @classmethod
+    def get_context(cls, records, header, data):
+        report_context = super().get_context(records, header, data)
+        pool = Pool()
+        Account = pool.get('account.account')
+        Period = pool.get('account.period')
+        Company = pool.get('company.company')
+        Fiscalyear = pool.get('account.fiscalyear')
+
+        company = Company(data['company'])
+
+        dom_accounts = [
+            ('company', '=', data['company']),
+            ('code', '!=', None),
+        ]
+        start_period_ = end_period_ = None
+
+        if not data['detailed']:
+            dom_accounts.append(('type', '!=', None))
+        accounts = Account.search(dom_accounts)
+
+        start_periods = []
+        if data['start_period']:
+            start_period = start_period_ = Period(data['start_period'])
+            start_periods = Period.search([
+                ('fiscalyear', '=', data['fiscalyear']),
+                ('end_date', '<=', start_period.start_date),
+            ])
+        else:
+            fiscalyear = Fiscalyear(data['fiscalyear'])
+            start_periods = Period.search([
+                ('fiscalyear', '=', data['fiscalyear']),
+                ('end_date', '<=', fiscalyear.start_date),
+            ])
+            start_period_ = start_periods[0] if start_periods else None
+
+        if data['end_period']:
+            end_period = end_period_ = Period(data['end_period'])
+            if end_period.type == 'adjustment':
+                end_periods = Period.search([
+                        ('fiscalyear', '=', data['fiscalyear']),
+                        ('end_date', '<=', end_period.end_date),
+                        ])
+            else:
+                end_periods = Period.search([
+                    ('fiscalyear', '=', data['fiscalyear']),
+                    ('end_date', '<=', end_period.start_date),
+                    ])
+            end_periods = list(set(end_periods).difference(
+                    set(start_periods)))
+            if end_period not in end_periods:
+                end_periods.append(end_period)
+        else:
+            end_periods = Period.search([
+                    ('fiscalyear', '=', data['fiscalyear']),
+                    ])
+            end_period_ = end_periods[0] if end_periods else None
+            end_periods = list(set(end_periods).difference(
+                    set(start_periods)))
+
+        start_period_ids = [p.id for p in start_periods] or [0]
+        end_period_ids = [p.id for p in end_periods]
+
+        with Transaction().set_context(
+                fiscalyear=data['fiscalyear'],
+                periods=start_period_ids,
+                posted=data['posted']):
+            start_accounts = Account.browse(accounts)
+
+        with Transaction().set_context(
+                fiscalyear=None,
+                periods=end_period_ids,
+                posted=data['posted']):
+            in_accounts = Account.browse(accounts)
+
+        with Transaction().set_context(
+                fiscalyear=data['fiscalyear'],
+                periods=start_period_ids + end_period_ids,
+                posted=data['posted']):
+            end_accounts = Account.browse(accounts)
+
+        to_remove = []
+        if not data['empty_account']:
+            for account in in_accounts:
+                if account.debit == Decimal('0.0') \
+                        and account.credit == Decimal('0.0'):
+                    to_remove.append(account.id)
+
+        if not data['detailed']:
+            accounts = cls._accounts(data, to_remove,
+                start_accounts, in_accounts, end_accounts)
+        else:
+            accounts = cls._accounts_view(data, to_remove,
+                start_accounts, in_accounts, end_accounts)
+
+        report_context['accounts'] = accounts
+        report_context['start_period'] = start_period_
+        report_context['end_period'] = end_period_
+        report_context['company'] = company
+        report_context['digits'] = company.currency.digits
+        report_context['sumto'] = lambda accounts, field: cls.sumto(accounts, field)
+        report_context['type_balance'] = data['detailed']
+        return report_context
+
+
+class GeneralLedgerAccount(metaclass=PoolMeta):
+    'General Ledger Account'
+    __name__ = 'account.general_ledger.account'
+
+    @classmethod
+    def get_period_ids(cls, name):
+        pool = Pool()
+        Period = pool.get('account.period')
+        context = Transaction().context
+
+        period = None
+        if name.startswith('start_'):
+            period_ids = []
+            if context.get('start_period'):
+                period = Period(context['start_period'])
+        elif name.startswith('end_'):
+            period_ids = []
+            if context.get('end_period'):
+                period = Period(context['end_period'])
+            else:
+                period_ = Period(context['start_period'])
+                periods = Period.search([
+                    ('fiscalyear', '=', context.get('fiscalyear')),
+                    ('end_date', '>=', period_.start_date),
+                ],
+                    order=[('end_date', 'DESC')], limit=1)
+                if periods:
+                    period, = periods
+
+        if period:
+            if name.startswith('end_'):
+                if period.type == 'adjustment':
+                    periods = Period.search([
+                            ('fiscalyear', '=', context.get('fiscalyear')),
+                            ('end_date', '<=', period.end_date),
+                            ])
+                else:
+                    periods = Period.search([
+                        ('fiscalyear', '=', context.get('fiscalyear')),
+                        ('end_date', '<=', period.start_date),
+                        ])
+            else:
+                periods = Period.search([
+                    ('fiscalyear', '=', context.get('fiscalyear')),
+                    ('end_date', '<=', period.start_date),
+                ])
+            if period.start_date == period.end_date:
+                periods.append(period)
+            if periods:
+                period_ids = [p.id for p in periods]
+            if name.startswith('end_'):
+                # Always include ending period
+                period_ids.append(period.id)
+        return period_ids

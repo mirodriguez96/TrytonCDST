@@ -170,10 +170,6 @@ msgctxt "field:account.voucher_configuration,account_retica_tecno:"
 msgid "Account Retention ICA for Conector TecnoCarnes"
 msgstr "Cuenta de Retención ICA para TecnoCarnes"
 
-msgctxt "model:ir.action,name:wizard_print_portfolio_status"
-msgid "Portfolio Status"
-msgstr "Estado de Cartera"
-
 msgctxt "model:ir.action,name:report_portfolio_status"
 msgid "Portfolio Status"
 msgstr "Estado de Cartera"
