@@ -104,10 +104,9 @@ class Invoice(metaclass=PoolMeta):
                                    ('invoice_date', '>=', data['date_start']),
                                    ('invoice_date', '<=', data['date_finish'])
                                    ])
-        # transaction = Transaction()
-        # context = transaction.context
-        # with transaction.set_context(
-        #             queue_batch=context.get('queue_batch', True)):
+        transaction = Transaction()
+        context = transaction.context
+
         cls.note_analytic_account = data['analytic_account']
         cls.note_invoice_type = data['invoice_type']
         cls.note_adjustment_account = data['adjustment_account']
@@ -968,7 +967,6 @@ class Invoice(metaclass=PoolMeta):
         reconciliation_table = Table('account_move_reconciliation')
         cursor = Transaction().connection.cursor()
         # Se procede a realizar la eliminación de todos los registros
-        print(to_delete)
         if to_delete['reconciliation']:
             cursor.execute(*reconciliation_table.delete(
                 where=reconciliation_table.id.in_(
@@ -1004,6 +1002,8 @@ class Invoice(metaclass=PoolMeta):
         reconciled: list = []
         moves: list = []
 
+        transaction = Transaction()
+        context = transaction.context
         cls.set_number(invoices)
         for invoice in invoices:
             move = invoice.get_move()
@@ -1020,13 +1020,16 @@ class Invoice(metaclass=PoolMeta):
             if invoice.state != 'posted':
                 invoice.state = 'posted'
         cls.save(invoices)
-        Move.post([i.move for i in invoices if i.move.state != 'posted'])
-        if reconciled:
-            cls.__queue__.process(reconciled)
 
-        for invoice in invoices:
-            if invoice.type == 'in' and invoice.state != 'posted':
-                cls.process_pruchases(invoice)
+        with transaction.set_context(
+                            queue_batch=context.get('queue_batch', True)):
+            Move.post([i.move for i in invoices if i.move.state != 'posted'])
+            if reconciled:
+                cls.process(reconciled)
+
+            for invoice in invoices:
+                if invoice.type == 'in':
+                    cls.process_pruchases(invoice)
 
     @classmethod
     def process_pruchases(cls, invoice):
