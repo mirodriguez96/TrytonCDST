@@ -2363,13 +2363,15 @@ class PayrollExo2276(metaclass=PoolMeta):
                         _salary_payments += amount
                     elif concept == 'incapacity_arl':
                         _salary_payments += amount
+                    elif electronic_concept == 'BonificacionS':
+                        _salary_payments += amount
+                    elif electronic_concept == 'BonificacionNS':
+                        _other += amount
                     elif electronic_concept == "PrimasS":
                         _total_benefit += amount
                     elif concept == "holidays":
                         _total_benefit += amount
                     elif concept == 'transport':
-                        _other += amount
-                    elif concept == 'bonus':
                         _other += amount
                     elif electronic_concept == 'PagoAlimentacionN':
                         _food += amount
@@ -2530,9 +2532,11 @@ class PayrollExo2276(metaclass=PoolMeta):
                     vals['salary_payment'] += amount
                 elif concept == 'incapacity_arl':
                     vals['salary_payment'] += amount
-                elif concept == 'transport':
+                elif electronic_concept == 'BonificacionS':
+                    vals['salary_payment'] += amount
+                elif electronic_concept == 'BonificacionNS':
                     vals['other_payments'] += amount
-                elif concept == 'bonus':
+                elif concept == 'transport':
                     vals['other_payments'] += amount
                 elif electronic_concept == 'PagoAlimentacionN':
                     vals['bonus_food_total'] += amount
@@ -2592,6 +2596,7 @@ class PayrollExo2276(metaclass=PoolMeta):
         payments = 0
         for line in lines:
             concept = line.wage_type.type_concept
+            concept_electronic = line.wage_type.type_concept_electronic
             if line.wage_type.definition == 'payment':
                 if concept == 'salary':
                     payments += line.amount
@@ -2599,7 +2604,7 @@ class PayrollExo2276(metaclass=PoolMeta):
                     payments += line.amount
                 elif concept == 'commission':
                     payments += line.amount
-                elif concept == 'bonus':
+                elif concept_electronic == 'BonificacionS':
                     payments += line.amount
                 elif concept == 'incapacity_greater_to_2_days':
                     payments += line.amount
@@ -2622,6 +2627,7 @@ class PayrollExo2276(metaclass=PoolMeta):
 
         Payroll = Pool().get('staff.payroll')
         LiquidationLine = Pool().get('staff.liquidation.line')
+        Liquidation = Pool().get('staff.liquidation')
         total_payroll = 0
         vacations = 0
 
@@ -2632,8 +2638,23 @@ class PayrollExo2276(metaclass=PoolMeta):
             ],
             order=[('date_effective', 'DESC')],
         )
+        start_month_period = date(end_period.year, end_period.month, 1)
         end_date = payrolls[0].date_effective if payrolls else None
-        start_date = end_date - relativedelta(months=6)
+
+        contract_liquidation = Liquidation.search(
+            [('employee.party', '=', party_id),
+                ('kind', '=', 'contract'),
+                ('liquidation_date', '>=', start_month_period),
+                ('liquidation_date', '<=', end_period),
+                ])
+
+        if (start_month_period <= end_date <= end_period
+                and not contract_liquidation):
+            end_date = end_date - relativedelta(years=1)
+            start_date = end_date - relativedelta(months=6)
+        else:
+            start_date = end_date - relativedelta(months=6)
+
         data = {'start_period': start_date,
                 'end_period': end_date, 'employees': None}
 
