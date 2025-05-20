@@ -1040,7 +1040,7 @@ class Invoice(metaclass=PoolMeta):
         Purchase = pool.get('purchase.purchase')
         for line in invoice.lines:
             origin = line.origin if line.origin else None
-            if origin:
+            if origin and origin.__name__ == 'purchase.line':
                 purchases = [origin.purchase]
                 Purchase.process(purchases)
 
