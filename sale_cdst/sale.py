@@ -1386,6 +1386,75 @@ class Sale(metaclass=PoolMeta):
                         sequence = sale.shop.credit_note_sequence
             return sequence
 
+    @classmethod
+    def process_pos(cls, sale):
+        """ Inheritance function from sale_pos module from presik,
+            modifiy confirm sale to no add number to invoice"""
+
+        if not sale:
+            return
+
+        if sale.invoices:
+            invoice = sale.invoices[0]
+            if invoice.number and invoice.state != 'draft':
+                return sale
+        pool = Pool()
+        Date = pool.get('ir.date')
+        # We need to keep that sequence for invoices been taked from shop
+        # configuration instead fiscalyear, because some countries sequences
+        # are setted by shop
+        number = None
+        invoice = sale.create_invoice()
+        sale.set_invoice_state()
+        sequence = sale.get_sequence(sale)
+
+        for invoice in sale.invoices:
+            if invoice.state == 'draft':
+                sale.invoice_number = None
+
+        if not sale.invoice_number and sale.invoice_method == 'order':
+            for invoice in sale.invoices:
+                if invoice.state != 'draft':
+                    if sequence:
+                        number = sequence.get()
+                        sale_date = Date.today()
+                        cls.write([sale], {
+                            'invoice_number': number,
+                            'invoice_date': sale_date,
+                        })
+        else:
+            number = sale.invoice_number
+        position = sale.position if sale.position else None
+        sale_kind = None
+        if hasattr(sale, 'kind') and sale.kind:
+            sale_kind = sale.kind
+        if invoice:
+            if sale.invoice_date:
+                inv_date = sale.invoice_date
+            elif sale.shipment_date:
+                inv_date = sale.shipment_date
+            else:
+                inv_date = Date.today()
+
+            sale.invoice = invoice.id
+            to_write = {
+                'shop': sale.shop.id,
+                'invoice_date': inv_date,
+                'number': number,
+                'reference': sale.reference or sale.number,
+                'position': position,
+                'turn': sale.turn,
+            }
+
+            if sale_kind:
+                to_write['sale_kind'] = sale_kind
+            if sale.invoice_type:
+                pass
+            invoice.write([invoice], to_write)
+
+        sale.save()
+        return sale
+
 
 class Statement(metaclass=PoolMeta):
     __name__ = 'account.statement'
