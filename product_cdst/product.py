@@ -37,6 +37,8 @@ class Template(metaclass=PoolMeta):
 class Product(metaclass=PoolMeta):
     __name__ = "product.product"
     id_tecno = fields.Char("Id TecnoCarnes", required=False)
+    # cost_price = fields.Function(fields.Numeric("Average Cost Price",
+    #     required=True, digits=(16, 4)), 'get_avg_cost_price')
 
     @classmethod
     def sync_code(cls, products):
@@ -244,60 +246,84 @@ class Product(metaclass=PoolMeta):
             return False
 
     @classmethod
-    def update_product_parent(cls, _products=None):
+    def update_product_parent(cls, _products={}):
         print("RUN update_product_parent")
         pool = Pool()
         Config = pool.get("conector.configuration")
         Product = pool.get("product.product")
         Revision = pool.get("product.cost_price.revision")
         AverageCost = pool.get("product.average_cost")
-
-        revisions = []
-        averages = []
-        products = []
-
         _today = date.today()
         result = Config.get_tblproducto_parent()
 
         if not result:
+            print("Sin resultados desde SQLServer.")
             return
 
         if not _products:
-            products = Product.search([])
-            if not products:
-                return
             _products = {}
-            for pr in products:
-                _products[pr.code] = pr
 
         for r in result:
-            if str(r.IdProducto) in _products and str(r.IdResponsable) in _products:
+            try:
+                if not str(r.IdProducto) or not str(r.IdResponsable):
+                    continue
+
+                if str(r.IdProducto) not in _products:
+                    product, = Product.search([('code', '=', str(r.IdProducto))])
+                    _products[str(r.IdProducto)] = product
+
+                if str(r.IdResponsable) not in _products:
+                    responsable, = Product.search([('code', '=', str(r.IdResponsable))])
+                    _products[str(r.IdResponsable)] = responsable
+
                 product = _products[str(r.IdProducto)]
                 responsable = _products[str(r.IdResponsable)]
-                factor = Decimal(r.tiempo_del_ciclo)
-                cost_price = round(responsable.cost_price * factor, 2)
-                revision = {
+
+                avg_responsable = AverageCost.search(
+                    [
+                        ("product", "=", responsable),
+                        ("effective_date", "<=", _today),
+                    ],
+                    order=[("effective_date", "DESC"), ("id", "DESC")],
+                    limit=1,
+                )
+
+                if not avg_responsable:
+                    continue
+
+                avg_responsable, = avg_responsable
+                cost_price = round(avg_responsable.cost_price, 4)
+
+                avg_product = AverageCost.search(
+                    [
+                        ("product", "=", product),
+                        ("effective_date", "=", avg_responsable.effective_date),
+                        ("cost_price", "=", Decimal(cost_price)),
+                    ]
+                )
+
+                if avg_product and round(product.cost_price, 4) == cost_price:
+                    continue
+
+                Revision.create([{
                     "company": 1,
                     "product": product.id,
                     "template": product.template.id,
                     "cost_price": cost_price,
-                    "date": _today,
-                }
-                revisions.append(revision)
-                # AverageCost
-                average = {
+                    "date": avg_responsable.effective_date,
+                }])
+
+                AverageCost.create([{
                     "product": product.id,
-                    "effective_date": _today,
+                    "effective_date": avg_responsable.effective_date,
                     "cost_price": cost_price,
-                }
-                averages.append(average)
+                }])
 
-        if revisions:
-            Revision.create(revisions)
-            Product.recompute_cost_price(products, start=_today)
+                Product.recompute_cost_price([product], start=_today)
 
-        if averages:
-            AverageCost.create(averages)
+            except Exception as error:
+                print(f"EXCEPCION: {error}")
+
         print("FINISH update_product_parent")
 
 
