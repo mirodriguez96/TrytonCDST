@@ -197,7 +197,7 @@ class Product(metaclass=PoolMeta):
         print(f"---------------FINISH {import_name}---------------")
 
     def get_avg_cost_price(self, name=None):
-        super(Product, self).get_avg_cost_price(name)
+        """Inheritance function from presik - stock_co """
         target_date = date.today()
         stock_date_end = Transaction().context.get("stock_date_end")
         if stock_date_end:
@@ -208,15 +208,18 @@ class Product(metaclass=PoolMeta):
                 ("product", "=", self.id),
                 ("effective_date", "<=", target_date),
             ],
-            order=[("create_date", "DESC")],
+            order=[("effective_date", "DESC"), ("id", "DESC")],
             limit=1,
         )
+
         if avg_product:
-            return avg_product[0].cost_price
+            avg_product, = avg_product
+            return avg_product.cost_price
         else:
             return self.cost_price
 
     # Función encargada de retornar que tipo de producto será un al realizar la equivalencia con el manejo de inventario de la bd de TecnoCarnes
+
     @classmethod
     def tipo_producto(cls, inventario):
         # equivalencia del tipo de producto (si maneja inventario o no)
