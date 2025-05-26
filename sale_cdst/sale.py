@@ -197,7 +197,6 @@ class Sale(metaclass=PoolMeta):
                 cls.update_logs_from_imports(
                     actualizacion, actualizacion_che, logs=log)
                 Transaction().commit()
-        Transaction().commit()
 
     @classmethod
     def validate_sale_from_tecno(cls, actualizacion, actualizacion_che,
