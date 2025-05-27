@@ -1685,7 +1685,8 @@ class Payroll(metaclass=PoolMeta):
                     real_hour_biweekly += round(assistance.hedf, 2)
                     real_hour_biweekly += round(assistance.henf, 2)
                     continue
-                real_hour_biweekly += round(Decimal(str(assistance.ttt)), 2)
+                hour_asistance = Decimal(str(assistance.ttt)) if assistance.ttt < work_day_hours else Decimal(work_day_hours)
+                real_hour_biweekly += round(hour_asistance, 2)
 
         # Validate if select date from extras
         if not start_date_extras or not end_date_extras:

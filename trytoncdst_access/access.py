@@ -738,3 +738,8 @@ class CreateAccessHolidaysWizard(Wizard):
                             values=[Decimal(work_day_hours), 0,
                                     0, 0, 0, 0, 0, 0],
                             where=access_table.id.in_([to_save.id])))
+                    else:
+                        for access in is_access:
+                            if access.ttt < work_day_hours:
+                                access.ttt = work_day_hours
+                                access.save()
