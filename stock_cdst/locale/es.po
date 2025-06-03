@@ -1032,3 +1032,21 @@ msgstr "Salario promedio"
 msgctxt "field:account_col.move_close_year.start,account:"
 msgid "Analytic account"
 msgstr "Cuenta analitica"
+
+msgctxt "field:production.bom,from_location:"
+msgid "Input inventory location"
+msgstr "Ubicacion de entrada"
+
+msgctxt "field:production.bom,to_location:"
+msgid "Output inventory location"
+msgstr "Ubicacion de salida"
+
+msgctxt "field:stock.configuration,logistic_user:"
+msgid "Logistic user"
+msgstr "Usuario de logistica"
+
+msgctxt "field:stock.configuration,validate_user:"
+msgid "Validate user"
+msgstr "Validar usuario"
+
+

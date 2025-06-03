@@ -921,10 +921,6 @@ msgctxt "model:ir.action,name:act_report_access"
 msgid "Staff access report"
 msgstr "Reporte de accesos"
 
-msgctxt "field:stock.configuration,state_shipment:"
-msgid "State shipment"
-msgstr "Estado de traslados"
-
 msgctxt "field:staff.payroll_global.start,analytic_account:"
 msgid "Analytic Account"
 msgstr "Cuenta analitica"
@@ -961,10 +957,6 @@ msgctxt "field:stock.inventory,product_type:"
 msgid "Type Product"
 msgstr "Tipo de producto"
 
-msgctxt "field:stock.configuration,consumable_products_state:"
-msgid "Consumable products"
-msgstr "Productos consumibles"
-
 msgctxt "field:product.category,account_credit_note:"
 msgid "Account Credit Note"
 msgstr "Cuenta Nota de Crédito"
@@ -972,10 +964,6 @@ msgstr "Cuenta Nota de Crédito"
 msgctxt "field:staff.liquidation,payment_liquidation_date:"
 msgid "Payment liquidation date"
 msgstr "Fecha de pago de liquidacion"
-
-msgctxt "field:stock.configuration,to_location:"
-msgid "Output inventory location"
-msgstr "Ubicación Salida de inventario"
 
 msgctxt "field:staff.payroll,payment_extras:"
 msgid "Payment extras"
