@@ -2441,6 +2441,14 @@ class PayrollExo2276(metaclass=PoolMeta):
         for employee in employees:
             cls.set_bonus_food(employee, data_)
 
+        data_ = {
+            party: {
+                k: round(v) if isinstance(v, (int, float, Decimal)) else v
+                for k, v in value.items()
+            }
+            for party, value in data_.items()
+        }
+
         report_context['records'] = data_.values()
         report_context['end_period'] = end_period
         report_context['start_period'] = start_period

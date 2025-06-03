@@ -170,7 +170,7 @@ class PrintReportExogenaStart(metaclass=PoolMeta):
         ]
 
 
-class TemplateExogena(Report, metaclass=PoolMeta):
+class TemplateExogena(metaclass=PoolMeta):
     "0000 Template"
     __name__ = 'account.f0000'
 
@@ -394,18 +394,22 @@ class TemplateExogena(Report, metaclass=PoolMeta):
 
         if not records:
             raise UserError('No se encontraron registros para este reporte')
-        report_context['records'] = records.items()
 
         if party_cuantia and (
                 report_number == '1001' or report_number == '1007'
                 or report_number == '1008' or report_number == '1009'):
-            new_records = cls.update_cuantia_data(records.items(),
-                                                  party_cuantia,
-                                                  records_cuantia,
-                                                  definitions,
-                                                  report_number,
-                                                  concepts)
-            report_context['records'] = new_records.items()
+            records = cls.update_cuantia_data(records.items(),
+                                              party_cuantia,
+                                              records_cuantia,
+                                              definitions,
+                                              report_number,
+                                              concepts)
+        for concept in records:
+            for party in records[concept]:
+                for key in records[concept][party]:
+                    records[concept][party][key] = round(records[concept][party][key])
+
+        report_context['records'] = records.items()
         return report_context
 
     @classmethod
@@ -670,7 +674,6 @@ class F1010(Report):
 
         lines_by_account = {}
         accounts_target = {}
-        records_cuantia = {}
         concept_banks = {}
         records = {}
         parties = {}
@@ -678,14 +681,9 @@ class F1010(Report):
 
         concept_accounts = []
         line_ids = []
-        party_cuantia = None
         lines_by_account = defaultdict(list)
         report_context = Report.get_context(records, header, data)
         configuration = Configuration(1)
-
-        party_cuantias = Party.search([('id_number', '=', '222222222')])
-        if party_cuantias:
-            party_cuantia = party_cuantias[0]
 
         report_number = cls.__name__[-4:]
         uvt = configuration.uvt
@@ -728,17 +726,12 @@ class F1010(Report):
             for bank in banks:
                 concept_banks[bank.account_expense] = bank
 
-        if report_number in ('1009', '1008'):
-            periods = Period.search([
-                ('start_date', '<=', end_period.start_date),
-            ])
-        else:
-            periods = Period.search([
-                ('fiscalyear', '=', data['fiscalyear']),
-                ('start_date', '>=', start_period.start_date),
-                ('start_date', '<=', end_period.start_date),
-                ('type', '=', 'standard'),
-            ])
+        periods = Period.search([
+            ('fiscalyear', '=', data['fiscalyear']),
+            ('start_date', '>=', start_period.start_date),
+            ('start_date', '<=', end_period.start_date),
+            ('type', '=', 'standard'),
+        ])
         period_ids = [p.id for p in periods]
 
         # Obtener los saldos iniciales:
@@ -782,7 +775,6 @@ class F1010(Report):
             is_dtp = concept_info.get('dtp')
             definition = concept_info.get('definition')
             concept_exo = concept_info.get('concept')
-            rate_not_deducible = concept_info.get('rate_not_deducible')
             nature_account = concept_info.get('nature_account')
             restar_debit_credit = concept_info.get('restar_debit_credit')
 
@@ -844,24 +836,10 @@ class F1010(Report):
                                 concept_exo = peer_info['concept']
                                 break
 
-                # Inicializar estructuras si es necesario
+                # Inicializar estructuras
                 definitions['base'] = 0
                 records.setdefault(concept_exo, {})
                 records[concept_exo].setdefault(party, {}.fromkeys(definitions.keys(), Decimal(0)))
-
-                if party_cuantia:
-                    records_cuantia.setdefault(concept_exo, {})
-
-                # Ajustes por no deducible
-                if rate_not_deducible and report_number == '1001':
-                    deducible = value * (100 - rate_not_deducible) / 100
-                    not_deducible = value - deducible
-                    if 'iva' in definition:
-                        definition_not_ded = '1001_ivanoded'
-                    else:
-                        definition_not_ded = '1001_pagonoded'
-                    records[concept_exo][party][definition_not_ded] += not_deducible
-                    value = deducible
 
                 records[concept_exo][party][definition] += value
                 if base != 0:
