@@ -721,7 +721,6 @@ class CreateAccessHolidaysWizard(Wizard):
                             hours=5)
                         to_save.exit_timestamp = exit_timestamp + timedelta(
                             hours=5)
-                        # to_save.line_event = date
                         to_save.save()
 
                         cursor.execute(*access_table.update(
@@ -740,6 +739,6 @@ class CreateAccessHolidaysWizard(Wizard):
                             where=access_table.id.in_([to_save.id])))
                     else:
                         for access in is_access:
-                            if access.ttt < work_day_hours:
+                            if access.ttt != work_day_hours:
                                 access.ttt = work_day_hours
                                 access.save()

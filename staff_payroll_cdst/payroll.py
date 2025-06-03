@@ -1654,7 +1654,6 @@ class Payroll(metaclass=PoolMeta):
         config = Config(1)
 
         salary_args = {}
-        validate_event = []
         values = []
         real_hour_biweekly = 0
         discount = 0
@@ -1693,34 +1692,24 @@ class Payroll(metaclass=PoolMeta):
             extras = {}
 
         if extras:
-            sum_extras = sum(
-                cant_extras
-                for type, cant_extras in extras.items()
-                if type == 'hedo' or type == 'heno' or type == 'hedf' or type == 'henf'
+            # Validate if party have LicenciaNR to discount it from assistance
+            event = None
+            event = Event.search(
+                [
+                    (
+                        'category.wage_type.type_concept_electronic',
+                        '=',
+                        'LicenciaNR',
+                    ),
+                    ('start_date', '>=', self.start_extras),
+                    ('end_date', '<=', self.end_extras),
+                    ('employee.id', '=', self.employee.id),
+                ]
             )
 
-            # Validate if party have LicenciaNR to discount it from assistance
-            for line in self.lines:
-                event = Event.search(
-                    [
-                        (
-                            'category.wage_type.type_concept_electronic',
-                            '=',
-                            'LicenciaNR',
-                        ),
-                        ('start_date', '>=', self.start_extras),
-                        ('end_date', '<=', self.end_extras),
-                        ('employee.id', '=', self.employee.id),
-                    ]
-                )
-                if event not in validate_event:
-                    validate_event.append(event)
-                else:
-                    event = ()
-
-                if event:
-                    days = [i.quantity for i in event]
-                    default_hour_biweekly -= int(sum(days)) * work_day_hours
+            if event:
+                days = [i.quantity for i in event]
+                default_hour_biweekly -= int(sum(days)) * work_day_hours
 
             # Validate if ttte is different to real ttt
             if default_hour_biweekly != real_hour_biweekly:
@@ -1743,12 +1732,7 @@ class Payroll(metaclass=PoolMeta):
             if difference < 0:
                 pending_value = abs(difference)
                 for type, cant_extras in extras.items():
-                    if (
-                        type == 'hedo'
-                        or type == 'heno'
-                        or type == 'hedf'
-                        or type == 'henf'
-                    ):
+                    if (type == 'hedo' or type == 'heno'):
                         if pending_value > 0:
                             if pending_value > cant_extras:
                                 pending_value -= cant_extras
@@ -1758,25 +1742,6 @@ class Payroll(metaclass=PoolMeta):
                                     cant_extras - pending_value, 2)
                                 extras[type] = rest_extras
                                 pending_value = 0
-            else:
-                if sum_extras > difference:
-                    pending_value = round(sum_extras - difference, 2)
-                    for type, cant_extras in extras.items():
-                        if (
-                            type == 'hedo'
-                            or type == 'heno'
-                            or type == 'hedf'
-                            or type == 'henf'
-                        ):
-                            if pending_value > 0:
-                                if pending_value > cant_extras:
-                                    pending_value -= cant_extras
-                                    extras[type] = Decimal(0)
-                                else:
-                                    rest_extras = round(
-                                        cant_extras - pending_value, 2)
-                                    extras[type] = rest_extras
-                                    pending_value = 0
 
         for wage, party, fix_amount in wages:
             if not fix_amount:
