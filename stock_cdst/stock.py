@@ -48,6 +48,9 @@ class Configuration(metaclass=PoolMeta):
                                   ],
                                   help="Where the stock is moved to.")
 
+    logistic_user = fields.Many2One('res.user', 'Logistic user')
+    validate_user = fields.Boolean('Validate user')
+
     @classmethod
     def default_consumable_products_state(cls):
         return False
@@ -233,6 +236,24 @@ class Location(metaclass=PoolMeta):
 
         actualizacion.add_logs(logs)
         print(f"---------------FINISH {import_name}---------------")
+
+
+class BOMInput(metaclass=PoolMeta):
+    "Bill of Material Input"
+    __name__ = 'production.bom.input'
+
+    location = fields.Many2One('stock.location', "location",
+                               domain=[
+                                      ('type', 'in', ['storage']),])
+
+
+class BOMOutput(metaclass=PoolMeta):
+    "Bill of Material Output"
+    __name__ = 'production.bom.output'
+
+    location = fields.Many2One('stock.location', "location",
+                               domain=[
+                                      ('type', 'in', ['storage']),])
 
 
 class ShipmentDetailedReport(metaclass=PoolMeta):
@@ -1065,7 +1086,7 @@ class ModifyCostPrice(metaclass=PoolMeta):
         return 'end'
 
 
-class MoveCDT(metaclass=PoolMeta):
+class Move(metaclass=PoolMeta):
     "Stock Move"
     __name__ = 'stock.move'
 
@@ -1091,7 +1112,7 @@ class MoveCDT(metaclass=PoolMeta):
     @classmethod
     def _get_origin(cls):
         add_origin = ['production', 'stock.shipment.internal']
-        return super(MoveCDT, cls)._get_origin() + add_origin
+        return super(Move, cls)._get_origin() + add_origin
 
     def _get_account_stock_move_lines(self, type_):
         '''
@@ -1303,7 +1324,7 @@ class MoveCDT(metaclass=PoolMeta):
         pool = Pool()
         AccountMove = pool.get('account.move')
         ProductRevision = pool.get('product.cost_price.revision')
-        super(MoveCDT, cls).do(moves)
+        super(Move, cls).do(moves)
         for move in moves:
             cost_price_move = move.cost_price
             date_inventory = move.effective_date
@@ -1326,6 +1347,74 @@ class MoveCDT(metaclass=PoolMeta):
                 account_moves.append(account_move)
         _moves = AccountMove.create(account_moves)
         AccountMove.post(_moves)
+
+    @classmethod
+    @ModelView.button
+    @Workflow.transition('assigned')
+    def assign(cls, moves):
+        super(Move, cls).assign(moves)
+        pool = Pool()
+        Product = pool.get('product.product')
+        StockConfig = pool.get('stock.configuration')
+        config = StockConfig(1)
+        bom_inputs = {}
+
+        for move in moves:
+            production_ = None
+
+            if move.production_input:
+                production_ = move.production_input
+            if move.production_output:
+                production_ = move.production_output
+
+            if production_:
+                if production_.bom:
+                    if config.logistic_user and config.validate_user:
+                        user_ = Transaction().user
+                        bom_inputs = {production.product: production.location for production in production_.bom.inputs}
+                        from_location_enable = False
+                        to_location_enable = False
+
+                        # Validar si en las entradas se modifico alguna ubicacion
+                        for input in production_.inputs:
+                            if (input.product in bom_inputs.keys()
+                                    and input.from_location != bom_inputs[input.product]):
+                                if user_ != config.logistic_user:
+                                    from_location_enable = True
+                        # Validar si en las salidas se modifico alguna ubicacion
+                        for input in production_.outputs:
+                            if (input.product in bom_inputs.keys()
+                                    and input.to_location != bom_inputs[input.product]):
+                                if user_ != config.logistic_user:
+                                    to_location_enable = True
+
+                        # Validar si el usuario tiene permisos de modificar
+                        if ((from_location_enable or to_location_enable)
+                                and (user_ != config.logistic_user.id)):
+                            msg = """No tiene permitido modificar producciones."""
+                            raise UserError(f'Error, {msg}')
+
+            # Validar que haya cantidades en las ubicaciones de entrada
+            product_ = move.product
+            location_ = move.from_location
+            context = {
+                'location_ids': [location_.id],
+                'stock_date_end': date.today(),
+            }
+
+            with Transaction().set_context(context):
+                res_dict = Product._get_quantity(
+                    [product_],
+                    'quantity',
+                    [location_.id],
+                    grouping_filter=([product_.id],)
+                )
+                stock_quantity = res_dict.get(product_.id)
+                if stock_quantity < move.quantity:
+                    msg = f"""No hay suficiente existencias para el producto
+                    {product_.name} en la ubicacion {location_.name}.
+                    """.replace("\n", " ").strip()
+                    raise UserError(f'Error, {msg}')
 
 
 class WarehouseKardexStockStartCds(ModelView):

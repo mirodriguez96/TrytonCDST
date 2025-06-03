@@ -7,5 +7,9 @@
         <field name="consumable_products_state"/>
         <label name="to_location"/>
         <field name="to_location"/>
+        <label name="logistic_user"/>
+        <field name="logistic_user"/>
+        <label name="validate_user"/>
+        <field name="validate_user"/>
     </xpath>
 </data>

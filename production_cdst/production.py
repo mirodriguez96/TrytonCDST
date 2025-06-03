@@ -14,7 +14,6 @@ from trytond.wizard import (Button, StateReport, StateTransition, StateView,
                             Wizard)
 
 
-# Heredamos del modelo sale.sale para agregar el campo id_tecno
 class Production(metaclass=PoolMeta):
     'Production'
     __name__ = 'production'
@@ -32,6 +31,7 @@ class Production(metaclass=PoolMeta):
         to_update = {}
         done_revision = []
         done_cost = []
+
         for rec in records:
             for inputs in rec.inputs:
                 inputs.origin = rec
@@ -67,7 +67,6 @@ class Production(metaclass=PoolMeta):
             AverageCost.create(done_cost)
 
         if to_update:
-            # Se actualiza el costo para los productos (relacioandos) hijos
             Product = Pool().get('product.product')
             Product.update_product_parent(to_update)
 
@@ -550,6 +549,54 @@ class Production(metaclass=PoolMeta):
             Move.write(moves, {'production_cost_price_updated': False})
         except Exception as error:
             print(f'ERROR PRODUCTION: {error}')
+
+    def explode_bom(self):
+        pool = Pool()
+        Uom = pool.get('product.uom')
+        inputs = []
+        outputs = []
+        if not (self.bom and self.product and self.uom):
+            return
+
+        factor = self.bom.compute_factor(self.product, self.quantity or 0,
+            self.uom)
+
+        validate_bom = self.validate_bom_input_outputs(self.bom.inputs, self.bom.outputs)
+
+        if not validate_bom:
+            raise UserError('Error, no se han definido las ubicaciones de la LDM')
+
+        for input_ in self.bom.inputs:
+            quantity = input_.compute_quantity(factor)
+            move = self._explode_move_values(input_.location, self.location,
+                                             self.company, input_, quantity)
+            if move:
+                inputs.append(move)
+                quantity = Uom.compute_qty(input_.uom, quantity,
+                    input_.product.default_uom, round=False)
+
+        for output in self.bom.outputs:
+            quantity = output.compute_quantity(factor)
+            move = self._explode_move_values(self.location, output.location,
+                                             self.company, output, quantity)
+            if move:
+                move.unit_price = Decimal(0)
+                outputs.append(move)
+        self.inputs = inputs
+        self.outputs = outputs
+
+    def validate_bom_input_outputs(self, inputs, outputs):
+        """
+        Validate if the inputs and outputs had locations
+        """
+
+        for input_ in inputs:
+            if not input_.location:
+                return False
+        for output in outputs:
+            if not output.location:
+                return False
+        return True
 
 
 class ProductionReport(CompanyReport):

@@ -4,7 +4,7 @@ this repository contains the full copyright notices and license terms. -->
 <tryton>
     <data>
 
-        <!--Campo para estado de envios internos-->
+        <!--Vista para configuracion de stock-->
         <record model="ir.ui.view" id="stock_configuration_view_form">
             <field name="model">stock.configuration</field>
             <field name="inherit" ref="stock.stock_configuration_view_form"/>
@@ -16,7 +16,6 @@ this repository contains the full copyright notices and license terms. -->
             <field name="inherit" ref="stock.inventory_view_form"/>
             <field name="name">inventory_form</field>
         </record>
-
 
         <record model="ir.ui.view" id="warehouse_kardex_stock_start_cds_view_form">
             <field name="model">stock_co.warehouse_kardex_cds_stock.start</field>
@@ -39,5 +38,32 @@ this repository contains the full copyright notices and license terms. -->
         </record>
 
         <menuitem parent="stock.menu_stock" sequence="130" icon="tryton-print" action="wizard_warehouse_kardex_stock_report_cds" id="warehouse_kardex_stock_cds_report"/>
+    
+
+        <!--Vista para lista de materiales inputs-->
+        <record model="ir.ui.view" id="bom_input_view_list">
+            <field name="model">production.bom.input</field>
+            <field name="inherit" ref="production.bom_input_view_list"/>
+            <field name="name">bom_input_list</field>
+        </record>
+
+        <record model="ir.ui.view" id="bom_input_view_form">
+            <field name="model">production.bom.input</field>
+            <field name="inherit" ref="production.bom_input_view_form"/>
+            <field name="name">bom_input_form</field>
+        </record>
+
+        <!--Vista para lista de materiales outputs-->
+        <record model="ir.ui.view" id="bom_output_view_list">
+            <field name="model">production.bom.output</field>
+            <field name="inherit" ref="production.bom_output_view_list"/>
+            <field name="name">bom_output_list</field>
+        </record>
+
+        <record model="ir.ui.view" id="bom_output_view_form">
+            <field name="model">production.bom.output</field>
+            <field name="inherit" ref="production.bom_output_view_form"/>
+            <field name="name">bom_output_form</field>
+        </record>
     </data>
 </tryton>

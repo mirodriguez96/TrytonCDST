@@ -13,20 +13,24 @@ __all__ = ['register']
 
 def register():
     Pool.register(
-            stock.Configuration,
-            stock.Location,
-            stock.ShipmentInternal,
-            stock.ShipmentDetailedStart,
-            stock.WarehouseKardexStockStartCds,
-            stock.MoveCDT,
-            stock.Inventory,
+        stock.Configuration,
+        stock.Location,
+        stock.ShipmentInternal,
+        stock.ShipmentDetailedStart,
+        stock.WarehouseKardexStockStartCds,
+        stock.Move,
+        stock.Inventory,
+        stock.BOMInput,
+        stock.BOMOutput,
         module='stock_cdst', type_='model')
+
     Pool.register(
-                stock.ModifyCostPrice,
-                stock.WarehouseKardexStockCds,
+        stock.ModifyCostPrice,
+        stock.WarehouseKardexStockCds,
         module='stock_cdst', type_='wizard')
+
     Pool.register(
-                stock.ShipmentDetailedReport,
-                stock.WarehouseCdsKardexReport,
-                stock.WarehouseReport,
+        stock.ShipmentDetailedReport,
+        stock.WarehouseCdsKardexReport,
+        stock.WarehouseReport,
         module='stock_cdst', type_='report')
