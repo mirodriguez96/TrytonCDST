@@ -598,17 +598,25 @@ class Voucher(ModelSQL, ModelView):
         pool = Pool()
         # Module = pool.get('ir.module')
         Line = pool.get('account.voucher.line')
+        Invoice = pool.get('account.invoice')
         config_voucher = pool.get('account.voucher_configuration')(1)
         to_lines = []
         for inv in invoices:
-            ref = inv.tipo_aplica + '-' + str(inv.numero_aplica)
+            invoice_number = ref = inv.tipo_aplica + '-' + str(inv.numero_aplica)
+            invoice = Invoice.search([('number', '=', invoice_number)])
+
+            if not invoice:
+                msg = f"EXCEPCION: NO SE ENCONTRO LA FACTURA CON NUMERO {invoice_number}"
+                logs[voucher.id_tecno] = msg
+                return None
+            invoice, = invoice
+            ref = invoice.reference
             move_line = cls.get_moveline(ref, voucher.party, logs,
                                          account_type)
             if not move_line:
-                msg = f"EXCEPCION: NO SE ENCONTRO LA FACTURA {ref} o REVISAR SI NO ESTA CONTABILIZADA EN TRYTON"
+                msg = f"EXCEPCION: REVISAR SI LA FACTURA CON NUMERO {invoice_number} NO ESTA CONTABILIZADA EN TRYTON"
                 logs[voucher.id_tecno] = msg
                 return None
-            # print(ref)
             valor_original, amount_to_pay, untaxed_amount = cls.get_amounts_to_pay(
                 move_line, voucher.voucher_type)
             line = Line()
