@@ -1561,6 +1561,13 @@ class MoveProvisionBonusService(metaclass=PoolMeta):
         return line_move
 
 
+class LiquidationGroupStart(metaclass=PoolMeta):
+    'Liquidation Group Start'
+    __name__ = 'staff.liquidation_group.start'
+
+    payment_liquidation_date = fields.Date('Payment liquidation date', required=True)
+
+
 class LiquidationGroup(metaclass=PoolMeta):
     "Liquidation Group"
     __name__ = 'staff.liquidation_group'
@@ -1636,6 +1643,7 @@ class LiquidationGroup(metaclass=PoolMeta):
             lqt_create = {
                 'start_period': start_period,
                 'end_period': end_period,
+                'payment_liquidation_date': self.start.payment_liquidation_date,
                 'employee': employee.id,
                 'contract': contract.id,
                 'kind': kind,

@@ -1029,3 +1029,7 @@ msgstr "Detalle de liquidacion"
 msgctxt "model:ir.action,name:report_detail_liquidation"
 msgid "Detail Liquidation"
 msgstr "Detalle de liquidacion"
+
+msgctxt "field:staff.liquidation_group.start,payment_liquidation_date:"
+msgid "Payment liquidation date"
+msgstr "Fecha de pago de liquidacion"
