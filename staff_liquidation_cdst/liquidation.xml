@@ -50,5 +50,14 @@ this repository contains the full copyright notices and license terms. -->
             <field name="template_extension">ods</field>
             <field name="translatable">False</field>
         </record>
+
+        <!-- ###################################### -->
+        <!-- # Create liquidation group           # -->
+        <!-- ###################################### -->
+        <record model="ir.ui.view" id="liquidation_group_start_view_form">
+            <field name="model">staff.liquidation_group.start</field>
+            <field name="inherit" ref="staff_payroll_co.liquidation_group_start_view_form"/>
+            <field name="name">liquidation_create_group_form</field>
+        </record>
     </data>
 </tryton>

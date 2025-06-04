@@ -16,6 +16,7 @@ def register():
         liquidation.Liquidation,
         liquidation.LiquidationLine,
         liquidation.AnalyticAccountEntry,
+        liquidation.LiquidationGroupStart,
         module='staff_liquidation_cdst', type_='model')
 
     Pool.register(
