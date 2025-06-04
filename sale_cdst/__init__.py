@@ -6,9 +6,7 @@
 
 from trytond.pool import Pool
 
-from . import sale
-
-from . import sale_device
+from . import sale, sale_device, suscription
 
 __all__ = ['register']
 
@@ -21,12 +19,14 @@ def register():
                 sale.SaleInvoiceValueCdstStart,
                 sale_device.SaleDevice,
                 sale_device.Journal,
-        module='sale_cdst', type_='model')
+                suscription.Subscription,
+                module='sale_cdst', type_='model')
+
     Pool.register(
                 sale.SaleShopDetailedCDS,
                 sale.SaleInvoiceValueCdst,
-        module='sale_cdst', type_='wizard')
+                module='sale_cdst', type_='wizard')
     Pool.register(
                 sale.SaleShopDetailedCDSReport,
                 sale.SaleInvoiceValueCdstReport,
-        module='sale_cdst', type_='report')
+                module='sale_cdst', type_='report')
