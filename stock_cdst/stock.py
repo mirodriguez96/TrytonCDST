@@ -514,6 +514,7 @@ class ShipmentInternal(metaclass=PoolMeta):
 
         if shipments:
             for shipment in shipments:
+                id_shipment = shipment.id_tecno
                 try:
                     if ((sw == '11')
                     or (state_shipment and state_shipment == 'done')):
@@ -521,9 +522,8 @@ class ShipmentInternal(metaclass=PoolMeta):
                     result["exportado"]["T"].append(shipment.id_tecno)
                 except Exception as error:
                     Transaction().rollback()
-                    logging.error(
-                        f"ROLLBACK-{shipment.id_tecno}-{import_name}: {error}")
-                    result["logs"][shipment.id] = str(error)
+                    logging.error(f"ROLLBACK-{id_shipment}-{import_name}: {error}")
+                    result["logs"][id_shipment] = str(error)
 
         for exportado, idt in result["exportado"].items():
             if idt:
@@ -1394,27 +1394,27 @@ class Move(metaclass=PoolMeta):
                             msg = """No tiene permitido modificar producciones."""
                             raise UserError(f'Error, {msg}')
 
-            # Validar que haya cantidades en las ubicaciones de entrada
-            product_ = move.product
-            location_ = move.from_location
-            context = {
-                'location_ids': [location_.id],
-                'stock_date_end': date.today(),
-            }
+                        # Validar que haya cantidades en las ubicaciones de entrada
+                        product_ = move.product
+                        location_ = move.from_location
+                        context = {
+                            'location_ids': [location_.id],
+                            'stock_date_end': date.today(),
+                        }
 
-            with Transaction().set_context(context):
-                res_dict = Product._get_quantity(
-                    [product_],
-                    'quantity',
-                    [location_.id],
-                    grouping_filter=([product_.id],)
-                )
-                stock_quantity = res_dict.get(product_.id)
-                if stock_quantity < move.quantity:
-                    msg = f"""No hay suficiente existencias para el producto
-                    {product_.name} en la ubicacion {location_.name}.
-                    """.replace("\n", " ").strip()
-                    raise UserError(f'Error, {msg}')
+                        with Transaction().set_context(context):
+                            res_dict = Product._get_quantity(
+                                [product_],
+                                'quantity',
+                                [location_.id],
+                                grouping_filter=([product_.id],)
+                            )
+                            stock_quantity = res_dict.get(product_.id)
+                            if stock_quantity < move.quantity:
+                                msg = f"""No hay suficiente existencias para el producto
+                                {product_.name} en la ubicacion {location_.name}.
+                                """.replace("\n", " ").strip()
+                                raise UserError(f'Error, {msg}')
 
 
 class WarehouseKardexStockStartCds(ModelView):
