@@ -181,6 +181,7 @@ class TemplateExogena(metaclass=PoolMeta):
         pool = Pool()
         Configuration = pool.get('account.configuration')
         Concept = pool.get('account.exogena_concepto')
+        Company = pool.get('company.company')
         Period = pool.get('account.period')
         Party = pool.get('party.party')
         Move = pool.get('account.move')
@@ -201,7 +202,7 @@ class TemplateExogena(metaclass=PoolMeta):
         lines_by_account = defaultdict(list)
         report_context = Report.get_context(records, header, data)
         configuration = Configuration(1)
-
+        company = Company(1)
         party_cuantias = Party.search([('id_number', '=', '222222222')])
         if party_cuantias:
             party_cuantia = party_cuantias[0]
@@ -272,19 +273,41 @@ class TemplateExogena(metaclass=PoolMeta):
                     lines_by_account[line.account_id].append(line)
                     line_ids.append(line.id)
 
-        # Obtener las lineas de movimiento para el reporte
-        result = cls.get_lines(concepts, concept_banks, period_ids)
-        if not result:
-            raise UserError("No se encontraron lineas para este reporte")
+        # Obtener saldos iniciales 1011
+        if report_number == '1011':
+            accounts_party_required = [c.account.id for c in concepts if c.account.party_required]
+            accounts_party_not_required = [c.account.id for c in concepts if not c.account.party_required]
+            result = cls.get_start_balances1011(accounts_party_required, period_ids, True)
+            if result:
+                TotalTuple = namedtuple('LineTuple', ['id', 'account_id', 'party', 'debit', 'credit'])
+                for row in result:
+                    line = TotalTuple(*row)
+                    lines_by_account[line.account_id].append(line)
+                    line_ids.append(line.id)
+            result = cls.get_start_balances1011(accounts_party_not_required, period_ids, False)
+            if result:
+                TotalTuple = namedtuple('LineTuple', ['id', 'account_id', 'party', 'debit', 'credit'])
+                for row in result:
+                    line = TotalTuple(*row)
+                    lines_by_account[line.account_id].append(line)
+                    line_ids.append(line.id)
 
-        if result:
-            # Usar namedtuple para mejorar legibilidad
-            LineTuple = namedtuple('LineTuple', ['id', 'account_id', 'party', 'debit', 'credit', 'move_id'])
+            result = cls.get_lines1011(accounts_party_not_required, period_ids, False)
+            if result:
+                LineTuple = namedtuple('LineTuple', ['id', 'account_id', 'party', 'debit', 'credit', 'move_id'])
 
-            for row in result:
-                line = LineTuple(*row)
-                lines_by_account[line.account_id].append(line)
-                line_ids.append(line.id)
+                for row in result:
+                    line = LineTuple(*row)
+                    lines_by_account[line.account_id].append(line)
+                    line_ids.append(line.id)
+
+            result = cls.get_lines1011(accounts_party_required, period_ids, True)
+            if result:
+                LineTuple = namedtuple('LineTuple', ['id', 'account_id', 'party', 'debit', 'credit', 'move_id'])
+                for row in result:
+                    line = LineTuple(*row)
+                    lines_by_account[line.account_id].append(line)
+                    line_ids.append(line.id)
 
             # Preparar línea segura para SQL IN
             if len(line_ids) == 1:
@@ -295,6 +318,30 @@ class TemplateExogena(metaclass=PoolMeta):
             # Obtener los impuestos asociados a las líneas de movimiento
             result_tax = cls.get_move_taxes(line_ids)
             lines_tax_map = {line_id: rate for line_id, _, rate in result_tax}
+        else:
+            # Obtener las lineas de movimiento para el reporte
+            result = cls.get_lines(concepts, concept_banks, period_ids, report_number)
+            if not result:
+                raise UserError("No se encontraron lineas para este reporte")
+
+            if result:
+                # Usar namedtuple para mejorar legibilidad
+                LineTuple = namedtuple('LineTuple', ['id', 'account_id', 'party', 'debit', 'credit', 'move_id'])
+
+                for row in result:
+                    line = LineTuple(*row)
+                    lines_by_account[line.account_id].append(line)
+                    line_ids.append(line.id)
+
+                # Preparar línea segura para SQL IN
+                if len(line_ids) == 1:
+                    line_ids = f"({line_ids[0]})"
+                else:
+                    line_ids = str(tuple(line_ids))
+
+                # Obtener los impuestos asociados a las líneas de movimiento
+                result_tax = cls.get_move_taxes(line_ids)
+                lines_tax_map = {line_id: rate for line_id, _, rate in result_tax}
 
         # Iterar por concepto y procesar solo las líneas de su cuenta
         for c in concepts:
@@ -318,6 +365,9 @@ class TemplateExogena(metaclass=PoolMeta):
                     if line.party not in parties.keys():
                         parties[line.party] = Party(line.party)
                     party = parties[line.party]
+
+                if report_number == '1011':
+                    party = company.party
 
                 if not party.id:
                     continue
@@ -413,7 +463,7 @@ class TemplateExogena(metaclass=PoolMeta):
         return report_context
 
     @classmethod
-    def get_lines(cls, concepts, concept_banks, period_ids):
+    def get_lines(cls, concepts, concept_banks, period_ids, report_number=None):
         cursor = Transaction().connection.cursor()
         accounts_concept_map = {c.account.id: c for c in concepts}
         accounts_with_banks = set(c.account.id for c in concepts if concept_banks and c.account in concept_banks)
@@ -436,6 +486,26 @@ class TemplateExogena(metaclass=PoolMeta):
         return cursor.fetchall()
 
     @classmethod
+    def get_lines1011(cls, accounts, period_ids, party_required):
+        cursor = Transaction().connection.cursor()
+
+        if party_required:
+            query = """SELECT ml.id, ml.account, ml.party, ml.debit, ml.credit, ml.move
+                FROM account_move_line AS ml
+                JOIN account_move AS m ON ml.move=m.id
+                WHERE ml.account = ANY(%s)
+                AND m.period = ANY(%s)
+                AND ml.party IS NOT NULL"""
+        else:
+            query = """SELECT ml.id, ml.account, ml.party, ml.debit, ml.credit, ml.move
+                FROM account_move_line AS ml
+                JOIN account_move AS m ON ml.move=m.id
+                WHERE ml.account = ANY(%s)
+                AND m.period = ANY(%s)"""
+        cursor.execute(query, (accounts, period_ids))
+        return cursor.fetchall()
+
+    @classmethod
     def get_start_balances(cls, accounts, period_ids):
         cursor = Transaction().connection.cursor()
         first_period = min(period_ids)
@@ -445,6 +515,28 @@ class TemplateExogena(metaclass=PoolMeta):
             WHERE ml.account = ANY(%s)
             AND m.period < %s
             GROUP BY ml.id, ml.account, ml.party"""
+        cursor.execute(query, (accounts, first_period))
+        return cursor.fetchall()
+
+    @classmethod
+    def get_start_balances1011(cls, accounts, period_ids, party_required):
+        cursor = Transaction().connection.cursor()
+        first_period = min(period_ids)
+        if party_required:
+            query = """SELECT ml.id, ml.account, ml.party, SUM(ml.debit) AS total_debit, SUM(ml.credit) AS total_credit
+                FROM account_move_line AS ml
+                JOIN account_move AS m ON ml.move = m.id
+                WHERE ml.account = ANY(%s)
+                AND m.period < %s
+                AND ml.party IS NOT NULL
+                GROUP BY ml.id, ml.account, ml.party"""
+        else:
+            query = """SELECT ml.id, ml.account, ml.party, SUM(ml.debit) AS total_debit, SUM(ml.credit) AS total_credit
+                FROM account_move_line AS ml
+                JOIN account_move AS m ON ml.move = m.id
+                WHERE ml.account = ANY(%s)
+                AND m.period < %s
+                GROUP BY ml.id, ml.account, ml.party"""
         cursor.execute(query, (accounts, first_period))
         return cursor.fetchall()
 
@@ -494,7 +586,8 @@ class TemplateExogena(metaclass=PoolMeta):
 
         for concept, parties in records:
             for party, values in parties.items():
-                if 0 < values["1001_pagoded"] < uvt * 3:
+                if (0 < values["1001_pagoded"] < uvt * 3
+                        and 0 < values["1001_pagonoded"] < uvt * 3):
                     records_cuantia[concept].setdefault(
                         party_cuantia,
                         {}.fromkeys(definitions.keys(), Decimal(0)),
@@ -512,11 +605,11 @@ class TemplateExogena(metaclass=PoolMeta):
                              or values["1001_retpracree"] > 0
                              or values["1001_retasumcree"] > 0) and concept != '0000':
                     records_cuantia[concept].setdefault(
-                        party_cuantia,
+                        party,
                         {}.fromkeys(definitions.keys(), Decimal(0)),
                     )
                     for key, value in values.items():
-                        records_cuantia[concept][party_cuantia][key] += value
+                        records_cuantia[concept][party][key] += value
                 else:
                     records_cuantia[concept].setdefault(
                         party,
@@ -545,25 +638,24 @@ class TemplateExogena(metaclass=PoolMeta):
                                 if key == '1001_pagonoded':
                                     pay_non_deductible = records_cuantia[_concept][party]['1001_pagonoded']
                                     total_pay_non_deductible += pay_non_deductible
-
-                    for _concept in list_concepts:
-                        if _concept in records_cuantia\
-                                and party in records_cuantia[_concept]\
-                                and _concept != concept:
-                            for key, value in values.items():
-                                if key == '1001_pagoded':
-                                    pay_deductible = records_cuantia[_concept][party][key]
-                                    iva_deductible = round(
-                                        (pay_deductible / total_pay_deductible * iva_total))
-                                    records_cuantia[_concept][party]['1001_ivaded'] = iva_deductible
-                                if key == '1001_pagonoded':
-                                    pay_non_deductible = records_cuantia[_concept][party][key]
-                                    iva_non_deductible = 0
-                                    if total_pay_non_deductible > 0:
+                    if total_pay_deductible > 0 and total_pay_non_deductible > 0:
+                        for _concept in list_concepts:
+                            if (_concept in records_cuantia
+                                    and party in records_cuantia[_concept]
+                                    and _concept != concept):
+                                for key, value in values.items():
+                                    if key == '1001_pagoded':
+                                        pay_deductible = records_cuantia[_concept][party][key]
+                                        iva_deductible = round(
+                                            (pay_deductible / total_pay_deductible * iva_total))
+                                        records_cuantia[_concept][party]['1001_ivaded'] = iva_deductible
+                                    if key == '1001_pagonoded':
+                                        pay_non_deductible = records_cuantia[_concept][party][key]
+                                        iva_non_deductible = 0
                                         iva_non_deductible = round(
                                             (pay_non_deductible / total_pay_non_deductible
-                                             * iva_total_non_deductible))
-                                    records_cuantia[_concept][party]['1001_ivanoded'] = iva_non_deductible
+                                            * iva_total_non_deductible))
+                                        records_cuantia[_concept][party]['1001_ivanoded'] = iva_non_deductible
         del records_cuantia['0000']
         return records_cuantia
 
