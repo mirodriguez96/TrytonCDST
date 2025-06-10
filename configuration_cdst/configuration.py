@@ -214,34 +214,69 @@ class Configuration(ModelSQL, ModelView):
 
     # Se marca en la tabla dbo.Documentos como exportado a Tryton
     @classmethod
-    def update_exportado(cls, id, e):
+    def update_exportado(cls, id_tecno, exportado):
         success = False
         try:
-            lista = id.split('-')
-            query = "UPDATE dbo.Documentos SET exportado = '" + e + "' WHERE sw =" + lista[
-                0] + " and tipo = " + lista[
-                    1] + " and Numero_documento = " + lista[2]
+            query = f"""UPDATE dbo.Documentos
+            SET exportado = '{exportado}'
+            WHERE CONCAT(sw, '-', tipo, '-', Numero_documento) = '{id_tecno}'"""
+
             cls.set_data(query)
+            if exportado == 'N':
+                cls.delete_documentos_tryton(id_tecno)
             success = True
         except (pyodbc.OperationalError, pyodbc.InterfaceError) as db_error:
             logging.error(
                 f"Error de conexión con la base de datos: {db_error}")
         except Exception as error:
+            print('1')
             logging.error(f'Error al actualizar datos: {error}')
         finally:
             return success
 
     @classmethod
-    def update_exportado_list(cls, idt, e):
+    def update_exportado_list(cls, idt, exportado):
         try:
             ids = list_to_tuple(idt, string=True)
-            query = f"UPDATE dbo.Documentos SET exportado = '{e}' WHERE CONCAT(sw,'-',tipo,'-',Numero_Documento) IN {ids}"
+            query = f"""UPDATE dbo.Documentos
+            SET exportado = '{exportado}'
+            WHERE CONCAT(sw,'-',tipo,'-',Numero_Documento) IN {ids}"""
+
             cls.set_data(query)
+            if exportado == 'N' and ids:
+                cls.delete_documentos_tryton_list(ids)
         except (pyodbc.OperationalError, pyodbc.InterfaceError) as db_error:
             logging.error(
                 f"Error de conexión con la base de datos: {db_error}")
         except Exception as error:
             logging.error(f'Error al enviar datos en lista: {error}')
+
+    @classmethod
+    def delete_documentos_tryton(cls, id_tecno):
+        try:
+            query = f"""Delete dbo.Documentos_Tryton
+            WHERE CONCAT(sw, '-', tipo, '-', Numero_documento) = '{id_tecno}'"""
+
+            cls.set_data(query)
+        except (pyodbc.OperationalError, pyodbc.InterfaceError) as db_error:
+            logging.error(
+                f"Error de conexión con la base de datos: {db_error}")
+        except Exception as error:
+            logging.error(f'Error al eliminar los datos: {error}')
+
+    @classmethod
+    def delete_documentos_tryton_list(cls, ids):
+        try:
+            query = f"""
+            DELETE FROM dbo.Documentos_Tryton
+            WHERE CONCAT(sw, '-', tipo, '-', Numero_documento) IN {ids}
+            """
+            cls.set_data(query)
+        except (pyodbc.OperationalError, pyodbc.InterfaceError) as db_error:
+            logging.error(
+                f"Error de conexión con la base de datos: {db_error}")
+        except Exception as error:
+            logging.error(f'Error al eliminar los datos: {error}')
 
     @classmethod
     def get_tblproducto(cls, fecha):

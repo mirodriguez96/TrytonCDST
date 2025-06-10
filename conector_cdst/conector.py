@@ -385,13 +385,16 @@ class Actualizacion(ModelSQL, ModelView):
 
             config, = Config.search([], order=[('id', 'DESC')], limit=1)
             connection_date = config.date.strftime('%Y-%m-%d %H:%M:%S')
-            consultc = "SET DATEFORMAT ymd "\
-                "SELECT CONCAT(sw,'-',tipo,'-',numero_documento), valor_total,"\
-                "Valor_impuesto, Impuesto_Consumo, anulado, retencion_causada FROM Documentos "\
-                f"WHERE {condition} "\
-                f"AND fecha_hora >= CAST('{connection_date}' AS datetime) "\
-                "AND exportado = 'T' "\
-                "AND tipo<>0 ORDER BY tipo,numero_documento"
+            end_date = config.end_date if config.end_date else datetime.datetime.now()
+
+            consultc = f"""SET DATEFORMAT ymd
+                SELECT CONCAT(sw,'-',tipo,'-',numero_documento), valor_total,
+                Valor_impuesto, Impuesto_Consumo, anulado, retencion_causada FROM Documentos
+                WHERE {condition}
+                AND fecha_hora >= CAST('{connection_date}' AS datetime)
+                AND fecha_hora <= CAST('{end_date}' AS datetime)
+                AND exportado = 'T'
+                AND tipo<>0 ORDER BY tipo,numero_documento"""
             try:
                 result_tecno = Config.get_data(consultc)
             except Exception as error:
@@ -430,21 +433,14 @@ class Actualizacion(ModelSQL, ModelView):
             list_canceled = [r[0] for r in result_value if r[4] == "S"]
 
             # Save the registry and mark the document to be imported
-            for falt in list_difference:
-                lid = falt.split('-')
-                query = "UPDATE dbo.Documentos SET exportado = 'N' "\
-                    f"WHERE sw = {lid[0]} "\
-                    f"AND tipo = {lid[1]} "\
-                    f"AND Numero_documento = {lid[2]}"
-                try:
-                    Config.set_data(query)
-                except Exception as error:
-                    print(
-                        f'ERROR ACTUALIZANDO EN DOCUMENTOS FALTANTES {error}')
-                logs[falt] = "EL DOCUMENTO ESTABA MARCADO COMO IMPORTADO "\
+            ids_tecto = []
+            for id_tecno in list_difference:
+                ids_tecto.append(id_tecno)
+                logs[id_tecno] = "EL DOCUMENTO ESTABA MARCADO COMO IMPORTADO "\
                     "(T) SIN ESTARLO."\
                     "AHORA FUE MARACADO COMO PENDIENTE PARA IMPOTAR (N)"
-
+            if ids_tecto:
+                Config.update_exportado_list(ids_tecto, 'N')
             """Update logs that was completed"""
             for values in list_already_values:
                 id_tecno = values
