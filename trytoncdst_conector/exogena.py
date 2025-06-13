@@ -583,40 +583,84 @@ class TemplateExogena(metaclass=PoolMeta):
         Configuration = pool.get('account.configuration')
         configuration = Configuration(1)
         uvt = configuration.uvt
+        uvt_limit = uvt * 3
+
+        for concept, parties in records:
+            if concept == '0000':
+                for party, values in parties.items():
+                    # Valores mayores que cero
+                    if values["1001_pagoded"] >= 0 and values["1001_pagonoded"] >= 0:
+                        # Valores menores a 3 UVT
+                        if (values["1001_pagoded"] < uvt_limit) and (values["1001_pagonoded"] < uvt_limit):
+                            if (values["1001_ivaded"] > 0
+                                    or values["1001_ivanoded"] > 0):
+                                if party not in records_cuantia[concept]:
+                                    records_cuantia[concept].setdefault(
+                                        party,
+                                        {}.fromkeys(definitions.keys(), Decimal(0)),
+                                    )
+                                for key, value in values.items():
+                                    records_cuantia[concept][party][key] += value
 
         for concept, parties in records:
             for party, values in parties.items():
-                if (0 < values["1001_pagoded"] < uvt * 3
-                        and 0 < values["1001_pagonoded"] < uvt * 3):
-                    records_cuantia[concept].setdefault(
-                        party_cuantia,
-                        {}.fromkeys(definitions.keys(), Decimal(0)),
-                    )
-                    for key, value in values.items():
-                        records_cuantia[concept][party_cuantia][key] += value
-                elif 0 == values["1001_pagoded"] and (values["1001_pagonoded"] > 0
-                             or values["1001_ivaded"] > 0
-                             or values["1001_ivanoded"] > 0
-                             or values["1001_retprac"] > 0
-                             or values["1001_retasum"] > 0
-                             or values["1001_retpracivarc"] > 0
-                             or values["1001_retasumivars"] > 0
-                             or values["1001_retpracivanodo"] > 0
-                             or values["1001_retpracree"] > 0
-                             or values["1001_retasumcree"] > 0) and concept != '0000':
-                    records_cuantia[concept].setdefault(
-                        party,
-                        {}.fromkeys(definitions.keys(), Decimal(0)),
-                    )
-                    for key, value in values.items():
-                        records_cuantia[concept][party][key] += value
-                else:
-                    records_cuantia[concept].setdefault(
-                        party,
-                        {}.fromkeys(definitions.keys(), Decimal(0)),
-                    )
-                    for key, value in values.items():
-                        records_cuantia[concept][party][key] = value
+                # Valores mayores que cero
+                if values["1001_pagoded"] >= 0 and values["1001_pagonoded"] >= 0:
+                    # Valores menores a 3 UVT
+                    if (values["1001_pagoded"] < uvt_limit) and (values["1001_pagonoded"] < uvt_limit):
+                        if values["1001_pagoded"] > 0 or values["1001_pagonoded"] > 0:
+
+                            if party not in records_cuantia['0000']:
+                                if party_cuantia not in records_cuantia[concept]:
+                                    records_cuantia[concept].setdefault(
+                                        party_cuantia,
+                                        {}.fromkeys(definitions.keys(), Decimal(0)),
+                                    )
+                                for key, value in values.items():
+                                    records_cuantia[concept][party_cuantia][key] += value
+                                continue
+
+                            if records_cuantia['0000'][party]['1001_ivanoded'] > 0:
+                                if party not in records_cuantia[concept]:
+                                    records_cuantia[concept].setdefault(
+                                        party,
+                                        {}.fromkeys(definitions.keys(), Decimal(0)),
+                                    )
+                                for key, value in values.items():
+                                    records_cuantia[concept][party][key] += value
+                            else:
+                                if party_cuantia not in records_cuantia[concept]:
+                                    records_cuantia[concept].setdefault(
+                                        party_cuantia,
+                                        {}.fromkeys(definitions.keys(), Decimal(0)),
+                                    )
+                                for key, value in values.items():
+                                    records_cuantia[concept][party_cuantia][key] += value
+                        elif (values["1001_ivaded"] > 0
+                              or values["1001_ivanoded"] > 0
+                              or values["1001_retprac"] > 0
+                              or values["1001_retasum"] > 0
+                              or values["1001_retpracivarc"] > 0
+                              or values["1001_retasumivars"] > 0
+                              or values["1001_retpracivanodo"] > 0
+                              or values["1001_retpracree"] > 0
+                                or values["1001_retasumcree"] > 0) and concept != '0000':
+                            if party not in records_cuantia[concept]:
+                                records_cuantia[concept].setdefault(
+                                    party,
+                                    {}.fromkeys(definitions.keys(), Decimal(0)),
+                                )
+                            for key, value in values.items():
+                                records_cuantia[concept][party][key] += value
+                    # Valores que no estan entre [0, 3 UVT]
+                    else:
+                        if party not in records_cuantia[concept]:
+                            records_cuantia[concept].setdefault(
+                                party,
+                                {}.fromkeys(definitions.keys(), Decimal(0)),
+                            )
+                        for key, value in values.items():
+                            records_cuantia[concept][party][key] = value
 
         list_concepts = set([_concept.concept for _concept in concepts])
         for concept, parties in records_cuantia.items():
@@ -624,38 +668,36 @@ class TemplateExogena(metaclass=PoolMeta):
                 for party, values in parties.items():
                     total_pay_deductible = 0
                     total_pay_non_deductible = 0
-                    iva_total = records_cuantia[concept][party]['1001_ivaded']
-                    iva_total_non_deductible = records_cuantia[concept][party]['1001_ivanoded']
+                    iva_total = values.get('1001_ivaded', 0)
+                    iva_total_non_deductible = values.get('1001_ivanoded', 0)
+
+                    # Para almacenar pagos por concepto
+                    pagos_deductibles = {}
+                    pagos_no_deductibles = {}
 
                     for _concept in list_concepts:
-                        if _concept in records_cuantia\
-                                and party in records_cuantia[_concept]\
-                                and _concept != concept:
-                            for key, value in values.items():
-                                if key == '1001_pagoded':
-                                    pay_deductible = records_cuantia[_concept][party]['1001_pagoded']
-                                    total_pay_deductible += pay_deductible
-                                if key == '1001_pagonoded':
-                                    pay_non_deductible = records_cuantia[_concept][party]['1001_pagonoded']
-                                    total_pay_non_deductible += pay_non_deductible
-                    if total_pay_deductible > 0 and total_pay_non_deductible > 0:
-                        for _concept in list_concepts:
-                            if (_concept in records_cuantia
-                                    and party in records_cuantia[_concept]
-                                    and _concept != concept):
-                                for key, value in values.items():
-                                    if key == '1001_pagoded':
-                                        pay_deductible = records_cuantia[_concept][party][key]
-                                        iva_deductible = round(
-                                            (pay_deductible / total_pay_deductible * iva_total))
-                                        records_cuantia[_concept][party]['1001_ivaded'] = iva_deductible
-                                    if key == '1001_pagonoded':
-                                        pay_non_deductible = records_cuantia[_concept][party][key]
-                                        iva_non_deductible = 0
-                                        iva_non_deductible = round(
-                                            (pay_non_deductible / total_pay_non_deductible
-                                            * iva_total_non_deductible))
-                                        records_cuantia[_concept][party]['1001_ivanoded'] = iva_non_deductible
+                        if _concept != concept and party in records_cuantia.get(_concept, {}):
+                            data = records_cuantia[_concept][party]
+                            pay_deductible = data.get('1001_pagoded', 0)
+                            pay_non_deductible = data.get('1001_pagonoded', 0)
+
+                            pagos_deductibles[_concept] = pay_deductible
+                            pagos_no_deductibles[_concept] = pay_non_deductible
+
+                            total_pay_deductible += pay_deductible
+                            total_pay_non_deductible += pay_non_deductible
+
+                    # Calcular y asignar IVAs distribuidos proporcionalmente
+                    for _concept in list_concepts:
+                        if _concept != concept and party in records_cuantia.get(_concept, {}):
+                            if total_pay_deductible > 0 and pagos_deductibles.get(_concept, 0) > 0:
+                                iva_deductible = round(pagos_deductibles[_concept] / total_pay_deductible * iva_total)
+                                records_cuantia[_concept][party]['1001_ivaded'] = iva_deductible
+
+                            if total_pay_non_deductible > 0 and pagos_no_deductibles.get(_concept, 0) > 0:
+                                iva_non_deductible = round(pagos_no_deductibles[_concept] / total_pay_non_deductible * iva_total_non_deductible)
+                                records_cuantia[_concept][party]['1001_ivanoded'] = iva_non_deductible
+
         del records_cuantia['0000']
         return records_cuantia
 

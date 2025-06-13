@@ -2321,7 +2321,7 @@ class PayrollExo2276(metaclass=PoolMeta):
                 definition = line['wage.']['definition']
                 if definition == 'payment':
                     amount = abs(line['amount'])
-                    if concept == 'salary':
+                    if concept == 'salary' and electronic_concept != 'ApoyoSost':
                         _salary_payments += amount
                     elif concept == 'extras':
                         _salary_payments += amount
@@ -2331,6 +2331,8 @@ class PayrollExo2276(metaclass=PoolMeta):
                         _salary_payments += amount
                     elif electronic_concept == 'BonificacionS':
                         _salary_payments += amount
+                    elif electronic_concept == 'ApoyoSost':
+                        _other += amount
                     elif electronic_concept == 'BonificacionNS':
                         _other += amount
                     elif electronic_concept == "PrimasS":
@@ -2496,7 +2498,7 @@ class PayrollExo2276(metaclass=PoolMeta):
             if line.wage_type.definition == 'payment':
                 if concept == 'unemployment' or concept == 'interest':
                     continue
-                elif concept == 'salary':
+                elif concept == 'salary' and electronic_concept != 'ApoyoSost':
                     vals['salary_payment'] += amount
                 elif concept == 'extras':
                     vals['salary_payment'] += amount
@@ -2508,6 +2510,8 @@ class PayrollExo2276(metaclass=PoolMeta):
                     vals['salary_payment'] += amount
                 elif electronic_concept == 'BonificacionS':
                     vals['salary_payment'] += amount
+                elif electronic_concept == 'ApoyoSost':
+                    vals['other_payments'] += amount
                 elif electronic_concept == 'BonificacionNS':
                     vals['other_payments'] += amount
                 elif concept == 'transport':
