@@ -1008,13 +1008,14 @@ class Liquidation(metaclass=PoolMeta):
                                               * line.unit_value)
 
         work_days_holidays = count_work_days_holidays * 15
-        if (line_.wage.type_concept_electronic == 'PrimasS'
-                and kind != 'contract'):
-            if start_period.month != end_period.month:
+        if (line_.wage.type_concept_electronic == 'PrimasS' and kind != 'contract'):
+            if (start_period.month != end_period.month):
                 day_liquidation_payments = self.payment_liquidation_date.day
-                if day_liquidation_payments >= 15:
+                if work_days < 30:
+                    total_base_salary += (contract.salary / 30) * work_days
+                elif day_liquidation_payments >= 15:
                     total_base_salary += contract.salary / 2
-                else:
+                elif day_liquidation_payments < 15:
                     total_base_salary += contract.salary
 
         if line_.wage.type_concept == 'holidays':
@@ -1434,6 +1435,8 @@ class MoveProvisionBonusService(metaclass=PoolMeta):
                 try:
                     move_lines = []
                     analytic_account = None
+
+                    period_id = AccountPeriod.find(_company.id, date=_end_date)
                     salary_amount = contract.get_salary_in_date(_end_date)
                     period_in_month = 1 if period_days > 15 else 2
                     employee = contract.employee
@@ -1459,11 +1462,13 @@ class MoveProvisionBonusService(metaclass=PoolMeta):
                             if concept.fix_amount:
                                 base_ += concept.fix_amount
 
-                    period_id = AccountPeriod.find(_company.id, date=_end_date)
-
-                    provision_amount = provision_wage.compute_unit_price(
-                        {'salary': (round((base_ / period_in_month), 2))}
-                    )
+                    if contract.start_date > self.start.period.start:
+                        provision_amount = self.get_provision_amount(contract, self.start.period.end,
+                                                                     salary_amount, provision_wage)
+                    else:
+                        provision_amount = provision_wage.compute_unit_price(
+                            {'salary': (round((base_ / period_in_month), 2))}
+                        )
 
                     base_lines = [
                         {
@@ -1514,6 +1519,16 @@ class MoveProvisionBonusService(metaclass=PoolMeta):
             raise UserError(f'Error: {str(error)}')
 
         return 'end'
+
+    def get_provision_amount(self, contract, end_period, salary_amount, provision_wage):
+        total = salary_amount + contract.transport_bonus
+        days = (end_period - contract.start_date).days + 1
+        total_provision = (total / 30) * days
+
+        provision_amount = provision_wage.compute_unit_price(
+                            {'salary': (round(total_provision, 2))}
+                        )
+        return provision_amount
 
     def get_move_lines_distribution(self, lines):
         lines_ = []
