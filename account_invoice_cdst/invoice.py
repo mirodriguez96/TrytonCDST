@@ -775,13 +775,17 @@ class Invoice(metaclass=PoolMeta):
     # Metodo encargado de validar el total de la factura en Tryton y TecnoCarnes
     @classmethod
     def _validate_total_tecno(cls, total_tryton, documento):
-        result = {
-            'value': False,
-        }
+        result = {'value': False}
+        retencion_total = 0
         retencion_causada = abs(documento['retencion_causada'])
+        retencion_ica = abs(documento['retencion_ica'])
+        retencion_total = retencion_causada
+
+        if retencion_total == 0 and documento['retencion_ica'] > 0:
+            retencion_total += retencion_ica
         total_tecno = abs(documento['valor_total'])
         total_tryton = abs(total_tryton)
-        total_tecno = total_tecno - retencion_causada
+        total_tecno = total_tecno - retencion_total
         diferencia = abs(total_tryton - total_tecno)
         if diferencia < Decimal('6.0'):
             result['value'] = True
