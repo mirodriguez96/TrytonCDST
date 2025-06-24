@@ -281,6 +281,9 @@ class Purchase(metaclass=PoolMeta):
                         elif clase_impuesto == '07' and retencion_ica:
                             if impuestol not in impuestos_linea:
                                 impuestos_linea.append(impuestol)
+                        elif clase_impuesto == '07' and not retencion_ica:
+                            if impuestol not in impuestos_linea:
+                                impuestos_linea.append(impuestol)
                         elif impuestol.consumo and impuesto_consumo > 0:
                             # Se busca el impuesto al consumo con el mismo valor para aplicarlo
                             tax = Tax.search([
@@ -373,12 +376,13 @@ class Purchase(metaclass=PoolMeta):
                             logs[id_compra] = msg
                     invoice.id_tecno = id_tecno_ if compra.sw == 4 else id_compra
                     invoice.save()
+                    rete_ica_amount = compra.retencion_ica if compra.retencion_ica else 0
                     ttecno = {
                         'retencion_causada': compra.retencion_causada,
+                        'retencion_ica': rete_ica_amount,
                         'valor_total': compra.valor_total,
                     }
-                    result = Invoice._validate_total_tecno(
-                        invoice.total_amount, ttecno)
+                    result = Invoice._validate_total_tecno(invoice.total_amount, ttecno)
                     if not result['value']:
                         msg = f"REVISAR: ({id_compra})\
                             El total de Tryton {invoice.total_amount}\
