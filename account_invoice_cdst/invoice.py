@@ -1461,10 +1461,21 @@ class AdvancePayment(metaclass=PoolMeta):
         if amount_balance < 0:
             amount_balance = sum_start_advances
             ignore_previous_discounts = True
+
+        move_line_credit = None
+        move_lines_invoice = invoice.move.lines
         if amount_balance > invoice.amount_to_pay:
             do_recon_invoice = True
             credit = 0
             debit = 0
+
+            # Get move_line credit from invoice
+            account_line_credit_account = invoice.account.id
+            for move_lines in move_lines_invoice:
+                if move_lines.account.id == account_line_credit_account:
+                    move_line_credit = move_lines
+                    break
+
             if invoice.type == 'in':
                 credit = invoice.amount_to_pay
             else:
@@ -1483,11 +1494,19 @@ class AdvancePayment(metaclass=PoolMeta):
                 'party': line_advance.party.id,
                 'account': invoice.account.id,
                 'description': invoice.description,
+                'move_line': move_line_credit,
             })
         else:
             sum_debit = 0
             sum_credit = 0
             do_recon_advance = True
+
+            # Get move_line credit from invoice
+            account_line_credit_account = invoice.account.id
+            for move_lines in move_lines_invoice:
+                if move_lines.account.id == account_line_credit_account:
+                    move_line_credit = move_lines
+                    break
 
             # Cofigure reconciliation
             if not ignore_previous_discounts:
@@ -1522,6 +1541,7 @@ class AdvancePayment(metaclass=PoolMeta):
                 'party': invoice.party.id,
                 'account': invoice.account.id,
                 'description': invoice.description,
+                'move_line': move_line_credit,
             })
 
         if hasattr(line_advance, 'operation_center'):
