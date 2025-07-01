@@ -643,6 +643,7 @@ class ShipmentInternal(metaclass=PoolMeta):
                     "effective_start_date": fecha_documento,
                     "company": id_company,
                 }
+
                 if operation_center:
                     shipment["operation_center"] = operation_center.id
                 if tipo not in tipos_doctos:
@@ -653,6 +654,7 @@ class ShipmentInternal(metaclass=PoolMeta):
                 id_bodega_destino = str(d.IdBodega)
                 if id_bodega_destino not in bodegas:
                     bodegas.append(id_bodega_destino)
+
                 shipment["from_location"] = id_bodega
                 shipment["to_location"] = id_bodega_destino
                 result["tryton"][id_tecno] = shipment
@@ -706,6 +708,7 @@ class ShipmentInternal(metaclass=PoolMeta):
         if hasattr(Internal, 'analytic_account') and tipos_doctos:
             analytic_types = cls.get_analytic_types(tipos_doctos)
         for id_tecno, shipment in result["tryton"].items():
+            sw = id_tecno.split("-")[0]
             if analytic_types:
                 # tipo = shipment["reference"].split("-")[0]
                 tipo = shipment["number"].split("-")[0]
@@ -720,6 +723,8 @@ class ShipmentInternal(metaclass=PoolMeta):
             if from_location in locations:
                 storage_location_id = locations[from_location].storage_location.id
                 shipment["from_location"] = storage_location_id
+                if (locations[from_location].operation_center) and sw == '11':
+                    shipment["operation_center"] = locations[from_location].operation_center
             else:
                 result["tryton"][
                     id_tecno] = f"No se encontro la bodega con id_tecno: {from_location}"
@@ -729,6 +734,8 @@ class ShipmentInternal(metaclass=PoolMeta):
             if to_location in locations:
                 storage_location_id = locations[to_location].storage_location.id
                 shipment["to_location"] = storage_location_id
+                if (locations[to_location].operation_center) and sw == '16':
+                    shipment["operation_center"] = locations[to_location].operation_center
             else:
                 result["tryton"][
                     id_tecno] = f"No se encontro la bodega con id_tecno: {to_location}"
@@ -787,7 +794,7 @@ class ShipmentInternal(metaclass=PoolMeta):
         if operation_center:
             OperationCenter = Pool().get('company.operation_center')
             operation_center = OperationCenter.search([],
-                                                    order=[('id', 'DESC')],
+                                                    order=[('id', 'ASC')],
                                                     limit=1)
             if not operation_center:
                 raise UserError("operation_center",

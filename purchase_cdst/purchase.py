@@ -98,7 +98,7 @@ class Purchase(metaclass=PoolMeta):
         if company_operation:
             CompanyOperation = pool.get('company.operation_center')
             operation_center = CompanyOperation.search([],
-                                                       order=[('id', 'DESC')],
+                                                       order=[('id', 'ASC')],
                                                        limit=1)
 
         parties = Party._get_party_documentos(data, 'nit_Cedula')
@@ -186,6 +186,8 @@ class Purchase(metaclass=PoolMeta):
                     to_exception.append(id_compra)
                     continue
                 bodega = bodega[0]
+                if hasattr(bodega, 'operation_center') and bodega.operation_center:
+                    operation_center = [bodega.operation_center]
                 purchase.warehouse = bodega
                 # Se le asigna el plazo de pago correspondiente
                 plazo_pago = payment_term.search([('id_tecno', '=',
@@ -263,7 +265,7 @@ class Purchase(metaclass=PoolMeta):
                         purchase.reference = dcto_referencia
 
                     if company_operation:
-                        line.operation_center = operation_center[0]
+                        line.operation_center = operation_center
                     # Comprueba los cambios y trae los impuestos del producto
                     line.on_change_product()
                     # Se verifica si el impuesto al consumo fue aplicado

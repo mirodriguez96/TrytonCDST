@@ -239,7 +239,7 @@ class Sale(metaclass=PoolMeta):
         date_ = str(venta.fecha_hora).split()[0].split('-')
         parties = Party._get_party_documentos(data, 'nit_Cedula')
         operation_center = CompanyOperation.search([],
-                                                   order=[('id', 'DESC')],
+                                                   order=[('id', 'ASC')],
                                                    limit=1)
         while True:
             log = {}
@@ -353,7 +353,7 @@ class Sale(metaclass=PoolMeta):
                     actualizacion, actualizacion_che, logs=log)
                 break
             bodega = bodega[0]
-
+            operation_center = [bodega.operation_center] if bodega.operation_center else operation_center
             # asigned the warehouse
             shop = Shop.search([('warehouse', '=', bodega.id)])
             if not shop:

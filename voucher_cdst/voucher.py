@@ -147,7 +147,7 @@ class Voucher(ModelSQL, ModelView):
                     OperationCenter = pool.get('company.operation_center')
                     operation_center, = OperationCenter.search([],
                                                                order=[('id',
-                                                                       'DESC')
+                                                                       'ASC')
                                                                       ],
                                                                limit=1)
                     voucher.operation_center = operation_center
@@ -180,7 +180,7 @@ class Voucher(ModelSQL, ModelView):
                             OperationCenter = pool.get(
                                 'company.operation_center')
                             operation_center, = OperationCenter.search(
-                                [], order=[('id', 'DESC')], limit=1)
+                                [], order=[('id', 'ASC')], limit=1)
                             line_ajuste.operation_center = operation_center
                         line_ajuste.save()
                         voucher.on_change_lines()
@@ -450,7 +450,7 @@ class Voucher(ModelSQL, ModelView):
                             operation_center, = OperationCenter.search([],
                                                                        order=[
                                 ('id',
-                                 'DESC')
+                                 'ASC')
                             ],
                                 limit=1)
                             voucher.operation_center = operation_center
@@ -490,7 +490,7 @@ class Voucher(ModelSQL, ModelView):
                                     OperationCenter = pool.get(
                                         'company.operation_center')
                                     operation_center, = OperationCenter.search(
-                                        [], order=[('id', 'DESC')], limit=1)
+                                        [], order=[('id', 'ASC')], limit=1)
                                     line_ajuste.operation_center = operation_center
                                 line_ajuste.save()
                                 voucher.on_change_lines()
@@ -628,7 +628,7 @@ class Voucher(ModelSQL, ModelView):
                 OperationCenter = pool.get('company.operation_center')
                 operation_center, = OperationCenter.search([],
                                                            order=[('id',
-                                                                   'DESC')],
+                                                                   'ASC')],
                                                            limit=1)
                 line.operation_center = operation_center
             valor = Decimal(inv.valor)
@@ -656,7 +656,7 @@ class Voucher(ModelSQL, ModelView):
                     OperationCenter = pool.get('company.operation_center')
                     operation_center, = OperationCenter.search([],
                                                                order=[('id',
-                                                                       'DESC')
+                                                                       'ASC')
                                                                       ],
                                                                limit=1)
                     line_discount.operation_center = operation_center
@@ -675,7 +675,7 @@ class Voucher(ModelSQL, ModelView):
                     OperationCenter = pool.get('company.operation_center')
                     operation_center, = OperationCenter.search([],
                                                                order=[('id',
-                                                                       'DESC')
+                                                                       'ASC')
                                                                       ],
                                                                limit=1)
                     line_rete.operation_center = operation_center
@@ -695,7 +695,7 @@ class Voucher(ModelSQL, ModelView):
                     OperationCenter = pool.get('company.operation_center')
                     operation_center, = OperationCenter.search([],
                                                                order=[('id',
-                                                                       'DESC')
+                                                                       'ASC')
                                                                       ],
                                                                limit=1)
                     line_retiva.operation_center = operation_center
@@ -715,7 +715,7 @@ class Voucher(ModelSQL, ModelView):
                     OperationCenter = pool.get('company.operation_center')
                     operation_center, = OperationCenter.search([],
                                                                order=[('id',
-                                                                       'DESC')
+                                                                       'ASC')
                                                                       ],
                                                                limit=1)
                     line_retica.operation_center = operation_center
@@ -734,7 +734,7 @@ class Voucher(ModelSQL, ModelView):
                     OperationCenter = pool.get('company.operation_center')
                     operation_center, = OperationCenter.search([],
                                                                order=[('id',
-                                                                       'DESC')
+                                                                       'ASC')
                                                                       ],
                                                                limit=1)
                     line_ajuste.operation_center = operation_center

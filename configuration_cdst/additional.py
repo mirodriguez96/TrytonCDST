@@ -61,7 +61,7 @@ def get_operation_center(cls):
     if operation_center:
         OperationCenter = Pool().get('company.operation_center')
         operation_center = OperationCenter.search([],
-                                                  order=[('id', 'DESC')],
+                                                  order=[('id', 'ASC')],
                                                   limit=1)
         if not operation_center:
             raise UserError("operation_center",
