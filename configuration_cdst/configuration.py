@@ -141,10 +141,9 @@ class Configuration(ModelSQL, ModelView):
                 DATABASE={record.db};
                 UID={record.user};
                 PWD={record.password};
-                Connection Timeout=5;
                 """
 
-                with pyodbc.connect(driver) as cnxn:
+                with pyodbc.connect(driver, timeout=5) as cnxn:
                     with cnxn.cursor() as cursor:
                         cursor = cnxn.cursor()
                         cursor.execute("SELECT 1")

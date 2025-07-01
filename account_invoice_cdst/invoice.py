@@ -354,7 +354,7 @@ class Invoice(metaclass=PoolMeta):
                 OperationCenter = pool.get('company.operation_center')
                 operation_center = OperationCenter.search([],
                                                           order=[
-                                                              ('id', 'DESC')],
+                                                              ('id', 'ASC')],
                                                           limit=1)
                 if not operation_center:
                     data['logs'][
