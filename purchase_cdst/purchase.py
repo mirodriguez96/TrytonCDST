@@ -264,8 +264,8 @@ class Purchase(metaclass=PoolMeta):
                         line.quantity = cantidad_facturada
                         purchase.reference = dcto_referencia
 
-                    if company_operation:
-                        line.operation_center = operation_center
+                    if company_operation and operation_center:
+                        line.operation_center = operation_center[0]
                     # Comprueba los cambios y trae los impuestos del producto
                     line.on_change_product()
                     # Se verifica si el impuesto al consumo fue aplicado
