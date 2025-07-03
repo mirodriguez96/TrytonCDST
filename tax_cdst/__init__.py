@@ -17,9 +17,11 @@ def register():
                 tax.MiddleModel,
                 tax.TaxRuleLine,
                 tax.TaxesConsolidationStart,
-        module='tax_cdst', type_='model')
+                module='tax_cdst', type_='model')
     Pool.register(
                 tax.TaxesConsolidation,
-        module='tax_cdst', type_='wizard')
+                tax.PrintTaxesPostedAccumulated,
+                module='tax_cdst', type_='wizard')
     Pool.register(
-        module='tax_cdst', type_='report')
+                tax.TaxesPostedAccumulated,
+                module='tax_cdst', type_='report')
