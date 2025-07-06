@@ -13,6 +13,8 @@ from . import company
 def register():
     Pool.register(
         company.Company,
+        company.Area,
+        company.Employee,
         module='company_cdst', type_='model')
 
     Pool.register(
