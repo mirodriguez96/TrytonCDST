@@ -2174,26 +2174,56 @@ class PayrollReport(CompanyReport):
     def get_context(cls, records, header, data):
         report_context = super().get_context(records, header, data)
         Loans = Pool().get('staff.loan')
+        loans = {}
         party = ''
-        amount = 0.0
-        for record in report_context['records']:
-            party = record.employee.party.name
-        # busco el prestamo de ese tercero
-        loans = Loans.search([('party', '=', party), ('state', '=', 'posted')])
-        # Si no hay prestamo limpio la variable
-        if not loans:
-            for keys in report_context['records']:
-                keys.total_cost = 0.0
-        else:
-            for loan in loans:
-                for line in loan.lines:
-                    # busco que las lineas que tenga esten pendientes de pago y las guardo.
-                    if line.state == 'pending':
-                        amount += float(line.amount)
+        total_loans_pending = 0.0
+        total_loans_paid = 0.0
+        total_loans = 0.0
 
-        # asigno el monto en una variable que no se usa
+        for record in report_context['records']:
+            for lines in record.lines:
+                if lines.wage_type.type_concept == 'loan' and lines.origin:
+                    lines.description = f'PRESTAMO-{lines.origin.loan.number}'
+            if record.employee.party.name:
+                party = record.employee.party.name
+                break
+        loans_ = Loans.search([('party', '=', party), ('state', '=', 'posted'),
+                               ('lines.state', '=', 'pending')])
+
+        for loan in loans_:
+            total_loan_paid = 0.0
+            total_lines_paid = 0
+            total_loan = float(loan.amount)
+
+            loans[loan] = {
+                'number': {loan.number},
+                'date': loan.date_effective,
+                'total_loan': total_loan,
+            }
+            for line in loan.lines:
+                if 'amount' not in loans[loan]:
+                    loans[loan]['amount'] = line.amount
+
+                if line.state == 'paid':
+                    total_lines_paid += 1
+                    total_loan_paid += float(line.amount)
+
+            total_loan_pending = total_loan - total_loan_paid
+            loans[loan]['total_lines'] = len(loan.lines)
+            loans[loan]['total_lines_paid'] = total_lines_paid
+            loans[loan]['total_lines_pending'] = len(loan.lines) - total_lines_paid
+            loans[loan]['total_loan_paid'] = total_loan_paid
+            loans[loan]['total_loan_pending'] = total_loan_pending
+
+            total_loans_paid += total_loan_paid
+            total_loans_pending += total_loan_pending
+            total_loans += total_loan
+
         for keys in report_context['records']:
-            keys.total_cost = amount
+            keys.total_loans_pending = total_loans_pending
+            keys.total_loans_paid = total_loans_paid
+            keys.total_loans = total_loans
+            keys.loans = loans
         return report_context
 
 
