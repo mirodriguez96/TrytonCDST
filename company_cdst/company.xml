@@ -6,5 +6,43 @@
             <field name="inherit" ref="company.company_view_form"/>
             <field name="name">company_form</field>
         </record>
+
+        <!-- Vista que hereda la informacion del empleado -->
+        <record model="ir.ui.view" id="employee_view_form">
+            <field name="model">company.employee</field>
+            <field name="inherit" ref="company.employee_view_form"/>
+            <field name="name">employee_form</field>
+        </record>
+
+        <!-- Vistas para las areas en la empresa -->
+        <record model="ir.ui.view" id="areas_view_form">
+            <field name="model">employee.area</field>
+            <field name="type">form</field>
+            <field name="name">areas_form</field>
+        </record>
+        <record model="ir.ui.view" id="areas_view_list">
+            <field name="model">employee.area</field>
+            <field name="type">tree</field>
+            <field name="name">areas_list</field>
+        </record>
+
+        <!-- Accion para las areas en la empresa -->
+        <record model="ir.action.act_window" id="act_areas">
+            <field name="name">Areas</field>
+            <field name="res_model">employee.area</field>
+        </record>
+
+        <record model="ir.action.act_window.view" id="act_areas_view_list">
+            <field name="sequence" eval="10"/>
+            <field name="view" ref="areas_view_list"/>
+            <field name="act_window" ref="act_areas"/>
+        </record>
+        <record model="ir.action.act_window.view" id="act_areas_view_form">
+            <field name="sequence" eval="20"/>
+            <field name="view" ref="areas_view_form"/>
+            <field name="act_window" ref="act_areas"/>
+        </record>
+
+        <menuitem parent="company.menu_company" sequence="-1" action="act_areas" id="menu_act_areas"/>
     </data>
 </tryton>

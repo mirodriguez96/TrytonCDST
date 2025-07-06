@@ -1020,3 +1020,11 @@ msgstr "Salario promedio"
 msgctxt "field:account_col.move_close_year.start,account:"
 msgid "Analytic account"
 msgstr "Cuenta analitica"
+
+msgctxt "field:employee.area,name_area:"
+msgid "Name area"
+msgstr "Nombre del area"
+
+msgctxt "field:employee.area,company:"
+msgid "Company"
+msgstr "Empresa"
