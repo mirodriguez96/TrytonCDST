@@ -884,6 +884,18 @@ class Liquidation(metaclass=PoolMeta):
         pool = Pool()
         WageType = pool.get('staff.wage_type')
         Adjustment = Pool().get('staff.liquidation.line_adjustment')
+        Liquidation = pool.get('staff.liquidation')
+        liquidations = Liquidation.search([('employee', '=', self.employee),
+                                           ('state', '=', 'posted')])
+
+        # Valida que ya haya una prima pagada
+        already_primas = False
+        for liquidation in liquidations:
+            if (liquidation.liquidation_date.year == self.liquidation_date.year
+                    and liquidation.liquidation_date.month == self.liquidation_date.month
+                    and liquidation.kind == 'bonus_service'
+                    and self.kind == 'contract'):
+                already_primas = True
         for line in lines:
             wage = WageType(line.wage)
             concept_electronic = wage.type_concept_electronic
@@ -892,6 +904,8 @@ class Liquidation(metaclass=PoolMeta):
             month_end_period = line.liquidation.end_period.start.month
             if (concept_electronic == 'PrimasS'
                     and month_start_period == month_end_period):
+                continue
+            elif (concept_electronic == 'PrimasS' and already_primas):
                 continue
 
             if ((concept_electronic == 'Cesantias'
@@ -1009,7 +1023,8 @@ class Liquidation(metaclass=PoolMeta):
 
         work_days_holidays = count_work_days_holidays * 15
         if (line_.wage.type_concept_electronic == 'PrimasS' and kind != 'contract'):
-            if (start_period.month != end_period.month):
+            if (start_period.month != end_period.month
+                    and self.payment_liquidation_date):
                 day_liquidation_payments = self.payment_liquidation_date.day
                 if work_days < 30:
                     total_base_salary += (contract.salary / 30) * work_days
@@ -1049,6 +1064,7 @@ class Liquidation(metaclass=PoolMeta):
         date_start_year = start_period.year
         first_of_july = date(date_end_year, 7, 1)
         start_date_contract = contract.start_date
+        end_date_contract = contract.end_date
 
         if wage.type_concept_electronic == 'PrimasS':
             if ((end_period > first_of_july)
@@ -1064,12 +1080,18 @@ class Liquidation(metaclass=PoolMeta):
                 end_date = contract.end_date
             elif ((end_period < first_of_july)
                   and (start_date_contract > start_period)):
+                if end_date_contract and end_date_contract < first_of_july:
+                    end_date = end_date_contract
+                else:
+                    end_date = end_period
                 start_date = start_date_contract
-                end_date = contract.end_date if contract.end_date else end_period
             elif ((end_period < first_of_july)
                   and (start_date_contract < start_period)):
                 start_date = start_period
-                end_date = contract.end_date if contract.end_date else end_period
+                if end_date_contract and end_date_contract < first_of_july:
+                    end_date = end_date_contract
+                else:
+                    end_date = end_period
             else:
                 start_date = start_period
                 end_date = end_period
@@ -1580,7 +1602,7 @@ class LiquidationGroupStart(metaclass=PoolMeta):
     'Liquidation Group Start'
     __name__ = 'staff.liquidation_group.start'
 
-    payment_liquidation_date = fields.Date('Payment liquidation date', required=True)
+    payment_liquidation_date = fields.Date('Payment liquidation date')
 
 
 class LiquidationGroup(metaclass=PoolMeta):
@@ -1654,11 +1676,11 @@ class LiquidationGroup(metaclass=PoolMeta):
                 )
                 if not lines:
                     continue
-
+            payment_liquidation_date = self.start.payment_liquidation_date if self.start.payment_liquidation_date else None
             lqt_create = {
                 'start_period': start_period,
                 'end_period': end_period,
-                'payment_liquidation_date': self.start.payment_liquidation_date,
+                'payment_liquidation_date': payment_liquidation_date,
                 'employee': employee.id,
                 'contract': contract.id,
                 'kind': kind,
@@ -1861,7 +1883,8 @@ class LiquidationDetailReport(Report):
         work_days_holidays = count_work_days_holidays * 15
         if (line_.wage.type_concept_electronic == 'PrimasS'
                 and kind != 'contract'):
-            if start_period.month != end_period.month:
+            if (start_period.month != end_period.month
+                    and liquidation.payment_liquidation_date):
                 day_liquidation_payments = liquidation.payment_liquidation_date.day
                 if day_liquidation_payments >= 15:
                     total_base_salary += contract.salary / 2
