@@ -1530,6 +1530,22 @@ class SaleShopDetailedCDS(Wizard):
         return 'end'
 
 
+class SaleDetailedReport(metaclass=PoolMeta):
+    __name__ = 'sale_pos.report_sale_detailed'
+
+    @classmethod
+    def get_context(cls, records, header, data):
+        pool = Pool()
+        Invoice = pool.get('account.invoice')
+        report_context = super().get_context(records, header, data)
+
+        for line in report_context['records']:
+            invoice = Invoice(line['id'])
+            line['reference'] = invoice.reference
+
+        return report_context
+
+
 class SaleShopDetailedCDSReport(Report):
     'Sale Shop Detailed Report'
     __name__ = 'sale_shop.report_sale_detailed_cds'

@@ -29,4 +29,5 @@ def register():
     Pool.register(
                 sale.SaleShopDetailedCDSReport,
                 sale.SaleInvoiceValueCdstReport,
+                sale.SaleDetailedReport,
                 module='sale_cdst', type_='report')
