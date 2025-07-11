@@ -469,6 +469,8 @@ class ShipmentInternal(metaclass=PoolMeta):
 
         data = Config.get_documentos_traslados(sw)
         if not data:
+            print("---------------NO SE ENCONTRO INFO---------------")
+            print(f"---------------FINISH {import_name}---------------")
             return
         actualizacion = Actualizacion.create_or_update(import_name)
         result = cls.validate_documentos(data)

@@ -295,6 +295,8 @@ class Actualizacion(ModelSQL, ModelView):
             consult += ")"
         elif self.name == 'TRASLADOS':
             consult += " AND sw = 16"
+        elif self.name == 'TRASLADOS - SALIDAS INVENTARIO':
+            consult += " AND sw = 11"
         else:
             return None
         result = connection.get_data(consult)
