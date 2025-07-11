@@ -592,32 +592,27 @@ class Configuration(ModelSQL, ModelView):
             fecha = config.date.strftime('%Y-%m-%d %H:%M:%S')
             # Consulta T-SQL mejorada
 
-            sql_query = """
-            SELECT idTipoDoctos FROM dbo.TblTipoDoctos_Tryton
-            WHERE PasaATryton='S'
-            """
-            subquery = f"""SELECT TOP 50 sw, tipo, Numero_documento, bodega, notas, anulado
-                        FROM dbo.Documentos
-                        WHERE sw = {sw}
-                        AND Fecha_Hora_Factura >= CAST('{fecha}' AS datetime)
-                        AND exportado NOT IN ('T', 'E', 'X')
-                        """
             if config.end_date:
                 end_date = config.end_date.strftime('%Y-%m-%d %H:%M:%S')
-                subquery += f"AND Fecha_Hora_Factura < CAST('{end_date}' AS datetime) "
-            # subquery += "ORDER BY Fecha_Hora_Factura ASC"
+            else:
+                end_date = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+            subquery = f"""SELECT TOP 50 sw, tipo, Numero_documento, bodega, notas, anulado
+                        FROM dbo.Documentos as doc
+                        JOIN dbo.TblTipoDoctos_Tryton AS ttd
+                            ON doc.tipo = ttd.idTipoDoctos
+                        WHERE ttd.PasaATryton = 'S'
+                        AND doc.sw = {sw}
+                        AND doc.Fecha_Hora >= CONVERT(datetime, '{fecha}', 121)
+                        AND doc.Fecha_Hora < CONVERT(datetime, '{end_date}', 121)
+                        AND doc.exportado NOT IN ('T', 'E', 'X')
+                        """
+
             query = f"""
-                    SET DATEFORMAT ymd
                     SELECT d.bodega from_location, l.*, notas, anulado
                     FROM dbo.Documentos_Lin AS l
-                    INNER JOIN (
-                        {subquery}
-                    ) AS d
+                    JOIN ({subquery}) AS d
                         ON d.sw = l.sw AND d.tipo = l.tipo AND d.Numero_documento = l.Numero_Documento
-                    INNER JOIN (
-                        {sql_query}
-                    ) AS type_docs
-                        ON type_docs.idTipoDoctos = d.tipo
                     """
             data = cls.get_data(query)
         except (pyodbc.OperationalError, pyodbc.InterfaceError) as db_error:
