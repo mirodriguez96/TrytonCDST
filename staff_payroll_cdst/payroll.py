@@ -2182,8 +2182,10 @@ class PayrollReport(CompanyReport):
 
         for record in report_context['records']:
             for lines in record.lines:
-                if lines.wage_type.type_concept == 'loan' and lines.origin:
-                    lines.description = f'PRESTAMO-{lines.origin.loan.number}'
+                if lines.origin and lines.origin.__name__ == 'staff.loan':
+                    if lines.wage_type.type_concept == 'loan' and lines.origin:
+                        lines.description = f'PRESTAMO-{lines.origin.loan.number}'
+
             if record.employee.party.name:
                 party = record.employee.party.name
                 break
