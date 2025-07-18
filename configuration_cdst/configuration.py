@@ -183,6 +183,9 @@ class Configuration(ModelSQL, ModelView):
             with cls.conexion() as cnxn:
                 with cnxn.cursor() as cursor:
                     cursor.execute(query)
+        except pyodbc.ProgrammingError as db_error:
+            if "Invalid object name" in str(db_error):
+                logging.error("La tabla Documentos_Tryton no existe.")
         except (pyodbc.OperationalError, pyodbc.InterfaceError) as db_error:
             logging.error(
                 f"Error de conexión con la base de datos: {db_error}")
@@ -216,13 +219,13 @@ class Configuration(ModelSQL, ModelView):
     def update_exportado(cls, id_tecno, exportado):
         success = False
         try:
+            if exportado == 'N':
+                cls.delete_documentos_tryton(id_tecno)
             query = f"""UPDATE dbo.Documentos
             SET exportado = '{exportado}'
             WHERE CONCAT(sw, '-', tipo, '-', Numero_documento) = '{id_tecno}'"""
 
             cls.set_data(query)
-            if exportado == 'N':
-                cls.delete_documentos_tryton(id_tecno)
             success = True
         except (pyodbc.OperationalError, pyodbc.InterfaceError) as db_error:
             logging.error(
@@ -237,13 +240,13 @@ class Configuration(ModelSQL, ModelView):
     def update_exportado_list(cls, idt, exportado):
         try:
             ids = list_to_tuple(idt, string=True)
+            if exportado == 'N' and ids:
+                cls.delete_documentos_tryton_list(ids)
             query = f"""UPDATE dbo.Documentos
             SET exportado = '{exportado}'
             WHERE CONCAT(sw,'-',tipo,'-',Numero_Documento) IN {ids}"""
 
             cls.set_data(query)
-            if exportado == 'N' and ids:
-                cls.delete_documentos_tryton_list(ids)
         except (pyodbc.OperationalError, pyodbc.InterfaceError) as db_error:
             logging.error(
                 f"Error de conexión con la base de datos: {db_error}")
