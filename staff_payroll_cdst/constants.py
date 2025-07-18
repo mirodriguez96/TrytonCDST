@@ -125,6 +125,7 @@ EXTRAS = [
     'dom',
     'hedf',
     'henf',
+    'fest',
 ]
 
 SHEET_SUMABLES = [
@@ -151,6 +152,7 @@ SHEET_SUMABLES = [
     'cost_dom',
     'cost_hedf',
     'cost_henf',
+    'cost_fest',
 ]
 
 SHEET_SUMABLES.extend(SOCIAL_SEGURITY)
