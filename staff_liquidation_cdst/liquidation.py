@@ -504,16 +504,16 @@ class Liquidation(metaclass=PoolMeta):
         pool = Pool()
         LoanLines = pool.get('staff.loan.line')
         grouped = {}
+        already_wage = []
         to_reconcile = []
         lines_moves = []
         amount = []
-        validate = True
-        result = None
 
         wages = [
             wage_type
             for wage_type in self.employee.mandatory_wages
-            if wage_type.wage_type.type_concept == 'retirement'
+            if (wage_type.wage_type.type_concept == 'retirement'
+                or wage_type.wage_type.type_concept == 'health')
             and self.kind == 'holidays'
         ]
 
@@ -582,25 +582,30 @@ class Liquidation(metaclass=PoolMeta):
 
                 grouped[key]['amount'].append(adjust.amount)
                 amount.append(adjust.amount)
-
         for account_id, values in grouped.items():
             account_id = account_id[0]
             party_payment = values['party_to_pay']
             wage = values['wage']
             origin_ = values['origin']
             reference_ = values['reference']
-
+            result = None
             if party_payment:
                 for wage in wages:
-                    if validate:
-                        if values['wage'].id == wage.wage_type.id:
+                    if (values['wage'].id == wage.wage_type.id
+                            and wage not in already_wage):
+                        result = None
+                        wage_type_ = wage.wage_type
+                        if wage_type_.type_concept_electronic == 'FondoPension':
+                            already_wage.append(wage)
                             party_payment = wage.party.id
-                            validate = False
+                            data_salary = {'salary': self.gross_payments}
+                            expense_amount = round(wage_type_.compute_expense(data_salary), 2)
+                            unit_price_amount = round(wage_type_.compute_unit_price(data_salary), 2)
+                            total_amount = expense_amount + unit_price_amount
                             result = self._prepare_line(
                                 values['description'],
-                                wages[0].wage_type.debit_account.id,
-                                debit=round(self.gross_payments
-                                            * Decimal(0.12), 2),
+                                wage_type_.debit_account.id,
+                                debit=expense_amount,
                                 credit=_ZERO,
                                 analytics=values.get('analytic', None),
                                 origin=origin_,
@@ -608,11 +613,30 @@ class Liquidation(metaclass=PoolMeta):
                                 wage=values['wage'],
                                 wages=wages
                             )
+                            values['amount'] = [total_amount * -1]
+                        elif (wage_type_.type_concept_electronic == 'Salud'
+                              and wage_type_.debit_account):
+                            already_wage.append(wage)
+                            party_payment = wage.party.id
+                            data_salary = {'salary': self.gross_payments}
+                            expense_amount = round(wage_type_.compute_expense(data_salary), 2)
+                            unit_price_amount = round(wage_type_.compute_unit_price(data_salary), 2)
+                            total_amount = expense_amount + unit_price_amount
+                            result = self._prepare_line(
+                                values['description'],
+                                wage_type_.debit_account.id,
+                                debit=expense_amount,
+                                credit=_ZERO,
+                                analytics=values.get('analytic', None),
+                                origin=origin_,
+                                reference=reference_,
+                                wage=values['wage'],
+                                wages=wages
+                            )
+                            values['amount'] = [total_amount * -1]
 
-                            values['amount'] = [
-                                round(self.gross_payments
-                                      * Decimal(0.16), 2) * -1
-                            ]
+                        if result:
+                            lines_moves.append(result)
 
             _amount = sum(values['amount'])
             debit = _amount
@@ -631,9 +655,6 @@ class Liquidation(metaclass=PoolMeta):
                     wages=wages,
                 )
             )
-
-        if result is not None:
-            lines_moves.append(result)
 
         if lines_moves:
             lines_moves.append(
