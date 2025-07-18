@@ -3990,6 +3990,9 @@ class PayrollSheetReport(Report, metaclass=PoolMeta):
                     vals['total_extras'].append(amount)
                     for e in EXTRAS_CORE:
                         if e.upper() in line.wage_type.name:
+                            if e not in vals:
+                                vals[e] = []
+                                vals['cost_' + e] = []
                             vals[e].append(line.quantity or 0)
                             vals['cost_' + e].append(amount)
                             break
@@ -4017,7 +4020,7 @@ class PayrollSheetReport(Report, metaclass=PoolMeta):
                 vals['discount'].append(amount)
 
         for key in SHEET_SUMABLES:
-            vals[key] = sum(vals[key])
+            vals[key] = sum(vals[key]) if key in vals else 0
 
         vals['gross_payment'] = sum(
             [
