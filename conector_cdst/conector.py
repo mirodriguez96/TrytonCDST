@@ -317,7 +317,6 @@ class Actualizacion(ModelSQL, ModelView):
         result_tryton = []
         condition = None
         logs = {}
-        print(name)
         try:
             if name == 'VENTAS':
                 consultv = "SELECT id_tecno FROM sale_sale "\
@@ -386,14 +385,14 @@ class Actualizacion(ModelSQL, ModelView):
                 return
 
             config, = Config.search([], order=[('id', 'DESC')], limit=1)
-            connection_date = config.date.strftime('%Y-%m-%d %H:%M:%S')
+            start_date = config.date.strftime('%Y-%m-%d %H:%M:%S')
             end_date = config.end_date if config.end_date else datetime.datetime.now()
-
+            end_date = end_date.strftime('%Y-%m-%d %H:%M:%S')
             consultc = f"""SET DATEFORMAT ymd
                 SELECT CONCAT(sw,'-',tipo,'-',numero_documento), valor_total,
                 Valor_impuesto, Impuesto_Consumo, anulado, retencion_causada FROM Documentos
                 WHERE {condition}
-                AND fecha_hora >= CAST('{connection_date}' AS datetime)
+                AND fecha_hora >= CAST('{start_date}' AS datetime)
                 AND fecha_hora <= CAST('{end_date}' AS datetime)
                 AND exportado = 'T'
                 AND tipo<>0 ORDER BY tipo,numero_documento"""
