@@ -765,13 +765,12 @@ class Sale(metaclass=PoolMeta):
         Period = pool.get('account.period')
 
         if sale_tecno.anulado == 'S':
-            date_str = sale_tecno.fecha_hora.split()[0]
+            date_str = str(sale_tecno.fecha_hora).split()[0]
             period_name = date_str[:7]  # Extract YYYY-MM
 
             validate_period = Period.search(
                 [('name', '=', period_name)], limit=1)
             if validate_period and validate_period[0].state == 'close':
-                print('Periodo cerrado')
                 cls.update_exportado_tecno(id_sale_tecno, exportado="E")
                 msg = ("EXCEPCION: EL PERIODO DEL DOCUMENTO SE ENCUENTRA"
                        " CERRADO Y NO ES POSIBLE SU ELIMINACION O "
@@ -781,7 +780,6 @@ class Sale(metaclass=PoolMeta):
                     actualizacion, actualizacion_che, logs=log)
                 return True
 
-            print(f'Eliminando venta que fue anulada ({id_sale_tecno})')
             cls.delete_imported_sales(sale_tryton, cod="X")
             msg = ("El documento fue eliminado de tryton porque fue anulado "
                    "en TecnoCarnes").replace(
@@ -791,7 +789,6 @@ class Sale(metaclass=PoolMeta):
                 actualizacion, actualizacion_che, logs=log)
             return True
 
-        print('Venta sera marcada en T')
         cls.update_exportado_tecno(id_sale_tecno, exportado="T")
         return True
 
@@ -1262,7 +1259,6 @@ class Sale(metaclass=PoolMeta):
         reconciliation_table = Table('account_move_reconciliation')
         cursor = Transaction().connection.cursor()
         # Se procede a realizar la eliminación de todos los registros
-        print(to_delete)
         if to_delete['reconciliation']:
             cursor.execute(*reconciliation_table.delete(
                 where=reconciliation_table.id.in_(
@@ -1325,12 +1321,86 @@ class Sale(metaclass=PoolMeta):
             cursor.execute(*sale_table.delete(
                 where=sale_table.id.in_(to_delete['sale'])))
 
+    @classmethod
+    def delete_cancel_sales(cls, to_delete):
+        sale_table = Table('sale_sale')
+        invoice_table = Table('account_invoice')
+        move_table = Table('account_move')
+        stock_move_table = Table('stock_move')
+        statement_line = Table('account_statement_line')
+        shipment_table = Table('stock_shipment_out')
+        shipment_return_table = Table('stock_shipment_out_return')
+        reconciliation_table = Table('account_move_reconciliation')
+        cursor = Transaction().connection.cursor()
+        # Se procede a realizar la eliminación de todos los registros
+        if to_delete['reconciliation']:
+            cursor.execute(*reconciliation_table.delete(
+                where=reconciliation_table.id.in_(
+                    to_delete['reconciliation'])))
+
+        if to_delete['move']:
+            cursor.execute(
+                *move_table.update(columns=[move_table.state],
+                                   values=['draft'],
+                                   where=move_table.id.in_(to_delete['move'])))
+            cursor.execute(*move_table.delete(
+                where=move_table.id.in_(to_delete['move'])))
+
+        if to_delete['invoice']:
+            cursor.execute(*invoice_table.update(
+                columns=[invoice_table.state, invoice_table.number],
+                values=['cancelled', None],
+                where=invoice_table.id.in_(to_delete['invoice'])))
+
+        if to_delete['stock_move']:
+            cursor.execute(*stock_move_table.update(
+                columns=[stock_move_table.state],
+                values=['draft'],
+                where=stock_move_table.id.in_(to_delete['stock_move'])))
+            cursor.execute(*stock_move_table.delete(
+                where=stock_move_table.id.in_(to_delete['stock_move'])))
+
+        if to_delete['shipment']:
+            cursor.execute(*shipment_table.update(
+                columns=[shipment_table.state],
+                values=['draft'],
+                where=shipment_table.id.in_(to_delete['shipment'])))
+            cursor.execute(*shipment_table.delete(
+                where=shipment_table.id.in_(to_delete['shipment'])))
+
+        if to_delete['shipment_return']:
+            cursor.execute(*shipment_return_table.update(
+                columns=[shipment_return_table.state],
+                values=['draft'],
+                where=shipment_return_table.id.in_(
+                    to_delete['shipment_return'])))
+            cursor.execute(*shipment_return_table.delete(
+                where=shipment_return_table.id.in_(
+                    to_delete['shipment_return'])))
+
+        if to_delete['statement_line']:
+            cursor.execute(*statement_line.delete(
+                where=statement_line.id.in_(to_delete['statement_line'])))
+
+        if to_delete['sale']:
+            cursor.execute(
+                *sale_table.update(columns=[
+                    sale_table.state, sale_table.shipment_state,
+                    sale_table.invoice_state
+                ],
+                    values=['cancelled', 'none', 'none'],
+                    where=sale_table.id.in_(to_delete['sale'])))
+
     # Función encargada de eliminar y marcar para importar ventas de importadas de TecnoCarnes
+
     @classmethod
     def delete_imported_sales(cls, sales, cod='N'):
         Cnxn = Pool().get('conector.configuration')
         ids_tecno, to_delete = cls._get_delete_sales(sales)
-        cls._delete_sales(to_delete)
+        if cod == 'X':
+            cls.delete_cancel_sales(to_delete)
+        else:
+            cls._delete_sales(to_delete)
         for idt in ids_tecno:
             Cnxn.update_exportado(idt, cod)
 
