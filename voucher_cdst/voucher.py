@@ -520,17 +520,16 @@ class Voucher(ModelSQL, ModelView):
 
     # Se obtiene las lineas de la factura que se desea pagar
     @classmethod
-    def get_moveline(cls, reference, party, logs, account_type):
+    def get_moveline(cls, invoice_number, party, logs, account_type):
         pool = Pool()
         Invoice = pool.get('account.invoice')
         MoveLine = pool.get('account.move.line')
-        # A continuacion se consulta las lineas a pagar de la factura (reference)
-        invoice = Invoice.search([('number', '=', reference),
+        invoice = Invoice.search([('number', '=', invoice_number),
                                   ('state', '=', 'posted')])
         if invoice:
-            # Se selecciona la primera linea pendiente por pagar
             return invoice[0].lines_to_pay[0]
-        line_domain = [('reference', '=', reference), ('party', '=', party),
+
+        line_domain = [('reference', '=', invoice_number), ('party', '=', party),
                        (account_type, '=', True),
                        ('reconciliation', '=', None),
                        ('move.state', '=', 'posted')]
@@ -542,11 +541,11 @@ class Voucher(ModelSQL, ModelView):
         moveline = MoveLine.search(line_domain)
         if moveline:
             if len(moveline) > 1:
-                msg = f"Esperaba unica referencia ({reference}) en linea de movimiento (saldos iniciales) y obtuvo muchas !"
-                logs[reference] = msg
+                msg = f"Esperaba unica referencia ({invoice_number}) en linea de movimiento (saldos iniciales) y obtuvo muchas !"
+                logs[invoice_number] = msg
                 return False
             if moveline[0].reconciliation:
-                logs[reference] = f"REVISAR FACTURA ({reference}) CONCILIADA"
+                logs[invoice_number] = f"REVISAR FACTURA ({invoice_number}) CONCILIADA"
                 return False
             return moveline[0]
         else:
@@ -596,23 +595,21 @@ class Voucher(ModelSQL, ModelView):
     @classmethod
     def get_lines_vtecno(cls, invoices, voucher, logs, account_type):
         pool = Pool()
-        # Module = pool.get('ir.module')
         Line = pool.get('account.voucher.line')
         Invoice = pool.get('account.invoice')
         config_voucher = pool.get('account.voucher_configuration')(1)
         to_lines = []
         for inv in invoices:
-            invoice_number = ref = inv.tipo_aplica + '-' + str(inv.numero_aplica)
+            invoice_number = inv.tipo_aplica + '-' + str(inv.numero_aplica)
             invoice = Invoice.search([('number', '=', invoice_number)])
-
             if not invoice:
                 msg = f"EXCEPCION: NO SE ENCONTRO LA FACTURA CON NUMERO {invoice_number}"
                 logs[voucher.id_tecno] = msg
                 return None
+
             invoice, = invoice
-            ref = invoice.reference
-            move_line = cls.get_moveline(ref, voucher.party, logs,
-                                         account_type)
+            move_line = cls.get_moveline(invoice_number, voucher.party, logs, account_type)
+            reference = invoice.reference
             if not move_line:
                 msg = f"EXCEPCION: REVISAR SI LA FACTURA CON NUMERO {invoice_number} NO ESTA CONTABILIZADA EN TRYTON"
                 logs[voucher.id_tecno] = msg
@@ -621,7 +618,7 @@ class Voucher(ModelSQL, ModelView):
                 move_line, voucher.voucher_type)
             line = Line()
             line.amount_original = valor_original
-            line.reference = ref
+            line.reference = reference
             line.move_line = move_line
             line.on_change_move_line()
             if hasattr(Line, 'operation_center'):
@@ -648,7 +645,7 @@ class Voucher(ModelSQL, ModelView):
             if descuento > 0:
                 line_discount = Line()
                 line_discount.party = move_line.party
-                line_discount.reference = ref
+                line_discount.reference = reference
                 line_discount.detail = 'DESCUENTO'
                 line_discount.amount = round((descuento * -1), 2)
                 line_discount.account = config_voucher.account_discount_tecno
@@ -664,7 +661,7 @@ class Voucher(ModelSQL, ModelView):
             if retencion > 0:
                 line_rete = Line()
                 line_rete.party = move_line.party
-                line_rete.reference = ref
+                line_rete.reference = reference
                 line_rete.detail = 'RETENCION - (' + str(retencion) + ')'
                 line_rete.type = 'tax'
                 line_rete.untaxed_amount = untaxed_amount
@@ -683,7 +680,7 @@ class Voucher(ModelSQL, ModelView):
             if retencion_iva > 0:
                 line_retiva = Line()
                 line_retiva.party = move_line.party
-                line_retiva.reference = ref
+                line_retiva.reference = reference
                 line_retiva.detail = 'RETENCION IVA - (' + str(
                     retencion_iva) + ')'
                 line_retiva.type = 'tax'
@@ -703,7 +700,7 @@ class Voucher(ModelSQL, ModelView):
             if retencion_ica > 0:
                 line_retica = Line()
                 line_retica.party = move_line.party
-                line_retica.reference = ref
+                line_retica.reference = reference
                 line_retica.detail = 'RETENCION ICA - (' + str(
                     retencion_ica) + ')'
                 line_retica.type = 'tax'
@@ -723,7 +720,7 @@ class Voucher(ModelSQL, ModelView):
             if ajuste > 0:
                 line_ajuste = Line()
                 line_ajuste.party = move_line.party
-                line_ajuste.reference = ref
+                line_ajuste.reference = reference
                 line_ajuste.detail = 'AJUSTE'
                 if Decimal(move_line.debit) > 0:
                     line_ajuste.account = config_voucher.account_adjust_income
