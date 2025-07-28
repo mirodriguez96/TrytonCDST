@@ -1571,9 +1571,7 @@ class StaffEvent(metaclass=PoolMeta):
         Contract = pool.get('staff.contract')
         Access = pool.get('staff.access')
         for event in events:
-            print(event)
             is_access = Access.search([('line_event', '=', event)])
-            print(is_access)
             if (
                 event.category
                 and event.contract
@@ -1584,6 +1582,38 @@ class StaffEvent(metaclass=PoolMeta):
                     [contract], {'events_vacations': [('remove', [event])]})
             if is_access:
                 Access.delete(is_access)
+
+    @classmethod
+    def delete(cls, events):
+        super(StaffEvent, cls).delete(events)
+        pool = Pool()
+        PayrollLine = pool.get('staff.payroll.line')
+        Liquidation = pool.get('staff.liquidation')
+        for event in events:
+            lines = PayrollLine.search([('origin', '=', event)])
+            liquidation = Liquidation.search([('origin', '=', event)])
+            if lines or liquidation:
+                raise UserError('ERROR', 'La novedad tiene nominas o liquidaciones asociadas, no se puede eliminar')
+
+    @classmethod
+    def write(cls, records, values, *args):
+        super(StaffEvent, cls).write(records, values, *args)
+        pool = Pool()
+        Event = pool.get('staff.event')
+        for event in records:
+            if event.start_date > event.end_date:
+                raise UserError(
+                    'ERROR',
+                    'La fecha de inicio no puede ser mayor a la fecha final',
+                )
+            event_ = Event.search([('start_date', '=', event.start_date), ('end_date', '=', event.end_date),
+                        ('employee', '=', event.employee),
+                        ('category', '=', event.category)])
+            if len(event_) > 1:
+                raise UserError(
+                    'ERROR',
+                    'Ya existe una novedad con la misma fecha de inicio y fin, empleado y categoria',
+                )
 
 
 class LineLiquidationEvent(ModelSQL):
