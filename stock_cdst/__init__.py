@@ -15,6 +15,7 @@ def register():
     Pool.register(
         stock.Configuration,
         stock.Location,
+        stock.ShipmentIn,
         stock.ShipmentInternal,
         stock.ShipmentDetailedStart,
         stock.WarehouseKardexStockStartCds,
