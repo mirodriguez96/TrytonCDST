@@ -1029,6 +1029,27 @@ class ShipmentInternal(metaclass=PoolMeta):
         return credit_account, debit_account
 
 
+class ShipmentIn(metaclass=PoolMeta):
+    "Internal Shipment"
+    __name__ = 'stock.shipment.in'
+
+    @classmethod
+    def receive(cls, shipments):
+        super(ShipmentIn, cls).receive(shipments)
+        pool = Pool()
+        StockMove = pool.get('stock.move')
+        Purchase = pool.get('purchase.purchase')
+        for shipment in shipments:
+            stock_move = StockMove.search([
+                ('shipment', '=', shipment)
+            ])
+            for move in stock_move:
+                if move.origin and move.origin.__name__ == 'purchase.line':
+                    purchase = move.origin.purchase
+                    if purchase.invoice_method == 'shipment':
+                        Purchase.process([purchase])
+
+
 class ModifyCostPrice(metaclass=PoolMeta):
     "Modify Cost Price"
     __name__ = 'product.modify_cost_price'
