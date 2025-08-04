@@ -523,6 +523,7 @@ class Sale(metaclass=PoolMeta):
                 retencion_rete = True
         print('Recorriendo lineas de venta')
         for lin in documentos_linea:
+            nota_linea = lin.Nota_Linea
             impuestos_linea = []
             producto = Product.search([
                 'OR', ('id_tecno', '=', str(lin.IdProducto)),
@@ -591,7 +592,8 @@ class Sale(metaclass=PoolMeta):
             linea.product = producto
             linea.type = 'line'
             linea.unit = producto.sale_uom
-
+            linea.note = nota_linea.replace('\n', ' ').replace(
+                '\r', '').replace('\t', ' ')
             # Validate if is sale return
             if sw == 2:
                 linea.quantity = cantidad_facturada * -1
