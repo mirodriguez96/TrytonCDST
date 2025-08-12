@@ -3,4 +3,9 @@
         <label name="payment_extras"/>
         <field name="payment_extras"/>
     </xpath>
+
+    <xpath expr="/form/notebook/page[@id='information']/field[@name='contract']" position="after">
+        <label name="area"/>
+        <field name="area"/>
+    </xpath>
 </data>
