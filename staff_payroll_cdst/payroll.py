@@ -1636,6 +1636,14 @@ class LineLiquidationEvent(ModelSQL):
 class Payroll(metaclass=PoolMeta):
     __name__ = 'staff.payroll'
     payment_extras = fields.Boolean('Payment extras')
+    area = fields.Many2One('employee.area', 'Area', ondelete='RESTRICT', depends=['employee'])
+
+    @fields.depends('employee', 'department', 'area')
+    def on_change_employee(self):
+        if self.employee and self.employee.department:
+            self.department = self.employee.department.id
+        if self.employee and self.employee.area:
+            self.area = self.employee.area.id
 
     @classmethod
     def __setup__(cls):
@@ -1649,6 +1657,8 @@ class Payroll(metaclass=PoolMeta):
         if not hasattr(PayrollLine, 'analytic_accounts'):
             return
         AnalyticAccount = Pool().get('analytic_account.account')
+        if not self.area and hasattr(self.employee, 'area'):
+            self.area = self.employee.area.id
 
         # Create analytic account lines
         for line in self.lines:
