@@ -192,6 +192,8 @@ class Voucher(ModelSQL, ModelView):
                 print(f"ROLLBACK-{import_name}: {error}")
                 logs[id_tecno] = f"EXCEPCION: {error}"
                 exceptions.append(id_tecno)
+                if id_tecno in created:
+                    created.remove(id_tecno)
         actualizacion.add_logs(logs)
         for idt in exceptions:
             Config.update_exportado(idt, 'E')
