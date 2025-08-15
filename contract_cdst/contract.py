@@ -81,6 +81,59 @@ class Contract(metaclass=PoolMeta):
                 res = int(round(res / 30.0, 0))
         return res
 
+    @classmethod
+    def write(cls, records, values):
+        super().write(records, values)
+        if 'transport_bonus' in values.keys() or 'salary' in values.keys():
+            contract = records[0]
+            cls.validate_transport_bonus(contract)
+
+    @classmethod
+    def create(cls, vlist):
+        records = super().create(vlist)
+        for rec in records:
+            cls.validate_transport_bonus(rec)
+
+
+@classmethod
+def validate_transport_bonus(cls, contract):
+    """
+    Valida que el contrato cumpla con las reglas del bono de transporte:
+    - Solo es válido si el salario es <= 2 * salario mínimo legal vigente (SMLV).
+    - Si excede, no debe tener concepto de transporte ni valor > 0 en transport_bonus.
+
+    :param contract: Registro de contrato (modelo hr.contract o similar).
+    :raises UserError: Si el salario excede el límite y el contrato mantiene bono de transporte.
+    """
+    pool = Pool()
+    StaffConfiguration = pool.get('staff.configuration')
+
+    # Configuración global del módulo de personal (SMLV y otras reglas)
+    config = StaffConfiguration.search([('id', '=', 1)])
+    if config:
+        config = config[0]
+        # Datos del empleado y sus conceptos obligatorios
+        employee = contract.employee
+        mandatory_wages = employee.mandatory_wages
+        have_transport_bonus = False
+
+        # Verifica si existe concepto de tipo 'transport'
+        for wages in mandatory_wages:
+            if wages.wage_type.type_concept == 'transport':
+                have_transport_bonus = True
+
+        # Validación principal
+        if contract.transport_bonus:
+            allow_salary = config.minimum_salary * 2
+            if (contract.salary > allow_salary
+                    and (have_transport_bonus or contract.transport_bonus > 0)):
+                raise UserError(
+                    'ERROR',
+                    'El bono de transporte no es válido: el salario supera 2 SMLV. '
+                    'Debe eliminar el concepto de bono de transporte y '
+                    'verificar que esté en cero en el contrato.'
+                )
+
 
 class ContractExportAvaliableVacation(Wizard):
     'Vacation Export'
