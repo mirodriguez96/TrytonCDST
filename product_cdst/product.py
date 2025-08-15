@@ -85,6 +85,9 @@ class Product(metaclass=PoolMeta):
         print(f"---------------RUN {import_name}---------------")
         actualizacion = Actualizacion.create_or_update("PRODUCTOS")
         date_updating = Actualizacion.get_fecha_actualizacion(actualizacion)
+
+        if not Config.get_configuration():
+            return
         products_tecno = Config.get_tblproducto(date_updating)
         if not products_tecno:
             actualizacion.save()
@@ -257,8 +260,11 @@ class Product(metaclass=PoolMeta):
         Revision = pool.get("product.cost_price.revision")
         AverageCost = pool.get("product.average_cost")
         _today = date.today()
-        result = Config.get_tblproducto_parent()
 
+        if not Config.get_configuration():
+            return
+
+        result = Config.get_tblproducto_parent()
         if not result:
             print("Sin resultados desde SQLServer.")
             return
@@ -368,6 +374,9 @@ class ProductCategory(metaclass=PoolMeta):
 
         import_name = "CATEGORIAS DE PRODUCTOS"
         print(f"---------------RUN {import_name}---------------")
+        if not Config.get_configuration():
+            return
+
         modelos = Config.get_data_table("vistamodelos")
         if not modelos:
             logs["vistamodelos"] = (

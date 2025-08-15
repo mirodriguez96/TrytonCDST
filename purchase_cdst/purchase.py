@@ -127,11 +127,6 @@ class Purchase(metaclass=PoolMeta):
         to_created = []
         not_import = []
 
-        # Obtener configuración y datos
-        configuration = other_models['Config'].get_configuration()
-        if not configuration:
-            return
-
         data = other_models['Config'].get_documentos_tecno(swt)
         actualizacion = other_models['Actualizacion'].create_or_update('COMPRAS')
 
@@ -147,6 +142,9 @@ class Purchase(metaclass=PoolMeta):
         print('compras a importar :', len(data))
         # Procesar cada compra
         for compra in data:
+            configuration = other_models['Config'].get_configuration()
+            if not configuration:
+                return
             sw = compra.sw
             numero_doc = compra.Numero_documento
             tipo_doc = compra.tipo

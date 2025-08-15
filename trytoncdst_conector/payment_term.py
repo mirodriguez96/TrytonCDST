@@ -35,6 +35,8 @@ class PaymentTerm(metaclass=PoolMeta):
 
         import_name = "PLAZOS DE PAGO"
         print(f"---------------RUN {import_name}---------------")
+        if not Config.get_configuration():
+            return
 
         actualizacion = Actualizacion.create_or_update('PLAZOS DE PAGO')
         condiciones_pago = Config.get_data_table('TblCondiciones_pago')

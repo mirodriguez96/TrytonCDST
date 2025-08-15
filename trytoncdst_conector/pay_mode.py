@@ -37,6 +37,8 @@ class VoucherPayMode(ModelSQL, ModelView):
         PayMode = pool.get('account.voucher.paymode')
         Actualizacion = pool.get('conector.actualizacion')
 
+        if not Config.get_configuration():
+            return
         actualizacion = Actualizacion.create_or_update('FORMAS DE PAGO')
         formas_pago = Config.get_data_table('TblFormaPago')
         logs = {}

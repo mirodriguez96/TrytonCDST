@@ -384,6 +384,8 @@ class Actualizacion(ModelSQL, ModelView):
             if not condition:
                 return
 
+            if not Config.get_configuration():
+                return
             config, = Config.search([], order=[('id', 'DESC')], limit=1)
             start_date = config.date.strftime('%Y-%m-%d %H:%M:%S')
             end_date = config.end_date if config.end_date else datetime.datetime.now()

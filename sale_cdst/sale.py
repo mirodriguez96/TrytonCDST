@@ -75,7 +75,7 @@ class Sale(metaclass=PoolMeta):
         company_operation = Module.search([('name', '=', 'company_operation'),
                                            ('state', '=', 'activated')])
 
-        if not configuration or not data:
+        if not data:
             print('No se obtuvo informacion')
             return
 
@@ -101,6 +101,8 @@ class Sale(metaclass=PoolMeta):
 
         for venta in data:
             try:
+                if not Config.get_configuration():
+                    break
                 numero_doc = venta.Numero_documento
                 tipo_doc = venta.tipo
                 sw = venta.sw

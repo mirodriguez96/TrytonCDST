@@ -17,18 +17,6 @@ class Voucher(ModelSQL, ModelView):
     'Voucher'
     __name__ = 'account.voucher'
     id_tecno = fields.Char('Id Tabla Sqlserver', required=False)
-    # to_reconcile = fields.Function(fields.Boolean('To Reconcile'), 'getter_to_reconcile')
-
-    # def getter_to_reconcile(self, name):
-    #     if self.voucher_type != 'multipayment'\
-    #         or self.state != 'posted'\
-    #         or not self.move or len(self.lines) < 200:
-    #         return False
-    #     for line in self.move.lines:
-    #         if line.account != self.account\
-    #             and line.reconciliation:
-    #             return False
-    #     return True
 
     @classmethod
     def import_voucher_payment(cls):
@@ -45,10 +33,6 @@ class Voucher(ModelSQL, ModelView):
         import_name = "COMPROBANTES DE EGRESO"
         print(f"---------------RUN {import_name}---------------")
 
-        configuration = Config.get_configuration()
-        if not configuration:
-            return
-
         actualizacion = Actualizacion.create_or_update(
             'COMPROBANTES DE EGRESO')
         logs = {}
@@ -63,6 +47,8 @@ class Voucher(ModelSQL, ModelView):
         parties = Party._get_party_documentos(documentos, 'nit_Cedula')
         for doc in documentos:
             try:
+                if not Config.get_configuration():
+                    return
                 tipo_numero = f"{doc.tipo}-{doc.Numero_documento}"
                 id_tecno = f"{doc.sw}-{tipo_numero}"
                 # Buscamos si ya existe el comprobante
