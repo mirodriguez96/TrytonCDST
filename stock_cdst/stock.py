@@ -172,11 +172,13 @@ class Location(metaclass=PoolMeta):
         pool = Pool()
         Config = pool.get('conector.configuration')
         Location = pool.get('stock.location')
-        bodegas = Config.get_data_table('TblBodega')
-        Actualizacion = pool.get('conector.actualizacion')
-        actualizacion = Actualizacion.create_or_update('BODEGAS')
         logs = {}
 
+        Actualizacion = pool.get('conector.actualizacion')
+        actualizacion = Actualizacion.create_or_update('BODEGAS')
+        if not Config.get_configuration():
+            return
+        bodegas = Config.get_data_table('TblBodega')
         import_name = "BODEGAS"
         print(f"---------------RUN {import_name}---------------")
         for bodega in bodegas:
@@ -460,12 +462,9 @@ class ShipmentInternal(metaclass=PoolMeta):
         ConfigShipment = pool.get('stock.configuration')
 
         print(f"---------------RUN {import_name}---------------")
-        configuration = Config.get_configuration()
         config_shipment = ConfigShipment.search([])
         state_shipment = config_shipment[0].state_shipment
         output_location = config_shipment[0].to_location
-        if not configuration:
-            return
 
         data = Config.get_documentos_traslados(sw)
         if not data:
@@ -477,6 +476,8 @@ class ShipmentInternal(metaclass=PoolMeta):
         shipments = []
         for value in result["tryton"].values():
             try:
+                if not Config.get_configuration():
+                    return
                 if value['from_location'] == value['to_location'] and sw != '11':
                     msg = """En traslados no puede tener la misma ubicacion
                         de entrada y salida"""

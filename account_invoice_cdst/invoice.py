@@ -742,11 +742,8 @@ class Invoice(metaclass=PoolMeta):
 
         pool = Pool()
         Config = pool.get('conector.configuration')
-        configuration = Config.get_configuration()
         import_name = _SW[sw]['name']
         print(f"---------------RUN {import_name}---------------")
-        if not configuration:
-            return
         Actualizacion = pool.get('conector.actualizacion')
         actualizacion = Actualizacion.create_or_update(_SW[sw]['name'])
         documentos = Config.get_documentos_tecno(sw)
@@ -755,6 +752,8 @@ class Invoice(metaclass=PoolMeta):
             return
         for document in documentos:
             try:
+                if not Config.get_configuration():
+                    return
                 # Se procede a validar los documentos importados de TecnoCarnes
                 data = cls._validate_documentos_tecno([document])
                 # Se procede a crear las facturas que hayan cumplido con la validación

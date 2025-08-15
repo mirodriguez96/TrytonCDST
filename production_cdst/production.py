@@ -205,6 +205,10 @@ class Production(metaclass=PoolMeta):
             print(f"---------------RUN {import_name}---------------")
             _today = datetime.date.today()
             actualizacion = Actualizacion.create_or_update('PRODUCCION')
+
+            if not Config.get_configuration():
+                return
+
             parametro = Config.get_data_parametros('177')
             valor_parametro = parametro[0].Valor.split(',')
             for tipo in valor_parametro:

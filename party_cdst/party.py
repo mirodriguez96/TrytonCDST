@@ -115,6 +115,9 @@ class Party(metaclass=PoolMeta):
             'logs': {},
         }
 
+        if not Config.get_configuration():
+            return
+
         print('Obteniendo los terceros')
         parties = cls._get_party_documentos(terceros_db, 'nit_cedula')
 
